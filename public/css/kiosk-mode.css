@@ -1,0 +1,20 @@
+/* Kiosk Mode Styles */
+body.kiosk-mode {
+    cursor: none;
+    /* Hide cursor in kiosk mode */
+}
+
+body.kiosk-mode * {
+    user-select: none;
+    /* Prevent text selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Disable pointer events on specific elements in kiosk mode */
+body.kiosk-mode a,
+body.kiosk-mode button:not(.kiosk-allowed) {
+    pointer-events: auto;
+    /* Keep interactivity but prevent default behaviors */
+}

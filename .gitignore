@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Database - local data
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+
+# User uploaded files
+backend/uploads/*
+!backend/uploads/.gitkeep
+!backend/uploads/sessiz.png
+!backend/uploads/uyari.png
+!backend/uploads/gurultu.png
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Build output
+dist/
+build/
