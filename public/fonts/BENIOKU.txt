@@ -1,17 +1,21 @@
 YEREL FONT DOSYALARI
 ====================
 
-Bu klasör, uygulamanın offline modda (internet yokken) doğru şekilde görünmesini sağlayan yazı tipi dosyalarını içerir.
+Bu klasör, uygulamanın gösterişli görünümünü sağlayan premium font dosyalarını içerir.
+Tüm dosyalar Türkçe karakter desteğine (Latin ve Latin-Ext) sahiptir.
 
 Mevcut Fontlar:
-1. Inter (Genel metinler için)
-   - Inter-Regular.woff2
-   - Inter-Medium.woff2
-   - Inter-Bold.woff2
+1. Montserrat (Başlıklar için - Premium & Güçlü)
+   - Montserrat-Bold-Latin.woff2
+   - Montserrat-Bold-Ext.woff2
+   - Montserrat-ExtraBold-Latin.woff2
+   - Montserrat-ExtraBold-Ext.woff2
 
-2. Outfit (Başlıklar için)
-   - Outfit-Regular.woff2
-   - Outfit-Bold.woff2
+2. Quicksand (Metinler için - Modern & Okunabilir)
+   - Quicksand-Medium-Latin.woff2
+   - Quicksand-Medium-Ext.woff2
+   - Quicksand-Bold-Latin.woff2
+   - Quicksand-Bold-Ext.woff2
 
 NOT: Bu dosyalar otomatik olarak indirilmiştir. Silmeyiniz.
-Online modda bu dosyalar yerine Google Fonts sunucularındaki en güncel versiyonlar kullanılır.
+Online modda dahi bu yerel fontlar kullanılarak performans ve tutarlılık sağlanır.
