@@ -17,5 +17,8 @@ Mevcut Fontlar:
    - Quicksand-Bold-Latin.woff2
    - Quicksand-Bold-Ext.woff2
 
+3. DS-Digital (Saat için - Elektronik Görünüm)
+   - DS-DIGIB.TTF
+
 NOT: Bu dosyalar otomatik olarak indirilmiştir. Silmeyiniz.
 Online modda dahi bu yerel fontlar kullanılarak performans ve tutarlılık sağlanır.
