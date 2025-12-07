@@ -1,6 +1,41 @@
 // ===========================================
-// KIOSK MODE - Etkileşim Engellemeleri
+// KIOSK MODE - Tam Ekran & Etkileşim Engellemeleri
 // ===========================================
+
+// Tam ekran fonksiyonu
+function enterFullscreen() {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) { // Safari
+        elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) { // IE11
+        elem.msRequestFullscreen();
+    }
+}
+
+// Tam ekrandan çıkışı engelle
+document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+        // Tam ekrandan çıkıldıysa, tekrar tam ekrana geç
+        setTimeout(enterFullscreen, 100);
+    }
+});
+
+// Sayfa yüklendiğinde tam ekran ol (kullanıcı etkileşimi ile)
+document.addEventListener('click', function firstClick() {
+    enterFullscreen();
+    document.removeEventListener('click', firstClick);
+}, { once: true });
+
+// ESC tuşunu engelle
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }
+});
 
 // Sağ tık menüsünü engelle
 document.addEventListener('contextmenu', e => e.preventDefault());
