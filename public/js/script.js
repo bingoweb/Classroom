@@ -43,7 +43,12 @@ document.addEventListener('contextmenu', e => e.preventDefault());
 // Klavye kısayollarını engelle (F5, Ctrl+R, Ctrl+Shift+I, vb.)
 document.addEventListener('keydown', e => {
     // F1-F12 tuşlarını engelle
+    // F1-F12 tuşlarını engelle (Ctrl+F5 HARİÇ)
     if (e.key.startsWith('F') && !isNaN(e.key.slice(1))) {
+        // Eğer Ctrl+F5 ise izin ver (Reload)
+        if (e.ctrlKey && e.key === 'F5') {
+            return;
+        }
         e.preventDefault();
     }
     // Ctrl kombinasyonlarını engelle
