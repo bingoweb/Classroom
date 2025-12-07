@@ -285,6 +285,10 @@ a {
     font-weight: 700;
     line-height: 0.9;
 
+    /* Electronic Clock Skew */
+    transform: skewX(-10deg);
+    display: inline-block;
+
     /* Neon Glow Effect */
     color: #ffffff;
     background: none;
