@@ -82,12 +82,10 @@ class SettingsLoader {
             this.setupAutoRefresh(this.settings.autoRefreshInterval);
         }
 
-        // 5. Clock Format (handled by clock widget listening to global settings usually, but we can trigger update)
-
-        // 6. Equalizer Theme - handled by main.js or equalizer script
+        // 5. Clock Format
+        // 6. Equalizer Theme
 
         // 7. Connection Mode
-        // Initial check or change
         if (this.settings.connection_mode !== prevSettings.connection_mode || !prevSettings.connection_mode) {
             this.applyConnectionMode(this.settings.connection_mode);
         }
@@ -104,26 +102,16 @@ class SettingsLoader {
 
         console.log(`Connection Mode: ${mode.toUpperCase()}`);
 
-        if (isOnline) {
-            // Add Google Fonts
-            if (!document.getElementById('google-fonts-link')) {
-                const link = document.createElement('link');
-                link.id = 'google-fonts-link';
-                link.rel = 'stylesheet';
-                link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap';
-                document.head.appendChild(link);
-            }
+        // Note: Fonts are now handled entirely locally via fonts.css
+        // We don't need to load Google Fonts dynamically anymore since we have local files.
 
+        if (isOnline) {
             // Show Weather
             if (weatherWidget) {
                 weatherWidget.style.display = 'flex';
                 this.fetchWeather();
             }
         } else {
-            // Remove Google Fonts
-            const link = document.getElementById('google-fonts-link');
-            if (link) link.remove();
-
             // Hide Weather
             if (weatherWidget) {
                 weatherWidget.style.display = 'none';
@@ -164,17 +152,16 @@ class SettingsLoader {
         if (tempEl) tempEl.textContent = `${Math.round(current.temperature_2m)}°C`;
         if (cityEl) cityEl.textContent = cityName;
 
-        // Simple icon mapping for OpenMeteo weather codes
         if (iconEl) {
             const code = current.weather_code;
             let icon = '☀️';
             if (code > 0 && code <= 3) icon = '⛅';
             else if (code > 40 && code <= 49) icon = '🌫️';
-            else if (code > 50 && code <= 59) icon = '🌧️'; // Drizzle
-            else if (code > 60 && code <= 69) icon = '🌧️'; // Rain
+            else if (code > 50 && code <= 59) icon = '🌧️';
+            else if (code > 60 && code <= 69) icon = '🌧️';
             else if (code > 70 && code <= 79) icon = '❄️';
-            else if (code > 80 && code <= 84) icon = '🌦️'; // Showers
-            else if (code > 85) icon = '❄️'; // Snow showers
+            else if (code > 80 && code <= 84) icon = '🌦️';
+            else if (code > 85) icon = '❄️';
             else if (code > 90) icon = '⛈️';
             iconEl.textContent = icon;
         }
@@ -204,12 +191,10 @@ class SettingsLoader {
     }
 
     async checkForUpdates() {
-        // Simple polling
         await this.loadSettings();
     }
 }
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     window.settingsLoader = new SettingsLoader();
 });
