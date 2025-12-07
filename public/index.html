@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2/D Sihirli Pano</title>
-    <!-- Fonts removed - using system fonts for offline operation -->
+    <title>2/D Sınıf Panosu</title>
+    <!-- Local Fonts (Always visible, works offline) -->
+    <link rel="stylesheet" href="css/fonts.css">
     <link rel="stylesheet" href="css/style.css?v=5">
     <link rel="stylesheet" href="css/kiosk-mode.css?v=1">
     <script src="js/config.js"></script>
@@ -110,6 +111,14 @@
                     <div class="date-section">
                         <div id="day-name" class="day-highlight">Pazartesi</div>
                         <div id="date" class="date-full">1 Ocak 2024</div>
+
+                        <!-- Weather Widget (Controlled by Settings) -->
+                        <div id="weather-widget"
+                            style="display: none; margin-top: 8px; font-size: 1.1rem; align-items: center; gap: 10px; justify-content: center; background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 20px;">
+                            <span id="weather-icon" style="font-size: 1.4rem;">☀️</span>
+                            <span id="weather-temp" style="font-weight: 700;">--°C</span>
+                            <span id="weather-city" style="font-size: 0.9rem; opacity: 0.8;">Istanbul</span>
+                        </div>
                     </div>
 
                     <!-- Clock Section (Middle) -->

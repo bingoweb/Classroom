@@ -43,3 +43,8 @@ desktop.ini
 # Build output
 dist/
 build/
+
+# Portable Runtime
+runtime/node/*
+!runtime/node/KURULUM.txt
+!runtime/node/.gitkeep

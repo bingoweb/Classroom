@@ -123,6 +123,7 @@ function initDatabase() {
         // Insert default settings if not exist
         db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('message', 'Harika bir gün olsun!')`);
         db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('city', 'Istanbul')`);
+        db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('connection_mode', 'offline')`);
 
         // Insert default slide settings if not exist
         db.run(`INSERT OR IGNORE INTO slide_settings (key, value) VALUES ('default_duration', '10000')`);

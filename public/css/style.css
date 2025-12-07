@@ -1,9 +1,14 @@
 :root {
-    --font-main: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    /* Font Variables with Fallbacks */
+    --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-heading: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+    /* Glass Effect Variables */
     --glass-bg: rgba(255, 255, 255, 0.65);
     --glass-border: rgba(255, 255, 255, 0.8);
     --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+
+    /* Brand Colors */
     --primary: #7B68EE;
     --secondary: #00D4D4;
     --accent: #FF6B9D;
@@ -22,7 +27,7 @@ html {
 }
 
 body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: var(--font-primary);
     /* Windows 1st priority */
     color: var(--text);
     height: 100vh;
@@ -54,6 +59,7 @@ h3,
 h4,
 h5,
 h6 {
+    font-family: var(--font-heading);
     letter-spacing: -0.015em;
     /* Tighter headings */
     font-weight: 700;

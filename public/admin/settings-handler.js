@@ -153,6 +153,30 @@ window.setDisplayMode = function (mode) {
     showToast(messages[mode] || 'Mod değişti');
 };
 
+window.setConnectionMode = function (mode) {
+    currentSettings.connection_mode = mode;
+
+    const offlineBtn = document.getElementById('connOffline');
+    const onlineBtn = document.getElementById('connOnline');
+
+    if (offlineBtn && onlineBtn) {
+        if (mode === 'offline') {
+            offlineBtn.style.border = '2px solid #667eea';
+            offlineBtn.style.background = 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'; // Light pastel gradient
+            onlineBtn.style.border = '2px solid rgba(0,0,0,0.1)';
+            onlineBtn.style.background = 'white';
+        } else {
+            onlineBtn.style.border = '2px solid #667eea';
+            onlineBtn.style.background = 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)';
+            offlineBtn.style.border = '2px solid rgba(0,0,0,0.1)';
+            offlineBtn.style.background = 'white';
+        }
+    }
+
+    saveSettingToDatabase('connection_mode', mode);
+    showToast(mode === 'offline' ? '🚫 Offline mod aktif' : '🌍 Online mod aktif');
+};
+
 window.setColorTheme = function (theme) {
     currentSettings.colorTheme = theme;
 
@@ -395,6 +419,27 @@ async function applySettingsToUI(settings) {
                 }
             }
         });
+    }
+
+    // Connection Mode
+    if (settings.connection_mode) {
+        currentSettings.connection_mode = settings.connection_mode;
+        const offlineBtn = document.getElementById('connOffline');
+        const onlineBtn = document.getElementById('connOnline');
+
+        if (offlineBtn && onlineBtn) {
+            if (settings.connection_mode === 'offline') {
+                offlineBtn.style.border = '2px solid #667eea';
+                offlineBtn.style.background = 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)';
+                onlineBtn.style.border = '2px solid rgba(0,0,0,0.1)';
+                onlineBtn.style.background = 'white';
+            } else {
+                onlineBtn.style.border = '2px solid #667eea';
+                onlineBtn.style.background = 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)';
+                offlineBtn.style.border = '2px solid rgba(0,0,0,0.1)';
+                offlineBtn.style.background = 'white';
+            }
+        }
     }
 
     // Color Theme

@@ -1,0 +1,17 @@
+BU KLASÖRE FONT DOSYALARINI YÜKLEYİN (Opsiyonel)
+================================================
+
+Tam offline deneyim için aşağıdaki font dosyalarını indirip bu klasöre kopyalayın:
+
+1. Inter Font Ailesi (https://fonts.google.com/specimen/Inter)
+   - Inter-Regular.woff2
+   - Inter-Medium.woff2
+   - Inter-Bold.woff2
+
+2. Outfit Font Ailesi (https://fonts.google.com/specimen/Outfit)
+   - Outfit-Regular.woff2
+   - Outfit-Bold.woff2
+
+Dosya isimlerinin tam olarak yukarıdaki gibi olduğundan emin olun.
+Eğer bu dosyalar yoksa, sistem varsayılan yazı tiplerini (Segoe UI, Arial) kullanır.
+Online modda ise bu dosyalara gerek yoktur, internetten otomatik yüklenir.

@@ -1,0 +1,19 @@
+Bu klasör portable Node.js dosyaları için ayrılmıştır.
+
+Portable Node.js Kurulumu:
+==========================
+
+1. https://nodejs.org/dist/ adresine gidin
+2. En son LTS versiyonunu bulun (örn: v20.x.x)
+3. "node-v20.x.x-win-x64.zip" dosyasını indirin
+4. ZIP dosyasını bu klasöre açın
+5. Klasör yapısı şöyle olmalı:
+
+   runtime/node/
+   ├── node.exe        ← Ana çalıştırılabilir
+   ├── npm.cmd
+   ├── npx.cmd
+   └── ...
+
+NOT: Portable Node.js olmadan da çalışır, 
+ancak sistemde Node.js kurulu olmalıdır.
