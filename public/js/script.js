@@ -1062,7 +1062,13 @@ function updateClock() {
     const now = new Date();
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
-    document.getElementById('clock').innerHTML = `${hours}<span class="blink">:</span>${minutes}`;
+    const clockEl = document.getElementById('clock');
+    if (clockEl) {
+        clockEl.innerHTML = `${hours}<span class="blink">:</span>${minutes}`;
+        // Force font family to prevent unwanted fallback
+        // This ensures the custom font is applied even if CSS fails initially
+        clockEl.style.fontFamily = "'EmbeddedDigital', 'Segment7', monospace";
+    }
 
     const dayName = now.toLocaleDateString('tr-TR', { weekday: 'long' });
     const fullDate = now.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
