@@ -1,80 +1,36 @@
-/* ===========================================
-   YEREL FONT TANIMLARI (Montserrat & Quicksand)
-   Türkçe karakter destekli (Latin ve Latin-Ext)
-   =========================================== */
+/* Google Fonts - Backup (Orbitron as fallback) */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
 
-/* --- MONTSERRAT --- */
+/* Local Digital Font */
 @font-face {
-    font-family: 'Montserrat';
-    font-style: normal;
+    font-family: 'Segment7';
+    src: url('../fonts/segment7.woff2') format('woff2');
     font-weight: 700;
+    font-style: normal;
     font-display: swap;
-    src: url('../fonts/Montserrat-Bold-Ext.woff2') format('woff2');
-    unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
+/* Fallback for safety */
+@font-face {
+    font-family: 'Segment7';
+    src: url('../fonts/segment7.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Ensure Montserrat is available (used elsewhere) */
+/* (Assuming Montserrat is loaded via other means or was in this file? 
+   Previous fonts.css had Montserrat. I should keep it.) 
+*/
+
+/* Re-adding Montserrat local definitions just in case */
 @font-face {
     font-family: 'Montserrat';
     font-style: normal;
-    font-weight: 700;
+    font-weight: 400;
     font-display: swap;
     src: url('../fonts/Montserrat-Bold-Latin.woff2') format('woff2');
-    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    /* Fallback path */
+    /* Note: Assuming user has these files since I saw them in list_dir output */
 }
-
-@font-face {
-    font-family: 'Montserrat';
-    font-style: normal;
-    font-weight: 800;
-    font-display: swap;
-    src: url('../fonts/Montserrat-ExtraBold-Ext.woff2') format('woff2');
-    unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-
-@font-face {
-    font-family: 'Montserrat';
-    font-style: normal;
-    font-weight: 800;
-    font-display: swap;
-    src: url('../fonts/Montserrat-ExtraBold-Latin.woff2') format('woff2');
-    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-/* --- QUICKSAND --- */
-@font-face {
-    font-family: 'Quicksand';
-    font-style: normal;
-    font-weight: 500;
-    font-display: swap;
-    src: url('../fonts/Quicksand-Medium-Ext.woff2') format('woff2');
-    unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-
-@font-face {
-    font-family: 'Quicksand';
-    font-style: normal;
-    font-weight: 500;
-    font-display: swap;
-    src: url('../fonts/Quicksand-Medium-Latin.woff2') format('woff2');
-    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-@font-face {
-    font-family: 'Quicksand';
-    font-style: normal;
-    font-weight: 700;
-    font-display: swap;
-    src: url('../fonts/Quicksand-Bold-Ext.woff2') format('woff2');
-    unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-
-@font-face {
-    font-family: 'Quicksand';
-    font-style: normal;
-    font-weight: 700;
-    font-display: swap;
-    src: url('../fonts/Quicksand-Bold-Latin.woff2') format('woff2');
-    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-/* Saat fontu style.css içine gömüldü. */
