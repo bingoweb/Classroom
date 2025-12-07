@@ -280,7 +280,7 @@ a {
 }
 
 .digital-clock {
-    font-family: 'DigitalClock', monospace;
+    font-family: 'DigitalClock', monospace !important;
     font-size: 7.5rem;
     font-weight: 700;
     line-height: 0.9;
@@ -336,7 +336,7 @@ a {
     text-shadow:
         0 0 5px rgba(255, 255, 255, 0.8),
         0 0 15px rgba(135, 206, 250, 0.8);
-    font-family: 'DigitalClock', monospace;
+    font-family: 'DigitalClock', monospace !important;
 }
 
 /* 3. Bottom: Weekend Countdown Pill */
