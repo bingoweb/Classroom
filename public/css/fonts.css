@@ -83,7 +83,7 @@
     font-style: normal;
     font-weight: 700;
     font-display: block;
-    src: url('../fonts/clock-final.ttf') format('truetype');
+    src: url('/clock.woff2') format('woff2');
 }
 
 @font-face {
@@ -91,5 +91,5 @@
     font-style: normal;
     font-weight: 400;
     font-display: block;
-    src: url('../fonts/clock-final.ttf') format('truetype');
+    src: url('/clock.woff2') format('woff2');
 }
