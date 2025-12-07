@@ -1,20 +1,66 @@
-/* Kiosk Mode Styles */
-body.kiosk-mode {
-    cursor: none;
-    /* Hide cursor in kiosk mode */
+/* ===========================================
+   KIOSK MODE - Digital Signage Optimizasyonu
+   Tam ekran, etkileşimsiz izleme modu
+   =========================================== */
+
+/* Temel Kiosk Ayarları */
+body {
+    cursor: none !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    overflow: hidden !important;
+    touch-action: none;
+    -webkit-touch-callout: none;
 }
 
-body.kiosk-mode * {
-    user-select: none;
-    /* Prevent text selection */
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
+/* Tüm tıklama/hover efektlerini devre dışı bırak */
+* {
+    pointer-events: none !important;
+    -webkit-tap-highlight-color: transparent;
 }
 
-/* Disable pointer events on specific elements in kiosk mode */
-body.kiosk-mode a,
-body.kiosk-mode button:not(.kiosk-allowed) {
-    pointer-events: auto;
-    /* Keep interactivity but prevent default behaviors */
+/* Sadece mikrofon başlatma butonu etkileşimli olsun */
+#mic-start-btn {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+/* Scroll'u engelle */
+html,
+body {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+}
+
+/* Selection highlight'ı gizle */
+::selection {
+    background: transparent;
+}
+
+::-moz-selection {
+    background: transparent;
+}
+
+/* Focus outline'ları gizle */
+*:focus {
+    outline: none !important;
+}
+
+/* Scrollbar'ları gizle */
+::-webkit-scrollbar {
+    display: none;
+}
+
+* {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Drag engellemesi */
+img,
+a,
+video {
+    -webkit-user-drag: none;
 }

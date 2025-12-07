@@ -1,3 +1,33 @@
+// ===========================================
+// KIOSK MODE - Etkileşim Engellemeleri
+// ===========================================
+
+// Sağ tık menüsünü engelle
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// Klavye kısayollarını engelle (F5, Ctrl+R, Ctrl+Shift+I, vb.)
+document.addEventListener('keydown', e => {
+    // F1-F12 tuşlarını engelle
+    if (e.key.startsWith('F') && !isNaN(e.key.slice(1))) {
+        e.preventDefault();
+    }
+    // Ctrl kombinasyonlarını engelle
+    if (e.ctrlKey && ['r', 'u', 's', 'p', 'f', 'g', 'h', 'j', 'k', 'l'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+    }
+    // Ctrl+Shift kombinasyonlarını engelle (DevTools)
+    if (e.ctrlKey && e.shiftKey) {
+        e.preventDefault();
+    }
+});
+
+// Çift tıklamayı engelle (zoom yapmasın)
+document.addEventListener('dblclick', e => e.preventDefault());
+
+// ===========================================
+// UYGULAMA BAŞLANGICI
+// ===========================================
+
 // Schedule cache
 let scheduleData = [];
 let currentSlideIndex = 0;
