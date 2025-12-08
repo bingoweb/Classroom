@@ -18,35 +18,47 @@ window.showTab = function (tabName) {
 async function fetchStudents() {
     try {
         const res = await fetch(`${CONFIG.API_URL}/students`);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
         const students = await res.json();
         renderStudents(students);
         updateRoleSelects(students);
     } catch (e) {
         if (typeof logger !== 'undefined') { logger.error(COMPONENTS.ADMIN, 'Error fetching students', e); }
+        Utils.showError('Öğrenciler yüklenirken hata oluştu');
     }
 }
 
 async function fetchRoles() {
     try {
         const res = await fetch(`${CONFIG.API_URL}/roles`);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
         const roles = await res.json();
         renderRoles(roles);
     } catch (e) {
         if (typeof logger !== 'undefined') {
             logger.error(COMPONENTS.ADMIN, 'Error fetching roles', e);
         }
+        Utils.showError('Roller yüklenirken hata oluştu');
     }
 }
 
 async function fetchSettings() {
     try {
         const res = await fetch(`${CONFIG.API_URL}/settings`);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
         const settings = await res.json();
         // Settings loaded (no city needed for offline operation)
     } catch (e) {
         if (typeof logger !== 'undefined') {
             logger.error(COMPONENTS.ADMIN, 'Error fetching settings', e);
         }
+        Utils.showError('Ayarlar yüklenirken hata oluştu');
     }
 }
 
@@ -1668,11 +1680,17 @@ window.loadAttendanceForDate = async function () {
     try {
         // Fetch all students
         const studentsRes = await fetch(`${CONFIG.API_URL}/students`);
+        if (!studentsRes.ok) {
+            throw new Error(`HTTP ${studentsRes.status}: ${studentsRes.statusText}`);
+        }
         const students = await studentsRes.json();
         allStudentsForAttendance = students;
 
         // Fetch today's attendance
         const attendanceRes = await fetch(`${CONFIG.API_URL}/attendance/${date}`);
+        if (!attendanceRes.ok) {
+            throw new Error(`HTTP ${attendanceRes.status}: ${attendanceRes.statusText}`);
+        }
         const attendance = await attendanceRes.json();
 
         // Create attendance map
@@ -1842,6 +1860,9 @@ window.setEqualizerTheme = async function (themeName) {
 window.fetchEqualizerTheme = async function () {
     try {
         const res = await fetch(`${CONFIG.API_URL}/settings`);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
         const settings = await res.json();
 
         let theme = 'neon'; // varsayılan

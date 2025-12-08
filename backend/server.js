@@ -21,7 +21,7 @@ function safeDeleteFile(filePath, component = COMPONENTS.API) {
 }
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Initialize logger
 const logger = new Logger();
@@ -33,8 +33,13 @@ if (!fs.existsSync('logs')) {
     fs.mkdirSync('logs');
 }
 
-app.use(cors());
-app.use(express.json());
+// CORS configuration - allow all origins in development, restrict in production
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || '*',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // Serve static files from PUBLIC directory (Frontend)
