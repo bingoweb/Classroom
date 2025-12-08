@@ -12,8 +12,13 @@ class DisplayModeManager {
         // Load saved settings
         this.loadSettings();
 
+        // TEMPORARILY DISABLED - Tasarım bitince açılacak
         // Apply mode on page load
-        this.applyMode();
+        // this.applyMode();
+        console.log('Display mode auto-apply DISABLED for design testing');
+
+        // Listen for fullscreen changes
+        document.addEventListener('fullscreenchange', () => this.onFullscreenChange());
 
         // Listen for fullscreen changes
         document.addEventListener('fullscreenchange', () => this.onFullscreenChange());
@@ -78,20 +83,20 @@ class DisplayModeManager {
     }
 
     enterKioskMode() {
+        // TEMPORARILY DISABLED - Tasarım bitince açılacak
+        console.log('Kiosk mode restrictions DISABLED for design testing');
+
         // First enter fullscreen
-        this.enterFullscreen();
+        // this.enterFullscreen();
 
         // Add kiosk-specific styles
-        document.body.classList.add('kiosk-mode');
+        // document.body.classList.add('kiosk-mode');
 
         // Disable context menu (right-click)
-        document.addEventListener('contextmenu', this.preventContextMenu);
+        // document.addEventListener('contextmenu', this.preventContextMenu);
 
         // Disable F11 (fullscreen toggle)
-        document.addEventListener('keydown', this.preventF11);
-
-        console.log('Kiosk mode activated');
-        console.log('To exit: Use Alt+F4 or task manager');
+        // document.addEventListener('keydown', this.preventF11);
     }
 
     exitKioskMode() {
@@ -102,29 +107,31 @@ class DisplayModeManager {
     }
 
     preventContextMenu(e) {
-        e.preventDefault();
-        return false;
+        // TEMPORARILY DISABLED
+        // e.preventDefault();
+        // return false;
     }
 
     preventF11(e) {
-        if (e.key === 'F11') {
-            e.preventDefault();
-            return false;
-        }
+        // TEMPORARILY DISABLED
+        // if (e.key === 'F11') {
+        //     e.preventDefault();
+        //     return false;
+        // }
     }
 
     handleKeyPress(e) {
+        // TEMPORARILY DISABLED - All key restrictions removed for design testing
         // In kiosk mode, prevent ESC from exiting fullscreen
-        if (this.currentMode === 'kiosk' && e.key === 'Escape') {
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
-        }
+        // if (this.currentMode === 'kiosk' && e.key === 'Escape') {
+        //     e.preventDefault();
+        //     e.stopPropagation();
+        //     return false;
+        // }
 
         // Allow ESC in normal fullscreen mode
         if (this.currentMode === 'fullscreen' && e.key === 'Escape') {
             this.currentMode = 'normal';
-            // Settings will be out of sync, but that's okay
         }
     }
 

@@ -1,68 +1,8 @@
 // ===========================================
-// KIOSK MODE - Tam Ekran & Etkileşim Engellemeleri
+// KIOSK MODE - DEVRE DIŞI (Tasarım için)
 // ===========================================
-
-// Tam ekran fonksiyonu
-function enterFullscreen() {
-    const elem = document.documentElement;
-    if (elem.requestFullscreen) {
-        elem.requestFullscreen();
-    } else if (elem.webkitRequestFullscreen) { // Safari
-        elem.webkitRequestFullscreen();
-    } else if (elem.msRequestFullscreen) { // IE11
-        elem.msRequestFullscreen();
-    }
-}
-
-// Tam ekrandan çıkışı engelle
-document.addEventListener('fullscreenchange', () => {
-    if (!document.fullscreenElement) {
-        // Tam ekrandan çıkıldıysa, tekrar tam ekrana geç
-        setTimeout(enterFullscreen, 100);
-    }
-});
-
-// Sayfa yüklendiğinde tam ekran ol (kullanıcı etkileşimi ile)
-document.addEventListener('click', function firstClick() {
-    enterFullscreen();
-    document.removeEventListener('click', firstClick);
-}, { once: true });
-
-// ESC tuşunu engelle
-document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-    }
-});
-
-// Sağ tık menüsünü engelle
-document.addEventListener('contextmenu', e => e.preventDefault());
-
-// Klavye kısayollarını engelle (F5, Ctrl+R, Ctrl+Shift+I, vb.)
-document.addEventListener('keydown', e => {
-    // F1-F12 tuşlarını engelle
-    // F1-F12 tuşlarını engelle (Ctrl+F5 HARİÇ)
-    if (e.key.startsWith('F') && !isNaN(e.key.slice(1))) {
-        // Eğer Ctrl+F5 ise izin ver (Reload)
-        if (e.ctrlKey && e.key === 'F5') {
-            return;
-        }
-        e.preventDefault();
-    }
-    // Ctrl kombinasyonlarını engelle
-    if (e.ctrlKey && ['r', 'u', 's', 'p', 'f', 'g', 'h', 'j', 'k', 'l'].includes(e.key.toLowerCase())) {
-        e.preventDefault();
-    }
-    // Ctrl+Shift kombinasyonlarını engelle (DevTools)
-    if (e.ctrlKey && e.shiftKey) {
-        e.preventDefault();
-    }
-});
-
-// Çift tıklamayı engelle (zoom yapmasın)
-document.addEventListener('dblclick', e => e.preventDefault());
+// Tüm kısıtlamalar geçici olarak kaldırıldı.
+// Tasarım tamamlandıktan sonra bu bölüm yeniden aktif edilecek.
 
 // ===========================================
 // UYGULAMA BAŞLANGICI
