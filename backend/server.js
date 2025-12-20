@@ -1196,12 +1196,13 @@ app.delete('/api/slides/:id', (req, res, next) => {
         return res.status(400).json({ error: 'Geçersiz slayt ID' });
     }
 
-    // Get slide to delete media file
-    db.get("SELECT media_path FROM slides WHERE id = ?", [id], (err, row) => {
+    // Get slide to delete media file and its display order
+    db.get("SELECT media_path, display_order FROM slides WHERE id = ?", [id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row) return res.status(404).json({ error: 'Slayt bulunamadı' });
 
         const mediaPath = row.media_path;
+        const displayOrder = row.display_order;
 
         // Delete slide
         db.run("DELETE FROM slides WHERE id = ?", [id], function (err) {
@@ -1224,7 +1225,7 @@ app.delete('/api/slides/:id', (req, res, next) => {
             }
 
             // Reorder remaining slides
-            db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > (SELECT display_order FROM (SELECT display_order FROM slides WHERE id = ?))", [id], (reorderErr) => {
+            db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?", [displayOrder], (reorderErr) => {
                 if (reorderErr) {
                     logger.error(COMPONENTS.DATABASE, 'Error reordering slides after deletion', reorderErr, {
                         deletedSlideId: id,
