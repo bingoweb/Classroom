@@ -792,6 +792,7 @@ app.post('/api/attendance', (req, res) => {
         let hasError = false;
 
         if (attendanceList.length === 0) {
+            stmt.finalize();
             return res.json({ message: "Yoklama kaydedildi", count: 0 });
         }
 
