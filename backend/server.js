@@ -1164,8 +1164,8 @@ app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
 
                 // Delete old media file if new one uploaded
                 if (req.file && oldMediaPath && oldMediaPath !== media_path) {
+                    const oldPath = path.join(__dirname, oldMediaPath);
                     try {
-                        const oldPath = path.join(__dirname, oldMediaPath);
                         if (fs.existsSync(oldPath)) {
                             fs.unlinkSync(oldPath);
                         }
