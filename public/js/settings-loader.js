@@ -21,7 +21,9 @@ class SettingsLoader {
             city: 'Istanbul,TR'
         };
 
-        this.apiBase = window.location.origin + '/api';
+        this.apiBase = (typeof CONFIG !== 'undefined' && CONFIG.API_URL)
+            ? CONFIG.API_URL
+            : `${window.location.origin}/api`;
         this.refreshTimer = null;
 
         this.init();
