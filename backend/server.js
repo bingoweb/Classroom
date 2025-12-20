@@ -1196,49 +1196,52 @@ app.delete('/api/slides/:id', (req, res, next) => {
         return res.status(400).json({ error: 'Geçersiz slayt ID' });
     }
 
-    // Get slide to delete media file
-    db.get("SELECT media_path FROM slides WHERE id = ?", [id], (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (!row) return res.status(404).json({ error: 'Slayt bulunamadı' });
-
-        const mediaPath = row.media_path;
-
-        // Delete slide
-        db.run("DELETE FROM slides WHERE id = ?", [id], function (err) {
+    db.serialize(() => {
+        // Get slide info before deletion
+        db.get("SELECT media_path, display_order FROM slides WHERE id = ?", [id], (err, row) => {
             if (err) return res.status(500).json({ error: err.message });
+            if (!row) return res.status(404).json({ error: 'Slayt bulunamadı' });
 
-            // Delete media file
-            if (mediaPath) {
-                try {
-                    const filePath = path.join(__dirname, mediaPath);
-                    if (fs.existsSync(filePath)) {
-                        fs.unlinkSync(filePath);
+            const mediaPath = row.media_path;
+            const displayOrder = row.display_order;
+
+            // Delete slide
+            db.run("DELETE FROM slides WHERE id = ?", [id], function (err) {
+                if (err) return res.status(500).json({ error: err.message });
+
+                // Delete media file
+                if (mediaPath) {
+                    try {
+                        const filePath = path.join(__dirname, mediaPath);
+                        if (fs.existsSync(filePath)) {
+                            fs.unlinkSync(filePath);
+                        }
+                    } catch (unlinkErr) {
+                        logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
+                            mediaPath: mediaPath,
+                            slideId: id
+                        });
+                        // Don't fail the request if file deletion fails
                     }
-                } catch (unlinkErr) {
-                    logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
-                        mediaPath: mediaPath,
-                        slideId: id
-                    });
-                    // Don't fail the request if file deletion fails
                 }
-            }
 
-            // Reorder remaining slides
-            db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > (SELECT display_order FROM (SELECT display_order FROM slides WHERE id = ?))", [id], (reorderErr) => {
-                if (reorderErr) {
-                    logger.error(COMPONENTS.DATABASE, 'Error reordering slides after deletion', reorderErr, {
-                        deletedSlideId: id,
-                        requestId: req.requestId
-                    });
-                }
-            });
+                // Reorder remaining slides
+                db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?", [displayOrder], (reorderErr) => {
+                    if (reorderErr) {
+                        logger.error(COMPONENTS.DATABASE, 'Error reordering slides after deletion', reorderErr, {
+                            deletedSlideId: id,
+                            requestId: req.requestId
+                        });
+                    }
+                });
 
-            logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
-                slideId: id,
-                changes: this.changes,
-                requestId: req.requestId
+                logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
+                    slideId: id,
+                    changes: this.changes,
+                    requestId: req.requestId
+                });
+                res.json({ message: 'Slayt başarıyla silindi', changes: this.changes });
             });
-            res.json({ message: 'Slayt başarıyla silindi', changes: this.changes });
         });
     });
 });
