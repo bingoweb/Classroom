@@ -1083,6 +1083,8 @@ app.post('/api/slides', uploadSlide.single('slide'), (req, res, next) => {
                     slideId: this.lastID,
                     requestId: req.requestId
                 });
+                slidesCache = null;
+                cacheTimestamp = null;
                 res.json({ id: this.lastID, message: 'Slayt başarıyla oluşturuldu' });
             }
         );
@@ -1183,6 +1185,8 @@ app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
                     changes: this.changes,
                     requestId: req.requestId
                 });
+                slidesCache = null;
+                cacheTimestamp = null;
                 res.json({ message: 'Slayt başarıyla güncellendi', changes: this.changes });
             }
         );
@@ -1238,6 +1242,8 @@ app.delete('/api/slides/:id', (req, res, next) => {
                 changes: this.changes,
                 requestId: req.requestId
             });
+            slidesCache = null;
+            cacheTimestamp = null;
             res.json({ message: 'Slayt başarıyla silindi', changes: this.changes });
         });
     });
@@ -1284,6 +1290,8 @@ app.put('/api/slides/reorder', (req, res) => {
                         totalItems,
                         requestId: req.requestId
                     });
+                    slidesCache = null;
+                    cacheTimestamp = null;
                     res.json({ message: 'Sıralama başarıyla güncellendi' });
                 }
             });
