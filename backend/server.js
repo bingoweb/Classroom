@@ -786,14 +786,14 @@ app.post('/api/attendance', (req, res) => {
             return res.status(500).json({ error: 'Yoklama kaydedilirken hata oluştu' });
         }
 
+        if (attendanceList.length === 0) {
+            return res.json({ message: "Yoklama kaydedildi", count: 0 });
+        }
+
         // Insert new attendance records
         const stmt = db.prepare("INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
         let completed = 0;
         let hasError = false;
-
-        if (attendanceList.length === 0) {
-            return res.json({ message: "Yoklama kaydedildi", count: 0 });
-        }
 
         attendanceList.forEach((item) => {
             if (!item.student_id || !item.status || !['present', 'absent'].includes(item.status)) {
