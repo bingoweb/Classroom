@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const db = require('./database');
+const dbAsync = require('./db_async');
 const multer = require('multer');
 const XLSX = require('xlsx');
 const { Logger, COMPONENTS, LOG_LEVELS } = require('./logger');
@@ -704,41 +705,32 @@ app.get('/api/network-info', (req, res) => {
 });
 
 // Get Class Statistics
-app.get('/api/stats', (req, res) => {
-    db.get("SELECT COUNT(*) as total FROM students", [], (err, totalRow) => {
-        if (err) return res.status(500).json({ error: err.message });
+app.get('/api/stats', async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
 
-        db.get("SELECT COUNT(*) as girls FROM students WHERE gender = 'F'", [], (err, girlsRow) => {
-            if (err) return res.status(500).json({ error: err.message });
+        const [totalRow, girlsRow, boysRow, presentRow, absentRows] = await Promise.all([
+            dbAsync.get("SELECT COUNT(*) as total FROM students"),
+            dbAsync.get("SELECT COUNT(*) as girls FROM students WHERE gender = 'F'"),
+            dbAsync.get("SELECT COUNT(*) as boys FROM students WHERE gender = 'M'"),
+            dbAsync.get("SELECT COUNT(*) as present FROM attendance WHERE date = ? AND status = 'present'", [today]),
+            dbAsync.all("SELECT students.id, students.name, students.photo, students.gender FROM attendance JOIN students ON attendance.student_id = students.id WHERE attendance.date = ? AND attendance.status = 'absent'", [today])
+        ]);
 
-            db.get("SELECT COUNT(*) as boys FROM students WHERE gender = 'M'", [], (err, boysRow) => {
-                if (err) return res.status(500).json({ error: err.message });
+        const absentCount = absentRows.length;
 
-                const today = new Date().toISOString().split('T')[0];
-                db.get("SELECT COUNT(*) as present FROM attendance WHERE date = ? AND status = 'present'", [today], (err, presentRow) => {
-                    if (err) return res.status(500).json({ error: err.message });
-
-                    // Fetch absent students with details for avatars
-                    db.all("SELECT students.id, students.name, students.photo, students.gender FROM attendance JOIN students ON attendance.student_id = students.id WHERE attendance.date = ? AND attendance.status = 'absent'", [today], (err, absentRows) => {
-                        if (err) return res.status(500).json({ error: err.message });
-
-                        const absentCount = absentRows.length;
-                        // Return full student objects instead of just names
-                        const absentStudents = absentRows;
-
-                        res.json({
-                            total: totalRow.total,
-                            girls: girlsRow.girls,
-                            boys: boysRow.boys,
-                            todayPresent: presentRow.present || 0,
-                            todayAbsent: absentCount,
-                            absentStudents: absentStudents
-                        });
-                    });
-                });
-            });
+        res.json({
+            total: totalRow ? totalRow.total : 0,
+            girls: girlsRow ? girlsRow.girls : 0,
+            boys: boysRow ? boysRow.boys : 0,
+            todayPresent: presentRow ? presentRow.present : 0,
+            todayAbsent: absentCount,
+            absentStudents: absentRows
         });
-    });
+    } catch (err) {
+        logger.error(COMPONENTS.API, 'Error fetching stats', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Get Today's Attendance
