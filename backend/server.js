@@ -35,9 +35,14 @@ if (!fs.existsSync('logs')) {
 }
 
 // CORS configuration - allow all origins in development, restrict in production
+const rawCorsOrigin = process.env.CORS_ORIGIN;
+const corsOriginList = rawCorsOrigin
+    ? rawCorsOrigin.split(',').map(origin => origin.trim()).filter(Boolean)
+    : [];
+const hasExplicitOrigins = corsOriginList.length > 0;
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || '*',
-    credentials: true,
+    origin: hasExplicitOrigins ? corsOriginList : '*',
+    credentials: hasExplicitOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
