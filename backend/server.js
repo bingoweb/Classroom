@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const db = require('./database');
+const dbAsync = require('./db_async');
 const multer = require('multer');
 const XLSX = require('xlsx');
 const { Logger, COMPONENTS, LOG_LEVELS } = require('./logger');
@@ -34,9 +35,14 @@ if (!fs.existsSync('logs')) {
 }
 
 // CORS configuration - allow all origins in development, restrict in production
+const rawCorsOrigin = process.env.CORS_ORIGIN;
+const corsOriginList = rawCorsOrigin
+    ? rawCorsOrigin.split(',').map(origin => origin.trim()).filter(Boolean)
+    : [];
+const hasExplicitOrigins = corsOriginList.length > 0;
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || '*',
-    credentials: true,
+    origin: hasExplicitOrigins ? corsOriginList : '*',
+    credentials: hasExplicitOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -802,8 +808,32 @@ app.get('/api/stats', (req, res) => {
                     });
                 });
             });
+app.get('/api/stats', async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+
+        const [totalRow, girlsRow, boysRow, presentRow, absentRows] = await Promise.all([
+            dbAsync.get("SELECT COUNT(*) as total FROM students"),
+            dbAsync.get("SELECT COUNT(*) as girls FROM students WHERE gender = 'F'"),
+            dbAsync.get("SELECT COUNT(*) as boys FROM students WHERE gender = 'M'"),
+            dbAsync.get("SELECT COUNT(*) as present FROM attendance WHERE date = ? AND status = 'present'", [today]),
+            dbAsync.all("SELECT students.id, students.name, students.photo, students.gender FROM attendance JOIN students ON attendance.student_id = students.id WHERE attendance.date = ? AND attendance.status = 'absent'", [today])
+        ]);
+
+        const absentCount = absentRows.length;
+
+        res.json({
+            total: totalRow ? totalRow.total : 0,
+            girls: girlsRow ? girlsRow.girls : 0,
+            boys: boysRow ? boysRow.boys : 0,
+            todayPresent: presentRow ? presentRow.present : 0,
+            todayAbsent: absentCount,
+            absentStudents: absentRows
         });
-    });
+    } catch (err) {
+        logger.error(COMPONENTS.API, 'Error fetching stats', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Get Today's Attendance
@@ -1269,9 +1299,15 @@ app.delete('/api/slides/:id', (req, res, next) => {
         const mediaPath = row.media_path;
         const displayOrder = row.display_order;
 
-        // Delete slide
-        db.run("DELETE FROM slides WHERE id = ?", [id], function (err) {
-            if (err) return res.status(500).json({ error: err.message });
+        const rollbackAndRespond = (rollbackErr, errorMessage) => {
+            if (rollbackErr) {
+                logger.error(COMPONENTS.DATABASE, 'Error rolling back slide deletion', rollbackErr, {
+                    slideId: id,
+                    requestId: req.requestId
+                });
+            }
+            return res.status(500).json({ error: errorMessage });
+        };
 
             // Delete media file
             if (mediaPath) {
@@ -1296,15 +1332,59 @@ app.delete('/api/slides/:id', (req, res, next) => {
                         deletedSlideId: id,
                         requestId: req.requestId
                     });
-                }
-            });
+        db.run("BEGIN TRANSACTION", (beginErr) => {
+            if (beginErr) {
+                return res.status(500).json({ error: beginErr.message });
+            }
 
-            logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
-                slideId: id,
-                changes: this.changes,
-                requestId: req.requestId
+            // Delete slide
+            db.run("DELETE FROM slides WHERE id = ?", [id], function (err) {
+                if (err) {
+                    return db.run("ROLLBACK", (rollbackErr) => rollbackAndRespond(rollbackErr, err.message));
+                }
+
+                const deleteChanges = this.changes;
+
+                // Reorder remaining slides
+                db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?", [displayOrder], (reorderErr) => {
+                    if (reorderErr) {
+                        logger.error(COMPONENTS.DATABASE, 'Error reordering slides after deletion', reorderErr, {
+                            deletedSlideId: id,
+                            requestId: req.requestId
+                        });
+                        return db.run("ROLLBACK", (rollbackErr) => rollbackAndRespond(rollbackErr, reorderErr.message));
+                    }
+
+                    db.run("COMMIT", (commitErr) => {
+                        if (commitErr) {
+                            return db.run("ROLLBACK", (rollbackErr) => rollbackAndRespond(rollbackErr, commitErr.message));
+                        }
+
+                        // Delete media file
+                        if (mediaPath) {
+                            try {
+                                const filePath = path.join(__dirname, mediaPath);
+                                if (fs.existsSync(filePath)) {
+                                    fs.unlinkSync(filePath);
+                                }
+                            } catch (unlinkErr) {
+                                logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
+                                    mediaPath: mediaPath,
+                                    slideId: id
+                                });
+                                // Don't fail the request if file deletion fails
+                            }
+                        }
+
+                        logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
+                            slideId: id,
+                            changes: deleteChanges,
+                            requestId: req.requestId
+                        });
+                        res.json({ message: 'Slayt başarıyla silindi', changes: deleteChanges });
+                    });
+                });
             });
-            res.json({ message: 'Slayt başarıyla silindi', changes: this.changes });
         });
     });
 });
@@ -1473,35 +1553,34 @@ app.post('/api/logs', (req, res) => {
                 logger.error(COMPONENTS.DATABASE, 'Error saving log to database', err);
                 return res.status(500).json({ error: 'Failed to save log' });
             }
-            // Response is sent after file write to ensure both operations complete
+
+            // Write to file after DB write succeeds
+            let logLine = `[${logEntry.timestamp}] [${logEntry.level}] [${logEntry.component}] ${logEntry.message}`;
+            if (logEntry.context) {
+                logLine += ` | Context: ${JSON.stringify(logEntry.context)}`;
+            }
+            if (logEntry.errorDetails) {
+                logLine += ` | Error: ${JSON.stringify(logEntry.errorDetails)}`;
+            }
+            if (logEntry.stackTrace) {
+                logLine += `\nStack: ${logEntry.stackTrace}`;
+            }
+            logLine += '\n';
+
+            try {
+                // Ensure logs directory exists
+                if (!fs.existsSync('logs')) {
+                    fs.mkdirSync('logs', { recursive: true });
+                }
+                fs.appendFileSync('logs/slideshow-errors.log', logLine, 'utf8');
+            } catch (fileErr) {
+                logger.error(COMPONENTS.SYSTEM, 'Error writing to log file', fileErr);
+                return res.status(500).json({ error: 'Failed to write log file' });
+            }
+
+            res.json({ success: true });
         }
     );
-
-    // Write to file
-    let logLine = `[${logEntry.timestamp}] [${logEntry.level}] [${logEntry.component}] ${logEntry.message}`;
-    if (logEntry.context) {
-        logLine += ` | Context: ${JSON.stringify(logEntry.context)}`;
-    }
-    if (logEntry.errorDetails) {
-        logLine += ` | Error: ${JSON.stringify(logEntry.errorDetails)}`;
-    }
-    if (logEntry.stackTrace) {
-        logLine += `\nStack: ${logEntry.stackTrace}`;
-    }
-    logLine += '\n';
-
-    try {
-        // Ensure logs directory exists
-        if (!fs.existsSync('logs')) {
-            fs.mkdirSync('logs', { recursive: true });
-        }
-        fs.appendFileSync('logs/slideshow-errors.log', logLine, 'utf8');
-    } catch (fileErr) {
-        logger.error(COMPONENTS.SYSTEM, 'Error writing to log file', fileErr);
-        // Don't fail the request if file write fails
-    }
-
-    res.json({ success: true });
 });
 
 // Get error logs
