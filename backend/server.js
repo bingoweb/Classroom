@@ -1399,35 +1399,34 @@ app.post('/api/logs', (req, res) => {
                 logger.error(COMPONENTS.DATABASE, 'Error saving log to database', err);
                 return res.status(500).json({ error: 'Failed to save log' });
             }
-            // Response is sent after file write to ensure both operations complete
+
+            // Write to file after DB write succeeds
+            let logLine = `[${logEntry.timestamp}] [${logEntry.level}] [${logEntry.component}] ${logEntry.message}`;
+            if (logEntry.context) {
+                logLine += ` | Context: ${JSON.stringify(logEntry.context)}`;
+            }
+            if (logEntry.errorDetails) {
+                logLine += ` | Error: ${JSON.stringify(logEntry.errorDetails)}`;
+            }
+            if (logEntry.stackTrace) {
+                logLine += `\nStack: ${logEntry.stackTrace}`;
+            }
+            logLine += '\n';
+
+            try {
+                // Ensure logs directory exists
+                if (!fs.existsSync('logs')) {
+                    fs.mkdirSync('logs', { recursive: true });
+                }
+                fs.appendFileSync('logs/slideshow-errors.log', logLine, 'utf8');
+            } catch (fileErr) {
+                logger.error(COMPONENTS.SYSTEM, 'Error writing to log file', fileErr);
+                return res.status(500).json({ error: 'Failed to write log file' });
+            }
+
+            res.json({ success: true });
         }
     );
-
-    // Write to file
-    let logLine = `[${logEntry.timestamp}] [${logEntry.level}] [${logEntry.component}] ${logEntry.message}`;
-    if (logEntry.context) {
-        logLine += ` | Context: ${JSON.stringify(logEntry.context)}`;
-    }
-    if (logEntry.errorDetails) {
-        logLine += ` | Error: ${JSON.stringify(logEntry.errorDetails)}`;
-    }
-    if (logEntry.stackTrace) {
-        logLine += `\nStack: ${logEntry.stackTrace}`;
-    }
-    logLine += '\n';
-
-    try {
-        // Ensure logs directory exists
-        if (!fs.existsSync('logs')) {
-            fs.mkdirSync('logs', { recursive: true });
-        }
-        fs.appendFileSync('logs/slideshow-errors.log', logLine, 'utf8');
-    } catch (fileErr) {
-        logger.error(COMPONENTS.SYSTEM, 'Error writing to log file', fileErr);
-        // Don't fail the request if file write fails
-    }
-
-    res.json({ success: true });
 });
 
 // Get error logs
