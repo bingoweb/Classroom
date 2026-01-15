@@ -34,6 +34,27 @@ if (!fs.existsSync('logs')) {
     fs.mkdirSync('logs');
 }
 
+// CORS configuration - allowlist when credentials are enabled, wildcard otherwise
+const rawCorsOrigin = process.env.CORS_ORIGIN || '';
+const corsAllowlist = rawCorsOrigin
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+const isCorsRestricted = corsAllowlist.length > 0;
+
+app.use(cors({
+    origin: isCorsRestricted
+        ? (origin, callback) => {
+            if (!origin) {
+                return callback(null, true);
+            }
+            if (corsAllowlist.includes(origin)) {
+                return callback(null, true);
+            }
+            return callback(new Error('CORS origin not allowed'));
+        }
+        : '*',
+    credentials: isCorsRestricted,
 // CORS configuration - allow all origins in development, restrict in production
 const rawCorsOrigin = process.env.CORS_ORIGIN;
 const corsOriginList = rawCorsOrigin
