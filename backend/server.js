@@ -1314,6 +1314,7 @@ app.delete('/api/slides/:id', (req, res, next) => {
         return res.status(400).json({ error: 'Geçersiz slayt ID' });
     }
 
+    // Get slide to delete media file and its display order
     // Get slide to delete media file
     db.serialize(() => {
         db.get("SELECT media_path, display_order FROM slides WHERE id = ?", [id], (err, row) => {
