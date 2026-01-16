@@ -27,34 +27,12 @@ const PORT = process.env.PORT || 3000;
 // Initialize logger
 const logger = new Logger();
 logger.init({ logLevel: LOG_LEVELS.INFO });
-console.log('SERVER REVISION 5 - CHECKING PATHS');
 
 // Ensure logs directory exists
 if (!fs.existsSync('logs')) {
     fs.mkdirSync('logs');
 }
 
-// CORS configuration - allowlist when credentials are enabled, wildcard otherwise
-const rawCorsOrigin = process.env.CORS_ORIGIN || '';
-const corsAllowlist = rawCorsOrigin
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-const isCorsRestricted = corsAllowlist.length > 0;
-
-app.use(cors({
-    origin: isCorsRestricted
-        ? (origin, callback) => {
-            if (!origin) {
-                return callback(null, true);
-            }
-            if (corsAllowlist.includes(origin)) {
-                return callback(null, true);
-            }
-            return callback(new Error('CORS origin not allowed'));
-        }
-        : '*',
-    credentials: isCorsRestricted,
 // CORS configuration - allow all origins in development, restrict in production
 const rawCorsOrigin = process.env.CORS_ORIGIN;
 const corsOriginList = rawCorsOrigin
@@ -791,44 +769,6 @@ app.get('/api/network-info', (req, res) => {
 });
 
 // Get Class Statistics
-app.get('/api/stats', (req, res) => {
-    db.get("SELECT COUNT(*) as total FROM students", [], (err, totalRow) => {
-        if (err) return res.status(500).json({ error: err.message });
-
-        db.get("SELECT COUNT(*) as girls FROM students WHERE gender = 'F'", [], (err, girlsRow) => {
-            if (err) return res.status(500).json({ error: err.message });
-
-            db.get("SELECT COUNT(*) as boys FROM students WHERE gender = 'M'", [], (err, boysRow) => {
-                if (err) return res.status(500).json({ error: err.message });
-
-                const today = new Date().toISOString().split('T')[0];
-                db.get("SELECT COUNT(*) as present FROM attendance WHERE date = ? AND status = 'present'", [today], (err, presentRow) => {
-                    if (err) return res.status(500).json({ error: err.message });
-
-                    // Fetch absent students with details for avatars
-                    db.all("SELECT students.id, students.name, students.photo, students.gender FROM attendance JOIN students ON attendance.student_id = students.id WHERE attendance.date = ? AND attendance.status = 'absent'", [today], (err, absentRows) => {
-                        if (err) return res.status(500).json({ error: err.message });
-
-                        const absentCount = absentRows.length;
-                        // Return full student objects instead of just names
-                        const absentStudents = absentRows.map((row) => {
-                            if (row.photo) {
-                                row.photo = toPublicUploadPath(row.photo);
-                            }
-                            return row;
-                        });
-
-                        res.json({
-                            total: totalRow.total,
-                            girls: girlsRow.girls,
-                            boys: boysRow.boys,
-                            todayPresent: presentRow.present || 0,
-                            todayAbsent: absentCount,
-                            absentStudents: absentStudents
-                        });
-                    });
-                });
-            });
 app.get('/api/stats', async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
@@ -1280,16 +1220,14 @@ app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
 
                 // Delete old media file if new one uploaded
                 if (req.file && oldMediaPath && oldMediaPath !== media_path) {
-                    const oldPath = path.join(__dirname, oldMediaPath);
                     try {
-                        if (fs.existsSync(oldPath)) {
                         const oldPath = toUploadsFilePath(oldMediaPath);
                         if (oldPath && fs.existsSync(oldPath)) {
                             fs.unlinkSync(oldPath);
                         }
                     } catch (unlinkErr) {
                         logger.warn(COMPONENTS.API, 'Error deleting old media file', unlinkErr, {
-                            oldPath,
+                            oldMediaPath,
                             requestId: req.requestId
                         });
                         // Don't fail the request if old file deletion fails
@@ -1315,32 +1253,6 @@ app.delete('/api/slides/:id', (req, res, next) => {
     }
 
     // Get slide to delete media file and its display order
-    // Get slide to delete media file
-    db.serialize(() => {
-        db.get("SELECT media_path, display_order FROM slides WHERE id = ?", [id], (err, row) => {
-            if (err) return res.status(500).json({ error: err.message });
-            if (!row) return res.status(404).json({ error: 'Slayt bulunamadı' });
-
-            const mediaPath = row.media_path;
-            const deletedDisplayOrder = row.display_order;
-
-            // Delete slide
-            db.run("DELETE FROM slides WHERE id = ?", [id], function (err) {
-                if (err) return res.status(500).json({ error: err.message });
-
-                // Delete media file
-                if (mediaPath) {
-                    try {
-                        const filePath = path.join(__dirname, mediaPath);
-                        if (fs.existsSync(filePath)) {
-                            fs.unlinkSync(filePath);
-                        }
-                    } catch (unlinkErr) {
-                        logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
-                            mediaPath: mediaPath,
-                            slideId: id
-                        });
-                        // Don't fail the request if file deletion fails
     db.get("SELECT media_path, display_order FROM slides WHERE id = ?", [id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row) return res.status(404).json({ error: 'Slayt bulunamadı' });
@@ -1358,42 +1270,6 @@ app.delete('/api/slides/:id', (req, res, next) => {
             return res.status(500).json({ error: errorMessage });
         };
 
-            // Delete media file
-            if (mediaPath) {
-                try {
-                    const filePath = toUploadsFilePath(mediaPath);
-                    if (filePath && fs.existsSync(filePath)) {
-                        fs.unlinkSync(filePath);
-                    }
-                }
-
-                // Reorder remaining slides
-                db.run(
-                    "UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?",
-                    [deletedDisplayOrder],
-                    (reorderErr) => {
-                        if (reorderErr) {
-                            logger.error(COMPONENTS.DATABASE, 'Error reordering slides after deletion', reorderErr, {
-                                deletedSlideId: id,
-                                requestId: req.requestId
-                            });
-                        }
-                    }
-                );
-
-                logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
-                    slideId: id,
-                    changes: this.changes,
-                    requestId: req.requestId
-                });
-                res.json({ message: 'Slayt başarıyla silindi', changes: this.changes });
-            // Reorder remaining slides
-            db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?", [displayOrder], (reorderErr) => {
-                if (reorderErr) {
-                    logger.error(COMPONENTS.DATABASE, 'Error reordering slides after deletion', reorderErr, {
-                        deletedSlideId: id,
-                        requestId: req.requestId
-                    });
         db.run("BEGIN TRANSACTION", (beginErr) => {
             if (beginErr) {
                 return res.status(500).json({ error: beginErr.message });
@@ -1425,8 +1301,8 @@ app.delete('/api/slides/:id', (req, res, next) => {
                         // Delete media file
                         if (mediaPath) {
                             try {
-                                const filePath = path.join(__dirname, mediaPath);
-                                if (fs.existsSync(filePath)) {
+                                const filePath = toUploadsFilePath(mediaPath);
+                                if (filePath && fs.existsSync(filePath)) {
                                     fs.unlinkSync(filePath);
                                 }
                             } catch (unlinkErr) {
@@ -1434,7 +1310,6 @@ app.delete('/api/slides/:id', (req, res, next) => {
                                     mediaPath: mediaPath,
                                     slideId: id
                                 });
-                                // Don't fail the request if file deletion fails
                             }
                         }
 
