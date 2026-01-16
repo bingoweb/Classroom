@@ -96,9 +96,9 @@ body::before {
    ============================================ */
 
 .header-bar {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: space-between;
     height: 90px;
     padding: 0 var(--gap);
     background: var(--glass-bg);
@@ -135,11 +135,12 @@ body::before {
     display: flex;
     align-items: center;
     gap: 16px;
+    justify-self: start;
 }
 
 .brand-logo {
     font-family: var(--font-heading);
-    font-size: 3.5rem;
+    font-size: clamp(2rem, 3vw, 3.5rem);
     font-weight: 900;
     background: var(--gradient-neon);
     background-size: 200% 200%;
@@ -158,9 +159,11 @@ body::before {
 }
 
 .header-center {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    justify-self: center;
+}
+
+.header-right {
+    justify-self: end;
 }
 
 .live-clock {
@@ -180,17 +183,17 @@ body::before {
 
     0%,
     100% {
-        transform: translateX(-50%) translateY(0);
+        transform: translateY(0);
     }
 
     50% {
-        transform: translateX(-50%) translateY(-5px);
+        transform: translateY(-5px);
     }
 }
 
 .clock-time {
     font-family: var(--font-heading);
-    font-size: 3.5rem;
+    font-size: clamp(2.5rem, 4vw, 3.5rem);
     font-weight: 900;
     color: var(--neon-blue);
     text-shadow: 0 0 20px var(--neon-blue);
@@ -199,7 +202,7 @@ body::before {
 
 .clock-separator {
     color: var(--neon-pink);
-    font-size: 2rem;
+    font-size: clamp(1.5rem, 3vw, 2rem);
     animation: blink 1s step-end infinite;
 }
 
@@ -324,7 +327,7 @@ body::before {
     -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius);
-    padding: 24px;
+    padding: clamp(16px, 1.5vw, 24px);
     position: relative;
     overflow: hidden;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -405,7 +408,7 @@ body::before {
 
 .stats-number {
     font-family: var(--font-heading);
-    font-size: 5rem;
+    font-size: clamp(3rem, 5vw, 5rem);
     font-weight: 900;
     color: var(--neon-blue);
     text-shadow: 0 0 40px var(--neon-blue);
@@ -584,7 +587,7 @@ body::before {
 
 .countdown-value {
     font-family: var(--font-heading);
-    font-size: 4rem;
+    font-size: clamp(2.5rem, 4vw, 4rem);
     font-weight: 900;
     color: var(--neon-orange);
     text-shadow: 0 0 40px var(--neon-orange);
@@ -610,7 +613,7 @@ body::before {
 }
 
 .goodbye-emoji {
-    font-size: 4rem;
+    font-size: clamp(3rem, 5vw, 4rem);
     animation: float 3s ease-in-out infinite;
 }
 
@@ -1023,13 +1026,28 @@ body::before {
     .dashboard-grid {
         grid-template-columns: 1fr 280px 340px;
     }
+}
 
-    .clock-time {
-        font-size: 2.5rem;
+/* Laptop Mode - 2 Column Layout */
+@media (max-width: 1400px) {
+    html, body {
+        overflow: auto;
+        height: auto;
     }
 
-    .stats-number {
-        font-size: 4rem;
+    .dashboard-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: minmax(400px, 50vh) auto;
+        height: auto;
+        min-height: calc(100vh - 90px);
+    }
+
+    .panel-hero {
+        grid-column: 1 / -1;
+    }
+
+    .panel {
+        min-height: 0; /* Reset */
     }
 }
 
@@ -1072,9 +1090,25 @@ body::before {
     }
 }
 
-/* Hide scrollbars */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-    display: none;
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--neon-blue);
+    box-shadow: 0 0 10px var(--neon-blue);
 }
 
 /* Accessibility - reduce motion */
