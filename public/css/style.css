@@ -28,8 +28,9 @@
 
     /* Text */
     --text-white: #FFFFFF;
-    --text-light: rgba(255, 255, 255, 0.8);
-    --text-muted: rgba(255, 255, 255, 0.5);
+    --text-light: rgba(255, 255, 255, 0.85);
+    /* Improved contrast from 0.5 to 0.65 */
+    --text-muted: rgba(255, 255, 255, 0.65);
 
     /* Shadows */
     --shadow-neon-blue: 0 0 30px rgba(0, 212, 255, 0.5);
@@ -54,6 +55,10 @@ body {
     overflow: hidden;
     font-family: var(--font-primary);
     color: var(--text-white);
+
+    /* Firefox Scrollbar Support */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(0, 0, 0, 0.1);
 }
 
 body {
@@ -333,9 +338,11 @@ body::before {
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.widget:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+@media (hover: hover) {
+    .widget:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+    }
 }
 
 .widget::before {
@@ -455,9 +462,11 @@ body::before {
     transition: all 0.3s ease;
 }
 
-.stats-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: scale(1.05);
+@media (hover: hover) {
+    .stats-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: scale(1.05);
+    }
 }
 
 .stats-emoji {
@@ -1075,6 +1084,7 @@ body::before {
     /* Fix Header Overlap */
     .header-bar {
         height: auto;
+        display: flex; /* ADDED: explicit display flex */
         flex-direction: column;
         padding: 20px;
         gap: 15px;
@@ -1087,6 +1097,82 @@ body::before {
 
     .live-clock {
         animation: none;
+    }
+}
+
+/* TABLET & MOBILE ADJUSTMENTS */
+@media (max-width: 768px) {
+    :root {
+        --gap: 12px;
+        --radius: 16px;
+    }
+
+    .header-bar {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .brand-logo {
+        font-size: 2rem;
+    }
+
+    .brand-text {
+        font-size: 0.8rem;
+    }
+
+    .live-clock {
+        padding: 10px 20px;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .clock-time {
+        font-size: 2.2rem;
+    }
+
+    .dashboard-grid {
+        padding: 10px;
+        gap: 15px;
+    }
+
+    .panel {
+        min-height: auto;
+        gap: 15px;
+    }
+
+    .panel-hero {
+        min-height: 250px;
+    }
+
+    /* Stats on mobile */
+    .stats-number {
+        font-size: 3.5rem;
+    }
+
+    .stats-breakdown {
+        gap: 10px;
+    }
+
+    .stats-item {
+        padding: 10px;
+    }
+
+    .stats-emoji {
+        font-size: 1.5rem;
+    }
+
+    .stats-count {
+        font-size: 1.5rem;
+    }
+
+    /* Countdown */
+    .countdown-value {
+        font-size: 3rem;
+    }
+
+    /* Hide less critical elements to save space */
+    .weekend-badge {
+        display: none;
     }
 }
 
