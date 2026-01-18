@@ -1,8 +1,8 @@
 // Shared Configuration
 const CONFIG = {
     // API URL - automatically detect based on current host, fallback to localhost
-    API_URL: (typeof window !== 'undefined' && window.location) 
-        ? `${window.location.protocol}//${window.location.hostname}:${window.location.port || '3000'}/api`
+    API_URL: (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:')
+        ? `${window.location.origin}/api`
         : 'http://localhost:3000/api',
     PORT: 3000,
 

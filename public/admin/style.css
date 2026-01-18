@@ -1,5 +1,6 @@
 :root {
-    --font-main: 'Nunito', sans-serif;
+    --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-heading: 'Poppins', sans-serif;
     --glass-bg: rgba(255, 255, 255, 0.7);
     --glass-border: rgba(255, 255, 255, 0.8);
     --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
@@ -21,7 +22,7 @@ html {
 }
 
 body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: var(--font-main);
     color: var(--text);
     min-height: 100vh;
     background-image: url('../assets/bg-premium.png');
@@ -42,6 +43,10 @@ body {
     border-radius: 20px;
     padding: 25px 30px;
     box-shadow: var(--glass-shadow);
+}
+
+h1, h2, h3 {
+    font-family: var(--font-heading);
 }
 
 h1 {
@@ -122,19 +127,25 @@ form {
 }
 
 input,
-select {
+select,
+textarea {
     padding: 12px 20px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
     font-size: 16px;
+    font-family: var(--font-main);
     background: rgba(255, 255, 255, 0.9);
     outline: none;
-    transition: border-color 0.3s ease;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
     border-color: var(--primary);
+    background: #fff;
+    box-shadow: 0 4px 10px rgba(108, 92, 231, 0.2);
 }
 
 button {

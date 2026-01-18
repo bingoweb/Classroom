@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const db = require('./database');
+const dbAsync = require('./db_async');
 const multer = require('multer');
 const XLSX = require('xlsx');
 const { Logger, COMPONENTS, LOG_LEVELS } = require('./logger');
@@ -26,7 +27,6 @@ const PORT = process.env.PORT || 3000;
 // Initialize logger
 const logger = new Logger();
 logger.init({ logLevel: LOG_LEVELS.INFO });
-console.log('SERVER REVISION 5 - CHECKING PATHS');
 
 // Ensure logs directory exists
 if (!fs.existsSync('logs')) {
@@ -34,9 +34,14 @@ if (!fs.existsSync('logs')) {
 }
 
 // CORS configuration - allow all origins in development, restrict in production
+const rawCorsOrigin = process.env.CORS_ORIGIN;
+const corsOriginList = rawCorsOrigin
+    ? rawCorsOrigin.split(',').map(origin => origin.trim()).filter(Boolean)
+    : [];
+const hasExplicitOrigins = corsOriginList.length > 0;
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || '*',
-    credentials: true,
+    origin: hasExplicitOrigins ? corsOriginList : '*',
+    credentials: hasExplicitOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -100,6 +105,52 @@ if (!fs.existsSync(slidesDir)) {
     fs.mkdirSync(slidesDir, { recursive: true });
 }
 
+function toPublicUploadPath(filePath) {
+    if (!filePath) return filePath;
+
+    const normalizedPath = filePath.replace(/\\/g, '/');
+    if (normalizedPath.startsWith('/uploads/')) {
+        return normalizedPath;
+    }
+    if (normalizedPath.startsWith('uploads/')) {
+        return `/${normalizedPath}`;
+    }
+    if (normalizedPath.startsWith('http') || normalizedPath.startsWith('data:')) {
+        return normalizedPath;
+    }
+
+    const resolvedPath = path.resolve(filePath);
+    const relativePath = path.relative(uploadsDir, resolvedPath);
+    if (!relativePath.startsWith('..') && !path.isAbsolute(relativePath)) {
+        return normalizePath(path.join('uploads', relativePath), true);
+    }
+
+    return normalizePath(filePath, true);
+}
+
+function toUploadsFilePath(storedPath) {
+    if (!storedPath) return null;
+
+    const normalizedPath = storedPath.replace(/\\/g, '/');
+    if (normalizedPath.startsWith('http') || normalizedPath.startsWith('data:')) {
+        return null;
+    }
+    if (normalizedPath.startsWith('/uploads/')) {
+        return path.join(uploadsDir, normalizedPath.replace('/uploads/', ''));
+    }
+    if (normalizedPath.startsWith('uploads/')) {
+        return path.join(uploadsDir, normalizedPath.replace('uploads/', ''));
+    }
+
+    const resolvedPath = path.resolve(storedPath);
+    const relativePath = path.relative(uploadsDir, resolvedPath);
+    if (!relativePath.startsWith('..') && !path.isAbsolute(relativePath)) {
+        return resolvedPath;
+    }
+
+    return null;
+}
+
 // Serve uploads directory
 app.use('/uploads', express.static(uploadsDir));
 
@@ -109,7 +160,13 @@ app.use('/uploads', express.static(uploadsDir));
 app.get('/api/students', (req, res) => {
     db.all("SELECT * FROM students", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+        const normalizedRows = rows.map((row) => {
+            if (row.photo) {
+                row.photo = toPublicUploadPath(row.photo);
+            }
+            return row;
+        });
+        res.json(normalizedRows);
     });
 });
 
@@ -140,7 +197,7 @@ app.post('/api/students', upload.single('photo'), (req, res) => {
         return res.status(400).json({ error: validation.error });
     }
 
-    const photo = req.file ? normalizePath(req.file.path, false) : null;
+    const photo = req.file ? toPublicUploadPath(req.file.path) : null;
     db.run("INSERT INTO students (name, photo, gender) VALUES (?, ?, ?)", [name.trim(), photo, gender], function (err) {
         if (err) {
             logger.error(COMPONENTS.API, 'Error adding student', err, {
@@ -463,7 +520,7 @@ app.put('/api/students/:id/photo', upload.single('photo'), (req, res) => {
         }
 
         const oldPhoto = row.photo;
-        const newPhoto = normalizePath(req.file.path, false);
+        const newPhoto = toPublicUploadPath(req.file.path);
 
         // Update the photo in database
         db.run("UPDATE students SET photo = ? WHERE id = ?", [newPhoto, studentId], function (updateErr) {
@@ -485,8 +542,10 @@ app.put('/api/students/:id/photo', upload.single('photo'), (req, res) => {
 
             // Delete old photo file if it exists and is not a default photo
             if (oldPhoto && oldPhoto !== 'assets/default_boy.png' && oldPhoto !== 'assets/default_girl.png') {
-                const oldPhotoPath = path.join(__dirname, oldPhoto);
-                safeDeleteFile(oldPhotoPath);
+                const oldPhotoPath = toUploadsFilePath(oldPhoto);
+                if (oldPhotoPath) {
+                    safeDeleteFile(oldPhotoPath);
+                }
             }
 
             res.json({ message: "Resim başarıyla güncellendi", photo: newPhoto });
@@ -501,7 +560,13 @@ app.get('/api/roles', (req, res) => {
                  JOIN students ON roles.student_id = students.id`;
     db.all(sql, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+        const normalizedRows = rows.map((row) => {
+            if (row.photo) {
+                row.photo = toPublicUploadPath(row.photo);
+            }
+            return row;
+        });
+        res.json(normalizedRows);
     });
 });
 
@@ -704,41 +769,32 @@ app.get('/api/network-info', (req, res) => {
 });
 
 // Get Class Statistics
-app.get('/api/stats', (req, res) => {
-    db.get("SELECT COUNT(*) as total FROM students", [], (err, totalRow) => {
-        if (err) return res.status(500).json({ error: err.message });
+app.get('/api/stats', async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
 
-        db.get("SELECT COUNT(*) as girls FROM students WHERE gender = 'F'", [], (err, girlsRow) => {
-            if (err) return res.status(500).json({ error: err.message });
+        const [totalRow, girlsRow, boysRow, presentRow, absentRows] = await Promise.all([
+            dbAsync.get("SELECT COUNT(*) as total FROM students"),
+            dbAsync.get("SELECT COUNT(*) as girls FROM students WHERE gender = 'F'"),
+            dbAsync.get("SELECT COUNT(*) as boys FROM students WHERE gender = 'M'"),
+            dbAsync.get("SELECT COUNT(*) as present FROM attendance WHERE date = ? AND status = 'present'", [today]),
+            dbAsync.all("SELECT students.id, students.name, students.photo, students.gender FROM attendance JOIN students ON attendance.student_id = students.id WHERE attendance.date = ? AND attendance.status = 'absent'", [today])
+        ]);
 
-            db.get("SELECT COUNT(*) as boys FROM students WHERE gender = 'M'", [], (err, boysRow) => {
-                if (err) return res.status(500).json({ error: err.message });
+        const absentCount = absentRows.length;
 
-                const today = new Date().toISOString().split('T')[0];
-                db.get("SELECT COUNT(*) as present FROM attendance WHERE date = ? AND status = 'present'", [today], (err, presentRow) => {
-                    if (err) return res.status(500).json({ error: err.message });
-
-                    // Fetch absent students with details for avatars
-                    db.all("SELECT students.id, students.name, students.photo, students.gender FROM attendance JOIN students ON attendance.student_id = students.id WHERE attendance.date = ? AND attendance.status = 'absent'", [today], (err, absentRows) => {
-                        if (err) return res.status(500).json({ error: err.message });
-
-                        const absentCount = absentRows.length;
-                        // Return full student objects instead of just names
-                        const absentStudents = absentRows;
-
-                        res.json({
-                            total: totalRow.total,
-                            girls: girlsRow.girls,
-                            boys: boysRow.boys,
-                            todayPresent: presentRow.present || 0,
-                            todayAbsent: absentCount,
-                            absentStudents: absentStudents
-                        });
-                    });
-                });
-            });
+        res.json({
+            total: totalRow ? totalRow.total : 0,
+            girls: girlsRow ? girlsRow.girls : 0,
+            boys: boysRow ? boysRow.boys : 0,
+            todayPresent: presentRow ? presentRow.present : 0,
+            todayAbsent: absentCount,
+            absentStudents: absentRows
         });
-    });
+    } catch (err) {
+        logger.error(COMPONENTS.API, 'Error fetching stats', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Get Today's Attendance
@@ -786,14 +842,14 @@ app.post('/api/attendance', (req, res) => {
             return res.status(500).json({ error: 'Yoklama kaydedilirken hata oluştu' });
         }
 
+        if (attendanceList.length === 0) {
+            return res.json({ message: "Yoklama kaydedildi", count: 0 });
+        }
+
         // Insert new attendance records
         const stmt = db.prepare("INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
         let completed = 0;
         let hasError = false;
-
-        if (attendanceList.length === 0) {
-            return res.json({ message: "Yoklama kaydedildi", count: 0 });
-        }
 
         attendanceList.forEach((item) => {
             if (!item.student_id || !item.status || !['present', 'absent'].includes(item.status)) {
@@ -893,7 +949,7 @@ app.get('/api/slides/active', async (req, res) => {
             // Normalize paths
             const normalizedRows = rows.map(row => {
                 if (row.media_path) {
-                    row.media_path = normalizePath(row.media_path, true);
+                    row.media_path = toPublicUploadPath(row.media_path);
                 }
                 return row;
             });
@@ -927,7 +983,7 @@ app.get('/api/slides', (req, res, next) => {
         // Normalize media_path for web (convert Windows paths to web paths)
         const normalizedRows = rows.map(row => {
             if (row.media_path) {
-                row.media_path = normalizePath(row.media_path, true);
+                row.media_path = toPublicUploadPath(row.media_path);
             }
             return row;
         });
@@ -946,7 +1002,7 @@ app.get('/api/slides/:id', (req, res) => {
         if (!row) return res.status(404).json({ error: 'Slayt bulunamadı' });
         // Normalize media_path for web (convert Windows paths to web paths)
         if (row.media_path) {
-            row.media_path = normalizePath(row.media_path, true);
+            row.media_path = toPublicUploadPath(row.media_path);
         }
         res.json(row);
     });
@@ -1027,7 +1083,7 @@ app.post('/api/slides', uploadSlide.single('slide'), (req, res, next) => {
 
     let media_path = null;
     if (req.file) {
-        media_path = normalizePath(req.file.path, false);
+        media_path = toPublicUploadPath(req.file.path);
     }
 
     // Get max display_order
@@ -1116,7 +1172,7 @@ app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
         // If new file uploaded, update media_path
         if (req.file) {
             // Normalize path for storage (use forward slashes for web compatibility)
-            media_path = normalizePath(req.file.path, false);
+            media_path = toPublicUploadPath(req.file.path);
         }
 
         const videoAutoAdvance = video_auto_advance === 'true' || video_auto_advance === true ? 1 : 0;
@@ -1165,13 +1221,13 @@ app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
                 // Delete old media file if new one uploaded
                 if (req.file && oldMediaPath && oldMediaPath !== media_path) {
                     try {
-                        const oldPath = path.join(__dirname, oldMediaPath);
-                        if (fs.existsSync(oldPath)) {
+                        const oldPath = toUploadsFilePath(oldMediaPath);
+                        if (oldPath && fs.existsSync(oldPath)) {
                             fs.unlinkSync(oldPath);
                         }
                     } catch (unlinkErr) {
                         logger.warn(COMPONENTS.API, 'Error deleting old media file', unlinkErr, {
-                            oldPath,
+                            oldMediaPath,
                             requestId: req.requestId
                         });
                         // Don't fail the request if old file deletion fails
@@ -1196,49 +1252,76 @@ app.delete('/api/slides/:id', (req, res, next) => {
         return res.status(400).json({ error: 'Geçersiz slayt ID' });
     }
 
-    // Get slide to delete media file
-    db.get("SELECT media_path FROM slides WHERE id = ?", [id], (err, row) => {
+    // Get slide to delete media file and its display order
+    db.get("SELECT media_path, display_order FROM slides WHERE id = ?", [id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row) return res.status(404).json({ error: 'Slayt bulunamadı' });
 
         const mediaPath = row.media_path;
+        const displayOrder = row.display_order;
 
-        // Delete slide
-        db.run("DELETE FROM slides WHERE id = ?", [id], function (err) {
-            if (err) return res.status(500).json({ error: err.message });
+        const rollbackAndRespond = (rollbackErr, errorMessage) => {
+            if (rollbackErr) {
+                logger.error(COMPONENTS.DATABASE, 'Error rolling back slide deletion', rollbackErr, {
+                    slideId: id,
+                    requestId: req.requestId
+                });
+            }
+            return res.status(500).json({ error: errorMessage });
+        };
 
-            // Delete media file
-            if (mediaPath) {
-                try {
-                    const filePath = path.join(__dirname, mediaPath);
-                    if (fs.existsSync(filePath)) {
-                        fs.unlinkSync(filePath);
-                    }
-                } catch (unlinkErr) {
-                    logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
-                        mediaPath: mediaPath,
-                        slideId: id
-                    });
-                    // Don't fail the request if file deletion fails
-                }
+        db.run("BEGIN TRANSACTION", (beginErr) => {
+            if (beginErr) {
+                return res.status(500).json({ error: beginErr.message });
             }
 
-            // Reorder remaining slides
-            db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > (SELECT display_order FROM (SELECT display_order FROM slides WHERE id = ?))", [id], (reorderErr) => {
-                if (reorderErr) {
-                    logger.error(COMPONENTS.DATABASE, 'Error reordering slides after deletion', reorderErr, {
-                        deletedSlideId: id,
-                        requestId: req.requestId
-                    });
+            // Delete slide
+            db.run("DELETE FROM slides WHERE id = ?", [id], function (err) {
+                if (err) {
+                    return db.run("ROLLBACK", (rollbackErr) => rollbackAndRespond(rollbackErr, err.message));
                 }
-            });
 
-            logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
-                slideId: id,
-                changes: this.changes,
-                requestId: req.requestId
+                const deleteChanges = this.changes;
+
+                // Reorder remaining slides
+                db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?", [displayOrder], (reorderErr) => {
+                    if (reorderErr) {
+                        logger.error(COMPONENTS.DATABASE, 'Error reordering slides after deletion', reorderErr, {
+                            deletedSlideId: id,
+                            requestId: req.requestId
+                        });
+                        return db.run("ROLLBACK", (rollbackErr) => rollbackAndRespond(rollbackErr, reorderErr.message));
+                    }
+
+                    db.run("COMMIT", (commitErr) => {
+                        if (commitErr) {
+                            return db.run("ROLLBACK", (rollbackErr) => rollbackAndRespond(rollbackErr, commitErr.message));
+                        }
+
+                        // Delete media file
+                        if (mediaPath) {
+                            try {
+                                const filePath = toUploadsFilePath(mediaPath);
+                                if (filePath && fs.existsSync(filePath)) {
+                                    fs.unlinkSync(filePath);
+                                }
+                            } catch (unlinkErr) {
+                                logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
+                                    mediaPath: mediaPath,
+                                    slideId: id
+                                });
+                            }
+                        }
+
+                        logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
+                            slideId: id,
+                            changes: deleteChanges,
+                            requestId: req.requestId
+                        });
+                        res.json({ message: 'Slayt başarıyla silindi', changes: deleteChanges });
+                    });
+                });
             });
-            res.json({ message: 'Slayt başarıyla silindi', changes: this.changes });
         });
     });
 });
@@ -1409,6 +1492,7 @@ app.post('/api/logs', (req, res) => {
             }
 
             // Write to file
+            // Write to file after DB write succeeds
             let logLine = `[${logEntry.timestamp}] [${logEntry.level}] [${logEntry.component}] ${logEntry.message}`;
             if (logEntry.context) {
                 logLine += ` | Context: ${JSON.stringify(logEntry.context)}`;
@@ -1433,6 +1517,10 @@ app.post('/api/logs', (req, res) => {
             }
 
             return res.json({ success: true });
+                return res.status(500).json({ error: 'Failed to write log file' });
+            }
+
+            res.json({ success: true });
         }
     );
 });
