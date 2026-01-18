@@ -1491,6 +1491,7 @@ app.post('/api/logs', (req, res) => {
                 return res.status(500).json({ error: 'Failed to save log' });
             }
 
+            // Write to file
             // Write to file after DB write succeeds
             let logLine = `[${logEntry.timestamp}] [${logEntry.level}] [${logEntry.component}] ${logEntry.message}`;
             if (logEntry.context) {
@@ -1512,6 +1513,10 @@ app.post('/api/logs', (req, res) => {
                 fs.appendFileSync('logs/slideshow-errors.log', logLine, 'utf8');
             } catch (fileErr) {
                 logger.error(COMPONENTS.SYSTEM, 'Error writing to log file', fileErr);
+                // Don't fail the request if file write fails
+            }
+
+            return res.json({ success: true });
                 return res.status(500).json({ error: 'Failed to write log file' });
             }
 
