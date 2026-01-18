@@ -28,8 +28,9 @@
 
     /* Text */
     --text-white: #FFFFFF;
-    --text-light: rgba(255, 255, 255, 0.8);
-    --text-muted: rgba(255, 255, 255, 0.5);
+    --text-light: rgba(255, 255, 255, 0.85);
+    /* Improved contrast from 0.5 to 0.65 */
+    --text-muted: rgba(255, 255, 255, 0.65);
 
     /* Shadows */
     --shadow-neon-blue: 0 0 30px rgba(0, 212, 255, 0.5);
@@ -54,6 +55,10 @@ body {
     overflow: hidden;
     font-family: var(--font-primary);
     color: var(--text-white);
+
+    /* Firefox Scrollbar Support */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(0, 0, 0, 0.1);
 }
 
 body {
@@ -96,9 +101,9 @@ body::before {
    ============================================ */
 
 .header-bar {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: space-between;
     height: 90px;
     padding: 0 var(--gap);
     background: var(--glass-bg);
@@ -135,11 +140,12 @@ body::before {
     display: flex;
     align-items: center;
     gap: 16px;
+    justify-self: start;
 }
 
 .brand-logo {
     font-family: var(--font-heading);
-    font-size: 3.5rem;
+    font-size: clamp(2rem, 3vw, 3.5rem);
     font-weight: 900;
     background: var(--gradient-neon);
     background-size: 200% 200%;
@@ -158,9 +164,11 @@ body::before {
 }
 
 .header-center {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    justify-self: center;
+}
+
+.header-right {
+    justify-self: end;
 }
 
 .live-clock {
@@ -180,17 +188,17 @@ body::before {
 
     0%,
     100% {
-        transform: translateX(-50%) translateY(0);
+        transform: translateY(0);
     }
 
     50% {
-        transform: translateX(-50%) translateY(-5px);
+        transform: translateY(-5px);
     }
 }
 
 .clock-time {
     font-family: var(--font-heading);
-    font-size: 3.5rem;
+    font-size: clamp(2.5rem, 4vw, 3.5rem);
     font-weight: 900;
     color: var(--neon-blue);
     text-shadow: 0 0 20px var(--neon-blue);
@@ -199,7 +207,7 @@ body::before {
 
 .clock-separator {
     color: var(--neon-pink);
-    font-size: 2rem;
+    font-size: clamp(1.5rem, 3vw, 2rem);
     animation: blink 1s step-end infinite;
 }
 
@@ -271,7 +279,7 @@ body::before {
 
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 1fr 340px 400px;
+    grid-template-columns: 1fr minmax(300px, 340px) minmax(350px, 400px);
     gap: var(--gap);
     height: calc(100vh - 90px);
     padding: var(--gap);
@@ -324,15 +332,17 @@ body::before {
     -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius);
-    padding: 24px;
+    padding: clamp(16px, 1.5vw, 24px);
     position: relative;
     overflow: hidden;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.widget:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+@media (hover: hover) {
+    .widget:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+    }
 }
 
 .widget::before {
@@ -405,7 +415,7 @@ body::before {
 
 .stats-number {
     font-family: var(--font-heading);
-    font-size: 5rem;
+    font-size: clamp(3rem, 5vw, 5rem);
     font-weight: 900;
     color: var(--neon-blue);
     text-shadow: 0 0 40px var(--neon-blue);
@@ -452,9 +462,11 @@ body::before {
     transition: all 0.3s ease;
 }
 
-.stats-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: scale(1.05);
+@media (hover: hover) {
+    .stats-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: scale(1.05);
+    }
 }
 
 .stats-emoji {
@@ -584,7 +596,7 @@ body::before {
 
 .countdown-value {
     font-family: var(--font-heading);
-    font-size: 4rem;
+    font-size: clamp(2.5rem, 4vw, 4rem);
     font-weight: 900;
     color: var(--neon-orange);
     text-shadow: 0 0 40px var(--neon-orange);
@@ -610,7 +622,7 @@ body::before {
 }
 
 .goodbye-emoji {
-    font-size: 4rem;
+    font-size: clamp(3rem, 5vw, 4rem);
     animation: float 3s ease-in-out infinite;
 }
 
@@ -1021,21 +1033,207 @@ body::before {
 
 @media (max-width: 1600px) {
     .dashboard-grid {
-        grid-template-columns: 1fr 300px 360px;
+        grid-template-columns: 1fr 280px 340px;
+    }
+}
+
+/* Laptop Mode - 2 Column Layout */
+@media (max-width: 1400px) {
+    html, body {
+        overflow: auto;
+        height: auto;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: minmax(400px, 50vh) auto;
+        height: auto;
+        min-height: calc(100vh - 90px);
+    }
+
+    .panel-hero {
+        grid-column: 1 / -1;
+    }
+
+    .panel {
+        min-height: 0; /* Reset */
+    }
+}
+
+@media (max-width: 1200px) {
+    html, body {
+        overflow: auto;
+        height: auto;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        height: auto;
+        gap: 20px;
+    }
+
+    .panel {
+        min-height: 500px;
+    }
+
+    .panel-hero {
+        min-height: 400px;
+    }
+
+    /* Fix Header Overlap */
+    .header-bar {
+        height: auto;
+        display: flex; /* ADDED: explicit display flex */
+        flex-wrap: wrap; /* Allow wrapping */
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        gap: 15px;
+        z-index: 100; /* Ensure header is on top */
+    }
+
+    .header-left {
+        flex: 1 1 auto;
+    }
+
+    .header-center {
+        position: static;
+        transform: none;
+        flex: 1 1 100%; /* Force clock to new line on smaller screens if needed */
+        display: flex;
+        justify-content: center;
+        order: 3; /* Move clock below logo and badge if wrapping */
+        margin-top: 10px;
+    }
+
+    .header-right {
+        flex: 1 1 auto;
+        justify-self: end;
+        order: 2;
+    }
+
+    .live-clock {
+        animation: none;
+        width: 100%;
+        justify-content: center;
+        padding: 10px 20px;
     }
 
     .clock-time {
         font-size: 2.5rem;
     }
+}
 
+/* TABLET & MOBILE ADJUSTMENTS */
+@media (max-width: 768px) {
+    :root {
+        --gap: 12px;
+        --radius: 16px;
+    }
+
+    .header-bar {
+        padding: 12px;
+        gap: 10px;
+        flex-direction: column; /* Stack vertically on very small screens */
+        align-items: center;
+    }
+
+    .header-center {
+        order: 2;
+        width: 100%;
+    }
+
+    .header-right {
+        order: 3;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+
+    .brand-logo {
+        font-size: 2rem;
+    }
+
+    .brand-text {
+        font-size: 0.8rem;
+    }
+
+    .live-clock {
+        padding: 10px 20px;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .clock-time {
+        font-size: 2.2rem;
+    }
+
+    .dashboard-grid {
+        padding: 10px;
+        gap: 15px;
+    }
+
+    .panel {
+        min-height: auto;
+        gap: 15px;
+    }
+
+    .panel-hero {
+        min-height: 250px;
+    }
+
+    /* Stats on mobile */
     .stats-number {
-        font-size: 4rem;
+        font-size: 3.5rem;
+    }
+
+    .stats-breakdown {
+        gap: 10px;
+    }
+
+    .stats-item {
+        padding: 10px;
+    }
+
+    .stats-emoji {
+        font-size: 1.5rem;
+    }
+
+    .stats-count {
+        font-size: 1.5rem;
+    }
+
+    /* Countdown */
+    .countdown-value {
+        font-size: 3rem;
+    }
+
+    /* Hide less critical elements to save space */
+    .weekend-badge {
+        display: none;
     }
 }
 
-/* Hide scrollbars */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-    display: none;
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--neon-blue);
+    box-shadow: 0 0 10px var(--neon-blue);
 }
 
 /* Accessibility - reduce motion */
