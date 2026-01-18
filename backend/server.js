@@ -851,6 +851,11 @@ app.post('/api/attendance', (req, res) => {
         let completed = 0;
         let hasError = false;
 
+        if (attendanceList.length === 0) {
+            stmt.finalize();
+            return res.json({ message: "Yoklama kaydedildi", count: 0 });
+        }
+
         attendanceList.forEach((item) => {
             if (!item.student_id || !item.status || !['present', 'absent'].includes(item.status)) {
                 hasError = true;
