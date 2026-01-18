@@ -16,11 +16,15 @@ class APIService {
         const url = `${this.baseURL}${endpoint}`;
 
         try {
+            const headers = { ...options.headers };
+            const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+
+            if (!isFormData && !('Content-Type' in headers) && !('content-type' in headers)) {
+                headers['Content-Type'] = 'application/json';
+            }
+
             const response = await fetch(url, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...options.headers
-                },
+                headers,
                 ...options
             });
 

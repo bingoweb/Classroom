@@ -1261,57 +1261,13 @@ app.delete('/api/slides/:id', (req, res, next) => {
         return res.status(400).json({ error: 'Geçersiz slayt ID' });
     }
 
-    // Get slide to delete media file and capture display order
-    db.serialize(() => {
-        // Get slide info before deletion
-        db.get("SELECT media_path, display_order FROM slides WHERE id = ?", [id], (err, row) => {
-            if (err) return res.status(500).json({ error: err.message });
-            if (!row) return res.status(404).json({ error: 'Slayt bulunamadı' });
-
-            const mediaPath = row.media_path;
-            const displayOrder = row.display_order;
-
-            // Delete slide
-            db.run("DELETE FROM slides WHERE id = ?", [id], function (err) {
-                if (err) return res.status(500).json({ error: err.message });
-
-                // Delete media file
-                if (mediaPath) {
-                    try {
-                        const filePath = path.join(__dirname, mediaPath);
-                        if (fs.existsSync(filePath)) {
-                            fs.unlinkSync(filePath);
-                        }
-                    } catch (unlinkErr) {
-                        logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
-                            mediaPath: mediaPath,
-                            slideId: id
-                        });
-                        // Don't fail the request if file deletion fails
-                    }
-                }
-
-                // Reorder remaining slides
-                db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?", [displayOrder], (reorderErr) => {
-                    if (reorderErr) {
-                        logger.error(COMPONENTS.DATABASE, 'Error reordering slides after deletion', reorderErr, {
-                            deletedSlideId: id,
-                            requestId: req.requestId
-                        });
-                    }
-                });
-
-                logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
-                    slideId: id,
-                    changes: this.changes,
-                    requestId: req.requestId
-                });
-                res.json({ message: 'Slayt başarıyla silindi', changes: this.changes });
-            });
-    // Get slide to delete media file and its display order
     db.get("SELECT media_path, display_order FROM slides WHERE id = ?", [id], (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (!row) return res.status(404).json({ error: 'Slayt bulunamadı' });
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        if (!row) {
+            return res.status(404).json({ error: 'Slayt bulunamadı' });
+        }
         if (row.display_order === null || row.display_order === undefined) {
             logger.error(COMPONENTS.API, 'Slide display order is missing', null, {
                 slideId: id,
@@ -1322,7 +1278,6 @@ app.delete('/api/slides/:id', (req, res, next) => {
 
         const mediaPath = row.media_path;
         const deletedOrder = row.display_order;
-        const displayOrder = row.display_order;
 
         const rollbackAndRespond = (rollbackErr, errorMessage) => {
             if (rollbackErr) {
@@ -1339,64 +1294,57 @@ app.delete('/api/slides/:id', (req, res, next) => {
                 return res.status(500).json({ error: beginErr.message });
             }
 
-            // Reorder remaining slides
-            db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?", [deletedOrder], (reorderErr) => {
-                if (reorderErr) {
-                    logger.error(COMPONENTS.DATABASE, 'Error reordering slides after deletion', reorderErr, {
-                        deletedSlideId: id,
-                        deletedOrder: deletedOrder,
-                        requestId: req.requestId
-                    });
-            // Delete slide
-            db.run("DELETE FROM slides WHERE id = ?", [id], function (err) {
-                if (err) {
-                    return db.run("ROLLBACK", (rollbackErr) => rollbackAndRespond(rollbackErr, err.message));
+            db.run("DELETE FROM slides WHERE id = ?", [id], function (deleteErr) {
+                if (deleteErr) {
+                    return db.run("ROLLBACK", (rollbackErr) => rollbackAndRespond(rollbackErr, deleteErr.message));
                 }
 
                 const deleteChanges = this.changes;
 
-                // Reorder remaining slides
-                db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?", [displayOrder], (reorderErr) => {
-                    if (reorderErr) {
-                        logger.error(COMPONENTS.DATABASE, 'Error reordering slides after deletion', reorderErr, {
-                            deletedSlideId: id,
-                            requestId: req.requestId
-                        });
-                        return db.run("ROLLBACK", (rollbackErr) => rollbackAndRespond(rollbackErr, reorderErr.message));
-                    }
-
-                    db.run("COMMIT", (commitErr) => {
-                        if (commitErr) {
-                            return db.run("ROLLBACK", (rollbackErr) => rollbackAndRespond(rollbackErr, commitErr.message));
+                db.run(
+                    "UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?",
+                    [deletedOrder],
+                    (reorderErr) => {
+                        if (reorderErr) {
+                            logger.error(COMPONENTS.DATABASE, 'Error reordering slides after deletion', reorderErr, {
+                                deletedSlideId: id,
+                                deletedOrder: deletedOrder,
+                                requestId: req.requestId
+                            });
+                            return db.run("ROLLBACK", (rollbackErr) => rollbackAndRespond(rollbackErr, reorderErr.message));
                         }
 
-                        // Delete media file
-                        if (mediaPath) {
-                            try {
-                                const filePath = toUploadsFilePath(mediaPath);
-                                if (filePath && fs.existsSync(filePath)) {
-                                    fs.unlinkSync(filePath);
-                                }
-                            } catch (unlinkErr) {
-                                logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
-                                    mediaPath: mediaPath,
-                                    slideId: id
-                                });
+                        db.run("COMMIT", (commitErr) => {
+                            if (commitErr) {
+                                return db.run("ROLLBACK", (rollbackErr) => rollbackAndRespond(rollbackErr, commitErr.message));
                             }
-                        }
 
-                        logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
-                            slideId: id,
-                            changes: deleteChanges,
-                            requestId: req.requestId
+                            if (mediaPath) {
+                                try {
+                                    const filePath = toUploadsFilePath(mediaPath);
+                                    if (filePath && fs.existsSync(filePath)) {
+                                        fs.unlinkSync(filePath);
+                                    }
+                                } catch (unlinkErr) {
+                                    logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
+                                        mediaPath: mediaPath,
+                                        slideId: id
+                                    });
+                                }
+                            }
+
+                            logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
+                                slideId: id,
+                                changes: deleteChanges,
+                                requestId: req.requestId
+                            });
+                            slidesCache = null;
+                            cacheTimestamp = null;
+                            res.json({ message: 'Slayt başarıyla silindi', changes: deleteChanges });
                         });
-                        res.json({ message: 'Slayt başarıyla silindi', changes: deleteChanges });
-                    });
-                });
+                    }
+                );
             });
-            slidesCache = null;
-            cacheTimestamp = null;
-            res.json({ message: 'Slayt başarıyla silindi', changes: this.changes });
         });
     });
 });
