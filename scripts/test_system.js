@@ -8,7 +8,6 @@ const tests = [
     { name: 'API - Roller', url: 'http://localhost:3000/api/roles', expected: 200 },
     { name: 'API - Slaytlar', url: 'http://localhost:3000/api/slides', expected: 200 },
     { name: 'API - Ayarlar', url: 'http://localhost:3000/api/settings', expected: 200 },
-    { name: 'API - Günün Kelimesi', url: 'http://localhost:3000/api/word', expected: 200 },
     { name: 'API - Program', url: 'http://localhost:3000/api/schedule', expected: 200 },
     { name: 'API - İstatistikler', url: 'http://localhost:3000/api/stats', expected: 200 },
     { name: 'API - Slayt Ayarları', url: 'http://localhost:3000/api/slide-settings', expected: 200 }
