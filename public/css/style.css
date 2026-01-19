@@ -28,9 +28,9 @@
 
     /* Text */
     --text-white: #FFFFFF;
-    --text-light: rgba(255, 255, 255, 0.85);
+    --text-light: rgba(255, 255, 255, 0.9);
     /* Improved contrast from 0.5 to 0.65 */
-    --text-muted: rgba(255, 255, 255, 0.65);
+    --text-muted: rgba(255, 255, 255, 0.75);
 
     /* Shadows */
     --shadow-neon-blue: 0 0 30px rgba(0, 212, 255, 0.5);
@@ -1066,21 +1066,6 @@ body::before {
         height: auto;
     }
 
-    .dashboard-grid {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto;
-        height: auto;
-        gap: 20px;
-    }
-
-    .panel {
-        min-height: 500px;
-    }
-
-    .panel-hero {
-        min-height: 400px;
-    }
-
     /* Fix Header Overlap */
     .header-bar {
         height: auto;
@@ -1125,6 +1110,23 @@ body::before {
     }
 }
 
+@media (max-width: 900px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        height: auto;
+        gap: 20px;
+    }
+
+    .panel {
+        min-height: 500px;
+    }
+
+    .panel-hero {
+        min-height: 400px;
+    }
+}
+
 /* TABLET & MOBILE ADJUSTMENTS */
 @media (max-width: 768px) {
     :root {
@@ -1133,10 +1135,11 @@ body::before {
     }
 
     .header-bar {
-        padding: 12px;
-        gap: 10px;
+        padding: 8px 12px;
+        gap: 8px;
         flex-direction: column; /* Stack vertically on very small screens */
         align-items: center;
+        height: auto;
     }
 
     .header-center {
@@ -1152,7 +1155,7 @@ body::before {
     }
 
     .brand-logo {
-        font-size: 2rem;
+        font-size: 1.5rem;
     }
 
     .brand-text {
@@ -1166,7 +1169,7 @@ body::before {
     }
 
     .clock-time {
-        font-size: 2.2rem;
+        font-size: 1.8rem;
     }
 
     .dashboard-grid {
@@ -1210,7 +1213,7 @@ body::before {
     }
 
     /* Hide less critical elements to save space */
-    .weekend-badge {
+    .header-right .weekend-badge {
         display: none;
     }
 }

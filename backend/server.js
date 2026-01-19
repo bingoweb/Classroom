@@ -1542,10 +1542,6 @@ app.post('/api/logs', (req, res) => {
             }
 
             return res.json({ success: true });
-                return res.status(500).json({ error: 'Failed to write log file' });
-            }
-
-            res.json({ success: true });
         }
     );
 });
