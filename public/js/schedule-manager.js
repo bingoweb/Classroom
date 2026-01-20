@@ -73,14 +73,14 @@ function getScheduleStatus(now) {
     if (isWeekend(dayIndex)) {
         const weekendMessages = {
             0: { // Pazar
-                iconChar: '🌅',
-                iconId: 'icon-sun',
+                iconChar: '<i class="fa-solid fa-sun"></i>',
+                iconId: null,
                 title: 'Yarın Yeni Bir Hafta Başlıyor!',
                 subtitle: 'İyi dinlenin, yarın görüşürüz!'
             },
             6: { // Cumartesi
-                iconChar: '🏖️',
-                iconId: 'icon-sun',
+                iconChar: '<i class="fa-solid fa-umbrella-beach"></i>',
+                iconId: null,
                 title: 'İyi Hafta Sonları!',
                 subtitle: 'Tatilinizin tadını çıkarın!'
             }
@@ -114,7 +114,7 @@ function getScheduleStatus(now) {
             visual: 'clock',
             hoursUntilStart: hours,
             minutesUntilStart: mins,
-            iconId: 'icon-school'
+            iconId: null
         };
     }
 
@@ -122,11 +122,11 @@ function getScheduleStatus(now) {
     if (currentTime >= schoolEndMinutes) {
         const dayNames = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
         const dayThemes = {
-            1: { icon: '🌅', iconId: 'icon-home', subtitle: 'Harika bir hafta geçirdin!' },
-            2: { icon: '🌙', iconId: 'icon-home', subtitle: 'İyi dinlenin, yarın görüşürüz!' },
-            3: { icon: '🌸', iconId: 'icon-home', subtitle: 'Haftanın yarısını geçtik!' },
-            4: { icon: '🦊', iconId: 'icon-home', subtitle: 'Yarın Cuma, biraz daha sabır!' },
-            5: { icon: '🎉', iconId: 'icon-sun', subtitle: 'Harika bir hafta sonu geçirin!' }
+            1: { icon: '<i class="fa-solid fa-sun"></i>', iconId: null, subtitle: 'Harika bir hafta geçirdin!' },
+            2: { icon: '<i class="fa-solid fa-moon"></i>', iconId: null, subtitle: 'İyi dinlenin, yarın görüşürüz!' },
+            3: { icon: '<i class="fa-solid fa-seedling"></i>', iconId: null, subtitle: 'Haftanın yarısını geçtik!' },
+            4: { icon: '<i class="fa-solid fa-dog"></i>', iconId: null, subtitle: 'Yarın Cuma, biraz daha sabır!' },
+            5: { icon: '<i class="fa-solid fa-gift"></i>', iconId: null, subtitle: 'Harika bir hafta sonu geçirin!' }
         };
 
         const theme = dayThemes[dayIndex] || dayThemes[1];

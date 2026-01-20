@@ -76,7 +76,7 @@ async function fetchData() {
                 const imgId = `president-img-${president.id}`;
                 html += `
                     <div class="president-main">
-                        <img id="${imgId}" src="${avatarPath}" class="president-avatar-large" onerror="this.onerror=null; this.src='${CONFIG.DEFAULT_AVATAR_BOY}'">
+                        <img id="${imgId}" src="${avatarPath}" alt="${president.name} - Sınıf Başkanı" class="president-avatar-large" onerror="this.onerror=null; this.src='${CONFIG.DEFAULT_AVATAR_BOY}'">
                         <div class="president-name-large">${president.name || '---'}</div>
                     </div>
                 `;
@@ -91,7 +91,7 @@ async function fetchData() {
                     const imgId = `vice-president-img-${vp.id}-${index}`;
                     html += `
                         <div class="vice-president-item">
-                            <img id="${imgId}" src="${avatarPath}" class="vice-president-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
+                            <img id="${imgId}" src="${avatarPath}" alt="${vp.name} - Başkan Yardımcısı" class="vice-president-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
                             <div class="vice-president-name">${vp.name || '---'}</div>
                         </div>
                     `;
@@ -138,7 +138,7 @@ async function fetchData() {
                 const nameId = `duty-name-${d.id}-${index}`;
                 return `
                 <div class="duty-item">
-                    <img id="${imgId}" src="${avatarPath}" class="duty-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
+                    <img id="${imgId}" src="${avatarPath}" alt="${d.name} - Nöbetçi" class="duty-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
                     <div class="duty-name" id="${nameId}"></div>
                 </div>
             `;
@@ -179,7 +179,7 @@ async function fetchData() {
                 const isActive = index === 0 ? 'active' : '';
                 return `
                 <div class="star-slide ${isActive}" data-index="${index}">
-                    <img src="${avatarPath}" class="star-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
+                    <img src="${avatarPath}" alt="${s.name} - Haftanın Yıldızı" class="star-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
                     <div class="star-name">${s.name || '---'}</div>
                 </div>
             `;
@@ -203,7 +203,7 @@ async function fetchData() {
             // Yıldız yok durumu
             starsContainer.innerHTML = `
                 <div class="no-stars-message">
-                    <div class="no-stars-icon">⭐</div>
+                    <div class="no-stars-icon"><i class="fa-solid fa-star"></i></div>
                     <div class="no-stars-text">Bu hafta henüz<br>yıldız belirlenmedi</div>
                 </div>
             `;
@@ -1070,7 +1070,7 @@ function updateCountdown(now) {
             } else if (status.image) {
                 weekendVisual.innerHTML = `<img src="${status.image}" class="icon-3d-large" alt="Weekend" style="width: 140px; height: 140px; object-fit: contain; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));">`;
             } else {
-                weekendVisual.textContent = status.icon;
+                weekendVisual.innerHTML = status.icon;
             }
 
             document.getElementById('goodbye-title').textContent = status.message;
@@ -1127,7 +1127,7 @@ function updateCountdown(now) {
             } else if (status.image) {
                 afterSchoolVisual.innerHTML = `<img src="${status.image}" class="icon-3d-large" alt="Goodbye" style="width: 140px; height: 140px; object-fit: contain; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));">`;
             } else {
-                afterSchoolVisual.textContent = status.icon;
+                afterSchoolVisual.innerHTML = status.icon;
             }
 
             document.getElementById('goodbye-title').textContent = status.message;
@@ -1224,7 +1224,7 @@ async function updateStats() {
                     const defaultAvatar = student.gender === 'F' ? CONFIG.DEFAULT_AVATAR_GIRL : CONFIG.DEFAULT_AVATAR_BOY;
                     return `
                         <span class="marquee-item">
-                            <img src="${avatarPath}" class="marquee-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
+                            <img src="${avatarPath}" alt="${student.name}" class="marquee-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
                             ${student.name}
                         </span>
                     `;
