@@ -22,8 +22,8 @@
     --gradient-neon: linear-gradient(90deg, var(--neon-blue), var(--neon-pink), var(--neon-purple));
 
     /* Glass */
-    --glass-bg: rgba(255, 255, 255, 0.08);
-    --glass-border: rgba(255, 255, 255, 0.15);
+    --glass-bg: rgba(255, 255, 255, 0.12);
+    --glass-border: rgba(255, 255, 255, 0.2);
     --glass-blur: blur(20px);
 
     /* Text */
@@ -260,6 +260,8 @@ body::before {
 
 .weekend-icon {
     font-size: 1.5rem;
+    display: flex;
+    align-items: center;
 }
 
 .weekend-label {
@@ -379,7 +381,21 @@ body::before {
 .widget-icon {
     font-size: 1.8rem;
     filter: drop-shadow(0 0 10px currentColor);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+
+.widget-icon i {
+    color: var(--neon-blue); /* Default fallback */
+}
+
+/* Specific icon colors */
+.widget-president .widget-icon i { color: var(--neon-pink); }
+.widget-duties .widget-icon i { color: var(--neon-orange); }
+.widget-stars .widget-icon i { color: var(--neon-purple); }
+.widget-stats .widget-icon i { color: var(--neon-blue); }
+.widget-countdown .widget-icon i { color: var(--neon-orange); }
 
 .widget-title {
     font-family: var(--font-heading);
@@ -471,7 +487,13 @@ body::before {
 
 .stats-emoji {
     font-size: 2.2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
+
+.stats-girls .stats-emoji i { color: var(--neon-pink); }
+.stats-boys .stats-emoji i { color: var(--neon-blue); }
 
 .stats-count {
     font-family: var(--font-heading);
@@ -580,6 +602,8 @@ body::before {
 .countdown-emoji {
     font-size: 3rem;
     animation: bounce 2s ease-in-out infinite;
+    display: flex;
+    justify-content: center;
 }
 
 @keyframes bounce {
@@ -624,6 +648,8 @@ body::before {
 .goodbye-emoji {
     font-size: clamp(3rem, 5vw, 4rem);
     animation: float 3s ease-in-out infinite;
+    display: flex;
+    justify-content: center;
 }
 
 @keyframes float {
