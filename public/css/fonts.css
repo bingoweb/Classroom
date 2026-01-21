@@ -10,7 +10,6 @@
     font-display: swap;
 }
 
-/* Fallback for safety */
 @font-face {
     font-family: 'Segment7';
     src: url('../fonts/segment7.woff2') format('woff2');
@@ -19,18 +18,38 @@
     font-display: swap;
 }
 
-/* Ensure Montserrat is available (used elsewhere) */
-/* (Assuming Montserrat is loaded via other means or was in this file? 
-   Previous fonts.css had Montserrat. I should keep it.) 
-*/
+/* Local Fallback Fonts */
 
-/* Re-adding Montserrat local definitions just in case */
+/* Montserrat (Bold & ExtraBold available locally) */
 @font-face {
     font-family: 'Montserrat';
     font-style: normal;
-    font-weight: 400;
+    font-weight: 700;
     font-display: swap;
     src: url('../fonts/Montserrat-Bold-Latin.woff2') format('woff2');
-    /* Fallback path */
-    /* Note: Assuming user has these files since I saw them in list_dir output */
+}
+
+@font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 800;
+    font-display: swap;
+    src: url('../fonts/Montserrat-ExtraBold-Latin.woff2') format('woff2');
+}
+
+/* Quicksand (Medium & Bold available locally) */
+@font-face {
+    font-family: 'Quicksand';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../fonts/Quicksand-Medium-Latin.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Quicksand';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../fonts/Quicksand-Bold-Latin.woff2') format('woff2');
 }
