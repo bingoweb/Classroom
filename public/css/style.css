@@ -286,7 +286,7 @@ body::before {
 .dashboard-grid {
     flex: 1;
     display: grid;
-    grid-template-columns: 1fr minmax(300px, 340px) minmax(350px, 400px);
+    grid-template-columns: 1fr minmax(280px, 340px) minmax(300px, 400px);
     gap: var(--gap);
     min-height: 0;
     padding: var(--gap);
