@@ -122,98 +122,89 @@
         <div id="students" class="content-section active">
 
             <!-- Header with Stats -->
-            <div
-                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 15px; color: white; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);">
+            <div class="admin-section-header header-purple">
                 <div
                     style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                     <div>
-                        <h1 style="margin: 0 0 10px 0; font-size: 2rem; display: flex; align-items: center; gap: 10px;">
+                        <h1 class="admin-header-title">
                             👨‍🎓 Öğrenci Yönetimi
                         </h1>
-                        <p style="margin: 0; opacity: 0.9; font-size: 1rem;">
+                        <p class="admin-header-desc">
                             Öğrencileri ekleyin, düzenleyin ve yönetin
                         </p>
                     </div>
-                    <div id="studentStats"
-                        style="display: flex; gap: 20px; background: rgba(255,255,255,0.2); padding: 15px 25px; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="text-align: center;">
-                            <div style="font-size: 2rem; font-weight: bold;" id="totalStudents">0</div>
-                            <div style="font-size: 0.85rem; opacity: 0.9;">Toplam</div>
+                    <div id="studentStats" class="admin-stats-container">
+                        <div class="admin-stat-item">
+                            <div class="stat-value" id="totalStudents">0</div>
+                            <div class="stat-label">Toplam</div>
                         </div>
-                        <div style="width: 2px; background: rgba(255,255,255,0.3);"></div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 2rem; font-weight: bold;" id="maleStudents">0</div>
-                            <div style="font-size: 0.85rem; opacity: 0.9;">👦 Erkek</div>
+                        <div class="stat-divider"></div>
+                        <div class="admin-stat-item">
+                            <div class="stat-value" id="maleStudents">0</div>
+                            <div class="stat-label">👦 Erkek</div>
                         </div>
-                        <div style="width: 2px; background: rgba(255,255,255,0.3);"></div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 2rem; font-weight: bold;" id="femaleStudents">0</div>
-                            <div style="font-size: 0.85rem; opacity: 0.9;">👧 Kız</div>
+                        <div class="stat-divider"></div>
+                        <div class="admin-stat-item">
+                            <div class="stat-value" id="femaleStudents">0</div>
+                            <div class="stat-label">👧 Kız</div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Action Cards Grid -->
-            <div
-                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-bottom: 25px;">
+            <div class="admin-grid">
 
                 <!-- Add Single Student Card -->
-                <div class="card"
-                    style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none;">
-                    <h2 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px; font-size: 1.3rem;">
+                <div class="admin-card card-pink">
+                    <h2 class="card-title">
                         ➕ Tekli Öğrenci Ekle
                     </h2>
-                    <p style="opacity: 0.95; font-size: 0.9rem; margin-bottom: 20px;">
+                    <p class="card-text">
                         Bir öğrenci eklemek için formu doldurun
                     </p>
                     <form id="addStudentForm" style="display: flex; flex-direction: column; gap: 12px;">
-                        <div>
-                            <label style="display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9rem;">
+                        <div class="admin-input-group">
+                            <label class="admin-label">
                                 📝 Ad Soyad <span style="color: #ffeb3b;">*</span>
                             </label>
-                            <input type="text" name="name" placeholder="Örn: Ahmet Yılmaz" required
-                                style="width: 100%; padding: 12px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.95); font-size: 1rem; color: #333;">
+                            <input type="text" name="name" placeholder="Örn: Ahmet Yılmaz" required class="admin-input">
                         </div>
-                        <div>
-                            <label style="display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9rem;">
+                        <div class="admin-input-group">
+                            <label class="admin-label">
                                 👤 Cinsiyet <span style="color: #ffeb3b;">*</span>
                             </label>
-                            <select name="gender" required
-                                style="width: 100%; padding: 12px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.95); font-size: 1rem; cursor: pointer; color: #333;">
+                            <select name="gender" required class="admin-select">
                                 <option value="M">👦 Erkek</option>
                                 <option value="F">👧 Kız</option>
                             </select>
                         </div>
-                        <div>
-                            <label style="display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9rem;">
+                        <div class="admin-input-group">
+                            <label class="admin-label">
                                 📷 Fotoğraf <span style="opacity: 0.7; font-size: 0.85rem;">(opsiyonel)</span>
                             </label>
-                            <input type="file" name="photo" accept="image/*"
-                                style="width: 100%; padding: 10px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.95); font-size: 0.9rem; cursor: pointer;">
-                            <small style="display: block; margin-top: 5px; opacity: 0.9; font-size: 0.8rem;">
+                            <input type="file" name="photo" accept="image/*" class="admin-input" style="padding: 10px;">
+                            <small class="small-hint">
                                 💡 Boş bırakırsanız varsayılan avatar kullanılır
                             </small>
                         </div>
-                        <button type="submit"
-                            style="padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: all 0.3s; margin-top: 10px;">
+                        <button type="submit" class="btn-submit">
                             ✅ Öğrenci Ekle
                         </button>
                     </form>
                 </div>
 
                 <!-- Excel Import Card -->
-                <div class="card"
-                    style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border: none;">
-                    <h2 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px; font-size: 1.3rem;">
+                <div class="admin-card card-blue">
+                    <h2 class="card-title">
                         📊 Excel'den Toplu Ekle
                     </h2>
-                    <p style="opacity: 0.95; font-size: 0.9rem; margin-bottom: 15px;">
+                    <p class="card-text">
                         E-okul formatında Excel dosyası yükleyin
                     </p>
 
                     <!-- Excel Format Info -->
-                    <div style="background: rgba(0,0,0,0.15); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                    <div class="info-box">
                         <div style="font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">📋 Gerekli Format:</div>
                         <ul style="margin: 0; padding-left: 20px; font-size: 0.85rem; line-height: 1.6; opacity: 0.95;">
                             <li>İlk satır başlık olmalı</li>
@@ -224,18 +215,16 @@
                     </div>
 
                     <form id="excelImportForm" style="display: flex; flex-direction: column; gap: 12px;">
-                        <div>
-                            <label style="display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9rem;">
+                        <div class="admin-input-group">
+                            <label class="admin-label">
                                 📁 Excel Dosyası <span style="color: #ffeb3b;">*</span>
                             </label>
-                            <input type="file" id="excelFileInput" accept=".xlsx,.xls" required
-                                style="width: 100%; padding: 10px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.95); font-size: 0.9rem; cursor: pointer;">
-                            <small style="display: block; margin-top: 5px; opacity: 0.9; font-size: 0.8rem;">
+                            <input type="file" id="excelFileInput" accept=".xlsx,.xls" required class="admin-input" style="padding: 10px;">
+                            <small class="small-hint">
                                 💡 Desteklenen: .xlsx, .xls
                             </small>
                         </div>
-                        <button type="submit"
-                            style="padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: all 0.3s; margin-top: 10px;">
+                        <button type="submit" class="btn-submit">
                             📤 Excel'i Yükle
                         </button>
                     </form>
@@ -280,23 +269,20 @@
         <div id="roles" class="content-section">
 
             <!-- Header -->
-            <div
-                style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); padding: 25px; border-radius: 15px; color: white; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(250, 112, 154, 0.3);">
-                <h1 style="margin: 0 0 10px 0; font-size: 2rem; display: flex; align-items: center; gap: 10px;">
+            <div class="admin-section-header header-pink">
+                <h1 class="admin-header-title">
                     🎯 Görev Yönetimi
                 </h1>
-                <p style="margin: 0; opacity: 0.95; font-size: 1rem;">
+                <p class="admin-header-desc">
                     Sınıf başkanı, yardımcılar, nöbetçiler ve haftanın yıldızlarını atayın
                 </p>
             </div>
 
             <!-- Role Assignment Cards -->
-            <div
-                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 25px;">
+            <div class="admin-grid">
 
                 <!-- President Card -->
-                <div class="card"
-                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 25px;">
+                <div class="admin-card card-purple">
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
                         <div style="font-size: 2.5rem;">👑</div>
                         <div>
@@ -305,30 +291,25 @@
                         </div>
                     </div>
 
-                    <div
-                        style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                    <div class="info-box">
                         <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 8px;">💡 Maksimum: 1 kişi</div>
                     </div>
 
-                    <select id="presidentSelect"
-                        style="width: 100%; padding: 12px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.95); font-size: 1rem; margin-bottom: 12px; cursor: pointer; color: #333;">
+                    <select id="presidentSelect" class="admin-select" style="margin-bottom: 12px;">
                         <option value="">Öğrenci seçin...</option>
                     </select>
 
-                    <button onclick="assignRole('president')"
-                        style="width: 100%; padding: 14px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #333; border: none; border-radius: 10px; cursor: pointer; font-size: 1.05rem; font-weight: 600; box-shadow: 0 4px 15px rgba(67, 233, 123, 0.4); transition: all 0.3s;">
+                    <button onclick="assignRole('president')" class="btn-submit btn-green">
                         ✅ Başkan Ata
                     </button>
 
-                    <div id="currentPresident"
-                        style="margin-top: 15px; padding: 12px; background: rgba(0,0,0,0.15); border-radius: 8px; min-height: 50px;">
+                    <div id="currentPresident" class="info-box info-box-dark" style="margin-top: 15px; min-height: 50px;">
                         <!-- Current president will be shown here -->
                     </div>
                 </div>
 
                 <!-- Vice Presidents Card -->
-                <div class="card"
-                    style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; padding: 25px;">
+                <div class="admin-card card-pink">
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
                         <div style="font-size: 2.5rem;">🤝</div>
                         <div>
@@ -337,30 +318,25 @@
                         </div>
                     </div>
 
-                    <div
-                        style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                    <div class="info-box">
                         <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 8px;">💡 Maksimum: 2 kişi</div>
                     </div>
 
-                    <select id="vicePresidentSelect"
-                        style="width: 100%; padding: 12px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.95); font-size: 1rem; margin-bottom: 12px; cursor: pointer; color: #333;">
+                    <select id="vicePresidentSelect" class="admin-select" style="margin-bottom: 12px;">
                         <option value="">Öğrenci seçin...</option>
                     </select>
 
-                    <button onclick="assignRole('vice_president')"
-                        style="width: 100%; padding: 14px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #333; border: none; border-radius: 10px; cursor: pointer; font-size: 1.05rem; font-weight: 600; box-shadow: 0 4px 15px rgba(67, 233, 123, 0.4); transition: all 0.3s;">
+                    <button onclick="assignRole('vice_president')" class="btn-submit btn-green">
                         ➕ Yardımcı Ekle
                     </button>
 
-                    <div id="currentVicePresidents"
-                        style="margin-top: 15px; padding: 12px; background: rgba(0,0,0,0.15); border-radius: 8px; min-height: 50px;">
+                    <div id="currentVicePresidents" class="info-box info-box-dark" style="margin-top: 15px; min-height: 50px;">
                         <!-- Current vice presidents will be shown here -->
                     </div>
                 </div>
 
                 <!-- Duty Students Card -->
-                <div class="card"
-                    style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border: none; padding: 25px;">
+                <div class="admin-card card-blue">
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
                         <div style="font-size: 2.5rem;">🧹</div>
                         <div>
@@ -369,31 +345,26 @@
                         </div>
                     </div>
 
-                    <div
-                        style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                    <div class="info-box">
                         <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 8px;">💡 Maksimum: 4 kişi</div>
                     </div>
 
-                    <select id="dutySelect"
-                        style="width: 100%; padding: 12px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.95); font-size: 1rem; margin-bottom: 12px; cursor: pointer; color: #333;">
+                    <select id="dutySelect" class="admin-select" style="margin-bottom: 12px;">
                         <option value="">Öğrenci seçin...</option>
                     </select>
 
-                    <button onclick="assignRole('duty')"
-                        style="width: 100%; padding: 14px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #333; border: none; border-radius: 10px; cursor: pointer; font-size: 1.05rem; font-weight: 600; box-shadow: 0 4px 15px rgba(67, 233, 123, 0.4); transition: all 0.3s;">
+                    <button onclick="assignRole('duty')" class="btn-submit btn-green">
                         ➕ Nöbetçi Ekle
                     </button>
 
-                    <div id="currentDuty"
-                        style="margin-top: 15px; padding: 12px; background: rgba(0,0,0,0.15); border-radius: 8px; min-height: 50px;">
+                    <div id="currentDuty" class="info-box info-box-dark" style="margin-top: 15px; min-height: 50px;">
                         <!-- Current duty students will be shown here -->
                     </div>
                 </div>
             </div>
 
             <!-- Stars Section -->
-            <div class="card"
-                style="background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%); color: white; border: none; padding: 30px;">
+            <div class="admin-card card-orange">
                 <div
                     style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
                     <div style="display: flex; align-items: center; gap: 12px;">
@@ -405,26 +376,22 @@
                         </div>
                     </div>
 
-                    <div
-                        style="background: rgba(255,255,255,0.2); padding: 12px 20px; border-radius: 10px; backdrop-filter: blur(10px);">
+                    <div class="info-box">
                         <div style="font-size: 0.85rem; opacity: 0.9;">💡 Sınırsız öğrenci eklenebilir</div>
                     </div>
                 </div>
 
                 <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <select id="starSelect"
-                        style="flex: 1; min-width: 250px; padding: 14px; border: 2px solid rgba(255,255,255,0.3); border-radius: 10px; background: rgba(255,255,255,0.95); font-size: 1rem; cursor: pointer; color: #333;">
+                    <select id="starSelect" class="admin-select" style="flex: 1; min-width: 250px;">
                         <option value="">Yıldız öğrenci seçin...</option>
                     </select>
 
-                    <button onclick="assignRole('star')"
-                        style="padding: 14px 30px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1.05rem; font-weight: 600; box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4); transition: all 0.3s; white-space: nowrap;">
+                    <button onclick="assignRole('star')" class="btn-submit btn-submit" style="width: auto; padding: 14px 30px; margin-top: 0; background: var(--secondary-gradient);">
                         ⭐ Yıldız Ekle
                     </button>
                 </div>
 
-                <div id="currentStars"
-                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 20px; min-height: 100px; padding: 15px; background: rgba(0,0,0,0.15); border-radius: 10px;">
+                <div id="currentStars" class="info-box info-box-dark" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 20px; min-height: 100px;">
                     <!-- Current stars will be shown here -->
                 </div>
             </div>
@@ -571,100 +538,90 @@
         <div id="settings" class="content-section">
 
             <!-- Header -->
-            <div
-                style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 15px; color: white; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);">
-                <h1 style="margin: 0 0 10px 0; font-size: 2rem; display: flex; align-items: center; gap: 10px;">
+            <div class="admin-section-header header-blue">
+                <h1 class="admin-header-title">
                     ⚙️ Sistem Ayarları
                 </h1>
-                <p style="margin: 0; opacity: 0.95; font-size: 1rem;">
+                <p class="admin-header-desc">
                     Ana sayfa ve ekran için detaylı ayarları yapılandırın
                 </p>
             </div>
 
             <!-- Settings Grid -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px;">
+            <div class="admin-grid">
 
                 <!-- Display Settings Card - ENHANCED -->
-                <div class="card"
-                    style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; border: none; padding: 30px;">
-                    <h2 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px; font-size: 1.4rem;">
+                <div class="admin-card card-light-blue text-dark">
+                    <h2 class="card-title">
                         🖥️ Ekran Ayarları
                     </h2>
-                    <p style="opacity: 0.9; font-size: 0.9rem; margin-bottom: 25px;">
+                    <p class="card-text">
                         Ana ekran görünüm ve davranışını özelleştirin
                     </p>
 
                     <div style="display: flex; flex-direction: column; gap: 20px;">
                         <!-- Display Mode -->
-                        <div style="padding: 15px; background: rgba(255,255,255,0.5); border-radius: 10px;">
-                            <label style="display: block; font-weight: 600; margin-bottom: 12px; font-size: 1.05rem;">
+                        <div class="info-box">
+                            <label class="admin-label">
                                 📺 Ekran Modu
                             </label>
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                <button onclick="setDisplayMode('normal')" id="displayModeNormal"
-                                    style="flex: 1; min-width: 120px; padding: 10px; background: white; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                            <div class="settings-btn-group">
+                                <button onclick="setDisplayMode('normal')" id="displayModeNormal" class="settings-btn">
                                     🪟 Normal
                                 </button>
-                                <button onclick="setDisplayMode('fullscreen')" id="displayModeFullscreen"
-                                    style="flex: 1; min-width: 120px; padding: 10px; background: white; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                                <button onclick="setDisplayMode('fullscreen')" id="displayModeFullscreen" class="settings-btn">
                                     ⛶ Tam Ekran
                                 </button>
-                                <button onclick="setDisplayMode('kiosk')" id="displayModeKiosk"
-                                    style="flex: 1; min-width: 120px; padding: 10px; background: white; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                                <button onclick="setDisplayMode('kiosk')" id="displayModeKiosk" class="settings-btn">
                                     🏢 Kiosk
                                 </button>
                             </div>
-                            <small style="display: block; margin-top: 8px; opacity: 0.85;">
+                            <small class="small-hint">
                                 💡 <strong>Normal:</strong> Pencere modu | <strong>Tam Ekran:</strong> F11 gibi |
                                 <strong>Kiosk:</strong> Sadece içerik
                             </small>
                         </div>
 
                         <!-- Connection Mode -->
-                        <div style="padding: 15px; background: rgba(255,255,255,0.5); border-radius: 10px;">
-                            <label style="display: block; font-weight: 600; margin-bottom: 12px; font-size: 1.05rem;">
+                        <div class="info-box">
+                            <label class="admin-label">
                                 🌐 Bağlantı Modu
                             </label>
-                            <div style="display: flex; gap: 10px;">
-                                <button onclick="setConnectionMode('offline')" id="connOffline"
-                                    style="flex: 1; padding: 10px; background: white; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-weight: 600; color: #333; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <div class="settings-btn-group">
+                                <button onclick="setConnectionMode('offline')" id="connOffline" class="settings-btn" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                                     <span>🚫</span> Offline
                                 </button>
-                                <button onclick="setConnectionMode('online')" id="connOnline"
-                                    style="flex: 1; padding: 10px; background: white; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; font-weight: 600; color: #333; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <button onclick="setConnectionMode('online')" id="connOnline" class="settings-btn" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                                     <span>🌍</span> Online
                                 </button>
                             </div>
-                            <small style="display: block; margin-top: 8px; opacity: 0.85; font-size: 0.85rem;">
+                            <small class="small-hint">
                                 💡 <strong>Offline:</strong> Yerel fontlar, hızlı | <strong>Online:</strong> Google
                                 Fonts, hava durumu
                             </small>
                         </div>
 
                         <!-- Theme -->
-                        <div style="padding: 15px; background: rgba(255,255,255,0.5); border-radius: 10px;">
-                            <label style="display: block; font-weight: 600; margin-bottom: 12px; font-size: 1.05rem;">
+                        <div class="info-box">
+                            <label class="admin-label">
                                 🎨 Renk Teması
                             </label>
-                            <div style="display: flex; gap: 10px;">
-                                <button onclick="setColorTheme('light')" id="themeLight"
-                                    style="flex: 1; padding: 10px; background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%); border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-weight: 600; color: #333;">
+                            <div class="settings-btn-group">
+                                <button onclick="setColorTheme('light')" id="themeLight" class="settings-btn">
                                     ☀️ Açık
                                 </button>
-                                <button onclick="setColorTheme('dark')" id="themeDark"
-                                    style="flex: 1; padding: 10px; background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; font-weight: 600; color: white;">
+                                <button onclick="setColorTheme('dark')" id="themeDark" class="settings-btn" style="background: #34495e; color: white;">
                                     🌙 Koyu
                                 </button>
-                                <button onclick="setColorTheme('auto')" id="themeAuto"
-                                    style="flex: 1; padding: 10px; background: linear-gradient(135deg, #ffffff 0%, #2c3e50 100%); border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; font-weight: 600; color: #333;">
+                                <button onclick="setColorTheme('auto')" id="themeAuto" class="settings-btn" style="background: linear-gradient(135deg, #ffffff 0%, #2c3e50 100%);">
                                     🌗 Otomatik
                                 </button>
                             </div>
                         </div>
 
                         <!-- Font Size -->
-                        <div style="padding: 15px; background: rgba(255,255,255,0.5); border-radius: 10px;">
-                            <label style="display: block; font-weight: 600; margin-bottom: 12px; font-size: 1.05rem;">
+                        <div class="info-box">
+                            <label class="admin-label">
                                 🔤 Yazı Boyutu
                             </label>
                             <input type="range" id="fontSize" min="80" max="150" value="100" step="10"
@@ -683,32 +640,30 @@
                         </div>
 
                         <!-- Auto Refresh with Live Countdown -->
-                        <div style="padding: 15px; background: rgba(255,255,255,0.5); border-radius: 10px;">
-                            <label style="display: block; font-weight: 600; margin-bottom: 12px; font-size: 1.05rem;">
+                        <div class="info-box">
+                            <label class="admin-label">
                                 🔄 Otomatik Yenileme
                             </label>
                             <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
                                 <input type="number" id="autoRefreshInterval" min="0" max="120" value="0"
-                                    oninput="updateRefreshDisplay()"
-                                    style="flex: 1; padding: 10px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; font-size: 1rem;">
+                                    oninput="updateRefreshDisplay()" class="admin-input" style="flex: 1;">
                                 <span style="font-weight: 600;">dakika</span>
                             </div>
                             <div id="refreshStatus"
                                 style="padding: 10px; background: white; border-radius: 6px; text-align: center; font-size: 0.9rem;">
                                 ⏸️ Kapalı
                             </div>
-                            <small style="display: block; margin-top: 8px; opacity: 0.85;">
+                            <small class="small-hint">
                                 💡 0 = Kapalı | 5-15 dk önerilen | 120 dk maximum
                             </small>
                         </div>
 
                         <!-- Clock Format with Preview -->
-                        <div style="padding: 15px; background: rgba(255,255,255,0.5); border-radius: 10px;">
-                            <label style="display: block; font-weight: 600; margin-bottom: 12px; font-size: 1.05rem;">
+                        <div class="info-box">
+                            <label class="admin-label">
                                 🕐 Saat Formatı
                             </label>
-                            <select id="clockFormat" onchange="updateClockPreview()"
-                                style="width: 100%; padding: 10px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; font-size: 1rem; cursor: pointer;">
+                            <select id="clockFormat" onchange="updateClockPreview()" class="admin-select">
                                 <option value="24">24 Saat Formatı</option>
                                 <option value="12">12 Saat Formatı (AM/PM)</option>
                             </select>
@@ -721,43 +676,39 @@
                 </div>
 
                 <!-- Noise Meter Settings - ENHANCED -->
-                <div class="card"
-                    style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); color: #333; border: none; padding: 30px;">
-                    <h2 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px; font-size: 1.4rem;">
+                <div class="admin-card card-peach text-dark">
+                    <h2 class="card-title">
                         🔊 Gürültü Ölçer Ayarları
                     </h2>
-                    <p style="opacity: 0.9; font-size: 0.9rem; margin-bottom: 25px;">
+                    <p class="card-text">
                         Ses hassasiyeti ve uyarı seviyelerini hassas şekilde ayarlayın
                     </p>
 
                     <div style="display: flex; flex-direction: column; gap: 20px;">
                         <!-- Quick Presets -->
-                        <div style="padding: 15px; background: rgba(255,255,255,0.5); border-radius: 10px;">
-                            <label style="display: block; font-weight: 600; margin-bottom: 12px; font-size: 1.05rem;">
+                        <div class="info-box">
+                            <label class="admin-label">
                                 ⚡ Hızlı Ayarlar
                             </label>
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                                <button onclick="setNoisePreset('quiet')"
-                                    style="padding: 10px; background: linear-gradient(135deg, #a8edea, #fed6e3); border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                            <div class="noise-meter-grid">
+                                <button onclick="setNoisePreset('quiet')" class="settings-btn">
                                     😌 Sessiz
                                 </button>
-                                <button onclick="setNoisePreset('normal')"
-                                    style="padding: 10px; background: linear-gradient(135deg, #ffecd2, #fcb69f); border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                                <button onclick="setNoisePreset('normal')" class="settings-btn">
                                     😊 Normal
                                 </button>
-                                <button onclick="setNoisePreset('active')"
-                                    style="padding: 10px; background: linear-gradient(135deg, #fa709a, #fee140); border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                                <button onclick="setNoisePreset('active')" class="settings-btn">
                                     🎉 Aktif
                                 </button>
                             </div>
-                            <small style="display: block; margin-top: 8px; opacity: 0.85;">
+                            <small class="small-hint">
                                 💡 Sınıf durumuna göre önceden ayarlanmış profiller
                             </small>
                         </div>
 
                         <!-- Sensitivity with Visual Feedback -->
-                        <div style="padding: 15px; background: rgba(255,255,255,0.5); border-radius: 10px;">
-                            <label style="display: block; font-weight: 600; margin-bottom: 12px; font-size: 1.05rem;">
+                        <div class="info-box">
+                            <label class="admin-label">
                                 📊 Hassasiyet Seviyesi
                             </label>
                             <input type="range" id="noiseSensitivity" min="1" max="10" value="5"
@@ -781,8 +732,8 @@
                         </div>
 
                         <!-- Thresholds with Live Preview -->
-                        <div style="padding: 15px; background: rgba(255,255,255,0.5); border-radius: 10px;">
-                            <label style="display: block; font-weight: 600; margin-bottom: 12px; font-size: 1.05rem;">
+                        <div class="info-box">
+                            <label class="admin-label">
                                 🎯 Eşik Değerleri
                             </label>
 
@@ -816,11 +767,10 @@
                             <div style="margin-top: 15px; padding: 12px; background: white; border-radius: 8px;">
                                 <div style="font-size: 0.85rem; margin-bottom: 8px; font-weight: 600;">📊 Renkli
                                     Önizleme:</div>
-                                <div
-                                    style="display: flex; height: 30px; border-radius: 6px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
-                                    <div id="previewGreen" style="background: #4caf50; transition: all 0.3s;"></div>
-                                    <div id="previewOrange" style="background: #ff9800; transition: all 0.3s;"></div>
-                                    <div id="previewRed" style="background: #f44336; transition: all 0.3s;"></div>
+                                <div class="preview-bar-container">
+                                    <div id="previewGreen" class="preview-segment" style="background: #4caf50;"></div>
+                                    <div id="previewOrange" class="preview-segment" style="background: #ff9800;"></div>
+                                    <div id="previewRed" class="preview-segment" style="background: #f44336;"></div>
                                 </div>
                                 <div
                                     style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.75rem; opacity: 0.8;">
@@ -833,9 +783,8 @@
                         </div>
 
                         <!-- Test Button -->
-                        <div style="padding: 15px; background: rgba(255,255,255,0.5); border-radius: 10px;">
-                            <button onclick="testNoiseMeter()"
-                                style="width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1.05rem; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: all 0.3s;">
+                        <div class="info-box">
+                            <button onclick="testNoiseMeter()" class="btn-submit">
                                 🎤 Mikrofonu Test Et
                             </button>
                             <div id="testResult"
@@ -847,12 +796,11 @@
                 </div>
 
                 <!-- Slideshow Settings -->
-                <div class="card"
-                    style="background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%); color: #333; border: none; padding: 25px;">
-                    <h2 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px; font-size: 1.3rem;">
+                <div class="admin-card card-pastel text-dark">
+                    <h2 class="card-title">
                         🎬 Slayt Gösterisi Ayarları
                     </h2>
-                    <p style="opacity: 0.9; font-size: 0.9rem; margin-bottom: 20px;">
+                    <p class="card-text">
                         Slayt gösterisinin davranışını özelleştirin
                     </p>
 
@@ -896,12 +844,11 @@
                 </div>
 
                 <!-- Equalizer Theme Card -->
-                <div class="card"
-                    style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: #333; border: none; padding: 25px;">
-                    <h2 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px; font-size: 1.3rem;">
+                <div class="admin-card card-pink text-dark">
+                    <h2 class="card-title">
                         🎨 Ekolayzer Teması
                     </h2>
-                    <p style="opacity: 0.9; font-size: 0.9rem; margin-bottom: 20px;">
+                    <p class="card-text">
                         Gürültü ölçer için renk teması seçin
                     </p>
 
@@ -916,8 +863,7 @@
                             </div>
                         </div>
                         <div style="text-align: center; margin-top: 10px;">
-                            <button id="admin-mic-btn" onclick="startAdminMicrophone()"
-                                style="padding: 10px 25px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                            <button id="admin-mic-btn" onclick="startAdminMicrophone()" class="btn-submit">
                                 🎤 Mikrofonu Başlat
                             </button>
                             <div id="admin-mic-status" style="margin-top: 8px; font-size: 0.85rem; color: #aaa;">
@@ -959,8 +905,7 @@
 
         <!-- Save Button -->
         <div style="margin-top: 25px; text-align: center;">
-            <button onclick="saveAllSettings()"
-                style="padding: 15px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: all 0.3s;"
+            <button onclick="saveAllSettings()" class="btn-save-all"
                 onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                 💾 Tüm Ayarları Kaydet
             </button>
