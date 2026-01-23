@@ -11,103 +11,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/fonts.css">
     <link rel="stylesheet" href="style.css">
-    <style>
-        /* 3D Typewriter Button Effect */
-        .theme-btn {
-            position: relative;
-            padding: 15px;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: white;
-            transition: all 0.1s;
-            /* 3D Depth */
-            box-shadow: 0 5px 0 rgba(0, 0, 0, 0.2), 0 10px 10px rgba(0, 0, 0, 0.1);
-            transform: translateY(0);
-            margin-bottom: 5px;
-            /* Yer açmak için */
-        }
-
-        .theme-btn:active,
-        .theme-btn.active {
-            /* Pressed State */
-            transform: translateY(5px);
-            box-shadow: 0 0 0 rgba(0, 0, 0, 0.2), 0 0 0 rgba(0, 0, 0, 0.1);
-            filter: brightness(0.9);
-        }
-
-        /* Specific Gradients - ULTRA VIBRANT MATCHING */
-        body {
-            /* font-family set in style.css */
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            text-rendering: optimizeLegibility;
-            font-feature-settings: "kern" 1, "liga" 1;
-        }
-
-        /* Hot Pink -> Orange -> Lime */
-        .btn-neon {
-            background: linear-gradient(135deg, #ff0055 0%, #ffaa00 50%, #00ff00 100%);
-        }
-
-        /* Deep Blue -> Cyan -> White */
-        .btn-ocean {
-            background: linear-gradient(135deg, #0000ff 0%, #00ffff 100%);
-        }
-
-        /* Purple -> Magenta -> Orange */
-        .btn-sunset {
-            background: linear-gradient(135deg, #cc00cc 0%, #ff0066 50%, #ff9933 100%);
-        }
-
-        /* Green -> Bright Lime */
-        .btn-forest {
-            background: linear-gradient(135deg, #009900 0%, #ccff00 100%);
-        }
-
-        /* Red -> Hot Pink */
-        .btn-love {
-            background: linear-gradient(135deg, #ff0000 0%, #ff0066 100%);
-        }
-
-        /* Indigo -> Neon Purple */
-        .btn-royal {
-            background: linear-gradient(135deg, #4b0082 0%, #cc00ff 100%);
-        }
-
-        /* Deep Blue -> Cyan */
-        .btn-ice {
-            background: linear-gradient(135deg, #0055ff 0%, #00ffff 100%);
-        }
-
-        /* Red -> Orange -> Yellow */
-        .btn-fire {
-            background: linear-gradient(135deg, #ff0000 0%, #ffcc00 100%);
-        }
-
-        /* Dark Green -> Neon Green */
-        .btn-matrix {
-            background: linear-gradient(135deg, #000000 0%, #00ff00 100%);
-            border: 1px solid #00ff00 !important;
-            color: #00ff00 !important;
-        }
-
-        /* Rainbow */
-        .btn-rainbow {
-            background: linear-gradient(90deg, #ff0000, #00ff00, #0000ff, #ffff00);
-        }
-    </style>
 </head>
 
 <body>
     <div class="container">
         <h1>Admin Panel</h1>
-        <button onclick="showQRCode()"
-            style="float: right; margin-top: -60px; padding: 10px 20px; background: var(--secondary); border: none; border-radius: 10px; color: white; cursor: pointer;">📱
-            Mobil Bağlan</button>
+        <button onclick="showQRCode()" class="header-action-btn">📱 Mobil Bağlan</button>
 
         <div class="tabs">
             <button class="tab-btn active" onclick="showTab('students')">Öğrenciler</button>
@@ -118,13 +27,11 @@
         </div>
 
         <!-- Students Section -->
-        <!-- Students Section - REDESIGNED -->
         <div id="students" class="content-section active">
 
             <!-- Header with Stats -->
             <div class="admin-section-header header-purple">
-                <div
-                    style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <div class="admin-header-flex">
                     <div>
                         <h1 class="admin-header-title">
                             👨‍🎓 Öğrenci Yönetimi
@@ -163,16 +70,16 @@
                     <p class="card-text">
                         Bir öğrenci eklemek için formu doldurun
                     </p>
-                    <form id="addStudentForm" style="display: flex; flex-direction: column; gap: 12px;">
+                    <form id="addStudentForm" class="admin-form-col">
                         <div class="admin-input-group">
                             <label class="admin-label">
-                                📝 Ad Soyad <span style="color: #ffeb3b;">*</span>
+                                📝 Ad Soyad <span class="admin-label-required">*</span>
                             </label>
                             <input type="text" name="name" placeholder="Örn: Ahmet Yılmaz" required class="admin-input">
                         </div>
                         <div class="admin-input-group">
                             <label class="admin-label">
-                                👤 Cinsiyet <span style="color: #ffeb3b;">*</span>
+                                👤 Cinsiyet <span class="admin-label-required">*</span>
                             </label>
                             <select name="gender" required class="admin-select">
                                 <option value="M">👦 Erkek</option>
@@ -181,9 +88,9 @@
                         </div>
                         <div class="admin-input-group">
                             <label class="admin-label">
-                                📷 Fotoğraf <span style="opacity: 0.7; font-size: 0.85rem;">(opsiyonel)</span>
+                                📷 Fotoğraf <span class="small-hint">(opsiyonel)</span>
                             </label>
-                            <input type="file" name="photo" accept="image/*" class="admin-input" style="padding: 10px;">
+                            <input type="file" name="photo" accept="image/*" class="admin-input admin-input-file">
                             <small class="small-hint">
                                 💡 Boş bırakırsanız varsayılan avatar kullanılır
                             </small>
@@ -214,12 +121,12 @@
                         </ul>
                     </div>
 
-                    <form id="excelImportForm" style="display: flex; flex-direction: column; gap: 12px;">
+                    <form id="excelImportForm" class="admin-form-col">
                         <div class="admin-input-group">
                             <label class="admin-label">
-                                📁 Excel Dosyası <span style="color: #ffeb3b;">*</span>
+                                📁 Excel Dosyası <span class="admin-label-required">*</span>
                             </label>
-                            <input type="file" id="excelFileInput" accept=".xlsx,.xls" required class="admin-input" style="padding: 10px;">
+                            <input type="file" id="excelFileInput" accept=".xlsx,.xls" required class="admin-input admin-input-file">
                             <small class="small-hint">
                                 💡 Desteklenen: .xlsx, .xls
                             </small>
@@ -228,26 +135,22 @@
                             📤 Excel'i Yükle
                         </button>
                     </form>
-                    <div id="excelImportResult"
-                        style="margin-top: 15px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.2);">
+                    <div id="excelImportResult" class="info-box" style="margin-top: 15px; background: rgba(255,255,255,0.2);">
                     </div>
                 </div>
             </div>
 
             <!-- Student List Card -->
             <div class="card" style="padding: 25px;">
-                <div
-                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
-                    <h2 style="margin: 0; display: flex; align-items: center; gap: 10px; color: var(--primary);">
+                <div class="list-header-flex">
+                    <h2 class="list-header-title">
                         📚 Öğrenci Listesi
                     </h2>
 
                     <!-- Search and Filter -->
-                    <div style="display: flex; gap: 10px; flex: 1; max-width: 600px;">
-                        <input type="text" id="studentSearch" placeholder="🔍 Öğrenci ara..." onkeyup="filterStudents()"
-                            style="flex: 1; padding: 10px 15px; border: 2px solid rgba(102, 126, 234, 0.2); border-radius: 8px; font-size: 1rem;">
-                        <select id="genderFilter" onchange="filterStudents()"
-                            style="padding: 10px 15px; border: 2px solid rgba(102, 126, 234, 0.2); border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                    <div class="list-filter-group">
+                        <input type="text" id="studentSearch" placeholder="🔍 Öğrenci ara..." onkeyup="filterStudents()" class="search-input">
+                        <select id="genderFilter" onchange="filterStudents()" class="filter-select">
                             <option value="">Tümü</option>
                             <option value="M">👦 Erkek</option>
                             <option value="F">👧 Kız</option>
@@ -256,8 +159,7 @@
                 </div>
 
                 <!-- Students Grid/List -->
-                <div id="studentList"
-                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 20px;">
+                <div id="studentList" class="student-list" style="margin-top: 20px;">
                     <!-- Students will be rendered here -->
                 </div>
             </div>
@@ -265,7 +167,7 @@
         </div>
 
 
-        <!-- Roles Section - REDESIGNED -->
+        <!-- Roles Section -->
         <div id="roles" class="content-section">
 
             <!-- Header -->
@@ -283,16 +185,16 @@
 
                 <!-- President Card -->
                 <div class="admin-card card-purple">
-                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
-                        <div style="font-size: 2.5rem;">👑</div>
+                    <div class="card-header-flex">
+                        <div class="card-icon-lg">👑</div>
                         <div>
-                            <h3 style="margin: 0; font-size: 1.3rem;">Sınıf Başkanı</h3>
-                            <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 0.85rem;">Sınıfın lideri</p>
+                            <h3 class="card-title-sm">Sınıf Başkanı</h3>
+                            <p class="card-subtitle">Sınıfın lideri</p>
                         </div>
                     </div>
 
                     <div class="info-box">
-                        <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 8px;">💡 Maksimum: 1 kişi</div>
+                        <div class="small-hint" style="margin-bottom: 8px;">💡 Maksimum: 1 kişi</div>
                     </div>
 
                     <select id="presidentSelect" class="admin-select" style="margin-bottom: 12px;">
@@ -310,16 +212,16 @@
 
                 <!-- Vice Presidents Card -->
                 <div class="admin-card card-pink">
-                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
-                        <div style="font-size: 2.5rem;">🤝</div>
+                    <div class="card-header-flex">
+                        <div class="card-icon-lg">🤝</div>
                         <div>
-                            <h3 style="margin: 0; font-size: 1.3rem;">Başkan Yardımcıları</h3>
-                            <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 0.85rem;">Başkanın destekçileri</p>
+                            <h3 class="card-title-sm">Başkan Yardımcıları</h3>
+                            <p class="card-subtitle">Başkanın destekçileri</p>
                         </div>
                     </div>
 
                     <div class="info-box">
-                        <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 8px;">💡 Maksimum: 2 kişi</div>
+                        <div class="small-hint" style="margin-bottom: 8px;">💡 Maksimum: 2 kişi</div>
                     </div>
 
                     <select id="vicePresidentSelect" class="admin-select" style="margin-bottom: 12px;">
@@ -337,16 +239,16 @@
 
                 <!-- Duty Students Card -->
                 <div class="admin-card card-blue">
-                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
-                        <div style="font-size: 2.5rem;">🧹</div>
+                    <div class="card-header-flex">
+                        <div class="card-icon-lg">🧹</div>
                         <div>
-                            <h3 style="margin: 0; font-size: 1.3rem;">Nöbetçiler</h3>
-                            <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 0.85rem;">Sınıf düzeni sorumluları</p>
+                            <h3 class="card-title-sm">Nöbetçiler</h3>
+                            <p class="card-subtitle">Sınıf düzeni sorumluları</p>
                         </div>
                     </div>
 
                     <div class="info-box">
-                        <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 8px;">💡 Maksimum: 4 kişi</div>
+                        <div class="small-hint" style="margin-bottom: 8px;">💡 Maksimum: 4 kişi</div>
                     </div>
 
                     <select id="dutySelect" class="admin-select" style="margin-bottom: 12px;">
@@ -365,33 +267,31 @@
 
             <!-- Stars Section -->
             <div class="admin-card card-orange">
-                <div
-                    style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="font-size: 3rem;">⭐</div>
+                <div class="star-card-header">
+                    <div class="card-header-flex">
+                        <div class="star-card-icon">⭐</div>
                         <div>
-                            <h3 style="margin: 0; font-size: 1.5rem;">Haftanın Yıldızları</h3>
-                            <p style="margin: 5px 0 0 0; opacity: 0.95; font-size: 0.9rem;">Başarılı öğrencileri
-                                ödüllendirin</p>
+                            <h3 class="star-card-title">Haftanın Yıldızları</h3>
+                            <p class="star-card-subtitle">Başarılı öğrencileri ödüllendirin</p>
                         </div>
                     </div>
 
                     <div class="info-box">
-                        <div style="font-size: 0.85rem; opacity: 0.9;">💡 Sınırsız öğrenci eklenebilir</div>
+                        <div class="small-hint">💡 Sınırsız öğrenci eklenebilir</div>
                     </div>
                 </div>
 
-                <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <select id="starSelect" class="admin-select" style="flex: 1; min-width: 250px;">
+                <div class="star-action-group">
+                    <select id="starSelect" class="admin-select star-select">
                         <option value="">Yıldız öğrenci seçin...</option>
                     </select>
 
-                    <button onclick="assignRole('star')" class="btn-submit btn-submit" style="width: auto; padding: 14px 30px; margin-top: 0; background: var(--secondary-gradient);">
+                    <button onclick="assignRole('star')" class="btn-submit btn-star-add">
                         ⭐ Yıldız Ekle
                     </button>
                 </div>
 
-                <div id="currentStars" class="info-box info-box-dark" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 20px; min-height: 100px;">
+                <div id="currentStars" class="info-box info-box-dark stars-grid">
                     <!-- Current stars will be shown here -->
                 </div>
             </div>
@@ -402,21 +302,17 @@
         <div id="attendance" class="content-section">
             <div class="card">
                 <h2>Günlük Yoklama</h2>
-                <div style="margin-bottom: 15px;">
+                <div class="attendance-controls">
                     <label>Tarih:</label>
-                    <input type="date" id="attendanceDate" style="margin-left: 10px; padding: 5px;">
-                    <button onclick="loadAttendanceForDate()"
-                        style="margin-left: 10px; padding: 5px 15px;">Yükle</button>
-                    <button onclick="setTodayDate()" style="margin-left: 5px; padding: 5px 15px;">Bugün</button>
+                    <input type="date" id="attendanceDate" class="attendance-date-input">
+                    <button onclick="loadAttendanceForDate()" class="btn-sm">Yükle</button>
+                    <button onclick="setTodayDate()" class="btn-sm">Bugün</button>
                 </div>
                 <div id="attendanceList" class="student-list"></div>
                 <div style="margin-top: 20px;">
-                    <button onclick="saveAttendance()"
-                        style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">Yoklamayı
-                        Kaydet</button>
+                    <button onclick="saveAttendance()" class="btn-submit" style="background: var(--primary);">Yoklamayı Kaydet</button>
                 </div>
-                <div id="attendanceSummary"
-                    style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.05); border-radius: 10px;">
+                <div id="attendanceSummary" style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.05); border-radius: 10px;">
                     <h3>Özet</h3>
                     <div id="attendanceSummaryContent"></div>
                 </div>
@@ -427,15 +323,12 @@
         <div id="slides" class="content-section">
             <div class="card">
                 <h2>Yeni Slayt Ekle</h2>
-                <button onclick="showSlideForm()"
-                    style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px;">+
-                    Yeni Slayt Ekle</button>
+                <button onclick="showSlideForm()" class="btn-submit" style="width: auto; margin-bottom: 20px;">+ Yeni Slayt Ekle</button>
             </div>
 
             <div class="card" style="margin-top: 20px;">
                 <h2>Slayt Listesi</h2>
-                <p style="color: #666; font-size: 0.9rem; margin-bottom: 10px;">Slaytları sürükle-bırak ile
-                    sıralayabilirsiniz.</p>
+                <p style="color: #666; font-size: 0.9rem; margin-bottom: 10px;">Slaytları sürükle-bırak ile sıralayabilirsiniz.</p>
                 <div id="slidesList" class="slides-list">
                     <!-- Slides will be loaded here -->
                 </div>
@@ -443,15 +336,14 @@
 
             <div class="card" style="margin-top: 20px;">
                 <h2>Genel Slayt Ayarları</h2>
-                <form id="slideSettingsForm" style="display: flex; flex-direction: column; gap: 15px;">
+                <form id="slideSettingsForm" class="admin-form-col">
                     <div>
                         <label>Varsayılan Gösterim Süresi (saniye)</label><br>
-                        <input type="number" id="defaultDuration" min="1" max="60" value="10"
-                            style="width: 100%; margin-top: 5px;">
+                        <input type="number" id="defaultDuration" min="1" max="60" value="10" class="admin-input" style="margin-top: 5px;">
                     </div>
                     <div>
                         <label>Varsayılan Geçiş Modu</label><br>
-                        <select id="defaultTransitionMode" style="width: 100%; margin-top: 5px;">
+                        <select id="defaultTransitionMode" class="admin-select" style="margin-top: 5px;">
                             <option value="auto">Otomatik Akıllı Seçim</option>
                             <option value="random">Random</option>
                             <option value="manual">Manuel</option>
@@ -459,10 +351,9 @@
                     </div>
                     <div>
                         <label>Varsayılan Geçiş Süresi (saniye)</label><br>
-                        <input type="number" id="defaultTransitionDuration" min="0.5" max="3" step="0.1" value="1"
-                            style="width: 100%; margin-top: 5px;">
+                        <input type="number" id="defaultTransitionDuration" min="0.5" max="3" step="0.1" value="1" class="admin-input" style="margin-top: 5px;">
                     </div>
-                    <button type="submit">Ayarları Kaydet</button>
+                    <button type="submit" class="btn-submit">Ayarları Kaydet</button>
                 </form>
             </div>
         </div>
@@ -470,29 +361,24 @@
         <!-- Error Logs Section -->
         <div id="error-logs" class="content-section">
             <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div class="error-logs-header">
                     <h2>Hata Logları</h2>
-                    <div style="display: flex; gap: 10px;">
-                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                    <div class="log-actions">
+                        <label class="debug-toggle">
                             <input type="checkbox" id="debugModeToggle" onchange="toggleDebugMode()">
                             <span>Debug Modu</span>
                         </label>
-                        <button onclick="refreshErrorLogs()"
-                            style="padding: 8px 15px; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer;">Yenile</button>
-                        <button onclick="exportErrorLogs()"
-                            style="padding: 8px 15px; background: var(--secondary); color: white; border: none; border-radius: 5px; cursor: pointer;">Dışa
-                            Aktar</button>
-                        <button onclick="clearOldLogs()"
-                            style="padding: 8px 15px; background: #ff9800; color: white; border: none; border-radius: 5px; cursor: pointer;">Eski
-                            Logları Temizle</button>
+                        <button onclick="refreshErrorLogs()" class="btn-refresh">Yenile</button>
+                        <button onclick="exportErrorLogs()" class="btn-export">Dışa Aktar</button>
+                        <button onclick="clearOldLogs()" class="btn-clear">Eski Logları Temizle</button>
                     </div>
                 </div>
 
                 <!-- Filters -->
-                <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                <div class="log-filters">
                     <div>
                         <label>Seviye:</label><br>
-                        <select id="logLevelFilter" onchange="filterErrorLogs()" style="margin-top: 5px; padding: 5px;">
+                        <select id="logLevelFilter" onchange="filterErrorLogs()" class="admin-select log-filter-select">
                             <option value="">Tümü</option>
                             <option value="ERROR">ERROR</option>
                             <option value="WARN">WARN</option>
@@ -502,8 +388,7 @@
                     </div>
                     <div>
                         <label>Bileşen:</label><br>
-                        <select id="logComponentFilter" onchange="filterErrorLogs()"
-                            style="margin-top: 5px; padding: 5px;">
+                        <select id="logComponentFilter" onchange="filterErrorLogs()" class="admin-select log-filter-select">
                             <option value="">Tümü</option>
                             <option value="SLIDESHOW">SLIDESHOW</option>
                             <option value="ADMIN">ADMIN</option>
@@ -516,7 +401,7 @@
                     </div>
                     <div>
                         <label>Son:</label><br>
-                        <select id="logTimeFilter" onchange="filterErrorLogs()" style="margin-top: 5px; padding: 5px;">
+                        <select id="logTimeFilter" onchange="filterErrorLogs()" class="admin-select log-filter-select">
                             <option value="">Tümü</option>
                             <option value="1h">Son 1 Saat</option>
                             <option value="24h">Son 24 Saat</option>
@@ -534,7 +419,6 @@
         </div>
 
         <!-- Settings Section -->
-        <!-- Settings Section - REDESIGNED -->
         <div id="settings" class="content-section">
 
             <!-- Header -->
@@ -550,7 +434,7 @@
             <!-- Settings Grid -->
             <div class="admin-grid">
 
-                <!-- Display Settings Card - ENHANCED -->
+                <!-- Display Settings Card -->
                 <div class="admin-card card-light-blue text-dark">
                     <h2 class="card-title">
                         🖥️ Ekran Ayarları
@@ -559,7 +443,7 @@
                         Ana ekran görünüm ve davranışını özelleştirin
                     </p>
 
-                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="admin-form-col" style="gap: 20px;">
                         <!-- Display Mode -->
                         <div class="info-box">
                             <label class="admin-label">
@@ -624,17 +508,13 @@
                             <label class="admin-label">
                                 🔤 Yazı Boyutu
                             </label>
-                            <input type="range" id="fontSize" min="80" max="150" value="100" step="10"
-                                oninput="updateFontSizeDisplay()"
-                                style="width: 100%; height: 8px; border-radius: 5px; background: linear-gradient(to right, #667eea, #764ba2); outline: none; cursor: pointer;">
-                            <div
-                                style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-top: 8px; font-weight: 600;">
+                            <input type="range" id="fontSize" min="80" max="150" value="100" step="10" oninput="updateFontSizeDisplay()" class="range-slider range-primary">
+                            <div class="range-labels">
                                 <span>80%</span>
                                 <span id="fontSizeValue" style="color: #667eea; font-size: 1.1rem;">100%</span>
                                 <span>150%</span>
                             </div>
-                            <div id="fontSizePreview"
-                                style="margin-top: 10px; padding: 12px; background: white; border-radius: 6px; text-align: center; font-size: 1rem; font-weight: 500;">
+                            <div id="fontSizePreview" class="preview-box">
                                 Önizleme: Sınıf Panosu
                             </div>
                         </div>
@@ -645,12 +525,10 @@
                                 🔄 Otomatik Yenileme
                             </label>
                             <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
-                                <input type="number" id="autoRefreshInterval" min="0" max="120" value="0"
-                                    oninput="updateRefreshDisplay()" class="admin-input" style="flex: 1;">
+                                <input type="number" id="autoRefreshInterval" min="0" max="120" value="0" oninput="updateRefreshDisplay()" class="admin-input" style="flex: 1;">
                                 <span style="font-weight: 600;">dakika</span>
                             </div>
-                            <div id="refreshStatus"
-                                style="padding: 10px; background: white; border-radius: 6px; text-align: center; font-size: 0.9rem;">
+                            <div id="refreshStatus" class="preview-box" style="margin-top: 0; font-size: 0.9rem;">
                                 ⏸️ Kapalı
                             </div>
                             <small class="small-hint">
@@ -667,15 +545,14 @@
                                 <option value="24">24 Saat Formatı</option>
                                 <option value="12">12 Saat Formatı (AM/PM)</option>
                             </select>
-                            <div id="clockPreview"
-                                style="margin-top: 10px; padding: 12px; background: white; border-radius: 6px; text-align: center; font-size: 1.5rem; font-weight: 600; color: #667eea;">
+                            <div id="clockPreview" class="preview-box" style="font-size: 1.5rem; font-weight: 600; color: #667eea;">
                                 14:30:45
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Noise Meter Settings - ENHANCED -->
+                <!-- Noise Meter Settings -->
                 <div class="admin-card card-peach text-dark">
                     <h2 class="card-title">
                         🔊 Gürültü Ölçer Ayarları
@@ -684,7 +561,7 @@
                         Ses hassasiyeti ve uyarı seviyelerini hassas şekilde ayarlayın
                     </p>
 
-                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="admin-form-col" style="gap: 20px;">
                         <!-- Quick Presets -->
                         <div class="info-box">
                             <label class="admin-label">
@@ -706,32 +583,26 @@
                             </small>
                         </div>
 
-                        <!-- Sensitivity with Visual Feedback -->
+                        <!-- Sensitivity -->
                         <div class="info-box">
                             <label class="admin-label">
                                 📊 Hassasiyet Seviyesi
                             </label>
-                            <input type="range" id="noiseSensitivity" min="1" max="10" value="5"
-                                oninput="updateSensitivityDisplay()"
-                                style="width: 100%; height: 8px; border-radius: 5px; background: linear-gradient(to right, #00ff88, #aa66ff); outline: none; cursor: pointer;">
-                            <div
-                                style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-top: 8px;">
+                            <input type="range" id="noiseSensitivity" min="1" max="10" value="5" oninput="updateSensitivityDisplay()" class="range-slider range-noise">
+                            <div class="range-labels">
                                 <span>🔇 Düşük</span>
-                                <span id="sensitivityValue"
-                                    style="font-weight: 600; font-size: 1.2rem; color: #667eea;">5</span>
+                                <span id="sensitivityValue" style="font-weight: 600; font-size: 1.2rem; color: #667eea;">5</span>
                                 <span>🔊 Yüksek</span>
                             </div>
                             <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px;">
-                                <div style="font-size: 0.85rem; margin-bottom: 5px; font-weight: 600;">Hassasiyet
-                                    Açıklaması:</div>
-
+                                <div style="font-size: 0.85rem; margin-bottom: 5px; font-weight: 600;">Hassasiyet Açıklaması:</div>
                                 <div id="sensitivityDescription" style="font-size: 0.9rem; color: #666;">
                                     Orta seviye - Standart sınıf ortamı için uygundur
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Thresholds with Live Preview -->
+                        <!-- Thresholds -->
                         <div class="info-box">
                             <label class="admin-label">
                                 🎯 Eşik Değerleri
@@ -739,41 +610,31 @@
 
                             <!-- Warning Threshold -->
                             <div style="margin-bottom: 15px;">
-                                <div
-                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div class="admin-header-flex" style="margin-bottom: 8px;">
                                     <span style="font-weight: 600;">⚠️ Uyarı Eşiği</span>
-                                    <span id="warningValue"
-                                        style="font-weight: 600; color: #ff9800; font-size: 1.1rem;">70%</span>
+                                    <span id="warningValue" style="font-weight: 600; color: #ff9800; font-size: 1.1rem;">70%</span>
                                 </div>
-                                <input type="range" id="warningThreshold" min="0" max="95" value="70"
-                                    oninput="updateThresholdDisplay()"
-                                    style="width: 100%; height: 6px; border-radius: 5px; background: linear-gradient(to right, #4caf50, #ff9800); outline: none; cursor: pointer;">
+                                <input type="range" id="warningThreshold" min="0" max="95" value="70" oninput="updateThresholdDisplay()" class="range-slider range-warning">
                             </div>
 
                             <!-- Danger Threshold -->
                             <div>
-                                <div
-                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div class="admin-header-flex" style="margin-bottom: 8px;">
                                     <span style="font-weight: 600;">🚨 Tehlike Eşiği</span>
-                                    <span id="dangerValue"
-                                        style="font-weight: 600; color: #f44336; font-size: 1.1rem;">85%</span>
+                                    <span id="dangerValue" style="font-weight: 600; color: #f44336; font-size: 1.1rem;">85%</span>
                                 </div>
-                                <input type="range" id="dangerThreshold" min="5" max="100" value="85"
-                                    oninput="updateThresholdDisplay()"
-                                    style="width: 100%; height: 6px; border-radius: 5px; background: linear-gradient(to right, #ff9800, #f44336); outline: none; cursor: pointer;">
+                                <input type="range" id="dangerThreshold" min="5" max="100" value="85" oninput="updateThresholdDisplay()" class="range-slider range-danger">
                             </div>
 
                             <!-- Visual Preview -->
                             <div style="margin-top: 15px; padding: 12px; background: white; border-radius: 8px;">
-                                <div style="font-size: 0.85rem; margin-bottom: 8px; font-weight: 600;">📊 Renkli
-                                    Önizleme:</div>
+                                <div style="font-size: 0.85rem; margin-bottom: 8px; font-weight: 600;">📊 Renkli Önizleme:</div>
                                 <div class="preview-bar-container">
                                     <div id="previewGreen" class="preview-segment" style="background: #4caf50;"></div>
                                     <div id="previewOrange" class="preview-segment" style="background: #ff9800;"></div>
                                     <div id="previewRed" class="preview-segment" style="background: #f44336;"></div>
                                 </div>
-                                <div
-                                    style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.75rem; opacity: 0.8;">
+                                <div class="range-labels">
                                     <span>0%</span>
                                     <span id="warningLabel">70%</span>
                                     <span id="dangerLabel">85%</span>
@@ -787,8 +648,7 @@
                             <button onclick="testNoiseMeter()" class="btn-submit">
                                 🎤 Mikrofonu Test Et
                             </button>
-                            <div id="testResult"
-                                style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px; text-align: center; font-size: 0.9rem; font-weight: 500;">
+                            <div id="testResult" class="preview-box">
                                 Test sonucu burada görünecek
                             </div>
                         </div>
@@ -804,39 +664,36 @@
                         Slayt gösterisinin davranışını özelleştirin
                     </p>
 
-                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div class="admin-form-col">
                         <!-- Auto Play -->
                         <div>
-                            <label
-                                style="display: flex; align-items: center; gap: 10px; font-weight: 600; cursor: pointer;">
+                            <label style="display: flex; align-items: center; gap: 10px; font-weight: 600; cursor: pointer;">
                                 <input type="checkbox" id="slideshowAutoPlay" checked>
                                 <span>▶️ Otomatik Başlat</span>
                             </label>
-                            <small style="display: block; margin-top: 5px; margin-left: 28px; opacity: 0.8;">
+                            <small class="small-hint" style="margin-left: 28px;">
                                 Sayfa yüklendiğinde slayt gösterisini başlat
                             </small>
                         </div>
 
                         <!-- Loop -->
                         <div>
-                            <label
-                                style="display: flex; align-items: center; gap: 10px; font-weight: 600; cursor: pointer;">
+                            <label style="display: flex; align-items: center; gap: 10px; font-weight: 600; cursor: pointer;">
                                 <input type="checkbox" id="slideshowLoop" checked>
                                 <span>🔁 Döngü Modunda Çalıştır</span>
                             </label>
-                            <small style="display: block; margin-top: 5px; margin-left: 28px; opacity: 0.8;">
+                            <small class="small-hint" style="margin-left: 28px;">
                                 Son slaytta başa dön
                             </small>
                         </div>
 
                         <!-- Show Progress -->
                         <div>
-                            <label
-                                style="display: flex; align-items: center; gap: 10px; font-weight: 600; cursor: pointer;">
+                            <label style="display: flex; align-items: center; gap: 10px; font-weight: 600; cursor: pointer;">
                                 <input type="checkbox" id="slideshowProgress" checked>
                                 <span>📊 İlerleme Çubuğu Göster</span>
                             </label>
-                            <small style="display: block; margin-top: 5px; margin-left: 28px; opacity: 0.8;">
+                            <small class="small-hint" style="margin-left: 28px;">
                                 Alt kısımda ilerleme çubuğu göster
                             </small>
                         </div>
@@ -852,10 +709,7 @@
                         Gürültü ölçer için renk teması seçin
                     </p>
 
-                    <!-- GERÇEK MİKROFON İLE ÇALIŞAN EQUALİZER ÖNİZLEME -->
-                    <div id="admin-noise-preview"
-                        style="background: rgba(0,0,0,0.85); border-radius: 15px; padding: 15px; margin-bottom: 20px;">
-                        <!-- Equalizer Container - Ana sayfa ile birebir aynı yapı -->
+                    <div id="admin-noise-preview" style="background: rgba(0,0,0,0.85); border-radius: 15px; padding: 15px; margin-bottom: 20px;">
                         <div class="equalizer-container theme-neon" id="equalizer-container" style="height: 100px;">
                             <span class="eq-label">🎙️</span>
                             <div class="equalizer-bars">
@@ -872,48 +726,34 @@
                         </div>
                     </div>
 
-                    <div
-                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; padding: 10px;">
-                        <button onclick="setEqualizerTheme('neon')" id="theme-btn-neon"
-                            class="theme-btn btn-neon">Neon</button>
-                        <button onclick="setEqualizerTheme('ocean')" id="theme-btn-ocean"
-                            class="theme-btn btn-ocean">Ocean</button>
-                        <button onclick="setEqualizerTheme('sunset')" id="theme-btn-sunset"
-                            class="theme-btn btn-sunset">Sunset</button>
-                        <button onclick="setEqualizerTheme('forest')" id="theme-btn-forest"
-                            class="theme-btn btn-forest">Forest</button>
-                        <button onclick="setEqualizerTheme('love')" id="theme-btn-love"
-                            class="theme-btn btn-love">Love</button>
-                        <button onclick="setEqualizerTheme('royal')" id="theme-btn-royal"
-                            class="theme-btn btn-royal">Royal</button>
-                        <button onclick="setEqualizerTheme('ice')" id="theme-btn-ice"
-                            class="theme-btn btn-ice">Ice</button>
-                        <button onclick="setEqualizerTheme('fire')" id="theme-btn-fire"
-                            class="theme-btn btn-fire">Fire</button>
-                        <button onclick="setEqualizerTheme('matrix')" id="theme-btn-matrix"
-                            class="theme-btn btn-matrix">Matrix</button>
-                        <button onclick="setEqualizerTheme('rainbow')" id="theme-btn-rainbow"
-                            class="theme-btn btn-rainbow">Rainbow</button>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; padding: 10px;">
+                        <button onclick="setEqualizerTheme('neon')" id="theme-btn-neon" class="theme-btn btn-neon">Neon</button>
+                        <button onclick="setEqualizerTheme('ocean')" id="theme-btn-ocean" class="theme-btn btn-ocean">Ocean</button>
+                        <button onclick="setEqualizerTheme('sunset')" id="theme-btn-sunset" class="theme-btn btn-sunset">Sunset</button>
+                        <button onclick="setEqualizerTheme('forest')" id="theme-btn-forest" class="theme-btn btn-forest">Forest</button>
+                        <button onclick="setEqualizerTheme('love')" id="theme-btn-love" class="theme-btn btn-love">Love</button>
+                        <button onclick="setEqualizerTheme('royal')" id="theme-btn-royal" class="theme-btn btn-royal">Royal</button>
+                        <button onclick="setEqualizerTheme('ice')" id="theme-btn-ice" class="theme-btn btn-ice">Ice</button>
+                        <button onclick="setEqualizerTheme('fire')" id="theme-btn-fire" class="theme-btn btn-fire">Fire</button>
+                        <button onclick="setEqualizerTheme('matrix')" id="theme-btn-matrix" class="theme-btn btn-matrix">Matrix</button>
+                        <button onclick="setEqualizerTheme('rainbow')" id="theme-btn-rainbow" class="theme-btn btn-rainbow">Rainbow</button>
                     </div>
 
                 </div>
-                <div id="currentThemeDisplay"
-                    style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 8px; font-weight: 600; text-align: center;">
+                <div id="currentThemeDisplay" style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 8px; font-weight: 600; text-align: center;">
                 </div>
             </div>
         </div>
 
         <!-- Save Button -->
         <div style="margin-top: 25px; text-align: center;">
-            <button onclick="saveAllSettings()" class="btn-save-all"
-                onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <button onclick="saveAllSettings()" class="btn-save-all">
                 💾 Tüm Ayarları Kaydet
             </button>
         </div>
 
         <!-- Info Section -->
-        <div class="card"
-            style="margin-top: 25px; padding: 20px; background: linear-gradient(135deg, #e0e7ff 0%, #cfe2ff 100%); border: none;">
+        <div class="card" style="margin-top: 25px; padding: 20px; background: linear-gradient(135deg, #e0e7ff 0%, #cfe2ff 100%); border: none;">
             <div style="display: flex; align-items: center; gap: 15px;">
                 <div style="font-size: 3rem;">ℹ️</div>
                 <div>
@@ -944,57 +784,52 @@
         <div class="qr-content">
             <h2>Resim Yükle</h2>
             <p><strong id="photoUploadStudentName"></strong> için resim yükleyin</p>
-            <form id="photoUploadForm" style="display: flex; flex-direction: column; gap: 15px; margin-top: 20px;">
+            <form id="photoUploadForm" class="admin-form-col" style="margin-top: 20px;">
                 <input type="hidden" id="photoUploadStudentId">
-                <input type="file" id="photoFileInput" accept="image/*" required style="padding: 10px;">
+                <input type="file" id="photoFileInput" accept="image/*" required class="admin-input-file">
                 <div style="display: flex; gap: 10px;">
-                    <button type="submit"
-                        style="flex: 1; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer;">Yükle</button>
-                    <button type="button" onclick="closePhotoUploadModal()"
-                        style="flex: 1; padding: 10px; background: #ccc; color: black; border: none; border-radius: 5px; cursor: pointer;">İptal</button>
+                    <button type="submit" class="btn-submit" style="flex: 1; margin-top: 0;">Yükle</button>
+                    <button type="button" onclick="closePhotoUploadModal()" class="btn-modal-cancel">İptal</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Slide Form Modal - IMPROVED UI -->
+    <!-- Slide Form Modal -->
     <div id="slideFormModal" class="qr-modal" style="display: none;">
-        <div class="qr-content" style="max-width: 750px; max-height: 90vh; overflow-y: auto; padding: 30px;">
-            <h2 id="slideFormTitle" style="margin-bottom: 10px; color: var(--primary);">🎬 Yeni Slayt Ekle</h2>
-            <p style="color: #666; font-size: 0.95rem; margin-bottom: 25px;">
+        <div class="qr-content modal-content-scroll">
+            <h2 id="slideFormTitle" class="slide-form-title">🎬 Yeni Slayt Ekle</h2>
+            <p class="slide-form-desc">
                 Slaytınızın içeriğini, görünümünü ve geçiş efektlerini özelleştirebilirsiniz.
             </p>
 
-            <form id="slideForm" style="display: flex; flex-direction: column; gap: 25px;">
+            <form id="slideForm" class="slide-form-container">
                 <input type="hidden" id="slideId">
 
                 <!-- SECTION 1: TEMEL BİLGİLER -->
-                <div
-                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white;">
-                    <h3 style="margin: 0 0 15px 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                <div class="section-box section-basic">
+                    <h3 class="section-header">
                         📝 Temel Bilgiler
                     </h3>
 
                     <div style="display: grid; gap: 15px;">
                         <!-- Başlık -->
                         <div>
-                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">
-                                Başlık <span style="opacity: 0.7; font-size: 0.9rem;">(opsiyonel)</span>
+                            <label class="admin-label">
+                                Başlık <span class="small-hint" style="display: inline;">(opsiyonel)</span>
                             </label>
-                            <input type="text" id="slideTitle" placeholder="Örn: Sınıf Kuralları"
-                                style="width: 100%; padding: 10px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.95); font-size: 1rem;">
-                            <small style="display: block; margin-top: 5px; opacity: 0.9; font-size: 0.85rem;">
+                            <input type="text" id="slideTitle" placeholder="Örn: Sınıf Kuralları" class="slide-input-light">
+                            <small class="small-hint">
                                 💡 Slaytı tanımlamak için kısa bir başlık
                             </small>
                         </div>
 
                         <!-- İçerik Tipi -->
                         <div>
-                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">
-                                İçerik Tipi <span style="color: #ffeb3b;">*</span>
+                            <label class="admin-label">
+                                İçerik Tipi <span class="admin-label-required">*</span>
                             </label>
-                            <select id="slideContentType" required
-                                style="width: 100%; padding: 10px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.95); font-size: 1rem; cursor: pointer;">
+                            <select id="slideContentType" required class="slide-input-light" style="cursor: pointer;">
                                 <option value="">🔽 Seçiniz</option>
                                 <option value="rule">📜 Kural</option>
                                 <option value="announcement">📢 Duyuru</option>
@@ -1002,7 +837,7 @@
                                 <option value="celebration">🎉 Kutlama Videosu</option>
                                 <option value="custom">⚙️ Özel</option>
                             </select>
-                            <small style="display: block; margin-top: 5px; opacity: 0.9; font-size: 0.85rem;">
+                            <small class="small-hint">
                                 💡 Slaytın görüntüleneceği bağlamı belirler
                             </small>
                         </div>
@@ -1010,98 +845,81 @@
                 </div>
 
                 <!-- SECTION 2: MEDYA DOSYASI -->
-                <div
-                    style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 20px; border-radius: 12px; color: white;">
-                    <h3 style="margin: 0 0 15px 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                <div class="section-box section-media">
+                    <h3 class="section-header">
                         🎨 Medya Dosyası
                     </h3>
 
                     <div>
-                        <label id="slideMediaLabel" style="display: block; margin-bottom: 8px; font-weight: 500;">
-                            📁 Resim, GIF veya Video <span style="color: #ffeb3b;">*</span>
+                        <label id="slideMediaLabel" class="admin-label">
+                            📁 Resim, GIF veya Video <span class="admin-label-required">*</span>
                         </label>
 
-                        <input type="file" id="slideMedia" name="slide" accept="image/*,video/*"
-                            style="width: 100%; padding: 10px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.95); font-size: 0.95rem; cursor: pointer;">
-                        <small style="display: block; margin-top: 5px; opacity: 0.9; font-size: 0.85rem;">
+                        <input type="file" id="slideMedia" name="slide" accept="image/*,video/*" class="slide-input-light" style="cursor: pointer;">
+                        <small class="small-hint">
                             💡 Maksimum dosya boyutu: 100 MB | Desteklenen: JPG, PNG, GIF, MP4, WEBM
                         </small>
 
                         <!-- Preview -->
-                        <div id="slideMediaPreview"
-                            style="margin-top: 15px; min-height: 150px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; border: 2px dashed rgba(255,255,255,0.3);">
+                        <div id="slideMediaPreview" class="media-preview-box">
                             <span style="opacity: 0.6;">📋 Önizleme burada görünecek</span>
                         </div>
 
-                        <div id="slideMediaInfo"
-                            style="margin-top: 8px; font-size: 0.9rem; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px;">
+                        <div id="slideMediaInfo" style="margin-top: 8px; font-size: 0.9rem; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px;">
                         </div>
-                        <div id="slideCurrentMediaInfo"
-                            style="margin-top: 8px; font-size: 0.9rem; background: rgba(76, 175, 80, 0.3); padding: 8px; border-radius: 6px; font-weight: 600;">
+                        <div id="slideCurrentMediaInfo" style="margin-top: 8px; font-size: 0.9rem; background: rgba(76, 175, 80, 0.3); padding: 8px; border-radius: 6px; font-weight: 600;">
                         </div>
 
                         <!-- Upload Progress -->
                         <div id="slideUploadProgress" style="display: none; margin-top: 12px;">
-                            <div
-                                style="background: rgba(255,255,255,0.3); border-radius: 8px; height: 24px; overflow: hidden;">
-                                <div id="slideProgressBar"
-                                    style="background: linear-gradient(90deg, #4CAF50, #8BC34A); height: 100%; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.85rem;">
+                            <div class="upload-progress-container">
+                                <div id="slideProgressBar" class="upload-progress-bar">
                                 </div>
                             </div>
-                            <div id="slideProgressText"
-                                style="text-align: center; margin-top: 8px; font-size: 0.9rem; font-weight: 500;"></div>
+                            <div id="slideProgressText" style="text-align: center; margin-top: 8px; font-size: 0.9rem; font-weight: 500;"></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- SECTION 3: İÇERİK (Conditional) -->
-                <div id="slideTextContentDiv"
-                    style="display: none; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 20px; border-radius: 12px; color: white;">
-                    <h3 style="margin: 0 0 15px 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                <div id="slideTextContentDiv" class="section-box section-text" style="display: none;">
+                    <h3 class="section-header">
                         ✏️ Metin İçeriği
                     </h3>
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">
+                    <label class="admin-label">
                         Kural veya Duyuru Metni
                     </label>
-                    <textarea id="slideTextContent" rows="4" placeholder="Kuralınızı veya duyurunuzu buraya yazın..."
-                        style="width: 100%; padding: 12px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.95); font-size: 1rem; resize: vertical; font-family: inherit;"></textarea>
-                    <small style="display: block; margin-top: 5px; opacity: 0.9; font-size: 0.85rem;">
+                    <textarea id="slideTextContent" rows="4" placeholder="Kuralınızı veya duyurunuzu buraya yazın..." class="slide-input-light slide-textarea"></textarea>
+                    <small class="small-hint">
                         💡 Bu metin slaytın üzerinde görünecektir
                     </small>
                 </div>
 
                 <!-- SECTION 4: ZAMANLAMA -->
-                <div
-                    style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); padding: 20px; border-radius: 12px; color: white;">
-                    <h3 style="margin: 0 0 15px 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                <div class="section-box section-timing">
+                    <h3 class="section-header">
                         ⏱️ Zamanlama Ayarları
                     </h3>
 
                     <div style="display: grid; gap: 15px;">
                         <!-- Gösterim Süresi -->
                         <div>
-                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">
-                                Ekranda Kalma Süresi <span style="opacity: 0.7; font-size: 0.9rem;">(saniye)</span>
+                            <label class="admin-label">
+                                Ekranda Kalma Süresi <span class="small-hint" style="display: inline;">(saniye)</span>
                             </label>
-                            <input type="number" id="slideDisplayDuration" min="1" max="60"
-                                placeholder="Varsayılan: 10 saniye"
-                                style="width: 100%; padding: 10px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.95); font-size: 1rem;">
-                            <small style="display: block; margin-top: 5px; opacity: 0.9; font-size: 0.85rem;">
+                            <input type="number" id="slideDisplayDuration" min="1" max="60" placeholder="Varsayılan: 10 saniye" class="slide-input-light">
+                            <small class="small-hint">
                                 💡 Boş bırakırsanız sistem varsayılanı kullanılır (10 saniye)
                             </small>
                         </div>
 
                         <!-- Video Auto Advance -->
-                        <div id="slideVideoSettings"
-                            style="display: none; background: rgba(0,0,0,0.15); padding: 12px; border-radius: 8px;">
-                            <label
-                                style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 1rem;">
-                                <input type="checkbox" id="slideVideoAutoAdvance"
-                                    style="width: 20px; height: 20px; cursor: pointer;">
+                        <div id="slideVideoSettings" style="display: none; background: rgba(0,0,0,0.15); padding: 12px; border-radius: 8px;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 1rem;">
+                                <input type="checkbox" id="slideVideoAutoAdvance" style="width: 20px; height: 20px; cursor: pointer;">
                                 <span>🎬 Video bitince otomatik olarak sonraki slayta geç</span>
                             </label>
-                            <small
-                                style="display: block; margin-top: 8px; margin-left: 30px; opacity: 0.9; font-size: 0.85rem;">
+                            <small class="small-hint" style="margin-left: 30px;">
                                 💡 İşaretlenirse video bittiğinde beklenmeden geçiş yapılır
                             </small>
                         </div>
@@ -1109,26 +927,23 @@
                 </div>
 
                 <!-- SECTION 5: GEÇİŞ EFEKTLERİ -->
-                <div
-                    style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); padding: 20px; border-radius: 12px; color: #333;">
-                    <h3
-                        style="margin: 0 0 15px 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; color: #333;">
+                <div class="section-box section-transition">
+                    <h3 class="section-header" style="color: #333;">
                         ✨ Geçiş Efektleri
                     </h3>
 
                     <div style="display: grid; gap: 15px;">
                         <!-- Geçiş Modu -->
                         <div>
-                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">
+                            <label class="admin-label">
                                 Geçiş Modu
                             </label>
-                            <select id="slideTransitionMode"
-                                style="width: 100%; padding: 10px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; font-size: 1rem; cursor: pointer;">
+                            <select id="slideTransitionMode" class="slide-input-light" style="background: white; cursor: pointer;">
                                 <option value="auto">🤖 Otomatik (Akıllı Seçim)</option>
                                 <option value="random">🎲 Rastgele</option>
                                 <option value="manual">🎯 Manuel (Kendiniz seçin)</option>
                             </select>
-                            <small style="display: block; margin-top: 5px; color: #666; font-size: 0.85rem;">
+                            <small class="small-hint" style="color: #666;">
                                 💡 <strong>Otomatik:</strong> Yapay zeka uygun efekti seçer | <strong>Rastgele:</strong>
                                 Her seferinde farklı | <strong>Manuel:</strong> Siz belirleyin
                             </small>
@@ -1136,11 +951,10 @@
 
                         <!-- Manuel Geçiş Efekti (Conditional) -->
                         <div id="slideTransitionManualDiv" style="display: none;">
-                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">
+                            <label class="admin-label">
                                 Geçiş Efekti Seçimi
                             </label>
-                            <select id="slideTransitionType"
-                                style="width: 100%; padding: 10px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; font-size: 1rem; cursor: pointer;">
+                            <select id="slideTransitionType" class="slide-input-light" style="background: white; cursor: pointer;">
                                 <option value="">Varsayılan (Fade)</option>
                                 <optgroup label="🎭 Basit Geçişler">
                                     <option value="fade">Fade (Kararma/Aydınlanma)</option>
@@ -1168,20 +982,18 @@
                                     <option value="push">↗️ Push</option>
                                 </optgroup>
                             </select>
-                            <small style="display: block; margin-top: 5px; color: #666; font-size: 0.85rem;">
+                            <small class="small-hint" style="color: #666;">
                                 💡 Farklı efektleri deneyerek size en uygun olanı bulabilirsiniz
                             </small>
                         </div>
 
                         <!-- Geçiş Süresi -->
                         <div>
-                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">
-                                Geçiş Animasyon Süresi <span style="opacity: 0.7; font-size: 0.9rem;">(saniye)</span>
+                            <label class="admin-label">
+                                Geçiş Animasyon Süresi <span class="small-hint" style="display: inline;">(saniye)</span>
                             </label>
-                            <input type="number" id="slideTransitionDuration" min="0.5" max="3" step="0.1"
-                                placeholder="Varsayılan: 1 saniye"
-                                style="width: 100%; padding: 10px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; font-size: 1rem;">
-                            <small style="display: block; margin-top: 5px; color: #666; font-size: 0.85rem;">
+                            <input type="number" id="slideTransitionDuration" min="0.5" max="3" step="0.1" placeholder="Varsayılan: 1 saniye" class="slide-input-light" style="background: white;">
+                            <small class="small-hint" style="color: #666;">
                                 💡 Geçiş animasyonunun ne kadar süreceği (0.5 - 3 saniye arası önerilir)
                             </small>
                         </div>
@@ -1189,22 +1001,17 @@
                 </div>
 
                 <!-- ACTION BUTTONS -->
-                <div
-                    style="display: flex; gap: 12px; margin-top: 10px; padding-top: 20px; border-top: 2px solid rgba(0,0,0,0.1);">
-                    <button type="submit"
-                        style="flex: 1; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: all 0.3s;">
+                <div class="modal-actions">
+                    <button type="submit" class="btn-modal-save">
                         💾 Kaydet
                     </button>
-                    <button type="button" onclick="closeSlideForm()"
-                        style="flex: 1; padding: 15px; background: #e0e0e0; color: #333; border: none; border-radius: 10px; cursor: pointer; font-size: 1.1rem; font-weight: 600; transition: all 0.3s;">
+                    <button type="button" onclick="closeSlideForm()" class="btn-modal-cancel">
                         ❌ İptal
                     </button>
                 </div>
             </form>
         </div>
     </div>
-
-    <!-- QRCode library removed - using simple URL display for offline operation -->
 
     <!-- SheetJS for Excel parsing -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -1219,4 +1026,3 @@
 </body>
 
 </html>
-```
