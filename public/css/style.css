@@ -1215,7 +1215,7 @@ body::before {
 
     /* Stats on mobile */
     .stats-number {
-        font-size: 3.5rem;
+        font-size: clamp(2.5rem, 8vw, 3.5rem);
     }
 
     .stats-breakdown {
@@ -1239,9 +1239,19 @@ body::before {
         font-size: 3rem;
     }
 
-    /* Hide less critical elements to save space */
+    /* Compact Weekend Badge */
     .header-right .weekend-badge {
+        padding: 8px;
+        gap: 0;
+    }
+
+    .weekend-label,
+    .weekend-value {
         display: none;
+    }
+
+    .weekend-icon {
+        font-size: 1.2rem;
     }
 }
 
