@@ -1162,7 +1162,7 @@ body::before {
     }
 
     .header-bar {
-        padding: 8px 12px;
+        padding: 5px 10px;
         gap: 8px;
         flex-direction: column; /* Stack vertically on very small screens */
         align-items: center;
@@ -1190,13 +1190,13 @@ body::before {
     }
 
     .live-clock {
-        padding: 10px 20px;
+        padding: 8px 15px;
         width: 100%;
         justify-content: center;
     }
 
     .clock-time {
-        font-size: 1.8rem;
+        font-size: 1.5rem;
     }
 
     .dashboard-grid {
@@ -1241,7 +1241,10 @@ body::before {
 
     /* Compact Weekend Badge */
     .header-right .weekend-badge {
-        padding: 8px;
+        padding: 6px 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         gap: 0;
     }
 
@@ -1252,6 +1255,8 @@ body::before {
 
     .weekend-icon {
         font-size: 1.2rem;
+        display: block;
+        margin: 0;
     }
 }
 

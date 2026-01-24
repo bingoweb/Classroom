@@ -102,13 +102,6 @@ body {
     cursor: pointer;
 }
 
-@media (max-width: 768px) {
-    .header-action-btn {
-        float: none;
-        margin-top: 10px;
-        width: 100%;
-    }
-}
 
 /* TABS */
 .tabs {
@@ -537,9 +530,50 @@ body {
 
 /* RESPONSIVE OVERRIDES */
 @media (max-width: 768px) {
-    .admin-stats-container {
-        flex-wrap: wrap;
+    /* Header & Action Button */
+    .header-action-btn {
+        float: none;
+        margin: 10px 0;
+        width: 100%;
+        display: block;
+    }
+
+    .admin-header-title {
+        font-size: 1.5rem;
+        text-align: center;
         justify-content: center;
+    }
+
+    /* Tabs - Scrollable Horizontal */
+    .tabs {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding-bottom: 5px;
+        gap: 10px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .tab-btn {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        font-size: 0.9rem;
+        padding: 10px 15px;
+        margin-bottom: 0;
+    }
+
+    /* Stats Grid */
+    .admin-stats-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        padding: 15px;
+        background: rgba(255,255,255,0.2);
     }
 
     .stat-divider {
@@ -547,14 +581,11 @@ body {
     }
 
     .admin-stat-item {
-        flex: 1 1 100px;
+        margin: 0;
+        width: auto;
         background: rgba(255,255,255,0.1);
         padding: 10px;
         border-radius: 8px;
-    }
-
-    .admin-header-title {
-        font-size: 1.5rem;
     }
 
     .card-title {
