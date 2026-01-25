@@ -15,8 +15,10 @@
 
 <body>
     <div class="container">
-        <h1>Admin Panel</h1>
-        <button onclick="showQRCode()" class="header-action-btn">📱 Mobil Bağlan</button>
+        <header class="admin-main-header">
+            <h1>Admin Panel</h1>
+            <button onclick="showQRCode()" class="header-action-btn">📱 Mobil Bağlan</button>
+        </header>
 
         <div class="tabs">
             <button class="tab-btn active" onclick="showTab('students')">Öğrenciler</button>
@@ -112,8 +114,8 @@
 
                     <!-- Excel Format Info -->
                     <div class="info-box">
-                        <div style="font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">📋 Gerekli Format:</div>
-                        <ul style="margin: 0; padding-left: 20px; font-size: 0.85rem; line-height: 1.6; opacity: 0.95;">
+                        <div class="fw-600 mb-xs text-sm">📋 Gerekli Format:</div>
+                        <ul class="text-xs" style="margin: 0; padding-left: 20px; line-height: 1.6; opacity: 0.95;">
                             <li>İlk satır başlık olmalı</li>
                             <li>Sütunlar: "Öğrenci No", "Ad Soyad", "Cinsiyet"</li>
                             <li>Cinsiyet: E=Erkek, K=Kız</li>
@@ -135,13 +137,13 @@
                             📤 Excel'i Yükle
                         </button>
                     </form>
-                    <div id="excelImportResult" class="info-box" style="margin-top: 15px; background: rgba(255,255,255,0.2);">
+                    <div id="excelImportResult" class="info-box mt-md bg-white-20">
                     </div>
                 </div>
             </div>
 
             <!-- Student List Card -->
-            <div class="card" style="padding: 25px;">
+            <div class="card p-xl">
                 <div class="list-header-flex">
                     <h2 class="list-header-title">
                         📚 Öğrenci Listesi
@@ -159,7 +161,7 @@
                 </div>
 
                 <!-- Students Grid/List -->
-                <div id="studentList" class="student-list" style="margin-top: 20px;">
+                <div id="studentList" class="student-list mt-lg">
                     <!-- Students will be rendered here -->
                 </div>
             </div>
@@ -194,10 +196,10 @@
                     </div>
 
                     <div class="info-box">
-                        <div class="small-hint" style="margin-bottom: 8px;">💡 Maksimum: 1 kişi</div>
+                        <div class="small-hint mb-xs">💡 Maksimum: 1 kişi</div>
                     </div>
 
-                    <select id="presidentSelect" class="admin-select" style="margin-bottom: 12px;">
+                    <select id="presidentSelect" class="admin-select mb-sm">
                         <option value="">Öğrenci seçin...</option>
                     </select>
 
@@ -205,7 +207,7 @@
                         ✅ Başkan Ata
                     </button>
 
-                    <div id="currentPresident" class="info-box info-box-dark" style="margin-top: 15px; min-height: 50px;">
+                    <div id="currentPresident" class="info-box info-box-dark mt-md" style="min-height: 50px;">
                         <!-- Current president will be shown here -->
                     </div>
                 </div>
@@ -221,10 +223,10 @@
                     </div>
 
                     <div class="info-box">
-                        <div class="small-hint" style="margin-bottom: 8px;">💡 Maksimum: 2 kişi</div>
+                        <div class="small-hint mb-xs">💡 Maksimum: 2 kişi</div>
                     </div>
 
-                    <select id="vicePresidentSelect" class="admin-select" style="margin-bottom: 12px;">
+                    <select id="vicePresidentSelect" class="admin-select mb-sm">
                         <option value="">Öğrenci seçin...</option>
                     </select>
 
@@ -232,7 +234,7 @@
                         ➕ Yardımcı Ekle
                     </button>
 
-                    <div id="currentVicePresidents" class="info-box info-box-dark" style="margin-top: 15px; min-height: 50px;">
+                    <div id="currentVicePresidents" class="info-box info-box-dark mt-md" style="min-height: 50px;">
                         <!-- Current vice presidents will be shown here -->
                     </div>
                 </div>
@@ -248,10 +250,10 @@
                     </div>
 
                     <div class="info-box">
-                        <div class="small-hint" style="margin-bottom: 8px;">💡 Maksimum: 4 kişi</div>
+                        <div class="small-hint mb-xs">💡 Maksimum: 4 kişi</div>
                     </div>
 
-                    <select id="dutySelect" class="admin-select" style="margin-bottom: 12px;">
+                    <select id="dutySelect" class="admin-select mb-sm">
                         <option value="">Öğrenci seçin...</option>
                     </select>
 
@@ -259,7 +261,7 @@
                         ➕ Nöbetçi Ekle
                     </button>
 
-                    <div id="currentDuty" class="info-box info-box-dark" style="margin-top: 15px; min-height: 50px;">
+                    <div id="currentDuty" class="info-box info-box-dark mt-md" style="min-height: 50px;">
                         <!-- Current duty students will be shown here -->
                     </div>
                 </div>
@@ -309,10 +311,10 @@
                     <button onclick="setTodayDate()" class="btn-sm">Bugün</button>
                 </div>
                 <div id="attendanceList" class="student-list"></div>
-                <div style="margin-top: 20px;">
-                    <button onclick="saveAttendance()" class="btn-submit" style="background: var(--primary);">Yoklamayı Kaydet</button>
+                <div class="mt-lg">
+                    <button onclick="saveAttendance()" class="btn-submit bg-primary">Yoklamayı Kaydet</button>
                 </div>
-                <div id="attendanceSummary" style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.05); border-radius: 10px;">
+                <div id="attendanceSummary" class="mt-lg p-md bg-dark-05" style="border-radius: 10px;">
                     <h3>Özet</h3>
                     <div id="attendanceSummaryContent"></div>
                 </div>
@@ -323,12 +325,12 @@
         <div id="slides" class="content-section">
             <div class="card">
                 <h2>Yeni Slayt Ekle</h2>
-                <button onclick="showSlideForm()" class="btn-submit" style="width: auto; margin-bottom: 20px;">+ Yeni Slayt Ekle</button>
+                <button onclick="showSlideForm()" class="btn-submit w-auto mb-lg">+ Yeni Slayt Ekle</button>
             </div>
 
-            <div class="card" style="margin-top: 20px;">
+            <div class="card mt-lg">
                 <h2>Slayt Listesi</h2>
-                <p style="color: #666; font-size: 0.9rem; margin-bottom: 10px;">Slaytları sürükle-bırak ile sıralayabilirsiniz.</p>
+                <p class="text-muted text-sm mb-sm">Slaytları sürükle-bırak ile sıralayabilirsiniz.</p>
                 <div id="slidesList" class="slides-list">
                     <!-- Slides will be loaded here -->
                 </div>
@@ -339,11 +341,11 @@
                 <form id="slideSettingsForm" class="admin-form-col">
                     <div>
                         <label>Varsayılan Gösterim Süresi (saniye)</label><br>
-                        <input type="number" id="defaultDuration" min="1" max="60" value="10" class="admin-input" style="margin-top: 5px;">
+                        <input type="number" id="defaultDuration" min="1" max="60" value="10" class="admin-input mt-xs">
                     </div>
                     <div>
                         <label>Varsayılan Geçiş Modu</label><br>
-                        <select id="defaultTransitionMode" class="admin-select" style="margin-top: 5px;">
+                        <select id="defaultTransitionMode" class="admin-select mt-xs">
                             <option value="auto">Otomatik Akıllı Seçim</option>
                             <option value="random">Random</option>
                             <option value="manual">Manuel</option>
@@ -351,7 +353,7 @@
                     </div>
                     <div>
                         <label>Varsayılan Geçiş Süresi (saniye)</label><br>
-                        <input type="number" id="defaultTransitionDuration" min="0.5" max="3" step="0.1" value="1" class="admin-input" style="margin-top: 5px;">
+                        <input type="number" id="defaultTransitionDuration" min="0.5" max="3" step="0.1" value="1" class="admin-input mt-xs">
                     </div>
                     <button type="submit" class="btn-submit">Ayarları Kaydet</button>
                 </form>
@@ -413,7 +415,7 @@
 
                 <!-- Error Logs List -->
                 <div id="errorLogsList" style="max-height: 600px; overflow-y: auto;">
-                    <p style="text-align: center; color: #666; padding: 20px;">Yükleniyor...</p>
+                    <p class="text-center text-muted p-lg">Yükleniyor...</p>
                 </div>
             </div>
         </div>
@@ -494,10 +496,10 @@
                                 <button onclick="setColorTheme('light')" id="themeLight" class="settings-btn">
                                     ☀️ Açık
                                 </button>
-                                <button onclick="setColorTheme('dark')" id="themeDark" class="settings-btn" style="background: #34495e; color: white;">
+                                <button onclick="setColorTheme('dark')" id="themeDark" class="settings-btn bg-dark-slate text-white">
                                     🌙 Koyu
                                 </button>
-                                <button onclick="setColorTheme('auto')" id="themeAuto" class="settings-btn" style="background: linear-gradient(135deg, #ffffff 0%, #2c3e50 100%);">
+                                <button onclick="setColorTheme('auto')" id="themeAuto" class="settings-btn bg-gradient-auto">
                                     🌗 Otomatik
                                 </button>
                             </div>
@@ -511,7 +513,7 @@
                             <input type="range" id="fontSize" min="80" max="150" value="100" step="10" oninput="updateFontSizeDisplay()" class="range-slider range-primary">
                             <div class="range-labels">
                                 <span>80%</span>
-                                <span id="fontSizeValue" style="color: #667eea; font-size: 1.1rem;">100%</span>
+                                <span id="fontSizeValue" class="text-primary fs-1-1">100%</span>
                                 <span>150%</span>
                             </div>
                             <div id="fontSizePreview" class="preview-box">
@@ -524,11 +526,11 @@
                             <label class="admin-label">
                                 🔄 Otomatik Yenileme
                             </label>
-                            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
-                                <input type="number" id="autoRefreshInterval" min="0" max="120" value="0" oninput="updateRefreshDisplay()" class="admin-input" style="flex: 1;">
+                            <div class="mb-sm" style="display: flex; gap: 10px; align-items: center;">
+                                <input type="number" id="autoRefreshInterval" min="0" max="120" value="0" oninput="updateRefreshDisplay()" class="admin-input flex-1">
                                 <span style="font-weight: 600;">dakika</span>
                             </div>
-                            <div id="refreshStatus" class="preview-box" style="margin-top: 0; font-size: 0.9rem;">
+                            <div id="refreshStatus" class="preview-box mt-0 text-sm">
                                 ⏸️ Kapalı
                             </div>
                             <small class="small-hint">
@@ -545,7 +547,7 @@
                                 <option value="24">24 Saat Formatı</option>
                                 <option value="12">12 Saat Formatı (AM/PM)</option>
                             </select>
-                            <div id="clockPreview" class="preview-box" style="font-size: 1.5rem; font-weight: 600; color: #667eea;">
+                            <div id="clockPreview" class="preview-box fs-1-5 fw-600 text-primary">
                                 14:30:45
                             </div>
                         </div>
@@ -591,12 +593,12 @@
                             <input type="range" id="noiseSensitivity" min="1" max="10" value="5" oninput="updateSensitivityDisplay()" class="range-slider range-noise">
                             <div class="range-labels">
                                 <span>🔇 Düşük</span>
-                                <span id="sensitivityValue" style="font-weight: 600; font-size: 1.2rem; color: #667eea;">5</span>
+                                <span id="sensitivityValue" class="fw-600 fs-1-2 text-primary">5</span>
                                 <span>🔊 Yüksek</span>
                             </div>
-                            <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px;">
-                                <div style="font-size: 0.85rem; margin-bottom: 5px; font-weight: 600;">Hassasiyet Açıklaması:</div>
-                                <div id="sensitivityDescription" style="font-size: 0.9rem; color: #666;">
+                            <div class="mt-sm p-sm bg-white br-6">
+                                <div class="text-xs mb-xs fw-600">Hassasiyet Açıklaması:</div>
+                                <div id="sensitivityDescription" class="text-sm text-muted">
                                     Orta seviye - Standart sınıf ortamı için uygundur
                                 </div>
                             </div>
@@ -609,30 +611,30 @@
                             </label>
 
                             <!-- Warning Threshold -->
-                            <div style="margin-bottom: 15px;">
-                                <div class="admin-header-flex" style="margin-bottom: 8px;">
-                                    <span style="font-weight: 600;">⚠️ Uyarı Eşiği</span>
-                                    <span id="warningValue" style="font-weight: 600; color: #ff9800; font-size: 1.1rem;">70%</span>
+                            <div class="mb-md">
+                                <div class="admin-header-flex mb-xs">
+                                    <span class="fw-600">⚠️ Uyarı Eşiği</span>
+                                    <span id="warningValue" class="fw-600 text-warning fs-1-1">70%</span>
                                 </div>
                                 <input type="range" id="warningThreshold" min="0" max="95" value="70" oninput="updateThresholdDisplay()" class="range-slider range-warning">
                             </div>
 
                             <!-- Danger Threshold -->
                             <div>
-                                <div class="admin-header-flex" style="margin-bottom: 8px;">
-                                    <span style="font-weight: 600;">🚨 Tehlike Eşiği</span>
-                                    <span id="dangerValue" style="font-weight: 600; color: #f44336; font-size: 1.1rem;">85%</span>
+                                <div class="admin-header-flex mb-xs">
+                                    <span class="fw-600">🚨 Tehlike Eşiği</span>
+                                    <span id="dangerValue" class="fw-600 text-danger fs-1-1">85%</span>
                                 </div>
                                 <input type="range" id="dangerThreshold" min="5" max="100" value="85" oninput="updateThresholdDisplay()" class="range-slider range-danger">
                             </div>
 
                             <!-- Visual Preview -->
-                            <div style="margin-top: 15px; padding: 12px; background: white; border-radius: 8px;">
-                                <div style="font-size: 0.85rem; margin-bottom: 8px; font-weight: 600;">📊 Renkli Önizleme:</div>
+                            <div class="mt-md p-sm bg-white br-8">
+                                <div class="text-xs mb-xs fw-600">📊 Renkli Önizleme:</div>
                                 <div class="preview-bar-container">
-                                    <div id="previewGreen" class="preview-segment" style="background: #4caf50;"></div>
-                                    <div id="previewOrange" class="preview-segment" style="background: #ff9800;"></div>
-                                    <div id="previewRed" class="preview-segment" style="background: #f44336;"></div>
+                                    <div id="previewGreen" class="preview-segment bg-success"></div>
+                                    <div id="previewOrange" class="preview-segment bg-warning"></div>
+                                    <div id="previewRed" class="preview-segment bg-danger"></div>
                                 </div>
                                 <div class="range-labels">
                                     <span>0%</span>
@@ -709,18 +711,18 @@
                         Gürültü ölçer için renk teması seçin
                     </p>
 
-                    <div id="admin-noise-preview" style="background: rgba(0,0,0,0.85); border-radius: 15px; padding: 15px; margin-bottom: 20px;">
+                    <div id="admin-noise-preview" class="bg-dark-overlay br-15 p-md mb-lg">
                         <div class="equalizer-container theme-neon" id="equalizer-container" style="height: 100px;">
                             <span class="eq-label">🎙️</span>
                             <div class="equalizer-bars">
                                 <!-- 64 Bar - noise-meter.js tarafından dolduruluyor -->
                             </div>
                         </div>
-                        <div style="text-align: center; margin-top: 10px;">
+                        <div class="text-center mt-sm">
                             <button id="admin-mic-btn" onclick="startAdminMicrophone()" class="btn-submit">
                                 🎤 Mikrofonu Başlat
                             </button>
-                            <div id="admin-mic-status" style="margin-top: 8px; font-size: 0.85rem; color: #aaa;">
+                            <div id="admin-mic-status" class="mt-xs text-xs text-muted-light">
                                 Mikrofon bekleniyor...
                             </div>
                         </div>
@@ -740,25 +742,25 @@
                     </div>
 
                 </div>
-                <div id="currentThemeDisplay" style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 8px; font-weight: 600; text-align: center;">
+                <div id="currentThemeDisplay" class="mt-md p-sm bg-dark-10 br-8 fw-600 text-center">
                 </div>
             </div>
         </div>
 
         <!-- Save Button -->
-        <div style="margin-top: 25px; text-align: center;">
+        <div class="mt-xl text-center">
             <button onclick="saveAllSettings()" class="btn-save-all">
                 💾 Tüm Ayarları Kaydet
             </button>
         </div>
 
         <!-- Info Section -->
-        <div class="card" style="margin-top: 25px; padding: 20px; background: linear-gradient(135deg, #e0e7ff 0%, #cfe2ff 100%); border: none;">
+        <div class="card mt-xl p-lg bg-gradient-info-light border-none">
             <div style="display: flex; align-items: center; gap: 15px;">
-                <div style="font-size: 3rem;">ℹ️</div>
+                <div class="fs-3rem">ℹ️</div>
                 <div>
-                    <h3 style="margin: 0 0 8px 0; color: #333;">Sistem Bilgisi</h3>
-                    <p style="margin: 0; color: #666; font-size: 0.95rem;">
+                    <h3 class="m-0 mb-xs text-dark">Sistem Bilgisi</h3>
+                    <p class="m-0 text-muted fs-095">
                         ✅ Sistem tamamen lokal çalışmaktadır. İnternet bağlantısı gerekmez.<br>
                         ✅ Ayarlar tarayıcıda saklanır, her cihaz için ayrı ayrı yapılandırılmalıdır.<br>
                         ✅ Değişiklikler anında uygulanır, ana sayfa otomatik güncellenir.
@@ -928,7 +930,7 @@
 
                 <!-- SECTION 5: GEÇİŞ EFEKTLERİ -->
                 <div class="section-box section-transition">
-                    <h3 class="section-header" style="color: #333;">
+                    <h3 class="section-header text-dark">
                         ✨ Geçiş Efektleri
                     </h3>
 
@@ -938,12 +940,12 @@
                             <label class="admin-label">
                                 Geçiş Modu
                             </label>
-                            <select id="slideTransitionMode" class="slide-input-light" style="background: white; cursor: pointer;">
+                            <select id="slideTransitionMode" class="slide-input-light bg-white" style="cursor: pointer;">
                                 <option value="auto">🤖 Otomatik (Akıllı Seçim)</option>
                                 <option value="random">🎲 Rastgele</option>
                                 <option value="manual">🎯 Manuel (Kendiniz seçin)</option>
                             </select>
-                            <small class="small-hint" style="color: #666;">
+                            <small class="small-hint text-muted">
                                 💡 <strong>Otomatik:</strong> Yapay zeka uygun efekti seçer | <strong>Rastgele:</strong>
                                 Her seferinde farklı | <strong>Manuel:</strong> Siz belirleyin
                             </small>
@@ -954,7 +956,7 @@
                             <label class="admin-label">
                                 Geçiş Efekti Seçimi
                             </label>
-                            <select id="slideTransitionType" class="slide-input-light" style="background: white; cursor: pointer;">
+                            <select id="slideTransitionType" class="slide-input-light bg-white" style="cursor: pointer;">
                                 <option value="">Varsayılan (Fade)</option>
                                 <optgroup label="🎭 Basit Geçişler">
                                     <option value="fade">Fade (Kararma/Aydınlanma)</option>
@@ -982,7 +984,7 @@
                                     <option value="push">↗️ Push</option>
                                 </optgroup>
                             </select>
-                            <small class="small-hint" style="color: #666;">
+                            <small class="small-hint text-muted">
                                 💡 Farklı efektleri deneyerek size en uygun olanı bulabilirsiniz
                             </small>
                         </div>
@@ -992,8 +994,8 @@
                             <label class="admin-label">
                                 Geçiş Animasyon Süresi <span class="small-hint" style="display: inline;">(saniye)</span>
                             </label>
-                            <input type="number" id="slideTransitionDuration" min="0.5" max="3" step="0.1" placeholder="Varsayılan: 1 saniye" class="slide-input-light" style="background: white;">
-                            <small class="small-hint" style="color: #666;">
+                            <input type="number" id="slideTransitionDuration" min="0.5" max="3" step="0.1" placeholder="Varsayılan: 1 saniye" class="slide-input-light bg-white">
+                            <small class="small-hint text-muted">
                                 💡 Geçiş animasyonunun ne kadar süreceği (0.5 - 3 saniye arası önerilir)
                             </small>
                         </div>

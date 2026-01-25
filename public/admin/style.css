@@ -45,6 +45,74 @@ body {
 /* Base resets handled by browser/container */
 
 /* UTILITY CLASSES FOR SECTIONS */
+.text-center { text-align: center; }
+.text-muted { color: #666; }
+.text-dark { color: #333; }
+.fw-600 { font-weight: 600; }
+
+.m-0 { margin: 0; }
+.mt-0 { margin-top: 0; }
+.mt-xs { margin-top: 5px; }
+.mt-sm { margin-top: 10px; }
+.mt-md { margin-top: 15px; }
+.mt-lg { margin-top: 20px; }
+.mt-xl { margin-top: 25px; }
+
+.mb-0 { margin-bottom: 0; }
+.mb-xs { margin-bottom: 8px; }
+.mb-sm { margin-bottom: 10px; }
+.mb-md { margin-bottom: 15px; }
+.mb-lg { margin-bottom: 20px; }
+
+.w-auto { width: auto; }
+.p-md { padding: 15px; }
+.p-lg { padding: 20px; }
+.p-xl { padding: 25px; }
+
+.text-sm { font-size: 0.9rem; }
+.fs-095 { font-size: 0.95rem; }
+.text-xs { font-size: 0.85rem; }
+.fs-1-1 { font-size: 1.1rem; }
+.fs-1-2 { font-size: 1.2rem; }
+.fs-1-5 { font-size: 1.5rem; }
+
+.bg-white-20 { background: rgba(255,255,255,0.2); }
+.bg-dark-05 { background: rgba(0,0,0,0.05); }
+
+.bg-primary { background: var(--primary) !important; }
+.bg-success { background: #4caf50 !important; }
+.bg-warning { background: #ff9800 !important; }
+.bg-danger { background: #f44336 !important; }
+.bg-dark-slate { background: #34495e !important; }
+.bg-gradient-auto { background: linear-gradient(135deg, #ffffff 0%, #2c3e50 100%) !important; }
+.bg-dark-overlay { background: rgba(0,0,0,0.85) !important; }
+
+.text-primary { color: #667eea !important; }
+.text-warning { color: #ff9800 !important; }
+.text-danger { color: #f44336 !important; }
+.text-white { color: white !important; }
+
+.br-6 { border-radius: 6px; }
+.br-8 { border-radius: 8px; }
+.br-15 { border-radius: 15px; }
+.border-none { border: none; }
+
+.gap-lg { gap: 20px; }
+.flex-1 { flex: 1; }
+.bg-white { background: white; }
+.text-muted-light { color: #aaa; }
+.bg-dark-10 { background: rgba(0,0,0,0.1); }
+.bg-gradient-info-light { background: linear-gradient(135deg, #e0e7ff 0%, #cfe2ff 100%); }
+.fs-3rem { font-size: 3rem; }
+.p-sm { padding: 10px; }
+
+.admin-main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
 .admin-section-header {
     padding: 25px;
     border-radius: var(--border-radius-lg);
@@ -92,8 +160,6 @@ body {
 }
 
 .header-action-btn {
-    float: right;
-    margin-top: -60px;
     padding: 10px 20px;
     background: var(--secondary);
     border: none;
@@ -103,9 +169,13 @@ body {
 }
 
 @media (max-width: 768px) {
+    .admin-main-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
     .header-action-btn {
-        float: none;
-        margin-top: 10px;
         width: 100%;
     }
 }
