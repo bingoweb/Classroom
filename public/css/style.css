@@ -1162,23 +1162,35 @@ body::before {
     }
 
     .header-bar {
-        padding: 8px 12px;
-        gap: 8px;
-        flex-direction: column; /* Stack vertically on very small screens */
-        align-items: center;
+        padding: 10px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            "logo badge"
+            "clock clock";
+        gap: 10px;
         height: auto;
     }
 
-    .header-center {
-        order: 2;
-        width: 100%;
+    .header-left {
+        grid-area: logo;
+        justify-self: start;
     }
 
     .header-right {
-        order: 3;
-        width: 100%;
+        grid-area: badge;
+        justify-self: end;
+        width: auto;
+        order: initial;
         display: flex;
-        justify-content: center;
+        justify-content: flex-end;
+    }
+
+    .header-center {
+        grid-area: clock;
+        width: 100%;
+        margin-top: 0;
+        order: initial;
     }
 
     .brand-logo {
