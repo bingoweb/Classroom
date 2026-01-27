@@ -190,7 +190,7 @@ body {
 /* GRID LAYOUTS */
 .admin-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
     margin-bottom: 25px;
 }
@@ -880,4 +880,79 @@ body {
     justify-content: space-between;
     font-size: 0.9rem;
     margin-top: 8px;
+}
+
+/* ============================================
+   REFACTORED UTILITIES
+   ============================================ */
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Info Box Typography */
+.info-box-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.info-box-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    opacity: 0.95;
+}
+
+/* Spacing Utilities */
+.mt-5 { margin-top: 5px !important; }
+.mt-10 { margin-top: 10px !important; }
+.mt-15 { margin-top: 15px !important; }
+.mt-20 { margin-top: 20px !important; }
+.mb-5 { margin-bottom: 5px !important; }
+.mb-8 { margin-bottom: 8px !important; }
+.mb-10 { margin-bottom: 10px !important; }
+.mb-12 { margin-bottom: 12px !important; }
+.mb-20 { margin-bottom: 20px !important; }
+
+.gap-8 { gap: 8px !important; }
+.gap-10 { gap: 10px !important; }
+.gap-20 { gap: 20px !important; }
+
+/* Text Utilities */
+.text-center { text-align: center; }
+.text-muted { color: #666; }
+.text-small { font-size: 0.9rem; }
+.text-bold { font-weight: 600; }
+.text-warning-bold { font-weight: 600; color: #ff9800; font-size: 1.1rem; }
+.text-danger-bold { font-weight: 600; color: #f44336; font-size: 1.1rem; }
+.text-primary-bold { font-weight: 600; color: #667eea; font-size: 1.1rem; }
+
+/* Flex Utilities */
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.flex-align-center {
+    display: flex;
+    align-items: center;
+}
+.flex-1 { flex: 1; }
+
+/* Input Utilities */
+.cursor-pointer { cursor: pointer; }
+.w-auto { width: auto; }
+.w-full { width: 100%; }
+
+/* Visibility */
+.d-none { display: none; }
+.bg-glass-light { background: rgba(255,255,255,0.2); }
+
+.card-white {
+    background: white;
+    color: var(--text);
 }
