@@ -1157,13 +1157,13 @@ body::before {
 /* TABLET & MOBILE ADJUSTMENTS */
 @media (max-width: 768px) {
     :root {
-        --gap: 12px;
-        --radius: 16px;
+        --gap: 8px;
+        --radius: 12px;
     }
 
     .header-bar {
-        padding: 8px 12px;
-        gap: 8px;
+        padding: 4px 8px;
+        gap: 4px;
         flex-direction: column; /* Stack vertically on very small screens */
         align-items: center;
         height: auto;
@@ -1182,31 +1182,31 @@ body::before {
     }
 
     .brand-logo {
-        font-size: 1.5rem;
+        font-size: 1.2rem;
     }
 
     .brand-text {
-        font-size: 0.8rem;
+        font-size: 0.7rem;
     }
 
     .live-clock {
-        padding: 10px 20px;
+        padding: 5px 15px;
         width: 100%;
         justify-content: center;
     }
 
     .clock-time {
-        font-size: 1.8rem;
+        font-size: 1.5rem;
     }
 
     .dashboard-grid {
-        padding: 10px;
-        gap: 15px;
+        padding: 8px;
+        gap: 8px;
     }
 
     .panel {
         min-height: auto;
-        gap: 15px;
+        gap: 8px;
     }
 
     .panel-hero {
