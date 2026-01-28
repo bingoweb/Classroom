@@ -135,13 +135,13 @@
                             📤 Excel'i Yükle
                         </button>
                     </form>
-                    <div id="excelImportResult" class="info-box" style="margin-top: 15px; background: rgba(255,255,255,0.2);">
+                    <div id="excelImportResult" class="info-box mt-15 bg-glass-light">
                     </div>
                 </div>
             </div>
 
             <!-- Student List Card -->
-            <div class="card" style="padding: 25px;">
+            <div class="card p-25">
                 <div class="list-header-flex">
                     <h2 class="list-header-title">
                         📚 Öğrenci Listesi
@@ -159,7 +159,7 @@
                 </div>
 
                 <!-- Students Grid/List -->
-                <div id="studentList" class="student-list" style="margin-top: 20px;">
+                <div id="studentList" class="student-list mt-20">
                     <!-- Students will be rendered here -->
                 </div>
             </div>
@@ -194,10 +194,10 @@
                     </div>
 
                     <div class="info-box">
-                        <div class="small-hint" style="margin-bottom: 8px;">💡 Maksimum: 1 kişi</div>
+                        <div class="small-hint mb-8">💡 Maksimum: 1 kişi</div>
                     </div>
 
-                    <select id="presidentSelect" class="admin-select" style="margin-bottom: 12px;">
+                    <select id="presidentSelect" class="admin-select mb-12">
                         <option value="">Öğrenci seçin...</option>
                     </select>
 
@@ -205,7 +205,7 @@
                         ✅ Başkan Ata
                     </button>
 
-                    <div id="currentPresident" class="info-box info-box-dark" style="margin-top: 15px; min-height: 50px;">
+                    <div id="currentPresident" class="info-box info-box-dark mt-15 min-h-50">
                         <!-- Current president will be shown here -->
                     </div>
                 </div>
@@ -221,10 +221,10 @@
                     </div>
 
                     <div class="info-box">
-                        <div class="small-hint" style="margin-bottom: 8px;">💡 Maksimum: 2 kişi</div>
+                        <div class="small-hint mb-8">💡 Maksimum: 2 kişi</div>
                     </div>
 
-                    <select id="vicePresidentSelect" class="admin-select" style="margin-bottom: 12px;">
+                    <select id="vicePresidentSelect" class="admin-select mb-12">
                         <option value="">Öğrenci seçin...</option>
                     </select>
 
@@ -232,7 +232,7 @@
                         ➕ Yardımcı Ekle
                     </button>
 
-                    <div id="currentVicePresidents" class="info-box info-box-dark" style="margin-top: 15px; min-height: 50px;">
+                    <div id="currentVicePresidents" class="info-box info-box-dark mt-15 min-h-50">
                         <!-- Current vice presidents will be shown here -->
                     </div>
                 </div>
@@ -248,10 +248,10 @@
                     </div>
 
                     <div class="info-box">
-                        <div class="small-hint" style="margin-bottom: 8px;">💡 Maksimum: 4 kişi</div>
+                        <div class="small-hint mb-8">💡 Maksimum: 4 kişi</div>
                     </div>
 
-                    <select id="dutySelect" class="admin-select" style="margin-bottom: 12px;">
+                    <select id="dutySelect" class="admin-select mb-12">
                         <option value="">Öğrenci seçin...</option>
                     </select>
 
@@ -259,7 +259,7 @@
                         ➕ Nöbetçi Ekle
                     </button>
 
-                    <div id="currentDuty" class="info-box info-box-dark" style="margin-top: 15px; min-height: 50px;">
+                    <div id="currentDuty" class="info-box info-box-dark mt-15 min-h-50">
                         <!-- Current duty students will be shown here -->
                     </div>
                 </div>
@@ -309,10 +309,10 @@
                     <button onclick="setTodayDate()" class="btn-sm">Bugün</button>
                 </div>
                 <div id="attendanceList" class="student-list"></div>
-                <div style="margin-top: 20px;">
+                <div class="mt-20">
                     <button onclick="saveAttendance()" class="btn-submit" style="background: var(--primary);">Yoklamayı Kaydet</button>
                 </div>
-                <div id="attendanceSummary" style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.05); border-radius: 10px;">
+                <div id="attendanceSummary" class="mt-20 p-25 bg-glass-dark radius-md">
                     <h3>Özet</h3>
                     <div id="attendanceSummaryContent"></div>
                 </div>
@@ -323,27 +323,27 @@
         <div id="slides" class="content-section">
             <div class="card">
                 <h2>Yeni Slayt Ekle</h2>
-                <button onclick="showSlideForm()" class="btn-submit" style="width: auto; margin-bottom: 20px;">+ Yeni Slayt Ekle</button>
+                <button onclick="showSlideForm()" class="btn-submit mb-20 w-auto">+ Yeni Slayt Ekle</button>
             </div>
 
-            <div class="card" style="margin-top: 20px;">
+            <div class="card mt-20">
                 <h2>Slayt Listesi</h2>
-                <p style="color: #666; font-size: 0.9rem; margin-bottom: 10px;">Slaytları sürükle-bırak ile sıralayabilirsiniz.</p>
+                <p class="text-light-gray text-smaller mb-10">Slaytları sürükle-bırak ile sıralayabilirsiniz.</p>
                 <div id="slidesList" class="slides-list">
                     <!-- Slides will be loaded here -->
                 </div>
             </div>
 
-            <div class="card" style="margin-top: 20px;">
+            <div class="card mt-20">
                 <h2>Genel Slayt Ayarları</h2>
                 <form id="slideSettingsForm" class="admin-form-col">
                     <div>
                         <label>Varsayılan Gösterim Süresi (saniye)</label><br>
-                        <input type="number" id="defaultDuration" min="1" max="60" value="10" class="admin-input" style="margin-top: 5px;">
+                        <input type="number" id="defaultDuration" min="1" max="60" value="10" class="admin-input mt-5">
                     </div>
                     <div>
                         <label>Varsayılan Geçiş Modu</label><br>
-                        <select id="defaultTransitionMode" class="admin-select" style="margin-top: 5px;">
+                        <select id="defaultTransitionMode" class="admin-select mt-5">
                             <option value="auto">Otomatik Akıllı Seçim</option>
                             <option value="random">Random</option>
                             <option value="manual">Manuel</option>
@@ -351,7 +351,7 @@
                     </div>
                     <div>
                         <label>Varsayılan Geçiş Süresi (saniye)</label><br>
-                        <input type="number" id="defaultTransitionDuration" min="0.5" max="3" step="0.1" value="1" class="admin-input" style="margin-top: 5px;">
+                        <input type="number" id="defaultTransitionDuration" min="0.5" max="3" step="0.1" value="1" class="admin-input mt-5">
                     </div>
                     <button type="submit" class="btn-submit">Ayarları Kaydet</button>
                 </form>
@@ -412,8 +412,8 @@
                 </div>
 
                 <!-- Error Logs List -->
-                <div id="errorLogsList" style="max-height: 600px; overflow-y: auto;">
-                    <p style="text-align: center; color: #666; padding: 20px;">Yükleniyor...</p>
+                <div id="errorLogsList" class="scroll-y-600">
+                    <p class="text-center text-light-gray p-20">Yükleniyor...</p>
                 </div>
             </div>
         </div>
@@ -443,7 +443,7 @@
                         Ana ekran görünüm ve davranışını özelleştirin
                     </p>
 
-                    <div class="admin-form-col" style="gap: 20px;">
+                    <div class="admin-form-col gap-20">
                         <!-- Display Mode -->
                         <div class="info-box">
                             <label class="admin-label">
@@ -472,10 +472,10 @@
                                 🌐 Bağlantı Modu
                             </label>
                             <div class="settings-btn-group">
-                                <button onclick="setConnectionMode('offline')" id="connOffline" class="settings-btn" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <button onclick="setConnectionMode('offline')" id="connOffline" class="settings-btn flex-align-center flex-justify-center flex-gap-10">
                                     <span>🚫</span> Offline
                                 </button>
-                                <button onclick="setConnectionMode('online')" id="connOnline" class="settings-btn" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <button onclick="setConnectionMode('online')" id="connOnline" class="settings-btn flex-align-center flex-justify-center flex-gap-10">
                                     <span>🌍</span> Online
                                 </button>
                             </div>
@@ -511,7 +511,7 @@
                             <input type="range" id="fontSize" min="80" max="150" value="100" step="10" oninput="updateFontSizeDisplay()" class="range-slider range-primary">
                             <div class="range-labels">
                                 <span>80%</span>
-                                <span id="fontSizeValue" style="color: #667eea; font-size: 1.1rem;">100%</span>
+                                <span id="fontSizeValue" class="text-primary text-bold text-lg">100%</span>
                                 <span>150%</span>
                             </div>
                             <div id="fontSizePreview" class="preview-box">
@@ -524,11 +524,11 @@
                             <label class="admin-label">
                                 🔄 Otomatik Yenileme
                             </label>
-                            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
-                                <input type="number" id="autoRefreshInterval" min="0" max="120" value="0" oninput="updateRefreshDisplay()" class="admin-input" style="flex: 1;">
-                                <span style="font-weight: 600;">dakika</span>
+                            <div class="flex-align-center flex-gap-10 mb-10">
+                                <input type="number" id="autoRefreshInterval" min="0" max="120" value="0" oninput="updateRefreshDisplay()" class="admin-input flex-1">
+                                <span class="text-bold">dakika</span>
                             </div>
-                            <div id="refreshStatus" class="preview-box" style="margin-top: 0; font-size: 0.9rem;">
+                            <div id="refreshStatus" class="preview-box mt-0 text-smaller">
                                 ⏸️ Kapalı
                             </div>
                             <small class="small-hint">
@@ -545,7 +545,7 @@
                                 <option value="24">24 Saat Formatı</option>
                                 <option value="12">12 Saat Formatı (AM/PM)</option>
                             </select>
-                            <div id="clockPreview" class="preview-box" style="font-size: 1.5rem; font-weight: 600; color: #667eea;">
+                            <div id="clockPreview" class="preview-box text-lg text-bold text-primary">
                                 14:30:45
                             </div>
                         </div>
