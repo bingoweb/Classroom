@@ -91,7 +91,7 @@
                     <span class="attendance-label">YOKLAMA</span>
                     <span class="attendance-status" id="today-attendance">Bekleniyor</span>
                 </div>
-                <div class="absent-marquee-container" id="absent-container" style="display: none;">
+                <div class="absent-marquee-container hidden" id="absent-container">
                     <div class="absent-label">GELMEYENLER:</div>
                     <div class="marquee-wrapper">
                         <div class="marquee-content" id="absent-list"></div>
@@ -102,7 +102,7 @@
             <!-- COUNTDOWN CARD -->
             <div class="widget widget-countdown card countdown-card" id="countdown-card">
                 <!-- Before School -->
-                <div class="before-school-mode" id="before-school-mode" style="display: none;">
+                <div class="before-school-mode hidden" id="before-school-mode">
                     <div class="countdown-display">
                         <span class="countdown-emoji"><i class="fa-solid fa-bell"></i></span>
                         <span class="countdown-value" id="before-school-countdown">--:--</span>
@@ -117,12 +117,12 @@
                         <span class="countdown-value" id="countdown">--:--</span>
                         <span class="countdown-text">Teneffüse Kalan</span>
                     </div>
-                    <div class="progress-bar-container" style="display:none;">
+                    <div class="progress-bar-container hidden">
                         <div class="progress-bar" id="countdown-bar"></div>
                     </div>
                 </div>
                 <!-- After School -->
-                <div class="goodbye-mode" id="goodbye-mode" style="display: none;">
+                <div class="goodbye-mode hidden" id="goodbye-mode">
                     <span class="goodbye-emoji"><i class="fa-solid fa-house"></i></span>
                     <span class="goodbye-title" id="goodbye-title">Yarın Görüşürüz!</span>
                     <span class="goodbye-subtitle" id="goodbye-subtitle">İyi dinlenin <i class="fa-solid fa-star"></i></span>
@@ -191,7 +191,7 @@
     </main>
 
     <!-- Hidden elements for JS compatibility -->
-    <div id="weather-widget" style="display:none;">
+    <div id="weather-widget" class="hidden">
         <span id="weather-icon"></span>
         <span id="weather-temp"></span>
         <span id="weather-city"></span>
