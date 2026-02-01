@@ -1164,21 +1164,32 @@ body::before {
     .header-bar {
         padding: 8px 12px;
         gap: 8px;
-        flex-direction: column; /* Stack vertically on very small screens */
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-rows: auto auto;
         align-items: center;
         height: auto;
     }
 
-    .header-center {
-        order: 2;
-        width: 100%;
+    .header-left {
+        grid-column: 1;
+        grid-row: 1;
+        justify-self: start;
     }
 
     .header-right {
-        order: 3;
-        width: 100%;
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
+        width: auto;
         display: flex;
-        justify-content: center;
+        justify-content: flex-end;
+    }
+
+    .header-center {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        width: 100%;
     }
 
     .brand-logo {
@@ -1252,6 +1263,23 @@ body::before {
 
     .weekend-icon {
         font-size: 1.2rem;
+    }
+
+    /* Fix Widget Sizing */
+    .widget,
+    .widget-stats,
+    .widget-countdown,
+    .widget-noise,
+    .widget-president,
+    .widget-duties,
+    .widget-stars {
+        flex: 0 0 auto !important;
+        min-height: auto;
+    }
+
+    .panel {
+        height: auto !important;
+        min-height: auto !important;
     }
 }
 

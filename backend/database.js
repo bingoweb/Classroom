@@ -7,17 +7,11 @@ const db = new sqlite3.Database(dbPath, (err) => {
         console.error('Error opening database', err.message);
     } else {
         console.log('Connected to the SQLite database.');
-        // Enable foreign keys for this connection (must be done for every connection)
-        db.run('PRAGMA foreign_keys = ON', (err) => {
-            if (err) {
-                console.error('Error enabling foreign keys:', err);
-            } else {
-                console.log('Foreign keys enabled.');
-            }
-        });
-        initDatabase();
     }
 });
+
+// Initialize database immediately to ensure tables are created before other modules use them
+initDatabase();
 
 function initDatabase() {
     db.serialize(() => {
