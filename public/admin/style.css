@@ -42,6 +42,27 @@ body {
     font-feature-settings: "kern" 1, "liga" 1;
 }
 
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(108, 92, 231, 0.3);
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+    box-shadow: 0 0 10px var(--primary);
+}
+
 /* Base resets handled by browser/container */
 
 /* UTILITY CLASSES FOR SECTIONS */
@@ -566,6 +587,40 @@ body {
    EXTRACTED STYLES (Formerly Inline/Embedded)
    ========================================= */
 
+/* Utility Classes */
+.w-100 { width: 100%; }
+.w-auto { width: auto; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-4 { margin-top: 1rem; }
+.mt-5 { margin-top: 1.25rem; }
+.p-4 { padding: 1rem; }
+.text-center { text-align: center; }
+.text-sm { font-size: 0.875rem; }
+.font-bold { font-weight: 600; }
+.font-normal { font-weight: 400; }
+.cursor-pointer { cursor: pointer; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+.text-white { color: white; }
+.bg-dark-blue { background: #34495e; color: white; }
+.btn-theme-auto { background: linear-gradient(135deg, #ffffff 0%, #2c3e50 100%); }
+.text-gray-600 { color: #666; }
+.bg-white { background: white; }
+.bg-transparent-dark { background: rgba(0,0,0,0.15); }
+.min-h-50 { min-height: 50px; }
+.overflow-y-auto { overflow-y: auto; }
+.max-h-600 { max-height: 600px; }
+.grid-preview-theme { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; padding: 10px; }
+.admin-noise-preview { background: rgba(0,0,0,0.85); border-radius: 15px; padding: 15px; margin-bottom: 20px; }
+
 /* 3D Typewriter Button Effect */
 .theme-btn {
     position: relative;
@@ -881,3 +936,4 @@ body {
     font-size: 0.9rem;
     margin-top: 8px;
 }
+.flex-1 { flex: 1; }

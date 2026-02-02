@@ -112,7 +112,7 @@
 
                     <!-- Excel Format Info -->
                     <div class="info-box">
-                        <div style="font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">📋 Gerekli Format:</div>
+                        <div class="font-bold mb-2 text-sm">📋 Gerekli Format:</div>
                         <ul style="margin: 0; padding-left: 20px; font-size: 0.85rem; line-height: 1.6; opacity: 0.95;">
                             <li>İlk satır başlık olmalı</li>
                             <li>Sütunlar: "Öğrenci No", "Ad Soyad", "Cinsiyet"</li>
@@ -494,10 +494,10 @@
                                 <button onclick="setColorTheme('light')" id="themeLight" class="settings-btn">
                                     ☀️ Açık
                                 </button>
-                                <button onclick="setColorTheme('dark')" id="themeDark" class="settings-btn" style="background: #34495e; color: white;">
+                                <button onclick="setColorTheme('dark')" id="themeDark" class="settings-btn bg-dark-blue">
                                     🌙 Koyu
                                 </button>
-                                <button onclick="setColorTheme('auto')" id="themeAuto" class="settings-btn" style="background: linear-gradient(135deg, #ffffff 0%, #2c3e50 100%);">
+                                <button onclick="setColorTheme('auto')" id="themeAuto" class="settings-btn btn-theme-auto">
                                     🌗 Otomatik
                                 </button>
                             </div>
@@ -524,9 +524,9 @@
                             <label class="admin-label">
                                 🔄 Otomatik Yenileme
                             </label>
-                            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
-                                <input type="number" id="autoRefreshInterval" min="0" max="120" value="0" oninput="updateRefreshDisplay()" class="admin-input" style="flex: 1;">
-                                <span style="font-weight: 600;">dakika</span>
+                            <div class="flex gap-2 items-center mb-2">
+                                <input type="number" id="autoRefreshInterval" min="0" max="120" value="0" oninput="updateRefreshDisplay()" class="admin-input flex-1">
+                                <span class="font-bold">dakika</span>
                             </div>
                             <div id="refreshStatus" class="preview-box" style="margin-top: 0; font-size: 0.9rem;">
                                 ⏸️ Kapalı
@@ -709,24 +709,24 @@
                         Gürültü ölçer için renk teması seçin
                     </p>
 
-                    <div id="admin-noise-preview" style="background: rgba(0,0,0,0.85); border-radius: 15px; padding: 15px; margin-bottom: 20px;">
+                    <div id="admin-noise-preview" class="admin-noise-preview">
                         <div class="equalizer-container theme-neon" id="equalizer-container" style="height: 100px;">
                             <span class="eq-label">🎙️</span>
                             <div class="equalizer-bars">
                                 <!-- 64 Bar - noise-meter.js tarafından dolduruluyor -->
                             </div>
                         </div>
-                        <div style="text-align: center; margin-top: 10px;">
+                        <div class="text-center mt-2">
                             <button id="admin-mic-btn" onclick="startAdminMicrophone()" class="btn-submit">
                                 🎤 Mikrofonu Başlat
                             </button>
-                            <div id="admin-mic-status" style="margin-top: 8px; font-size: 0.85rem; color: #aaa;">
+                            <div id="admin-mic-status" class="mt-2 text-sm" style="color: #aaa;">
                                 Mikrofon bekleniyor...
                             </div>
                         </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; padding: 10px;">
+                    <div class="grid-preview-theme">
                         <button onclick="setEqualizerTheme('neon')" id="theme-btn-neon" class="theme-btn btn-neon">Neon</button>
                         <button onclick="setEqualizerTheme('ocean')" id="theme-btn-ocean" class="theme-btn btn-ocean">Ocean</button>
                         <button onclick="setEqualizerTheme('sunset')" id="theme-btn-sunset" class="theme-btn btn-sunset">Sunset</button>

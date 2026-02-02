@@ -29,8 +29,8 @@
     /* Text */
     --text-white: #FFFFFF;
     --text-light: rgba(255, 255, 255, 0.9);
-    /* Improved contrast from 0.5 to 0.65 */
-    --text-muted: rgba(255, 255, 255, 0.75);
+    /* Improved contrast to 0.85 */
+    --text-muted: rgba(255, 255, 255, 0.85);
 
     /* Shadows */
     --shadow-neon-blue: 0 0 30px rgba(0, 212, 255, 0.5);
@@ -1092,6 +1092,7 @@ body::before {
 @media (max-width: 1200px) {
     body {
         overflow-y: auto;
+        overflow-x: hidden;
     }
 
     /* Fix Header Overlap */
@@ -1167,16 +1168,29 @@ body::before {
         flex-direction: column; /* Stack vertically on very small screens */
         align-items: center;
         height: auto;
+        width: 100%;
+    }
+
+    .header-left,
+    .header-center,
+    .header-right {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .header-left {
+        justify-content: center; /* Center logo */
     }
 
     .header-center {
         order: 2;
-        width: 100%;
+        display: flex;
+        justify-content: center;
     }
 
     .header-right {
         order: 3;
-        width: 100%;
         display: flex;
         justify-content: center;
     }
