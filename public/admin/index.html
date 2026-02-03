@@ -112,8 +112,8 @@
 
                     <!-- Excel Format Info -->
                     <div class="info-box">
-                        <div style="font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">📋 Gerekli Format:</div>
-                        <ul style="margin: 0; padding-left: 20px; font-size: 0.85rem; line-height: 1.6; opacity: 0.95;">
+                        <div class="fw-600 mb-8 text-md">📋 Gerekli Format:</div>
+                        <ul class="m-0 pl-20 text-sm lh-16 opacity-95">
                             <li>İlk satır başlık olmalı</li>
                             <li>Sütunlar: "Öğrenci No", "Ad Soyad", "Cinsiyet"</li>
                             <li>Cinsiyet: E=Erkek, K=Kız</li>
@@ -135,13 +135,13 @@
                             📤 Excel'i Yükle
                         </button>
                     </form>
-                    <div id="excelImportResult" class="info-box" style="margin-top: 15px; background: rgba(255,255,255,0.2);">
+                    <div id="excelImportResult" class="info-box mt-15 bg-glass-light">
                     </div>
                 </div>
             </div>
 
             <!-- Student List Card -->
-            <div class="card" style="padding: 25px;">
+            <div class="card p-25">
                 <div class="list-header-flex">
                     <h2 class="list-header-title">
                         📚 Öğrenci Listesi
@@ -159,7 +159,7 @@
                 </div>
 
                 <!-- Students Grid/List -->
-                <div id="studentList" class="student-list" style="margin-top: 20px;">
+                <div id="studentList" class="student-list mt-20">
                     <!-- Students will be rendered here -->
                 </div>
             </div>
@@ -194,10 +194,10 @@
                     </div>
 
                     <div class="info-box">
-                        <div class="small-hint" style="margin-bottom: 8px;">💡 Maksimum: 1 kişi</div>
+                        <div class="small-hint mb-8">💡 Maksimum: 1 kişi</div>
                     </div>
 
-                    <select id="presidentSelect" class="admin-select" style="margin-bottom: 12px;">
+                    <select id="presidentSelect" class="admin-select mb-12">
                         <option value="">Öğrenci seçin...</option>
                     </select>
 
@@ -205,7 +205,7 @@
                         ✅ Başkan Ata
                     </button>
 
-                    <div id="currentPresident" class="info-box info-box-dark" style="margin-top: 15px; min-height: 50px;">
+                    <div id="currentPresident" class="info-box info-box-dark mt-15 min-h-50">
                         <!-- Current president will be shown here -->
                     </div>
                 </div>
@@ -221,10 +221,10 @@
                     </div>
 
                     <div class="info-box">
-                        <div class="small-hint" style="margin-bottom: 8px;">💡 Maksimum: 2 kişi</div>
+                        <div class="small-hint mb-8">💡 Maksimum: 2 kişi</div>
                     </div>
 
-                    <select id="vicePresidentSelect" class="admin-select" style="margin-bottom: 12px;">
+                    <select id="vicePresidentSelect" class="admin-select mb-12">
                         <option value="">Öğrenci seçin...</option>
                     </select>
 
@@ -232,7 +232,7 @@
                         ➕ Yardımcı Ekle
                     </button>
 
-                    <div id="currentVicePresidents" class="info-box info-box-dark" style="margin-top: 15px; min-height: 50px;">
+                    <div id="currentVicePresidents" class="info-box info-box-dark mt-15 min-h-50">
                         <!-- Current vice presidents will be shown here -->
                     </div>
                 </div>
@@ -248,10 +248,10 @@
                     </div>
 
                     <div class="info-box">
-                        <div class="small-hint" style="margin-bottom: 8px;">💡 Maksimum: 4 kişi</div>
+                        <div class="small-hint mb-8">💡 Maksimum: 4 kişi</div>
                     </div>
 
-                    <select id="dutySelect" class="admin-select" style="margin-bottom: 12px;">
+                    <select id="dutySelect" class="admin-select mb-12">
                         <option value="">Öğrenci seçin...</option>
                     </select>
 
@@ -259,7 +259,7 @@
                         ➕ Nöbetçi Ekle
                     </button>
 
-                    <div id="currentDuty" class="info-box info-box-dark" style="margin-top: 15px; min-height: 50px;">
+                    <div id="currentDuty" class="info-box info-box-dark mt-15 min-h-50">
                         <!-- Current duty students will be shown here -->
                     </div>
                 </div>
@@ -323,27 +323,27 @@
         <div id="slides" class="content-section">
             <div class="card">
                 <h2>Yeni Slayt Ekle</h2>
-                <button onclick="showSlideForm()" class="btn-submit" style="width: auto; margin-bottom: 20px;">+ Yeni Slayt Ekle</button>
+                <button onclick="showSlideForm()" class="btn-submit w-auto mb-20">+ Yeni Slayt Ekle</button>
             </div>
 
-            <div class="card" style="margin-top: 20px;">
+            <div class="card mt-20">
                 <h2>Slayt Listesi</h2>
-                <p style="color: #666; font-size: 0.9rem; margin-bottom: 10px;">Slaytları sürükle-bırak ile sıralayabilirsiniz.</p>
+                <p class="text-666 text-md mb-10">Slaytları sürükle-bırak ile sıralayabilirsiniz.</p>
                 <div id="slidesList" class="slides-list">
                     <!-- Slides will be loaded here -->
                 </div>
             </div>
 
-            <div class="card" style="margin-top: 20px;">
+            <div class="card mt-20">
                 <h2>Genel Slayt Ayarları</h2>
                 <form id="slideSettingsForm" class="admin-form-col">
                     <div>
                         <label>Varsayılan Gösterim Süresi (saniye)</label><br>
-                        <input type="number" id="defaultDuration" min="1" max="60" value="10" class="admin-input" style="margin-top: 5px;">
+                        <input type="number" id="defaultDuration" min="1" max="60" value="10" class="admin-input mt-5">
                     </div>
                     <div>
                         <label>Varsayılan Geçiş Modu</label><br>
-                        <select id="defaultTransitionMode" class="admin-select" style="margin-top: 5px;">
+                        <select id="defaultTransitionMode" class="admin-select mt-5">
                             <option value="auto">Otomatik Akıllı Seçim</option>
                             <option value="random">Random</option>
                             <option value="manual">Manuel</option>
@@ -351,7 +351,7 @@
                     </div>
                     <div>
                         <label>Varsayılan Geçiş Süresi (saniye)</label><br>
-                        <input type="number" id="defaultTransitionDuration" min="0.5" max="3" step="0.1" value="1" class="admin-input" style="margin-top: 5px;">
+                        <input type="number" id="defaultTransitionDuration" min="0.5" max="3" step="0.1" value="1" class="admin-input mt-5">
                     </div>
                     <button type="submit" class="btn-submit">Ayarları Kaydet</button>
                 </form>
@@ -524,11 +524,11 @@
                             <label class="admin-label">
                                 🔄 Otomatik Yenileme
                             </label>
-                            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
-                                <input type="number" id="autoRefreshInterval" min="0" max="120" value="0" oninput="updateRefreshDisplay()" class="admin-input" style="flex: 1;">
-                                <span style="font-weight: 600;">dakika</span>
+                            <div class="d-flex gap-10 align-center mb-10">
+                                <input type="number" id="autoRefreshInterval" min="0" max="120" value="0" oninput="updateRefreshDisplay()" class="admin-input flex-1">
+                                <span class="fw-600">dakika</span>
                             </div>
-                            <div id="refreshStatus" class="preview-box" style="margin-top: 0; font-size: 0.9rem;">
+                            <div id="refreshStatus" class="preview-box mt-0 text-md">
                                 ⏸️ Kapalı
                             </div>
                             <small class="small-hint">
