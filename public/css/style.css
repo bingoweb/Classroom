@@ -30,7 +30,7 @@
     --text-white: #FFFFFF;
     --text-light: rgba(255, 255, 255, 0.9);
     /* Improved contrast from 0.5 to 0.65 */
-    --text-muted: rgba(255, 255, 255, 0.75);
+    --text-muted: rgba(255, 255, 255, 0.85);
 
     /* Shadows */
     --shadow-neon-blue: 0 0 30px rgba(0, 212, 255, 0.5);
@@ -1157,12 +1157,12 @@ body::before {
 /* TABLET & MOBILE ADJUSTMENTS */
 @media (max-width: 768px) {
     :root {
-        --gap: 12px;
+        --gap: 8px;
         --radius: 16px;
     }
 
     .header-bar {
-        padding: 8px 12px;
+        padding: 8px 5px;
         gap: 8px;
         flex-direction: column; /* Stack vertically on very small screens */
         align-items: center;
