@@ -40,6 +40,10 @@ body {
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     font-feature-settings: "kern" 1, "liga" 1;
+
+    /* Firefox Scrollbar Support */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(0, 0, 0, 0.1);
 }
 
 /* Base resets handled by browser/container */
@@ -107,6 +111,19 @@ body {
         float: none;
         margin-top: 10px;
         width: 100%;
+    }
+
+    .tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .tab-btn {
+        width: 100%;
+        padding: 12px 10px;
+        font-size: 0.9rem;
+        text-align: center;
     }
 }
 
@@ -275,7 +292,7 @@ body {
 }
 
 .text-dark .admin-input, .text-dark .admin-select {
-    border: 2px solid rgba(0,0,0,0.1);
+    border: 2px solid rgba(0,0,0,0.2);
 }
 
 /* BUTTONS */
@@ -880,4 +897,28 @@ body {
     justify-content: space-between;
     font-size: 0.9rem;
     margin-top: 8px;
+}
+
+/* =========================================
+   CUSTOM SCROLLBAR
+   ========================================= */
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+    box-shadow: 0 0 10px var(--primary);
 }
