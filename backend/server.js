@@ -9,7 +9,7 @@ const XLSX = require('xlsx');
 const { Logger, COMPONENTS, LOG_LEVELS } = require('./logger');
 const { normalizePath } = require('./utils');
 const { getIstanbulDateKey } = require('./date-utils');
-const { validateNormalizedSchedule, isValidDayKey } = require('./schedule-service');
+const { validateNormalizedSchedule, resolveScheduleDayKey, isValidDayKey } = require('./schedule-service');
 const { getNormalizedScheduleRows, replaceNormalizedSchedule } = require('./schedule-repository');
 
 // File deletion utility - prevents code duplication
@@ -24,7 +24,7 @@ function safeDeleteFile(filePath, component = COMPONENTS.API) {
 }
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Initialize logger
 const logger = new Logger();
@@ -646,15 +646,29 @@ app.post('/api/settings', (req, res) => {
     });
 });
 
+async function requireScheduleStorageReady(req, res, next) {
+    try {
+        await db.scheduleMigrationPromise;
+        next();
+    } catch (err) {
+        logger.error(COMPONENTS.DATABASE, 'Schedule storage initialization failed', err);
+        return res.status(503).json({
+            code: 'SCHEDULE_STORAGE_UNAVAILABLE',
+            error: 'Ders programı veritabanı hazırlanamadı.'
+        });
+    }
+}
+
+app.use('/api/schedule', requireScheduleStorageReady);
 
 // Get Normalized Schedule
 app.get('/api/schedule/normalized', async (req, res) => {
     try {
-        await db.scheduleMigrationPromise;
-        const day = req.query.day || 'weekday';
-        if (!isValidDayKey(day)) {
-            return res.status(400).json({ error: 'Geçersiz gün anahtarı.' });
+        const resolved = resolveScheduleDayKey(req.query.day, { defaultDay: 'weekday' });
+        if (!resolved.valid) {
+            return res.status(400).json({ error: resolved.error.message });
         }
+        const day = resolved.day;
 
         const rows = await getNormalizedScheduleRows(db, day);
         
@@ -664,9 +678,15 @@ app.get('/api/schedule/normalized', async (req, res) => {
 
         const validation = validateNormalizedSchedule(rows);
         
-        // If there are rows but they don't form a valid normalized schedule, it's a legacy or incomplete schedule
         if (!validation.valid || validation.errors.length > 0) {
-            return res.json({ day, source: 'legacy-incomplete', valid: false, periods: [], warnings: [], errors: [] });
+            return res.json({ 
+                day, 
+                source: 'legacy-incomplete', 
+                valid: false, 
+                periods: [], 
+                warnings: validation.warnings, 
+                errors: validation.errors 
+            });
         }
 
         return res.json({
@@ -686,13 +706,42 @@ app.get('/api/schedule/normalized', async (req, res) => {
 // Update Normalized Schedule
 app.put('/api/schedule/normalized', async (req, res) => {
     try {
-        await db.scheduleMigrationPromise;
-        const { day, periods } = req.body;
-        if (!isValidDayKey(day)) {
-            return res.status(400).json({ error: 'Geçersiz gün anahtarı.' });
+        if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+            return res.status(400).json({
+                day: null,
+                valid: false,
+                count: 0,
+                periods: [],
+                warnings: [],
+                errors: [{ code: 'INVALID_SCHEDULE_BODY', message: 'Ders programı isteği geçersiz.' }]
+            });
         }
 
-        const validation = validateNormalizedSchedule(periods);
+        if (!Array.isArray(req.body.periods)) {
+            return res.status(400).json({
+                day: null,
+                valid: false,
+                count: 0,
+                periods: [],
+                warnings: [],
+                errors: [{ code: 'INVALID_SCHEDULE_BODY', message: 'Ders programı isteği geçersiz.' }]
+            });
+        }
+
+        const resolved = resolveScheduleDayKey(req.body.day, { defaultDay: 'weekday' });
+        if (!resolved.valid) {
+            return res.status(400).json({
+                day: null,
+                valid: false,
+                count: 0,
+                periods: [],
+                warnings: [],
+                errors: [resolved.error]
+            });
+        }
+        const day = resolved.day;
+
+        const validation = validateNormalizedSchedule(req.body.periods);
         if (!validation.valid || validation.errors.length > 0) {
             return res.status(422).json({
                 day,
@@ -1622,7 +1671,11 @@ app.use((err, req, res, next) => {
     }
 });
 
-app.listen(PORT, () => {
-    logger.info(COMPONENTS.SYSTEM, `Server running on http://localhost:${PORT}`, null, { port: PORT });
-    logger.info(COMPONENTS.SYSTEM, 'Server started', null, { port: PORT });
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        logger.info(COMPONENTS.SYSTEM, `Server running on http://localhost:${PORT}`, null, { port: PORT });
+        logger.info(COMPONENTS.SYSTEM, 'Server started', null, { port: PORT });
+    });
+}
+
+module.exports = app;

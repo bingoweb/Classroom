@@ -6,9 +6,23 @@ const configuredDbPath = process.env.CLASSROOM_DB_PATH;
 const dbPath = configuredDbPath
     ? path.resolve(configuredDbPath)
     : path.resolve(__dirname, 'classroom.db');
+let resolveScheduleMigration;
+let rejectScheduleMigration;
+
+const scheduleMigrationPromise = new Promise((resolve, reject) => {
+    resolveScheduleMigration = resolve;
+    rejectScheduleMigration = reject;
+});
+
+// Do not swallow rejection, but log it
+scheduleMigrationPromise.catch((err) => {
+    console.error('Fatal: Schedule schema migration failed', err);
+});
+
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database', err.message);
+        rejectScheduleMigration(err);
     } else {
         console.log('Connected to the SQLite database.');
         // Enable foreign keys for this connection (must be done for every connection)
@@ -22,6 +36,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
         initDatabase();
     }
 });
+
+db.scheduleMigrationPromise = scheduleMigrationPromise;
 
 function initDatabase() {
     db.serialize(() => {
@@ -144,9 +160,9 @@ function initDatabase() {
         });
     });
 
-    db.scheduleMigrationPromise = ensureScheduleSchema(db).catch(err => {
-        console.error('Fatal: Schedule schema migration failed', err);
-    });
+    ensureScheduleSchema(db)
+        .then(() => resolveScheduleMigration())
+        .catch(err => rejectScheduleMigration(err));
 }
 
 module.exports = db;

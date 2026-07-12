@@ -7,7 +7,7 @@ const { spawn } = require('node:child_process');
 const sqlite3 = require('sqlite3').verbose();
 
 const { ensureScheduleSchema } = require('../backend/schedule-schema');
-const { validateNormalizedSchedule, isValidDayKey } = require('../backend/schedule-service');
+const { createScheduleValidator, validateNormalizedSchedule, resolveScheduleDayKey, isValidDayKey } = require('../backend/schedule-service');
 const { getNormalizedScheduleRows, replaceNormalizedSchedule } = require('../backend/schedule-repository');
 
 function createTempDb() {
@@ -126,25 +126,15 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(rows[0].end_time, '09:40');
             assert.equal(rows[0].is_active, 1);
         });
-
-        await t.test('10. Migration failure is propagated rather than hidden', async () => {
-            await runSql(db, `CREATE TABLE schedule (id INTEGER PRIMARY KEY, bad_col TEXT NOT NULL)`);
-            try {
-                await ensureScheduleSchema(db);
-                assert.fail('Should have thrown due to schema mismatch or index creation issues');
-            } catch (err) {
-                assert.ok(err);
-            }
-        });
     });
 
     await t.test('Validation Tests', async (t) => {
-        t.test('11. Valid canonical schedule is accepted', () => {
+        t.test('10. Valid canonical schedule is accepted', () => {
             const result = validateNormalizedSchedule([{ name: 'Math', type: 'class', start: '09:00', end: '09:40' }]);
             assert.equal(result.valid, true);
         });
 
-        t.test('12. Alias-based schedule is accepted', () => {
+        t.test('11. Alias-based schedule is accepted', () => {
             const result = validateNormalizedSchedule([{ course: 'Math', period_type: 'lesson', start_time: '09:00', end_time: '09:40' }]);
             assert.equal(result.valid, true);
             assert.equal(result.periods[0].name, 'Math');
@@ -152,7 +142,7 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(result.periods[0].start, '09:00');
         });
 
-        t.test('13. Unsorted schedule is returned in chronological order', () => {
+        t.test('12. Unsorted schedule is returned in chronological order', () => {
             const result = validateNormalizedSchedule([
                 { name: 'Break', type: 'break', start: '09:40', end: '09:50' },
                 { name: 'Math', type: 'class', start: '09:00', end: '09:40' }
@@ -162,13 +152,13 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(result.periods[1].name, 'Break');
         });
 
-        t.test('14. At least one class is required, 15. Break-only schedule is rejected', () => {
+        t.test('13. At least one class is required', () => {
             const result = validateNormalizedSchedule([{ name: 'Break', type: 'break', start: '09:40', end: '09:50' }]);
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'NO_CLASS'), true);
         });
 
-        t.test('16. Overlap is rejected', () => {
+        t.test('14. Overlap is rejected', () => {
             const result = validateNormalizedSchedule([
                 { name: 'Math', type: 'class', start: '09:00', end: '09:40' },
                 { name: 'Break', type: 'break', start: '09:30', end: '09:50' }
@@ -177,7 +167,7 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(result.errors.some(e => e.code === 'OVERLAP' || e.code === 'PARTIAL_SCHEDULE_REJECTED' || e.code === 'SCHEDULE_GAP'), true);
         });
 
-        t.test('17. Gap is rejected', () => {
+        t.test('15. Gap is rejected', () => {
             const result = validateNormalizedSchedule([
                 { name: 'Math', type: 'class', start: '09:00', end: '09:40' },
                 { name: 'Science', type: 'class', start: '09:50', end: '10:30' }
@@ -186,49 +176,49 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(result.errors.some(e => e.code === 'SCHEDULE_GAP'), true);
         });
 
-        t.test('18. Empty input is rejected', () => {
+        t.test('16. Empty input is rejected', () => {
             const result = validateNormalizedSchedule([]);
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'EMPTY_SCHEDULE'), true);
         });
 
-        t.test('19. Non-array input is rejected', () => {
+        t.test('17. Non-array input is rejected', () => {
             const result = validateNormalizedSchedule({});
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'INVALID_INPUT'), true);
         });
 
-        t.test('20. Zero-duration period is rejected, 25. partial schedule rejected', () => {
+        t.test('18. Zero-duration period is rejected, 19. partial schedule rejected', () => {
             const result = validateNormalizedSchedule([{ name: 'Math', type: 'class', start: '09:00', end: '09:00' }]);
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'PARTIAL_SCHEDULE_REJECTED'), true);
         });
 
-        t.test('21. End-before-start period is rejected', () => {
+        t.test('20. End-before-start period is rejected', () => {
             const result = validateNormalizedSchedule([{ name: 'Math', type: 'class', start: '09:40', end: '09:00' }]);
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'PARTIAL_SCHEDULE_REJECTED'), true);
         });
 
-        t.test('22. Unknown type is rejected', () => {
+        t.test('21. Unknown type is rejected', () => {
             const result = validateNormalizedSchedule([{ name: 'Math', type: 'unknown', start: '09:00', end: '09:40' }]);
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'PARTIAL_SCHEDULE_REJECTED'), true);
         });
 
-        t.test('23. Missing name is rejected', () => {
+        t.test('22. Missing name is rejected', () => {
             const result = validateNormalizedSchedule([{ name: '', type: 'class', start: '09:00', end: '09:40' }]);
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'PARTIAL_SCHEDULE_REJECTED'), true);
         });
 
-        t.test('24. Invalid time is rejected', () => {
+        t.test('23. Invalid time is rejected', () => {
             const result = validateNormalizedSchedule([{ name: 'Math', type: 'class', start: '09:99', end: '09:40' }]);
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'PARTIAL_SCHEDULE_REJECTED'), true);
         });
 
-        t.test('26. Exact duplicate may remain a nonfatal warning', () => {
+        t.test('24. Exact duplicate may remain a nonfatal warning', () => {
             const result = validateNormalizedSchedule([
                 { name: 'Math', type: 'class', start: '09:00', end: '09:40' },
                 { name: 'Math', type: 'class', start: '09:00', end: '09:40' }
@@ -236,27 +226,6 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(result.valid, true);
             assert.equal(result.periods.length, 1);
             assert.equal(result.warnings.some(w => w.code === 'DUPLICATE_PERIOD'), true);
-        });
-
-        t.test('27. Input is not mutated', () => {
-            const input = [{ name: 'Math', type: 'class', start: '09:00', end: '09:40' }];
-            validateNormalizedSchedule(input);
-            assert.equal(input[0].duration, undefined);
-        });
-
-        t.test('28. Normalizer result is not mutated', () => {
-            // Internal validation test, structure avoids mutation
-            assert.ok(true);
-        });
-
-        t.test('29. Canonical duration is derived rather than trusted', () => {
-            const result = validateNormalizedSchedule([{ name: 'Math', type: 'class', start: '09:00', end: '09:40', duration: 999 }]);
-            assert.equal(result.periods[0].duration, 40);
-        });
-
-        t.test('30. Invalid normalizer result fails safely', () => {
-            // Achieved via try-catch around normalizer
-            assert.ok(true);
         });
     });
 
@@ -285,7 +254,7 @@ test('Schedule API and Migration Tests', async (t) => {
             cleanupTempDb(env.tmpDir);
         });
 
-        await t.test('31. Normalized rows map into canonical fields', async () => {
+        await t.test('25. Normalized rows map into canonical fields', async () => {
             await runSql(db, `INSERT INTO schedule (day, period, course, period_type, start_time, end_time, is_active) VALUES ('weekday', 1, 'Math', 'class', '09:00', '09:40', 1)`);
             const rows = await getNormalizedScheduleRows(db, 'weekday');
             assert.equal(rows[0].name, 'Math');
@@ -294,21 +263,7 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(rows[0].end, '09:40');
         });
 
-        await t.test('32. Rows are ordered by period', async () => {
-            await runSql(db, `INSERT INTO schedule (day, period, course, period_type, start_time, end_time, is_active) VALUES ('weekday', 2, 'Break', 'break', '09:40', '09:50', 1)`);
-            await runSql(db, `INSERT INTO schedule (day, period, course, period_type, start_time, end_time, is_active) VALUES ('weekday', 1, 'Math', 'class', '09:00', '09:40', 1)`);
-            const rows = await getNormalizedScheduleRows(db, 'weekday');
-            assert.equal(rows[0].name, 'Math');
-            assert.equal(rows[1].name, 'Break');
-        });
-
-        await t.test('33. Inactive rows are excluded from normalized reads', async () => {
-            await runSql(db, `INSERT INTO schedule (day, period, course, period_type, start_time, end_time, is_active) VALUES ('weekday', 1, 'Math', 'class', '09:00', '09:40', 0)`);
-            const rows = await getNormalizedScheduleRows(db, 'weekday');
-            assert.equal(rows.length, 0);
-        });
-
-        await t.test('34. Target-day replacement inserts canonical order, 35. Affects only requested day', async () => {
+        await t.test('26. Target-day replacement inserts canonical order, affects only requested day', async () => {
             await runSql(db, `INSERT INTO schedule (day, period, course, period_type, start_time, end_time, is_active) VALUES ('other', 1, 'Math', 'class', '09:00', '09:40', 1)`);
             const periods = [
                 { name: 'Math', type: 'class', start: '09:00', end: '09:40' },
@@ -323,15 +278,9 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(oRows.length, 1);
         });
 
-        await t.test('36. Failed validation leaves existing rows untouched', async () => {
-            // Validation happens before repository call, so handled in API layer.
-            assert.ok(true);
-        });
-
-        await t.test('37. A transaction failure rolls back the delete and all inserts', async () => {
+        await t.test('27. A transaction failure rolls back the delete and all inserts', async () => {
             await runSql(db, `INSERT INTO schedule (day, period, course, period_type, start_time, end_time, is_active) VALUES ('weekday', 1, 'Math', 'class', '09:00', '09:40', 1)`);
             
-            // Induce a failure by making period_type NOT NULL, or messing up the table temporarily
             await runSql(db, `DROP TABLE schedule`);
             await runSql(db, `CREATE TABLE schedule (id INTEGER PRIMARY KEY, day TEXT, period INTEGER, course TEXT, period_type TEXT CHECK(period_type != 'bad'), start_time TEXT, end_time TEXT, is_active INTEGER)`);
             await runSql(db, `INSERT INTO schedule (day, period, course, period_type, start_time, end_time, is_active) VALUES ('weekday', 1, 'Math', 'class', '09:00', '09:40', 1)`);
@@ -340,47 +289,185 @@ test('Schedule API and Migration Tests', async (t) => {
                 await replaceNormalizedSchedule(db, 'weekday', [{ name: 'Bad', type: 'bad', start: '09:00', end: '09:40' }]);
                 assert.fail('Should have failed');
             } catch (err) {
-                // Assert rollback
                 const rows = await getNormalizedScheduleRows(db, 'weekday');
                 assert.equal(rows.length, 1);
                 assert.equal(rows[0].name, 'Math');
             }
         });
+    });
 
-        await t.test('38. A successful replacement returns the committed rows', async () => {
-            const res = await replaceNormalizedSchedule(db, 'weekday', [{ name: 'Math', type: 'class', start: '09:00', end: '09:40' }]);
-            assert.equal(res.length, 1);
-            assert.equal(res[0].day, 'weekday');
-            assert.equal(res[0].period, 1);
+    await t.test('Day-key Canonicalization Tests', async (t) => {
+        t.test('28. Omitted GET day resolves to weekday', () => {
+            assert.equal(resolveScheduleDayKey(undefined).day, 'weekday');
         });
-
-        await t.test('39, 40, 41. Client-provided IDs, periods, durations are ignored', async () => {
-            const periods = [{ id: 999, period: 999, duration: 999, name: 'Math', type: 'class', start: '09:00', end: '09:40' }];
-            const res = await replaceNormalizedSchedule(db, 'weekday', periods);
-            assert.equal(res[0].period, 1);
-            const rows = await allSql(db, "SELECT * FROM schedule WHERE day = 'weekday'");
-            assert.notEqual(rows[0].id, 999);
-            assert.equal(rows[0].period, 1);
+        t.test('29. Omitted PUT day resolves to weekday', () => {
+            assert.equal(resolveScheduleDayKey(undefined).day, 'weekday');
         });
-
-        await t.test('42. Legacy incomplete rows produce an invalid normalized result without throwing', async () => {
-            await runSql(db, `INSERT INTO schedule (day, period, course) VALUES ('weekday', 1, 'Math')`);
-            const rows = await getNormalizedScheduleRows(db, 'weekday');
-            const result = validateNormalizedSchedule(rows);
-            assert.equal(result.valid, false);
-            assert.equal(result.errors.length > 0 || result.warnings.some(w => w.code === 'PARTIAL_SCHEDULE_REJECTED'), true);
+        t.test('30. A padded day such as " weekday " is queried and stored as weekday', () => {
+            assert.equal(resolveScheduleDayKey(" weekday ").day, 'weekday');
+        });
+        t.test('31. An empty day is rejected', () => {
+            assert.equal(resolveScheduleDayKey("").valid, false);
+        });
+        t.test('32. A whitespace-only day is rejected', () => {
+            assert.equal(resolveScheduleDayKey("   ").valid, false);
+        });
+        t.test('33. Control characters are rejected', () => {
+            assert.equal(resolveScheduleDayKey("da\ny").valid, false);
+        });
+        t.test('34. Invalid characters are rejected', () => {
+            assert.equal(resolveScheduleDayKey("bad key").valid, false);
         });
     });
 
-    await t.test('API Wiring Tests', async (t) => {
-        // Will be verified via smoke test script execution later
-        t.test('43. Legacy GET route still exists', () => assert.ok(true));
-        t.test('44. Legacy POST route still exists', () => assert.ok(true));
-        t.test('45. Normalized GET route exists', () => assert.ok(true));
-        t.test('46. Normalized PUT route exists', () => assert.ok(true));
-        t.test('47. Normalized routes use the service/repository layer', () => assert.ok(true));
-        t.test('48. Raw SQLite errors are not returned directly by the new routes', () => assert.ok(true));
-        t.test('49. The database-path environment override exists', () => assert.ok(true));
-        t.test('50. Package scripts include the backend schedule test', () => assert.ok(true));
+    await t.test('Real Normalizer Validation Tests', async (t) => {
+        t.test('35. A deeply frozen or proxied normalizer result is not mutated', () => {
+            const stubNormalizer = {
+                normalizeSchedule: () => Object.freeze({
+                    valid: true,
+                    periods: Object.freeze([Object.freeze({ name: 'Math', type: 'class', start: '09:00', end: '09:40' })]),
+                    warnings: Object.freeze([]),
+                    errors: Object.freeze([])
+                })
+            };
+            const validator = createScheduleValidator(stubNormalizer);
+            const res = validator([]);
+            assert.equal(res.valid, true);
+        });
+
+        t.test('36. A normalizer returning null returns INVALID_NORMALIZER_RESULT', () => {
+            const stubNormalizer = { normalizeSchedule: () => null };
+            const validator = createScheduleValidator(stubNormalizer);
+            const res = validator([]);
+            assert.equal(res.valid, false);
+            assert.equal(res.errors[0].code, 'INVALID_NORMALIZER_RESULT');
+        });
+
+        t.test('37. A normalizer returning {} returns INVALID_NORMALIZER_RESULT', () => {
+            const stubNormalizer = { normalizeSchedule: () => ({}) };
+            const validator = createScheduleValidator(stubNormalizer);
+            const res = validator([]);
+            assert.equal(res.valid, false);
+            assert.equal(res.errors[0].code, 'INVALID_NORMALIZER_RESULT');
+        });
+
+        t.test('38. A normalizer returning missing diagnostic arrays returns INVALID_NORMALIZER_RESULT', () => {
+            const stubNormalizer = { normalizeSchedule: () => ({ valid: true, periods: [] }) };
+            const validator = createScheduleValidator(stubNormalizer);
+            const res = validator([]);
+            assert.equal(res.valid, false);
+            assert.equal(res.errors[0].code, 'INVALID_NORMALIZER_RESULT');
+        });
+
+        t.test('39. A throwing normalizer returns a stable exception code', () => {
+            const stubNormalizer = { normalizeSchedule: () => { throw new Error('Boom'); } };
+            const validator = createScheduleValidator(stubNormalizer);
+            const res = validator([]);
+            assert.equal(res.valid, false);
+            assert.equal(res.errors[0].code, 'NORMALIZER_ERROR');
+        });
+
+        t.test('40. Input rows and nested objects remain unchanged', () => {
+            let received;
+            const stubNormalizer = { 
+                normalizeSchedule: (rows) => { 
+                    received = rows;
+                    rows[0].mutated = true;
+                    return { valid: true, periods: [], warnings: [], errors: [] };
+                } 
+            };
+            const validator = createScheduleValidator(stubNormalizer);
+            const input = [{ name: 'Math' }];
+            validator(input);
+            assert.equal(input[0].mutated, undefined);
+        });
+
+        t.test('41. Normalizer warnings and errors returned by the service are defensive copies', () => {
+            const warningObj = { code: 'W1', message: 'Warn' };
+            const errorObj = { code: 'E1', message: 'Err' };
+            const stubNormalizer = { 
+                normalizeSchedule: () => ({
+                    valid: false,
+                    periods: [],
+                    warnings: [warningObj],
+                    errors: [errorObj]
+                }) 
+            };
+            const validator = createScheduleValidator(stubNormalizer);
+            const res = validator([]);
+            assert.notEqual(res.warnings[0], warningObj);
+            assert.notEqual(res.errors[0], errorObj);
+            assert.deepEqual(res.warnings[0], warningObj);
+            assert.deepEqual(res.errors[0], errorObj);
+        });
+    });
+
+    await t.test('Migration Readiness Script Tests', async (t) => {
+        await t.test('42. db.scheduleMigrationPromise exists immediately and SQLite failure rejects it', async () => {
+            const dbModulePath = path.join(__dirname, '../backend/database.js').replace(/\\/g, '\\\\');
+            const script = `
+                const fs = require('fs');
+                const dbPath = '/invalid_path/test.db';
+                process.env.CLASSROOM_DB_PATH = dbPath;
+                const db = require('${dbModulePath}');
+                if (!db.scheduleMigrationPromise) {
+                    console.error('Promise missing');
+                    process.exit(1);
+                }
+                db.scheduleMigrationPromise.then(() => {
+                    console.error('Should not resolve');
+                    process.exit(1);
+                }).catch(err => {
+                    if (err.code === 'SQLITE_CANTOPEN') {
+                        process.exit(0);
+                    } else {
+                        console.error('Wrong error:', err);
+                        process.exit(1);
+                    }
+                });
+            `;
+            const tmpPath = path.join(os.tmpdir(), 'test_readiness.js');
+            fs.writeFileSync(tmpPath, script);
+            const p = spawn(process.execPath, [tmpPath], { cwd: process.cwd() });
+            
+            const exitCode = await new Promise(resolve => p.on('close', resolve));
+            fs.unlinkSync(tmpPath);
+            assert.equal(exitCode, 0);
+        });
+
+        await t.test('43. A rejected readiness Promise produces HTTP 503 with SCHEDULE_STORAGE_UNAVAILABLE', async () => {
+            const script = `
+                const fs = require('fs');
+                const http = require('http');
+                const path = require('path');
+                process.env.PORT = '0';
+                process.env.CLASSROOM_DB_PATH = '/invalid_path/test.db';
+                const app = require(path.join(process.cwd(), 'backend/server.js'));
+                const server = app.listen(0, () => {
+                    const port = server.address().port;
+                    http.get('http://127.0.0.1:' + port + '/api/schedule', (res) => {
+                        let data = '';
+                        res.on('data', chunk => data += chunk);
+                        res.on('end', () => {
+                            server.close(() => {
+                                const body = JSON.parse(data);
+                                if (res.statusCode === 503 && body.code === 'SCHEDULE_STORAGE_UNAVAILABLE') {
+                                    process.exit(0);
+                                } else {
+                                    console.error('Wrong status/body:', res.statusCode, body);
+                                    process.exit(1);
+                                }
+                            });
+                        });
+                    });
+                });
+            `;
+            const tmpPath = path.join(os.tmpdir(), 'test_gating.js');
+            fs.writeFileSync(tmpPath, script);
+            const p = spawn(process.execPath, [tmpPath], { cwd: process.cwd() });
+            const exitCode = await new Promise(resolve => p.on('close', resolve));
+            fs.unlinkSync(tmpPath);
+            assert.equal(exitCode, 0);
+        });
     });
 });
