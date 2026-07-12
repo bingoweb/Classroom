@@ -9,6 +9,8 @@ const XLSX = require('xlsx');
 const { Logger, COMPONENTS, LOG_LEVELS } = require('./logger');
 const { normalizePath } = require('./utils');
 const { getIstanbulDateKey } = require('./date-utils');
+const { validateNormalizedSchedule, isValidDayKey } = require('./schedule-service');
+const { getNormalizedScheduleRows, replaceNormalizedSchedule } = require('./schedule-repository');
 
 // File deletion utility - prevents code duplication
 function safeDeleteFile(filePath, component = COMPONENTS.API) {
@@ -644,6 +646,79 @@ app.post('/api/settings', (req, res) => {
     });
 });
 
+
+// Get Normalized Schedule
+app.get('/api/schedule/normalized', async (req, res) => {
+    try {
+        await db.scheduleMigrationPromise;
+        const day = req.query.day || 'weekday';
+        if (!isValidDayKey(day)) {
+            return res.status(400).json({ error: 'Geçersiz gün anahtarı.' });
+        }
+
+        const rows = await getNormalizedScheduleRows(db, day);
+        
+        if (rows.length === 0) {
+            return res.json({ day, source: 'empty', valid: false, periods: [], warnings: [], errors: [] });
+        }
+
+        const validation = validateNormalizedSchedule(rows);
+        
+        // If there are rows but they don't form a valid normalized schedule, it's a legacy or incomplete schedule
+        if (!validation.valid || validation.errors.length > 0) {
+            return res.json({ day, source: 'legacy-incomplete', valid: false, periods: [], warnings: [], errors: [] });
+        }
+
+        return res.json({
+            day,
+            source: 'database',
+            valid: true,
+            periods: validation.periods,
+            warnings: validation.warnings,
+            errors: []
+        });
+    } catch (err) {
+        logger.error(COMPONENTS.API, 'Normalized schedule read error', err);
+        res.status(500).json({ error: 'Zaman çizelgesi okunurken bir hata oluştu.' });
+    }
+});
+
+// Update Normalized Schedule
+app.put('/api/schedule/normalized', async (req, res) => {
+    try {
+        await db.scheduleMigrationPromise;
+        const { day, periods } = req.body;
+        if (!isValidDayKey(day)) {
+            return res.status(400).json({ error: 'Geçersiz gün anahtarı.' });
+        }
+
+        const validation = validateNormalizedSchedule(periods);
+        if (!validation.valid || validation.errors.length > 0) {
+            return res.status(422).json({
+                day,
+                valid: false,
+                count: 0,
+                periods: validation.periods,
+                warnings: validation.warnings,
+                errors: validation.errors
+            });
+        }
+
+        const insertedRows = await replaceNormalizedSchedule(db, day, validation.periods);
+        
+        return res.json({
+            day,
+            valid: true,
+            count: insertedRows.length,
+            periods: validation.periods,
+            warnings: validation.warnings,
+            errors: []
+        });
+    } catch (err) {
+        logger.error(COMPONENTS.API, 'Normalized schedule write error', err);
+        res.status(500).json({ error: 'Zaman çizelgesi kaydedilirken bir hata oluştu.' });
+    }
+});
 
 // Get Schedule
 app.get('/api/schedule', (req, res) => {

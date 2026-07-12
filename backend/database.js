@@ -1,7 +1,11 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const { ensureScheduleSchema } = require('./schedule-schema');
 
-const dbPath = path.resolve(__dirname, 'classroom.db');
+const configuredDbPath = process.env.CLASSROOM_DB_PATH;
+const dbPath = configuredDbPath
+    ? path.resolve(configuredDbPath)
+    : path.resolve(__dirname, 'classroom.db');
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database', err.message);
@@ -47,14 +51,7 @@ function initDatabase() {
             value TEXT NOT NULL
         )`);
 
-        // Schedule Table
-        db.run(`CREATE TABLE IF NOT EXISTS schedule (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            day TEXT NOT NULL,
-            period INTEGER NOT NULL,
-            course TEXT NOT NULL,
-            UNIQUE(day, period)
-        )`);
+        // Schedule table migration is handled separately
 
         // Attendance Table (Daily attendance records)
         db.run(`CREATE TABLE IF NOT EXISTS attendance (
@@ -111,7 +108,6 @@ function initDatabase() {
         // Create indexes for better query performance
         db.run(`CREATE INDEX IF NOT EXISTS idx_roles_student_id ON roles(student_id)`);
         db.run(`CREATE INDEX IF NOT EXISTS idx_roles_type ON roles(role_type)`);
-        db.run(`CREATE INDEX IF NOT EXISTS idx_schedule_day_period ON schedule(day, period)`);
         db.run(`CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON attendance(student_id)`);
         db.run(`CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date)`);
         db.run(`CREATE INDEX IF NOT EXISTS idx_slides_order ON slides(display_order)`);
@@ -146,6 +142,10 @@ function initDatabase() {
                 console.error('Error adding is_poster column:', err.message);
             }
         });
+    });
+
+    db.scheduleMigrationPromise = ensureScheduleSchema(db).catch(err => {
+        console.error('Fatal: Schedule schema migration failed', err);
     });
 }
 
