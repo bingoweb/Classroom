@@ -550,3 +550,117 @@ Rules:
   ```text
   Task completed successfully.
   ```
+
+## 19. Last Context Update
+
+* Date:
+
+  ```text
+  2026-07-12
+  ```
+* Verified branch:
+
+  ```text
+  ilk-surum-gelistirme
+  ```
+* Verified HEAD before this task:
+
+  ```text
+  6c5579e docs: record simulator hardening results
+  ```
+* Initial working-tree state:
+
+  ```text
+  clean
+  ```
+* Files added/modified during task:
+
+  ```text
+  backend/date-utils.js (added)
+  tests/backend-date-utils.test.js (added)
+  backend/server.js (modified)
+  package.json (modified)
+  ```
+* Root cause of the UTC/Istanbul date-key defect:
+
+  ```text
+  Using `new Date().toISOString().split('T')[0]` generated UTC dates, which resulted in the wrong date key when queried between midnight and 02:59:59 local Istanbul time.
+  ```
+* New `backend/date-utils.js` public API:
+
+  ```text
+  ISTANBUL_TIME_ZONE ('Europe/Istanbul') and getIstanbulDateKey(date = new Date())
+  ```
+* Explicit `Europe/Istanbul` decision:
+
+  ```text
+  Implemented deterministic local timezone conversion avoiding unreliable host-timezone logic like process.env.TZ or Date object numeric offsets.
+  ```
+* Why `Intl.DateTimeFormat(...).formatToParts()` was selected:
+
+  ```text
+  Ensures strict standard 'YYYY-MM-DD' formatting regardless of locale quirks or default separators.
+  ```
+* The two endpoint integrations:
+
+  ```text
+  `GET /api/stats` and `GET /api/attendance/today`
+  ```
+* Excluded paths:
+
+  ```text
+  Explicit attendance-date routes (e.g. `GET /api/attendance/:date`) and unrelated timestamps (e.g., slide expirations) were purposefully left untouched.
+  ```
+* Exact Node version:
+
+  ```text
+  v24.18.0
+  ```
+* Exact Node test totals:
+
+  ```text
+  Persistent ScheduleManager tests: 33
+  Persistent Simulator tests: 42
+  Persistent Backend Date tests: 20
+  Combined core test total: 95
+  ```
+* Exact Server smoke-test result:
+
+  ```text
+  Backend attendance smoke responses are valid JSON
+  ```
+* Exact Playwright UI test total:
+
+  ```text
+  37 passed, 0 failed (verified via real Chromium)
+  ```
+* Implementation commit:
+
+  ```text
+  9e1dae4 fix: use Istanbul date keys for attendance
+  ```
+* Documentation commit:
+
+  ```text
+  (hash available in Git history) docs: record Istanbul date key fix
+  ```
+* Final working-tree state:
+
+  ```text
+  clean (after committing this documentation)
+  ```
+* Confirmation of unchanged scope:
+
+  ```text
+  Database schema, schedule API contract, admin panel, frontend files, dashboard layout, cards, large clock, CSS, and visual design were definitely NOT changed.
+  ```
+* Remaining risks:
+
+  ```text
+  Database schema requires updating to handle dynamic temporal fields correctly in the next task.
+  ```
+* Updated next recommended task:
+
+  ```text
+  Design and implement a backward-compatible schedule-table migration and validated backend schedule API for normalized period fields, without connecting the admin panel or dashboard yet.
+  ```
