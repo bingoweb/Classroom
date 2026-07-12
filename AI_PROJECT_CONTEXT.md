@@ -1276,3 +1276,58 @@ Gerçek veritabanı, backend kodları, dashboard kartları, büyük saat ve dash
 
 #### Bir Sonraki Önerilen Görev
 Add a read-only source-versus-draft review panel that summarizes added, removed and changed periods without sending PUT requests yet.
+
+---
+
+### 9. Admin Schedule Review Panel Prototype
+
+**Tarih:** 2026-07-12
+**Başlangıç Hash (Remote HEAD):** `f1963f6db76d8692686217f99dfa9b9007227e40`
+**Implementation Hash:** `8e34e94`
+**Implementation Message:** `feat: add read-only source-versus-draft review panel prototype`
+
+#### Eklenen ve Değiştirilen Dosyalar
+- `package.json`
+- `public/admin/admin.js`
+- `public/admin/index.html`
+- `public/admin/schedule-review-panel.js` (Yeni)
+- `tests/admin-schedule-review-panel.test.js` (Yeni)
+
+#### Mimari Özellikleri
+- **Deterministic LCS Comparison:** `sourceSnapshot` ve `draft` arasındaki değişiklikleri belirlemek için Longest Common Subsequence (LCS) algoritması kullanıldı. Öğeler, ID'lerinden bağımsız olarak tamamen kanonik yapıları (name, type, start, end) üzerinden karşılaştırıldı.
+- **Composite View Kalıbı:** Yeni panel mantığı, mevcut `schedule-draft-editor.js` koduna dokunulmadan, `admin.js` içindeki render döngüsüne bir "composite view" sarmalayıcısı aracılığıyla entegre edildi.
+- **XSS-Safe Rendering:** `innerHTML` kullanımı engellendi; tamamen güvenli olan `textContent` ve `document.createElement` kullanılarak render işlemleri sağlandı.
+- **Pure Functions:** Veri dönüştürme ve karşılaştırma fonksiyonları, DOM ve ağ isteklerinden izole edilerek tam test edilebilir hale getirildi.
+- **Türkçe Arayüz:** Kullanıcıya görünen tüm metinler, talep edildiği üzere doğal ve akıcı Türkçe ile ("Değiştirilen", "Kaldırılan", "Eklenen" vb.) yazıldı.
+
+#### Test Kapsamı
+Kalıcı Node.js Test Toplamları:
+1. **ScheduleManager:** 33
+2. **Simulator:** 42
+3. **Backend Date:** 20
+4. **Backend Schedule:** 69
+5. **Dashboard Schedule Loader:** 55
+6. **Admin Schedule Diagnostics:** 84
+7. **Admin Schedule Draft Editor:** 121
+8. **Admin Schedule Review Panel:** 13 (Sentetik olmayan, tamamen davranışsal)
+
+##### 1. Kalıcı yapısal test bildirimleri
+`tests/admin-schedule-review-panel.test.js` dosyası 13 davranışsal test içerir. Bunlar padding testleri değildir. Toplam core test sayısı `424 + 13 = 437` olmuştur.
+
+##### 2. Bu düzeltme turundaki Antigravity yerel terminal sonuçları
+```bash
+npm run test:admin-schedule-review
+npm run test:admin-schedule-draft
+npm run test:core
+```
+- Review Panel paketi: 13 başarılı, 0 başarısız.
+- Draft Editor paketi: 121 başarılı, 0 başarısız.
+- Core paketi: 437 başarılı, 0 başarısız.
+
+GitHub bu sonuçları bağımsız olarak henüz doğrulamamıştır. Sürücü ortamı kullanılamadığından bu turda Chromium/Playwright çalıştırılamamıştır.
+
+#### Değişmeyen Bileşenler (Garantiler)
+Draft Editor state yapısı, ScheduleNormalizer algoritması, dashboard görünümleri, backend API rotaları ve veritabanı şeması kesinlikle değiştirilmemiştir. Sadece okunabilir, değişiklik göndermeyen yapısal bir ekleme yapılmıştır.
+
+#### Bir Sonraki Önerilen Görev
+Design and implement the actual persistence mechanism (e.g. Save Button) that sends the draft via PUT request to the backend and handles errors gracefully.
