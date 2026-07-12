@@ -27,14 +27,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run CI Policy Check
-        run: npm run policy:ci
-
-      - name: Run Guardrail Tests
-        run: npm run test:agent-compliance
-
-      - name: Run Complete Core Tests
-        run: npm run test:core
-
       - name: Execute Complete CI Gate
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
         run: npm run gate:ci

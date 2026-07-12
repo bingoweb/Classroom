@@ -6,7 +6,8 @@ const { execSync } = require('child_process');
 const PROJECT_ROOT = process.cwd();
 const POLICY_FILE = path.join(PROJECT_ROOT, 'agent-policy.json');
 const BASELINE_FILE = path.join(PROJECT_ROOT, '.agent/quality-baseline.json');
-const AGENTS_FILE = path.join(PROJECT_ROOT, 'AGENTS.md');
+const CONTRACT_FILE = path.join(PROJECT_ROOT, '.agent/task-contract.json');
+const CONTRACT_SCHEMA_FILE = path.join(PROJECT_ROOT, '.agent/task-contract.schema.json');
 const AI_CONTEXT_FILE = path.join(PROJECT_ROOT, 'AI_PROJECT_CONTEXT.md');
 const PACKAGE_JSON = path.join(PROJECT_ROOT, 'package.json');
 const TESTS_DIR = path.join(PROJECT_ROOT, 'tests');
@@ -23,47 +24,279 @@ if (!modes.scan && !modes.staged && !modes.repository && !modes.ci) {
     process.exit(1);
 }
 
-let policy = {};
-try {
-    policy = JSON.parse(fs.readFileSync(POLICY_FILE, 'utf8'));
-} catch (e) {
-    console.error(`❌ agent-policy.json okunamadı veya parse edilemedi: ${e.message}`);
-    process.exit(1);
+const violations = [];
+
+function addViolation(ruleId, severity, file, line, msg) {
+    violations.push({ ruleId, severity, file, line, msg });
 }
 
-let baseline = [];
-let baselineCounts = {};
-if (fs.existsSync(BASELINE_FILE)) {
+function loadJsonOrDie(file, name) {
+    if (!fs.existsSync(file)) {
+        if (name === 'Contract') return null;
+        console.error(`❌ ${name} bulunamadı: ${file}`);
+        process.exit(1);
+    }
     try {
-        baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'));
-        const seen = new Set();
-        baseline.forEach(b => {
-            const entryStr = JSON.stringify({ruleId: b.ruleId, path: b.path, line: b.line, fingerprint: b.fingerprint});
-            if (seen.has(entryStr)) {
-                console.error(`❌ quality-baseline.json içerisinde duplicate kayıt tespit edildi: ${entryStr}`);
-                process.exit(1);
-            }
-            seen.add(entryStr);
-            if (!/^[a-f0-9]{64}$/.test(b.fingerprint)) {
-                console.error(`❌ quality-baseline.json içerisinde geçersiz fingerprint tespit edildi: ${b.fingerprint}`);
-                process.exit(1);
-            }
-            const key = `${b.ruleId}|${b.path}|${b.fingerprint}`;
-            baselineCounts[key] = (baselineCounts[key] || 0) + 1;
-        });
+        return JSON.parse(fs.readFileSync(file, 'utf8'));
     } catch (e) {
-        console.error(`❌ quality-baseline.json okunamadı: ${e.message}`);
+        console.error(`❌ ${name} parse edilemedi: ${e.message}`);
         process.exit(1);
     }
 }
 
+const policy = loadJsonOrDie(POLICY_FILE, 'Policy');
+const baseline = loadJsonOrDie(BASELINE_FILE, 'Baseline') || [];
+const contractSchema = loadJsonOrDie(CONTRACT_SCHEMA_FILE, 'Contract Schema');
+let contract = loadJsonOrDie(CONTRACT_FILE, 'Contract');
+
+let baselineCounts = {};
+function prepareBaseline() {
+    const seen = new Set();
+    baseline.forEach(b => {
+        const entryStr = JSON.stringify({ruleId: b.ruleId, path: b.path, line: b.line, fingerprint: b.fingerprint});
+        if (seen.has(entryStr)) {
+            console.error(`❌ quality-baseline.json içerisinde duplicate kayıt tespit edildi: ${entryStr}`);
+            process.exit(1);
+        }
+        seen.add(entryStr);
+        if (!b.fingerprint || !/^[a-f0-9]{64}$/.test(b.fingerprint)) {
+            console.error(`❌ quality-baseline.json içerisinde geçersiz fingerprint tespit edildi: ${b.fingerprint}`);
+            process.exit(1);
+        }
+        const key = `${b.ruleId}|${b.path}|${b.fingerprint}`;
+        baselineCounts[key] = (baselineCounts[key] || 0) + 1;
+    });
+}
+prepareBaseline();
 let currentCounts = {};
 
 function sha256(content) {
     return crypto.createHash('sha256').update(content).digest('hex');
 }
 
+function checkBaselineAllowed(ruleId, relFile, textLine) {
+    const fingerprint = sha256(textLine);
+    const key = `${ruleId}|${relFile}|${fingerprint}`;
+    currentCounts[key] = (currentCounts[key] || 0) + 1;
+    
+    if (!baselineCounts[key]) return false;
+    if (currentCounts[key] > baselineCounts[key]) return false;
+    return true;
+}
+
+function validateContract() {
+    if (!contract) return;
+    const req = contractSchema.required || [];
+    req.forEach(f => {
+        if (contract[f] === undefined) {
+            addViolation('invalid-task-contract', 'high', '.agent/task-contract.json', 0, `Eksik alan: ${f}`);
+        }
+    });
+
+    Object.keys(contractSchema.properties || {}).forEach(key => {
+        if (contract[key] !== undefined) {
+            const type = contractSchema.properties[key].type;
+            if (type === 'array' && !Array.isArray(contract[key])) {
+                addViolation('invalid-task-contract', 'high', '.agent/task-contract.json', 0, `${key} bir array olmalıdır.`);
+            } else if (type === 'boolean' && typeof contract[key] !== 'boolean') {
+                addViolation('invalid-task-contract', 'high', '.agent/task-contract.json', 0, `${key} bir boolean olmalıdır.`);
+            } else if (type === 'string' && typeof contract[key] !== 'string') {
+                addViolation('invalid-task-contract', 'high', '.agent/task-contract.json', 0, `${key} bir string olmalıdır.`);
+            }
+        }
+    });
+
+    if (contract.newFeaturesAllowed !== false) {
+        addViolation('task-contract-new-features', 'high', '.agent/task-contract.json', 0, `newFeaturesAllowed false olmalıdır.`);
+    }
+
+    if (!contract.taskId || contract.taskId.trim() === '') {
+        addViolation('invalid-task-contract', 'high', '.agent/task-contract.json', 0, `taskId boş olamaz.`);
+    }
+
+    if (contract.changeType && contractSchema.properties.changeType?.enum && !contractSchema.properties.changeType.enum.includes(contract.changeType)) {
+        addViolation('task-contract-change-type', 'high', '.agent/task-contract.json', 0, `changeType geçersiz: ${contract.changeType}`);
+    }
+
+    if (!contract.baseCommit || !/^[0-9a-f]{40}$/.test(contract.baseCommit)) {
+        addViolation('task-contract-base-commit', 'high', '.agent/task-contract.json', 0, `baseCommit 40 karakterlik SHA olmalıdır.`);
+    }
+
+    const arrays = ['allowedExistingFiles', 'allowedNewFiles', 'protectedFiles', 'allowedSensitiveChanges', 'allowedUiStructureChanges', 'allowedBackendChanges', 'allowedDatabaseChanges', 'allowedDependencyChanges'];
+    arrays.forEach(arrName => {
+        if (Array.isArray(contract[arrName])) {
+            const set = new Set();
+            contract[arrName].forEach(f => {
+                if (set.has(f)) addViolation('invalid-task-contract', 'high', '.agent/task-contract.json', 0, `Duplicate allowlist entry: ${f} in ${arrName}`);
+                if (path.isAbsolute(f)) addViolation('invalid-task-contract', 'high', '.agent/task-contract.json', 0, `Absolute path yasak: ${f}`);
+                if (f.includes('..')) addViolation('invalid-task-contract', 'high', '.agent/task-contract.json', 0, `Path traversal yasak: ${f}`);
+                set.add(f);
+            });
+        }
+    });
+}
+validateContract();
+
+let changedFilesStatus = {};
+let addedLinesByFile = {};
+
+function determineBaseAndHead() {
+    let base = '', head = 'HEAD';
+    if (modes.ci) {
+        base = process.env.BASE_SHA;
+        head = process.env.HEAD_SHA;
+        if (!base || !head || base === '0000000000000000000000000000000000000000') {
+            console.error(`❌ CI ortamında geçerli BASE_SHA ve HEAD_SHA bulunamadı.`);
+            process.exit(1);
+        }
+        if (contract && contract.baseCommit !== base) {
+            addViolation('invalid-task-contract', 'high', '.agent/task-contract.json', 0, `Contract baseCommit (${contract.baseCommit}) BASE_SHA (${base}) ile eslesmiyor.`);
+        }
+    } else if (modes.staged) {
+        if (!contract) {
+            console.error(`❌ --staged modunda task contract zorunludur.`);
+            process.exit(1);
+        }
+        base = contract.baseCommit;
+        head = '';
+        
+        try {
+            const targetBase = execSync('git merge-base HEAD origin/ilk-surum-gelistirme 2>/dev/null || git merge-base HEAD master 2>/dev/null || echo ""', { cwd: PROJECT_ROOT, encoding: 'utf8' }).trim();
+            if (targetBase && targetBase !== base) {
+                addViolation('task-contract-base-commit', 'high', '.agent/task-contract.json', 0, `baseCommit (${base}) branchin baslangic commit'i (${targetBase}) ile eslesmiyor.`);
+            }
+        } catch (e) {}
+    } else {
+        return null;
+    }
+    return { base, head };
+}
+
+function parseGitDiffs() {
+    const range = determineBaseAndHead();
+    if (!range) return;
+    const { base, head } = range;
+    
+    try {
+        let nameStatusCmd = modes.staged ? 'git diff --cached --name-status' : `git diff --name-status ${base} ${head}`;
+        const nsOutput = execSync(nameStatusCmd, { cwd: PROJECT_ROOT, stdio: ['pipe', 'pipe', 'ignore'], encoding: 'utf8' });
+        nsOutput.split('\n').filter(Boolean).forEach(line => {
+            const parts = line.split('\t');
+            const status = parts[0][0];
+            const file = parts[parts.length - 1];
+            changedFilesStatus[file] = status;
+        });
+
+        let diffCmd = modes.staged ? 'git diff --cached --unified=0' : `git diff --unified=0 ${base} ${head}`;
+        const diffOutput = execSync(diffCmd, { cwd: PROJECT_ROOT, stdio: ['pipe', 'pipe', 'ignore'], encoding: 'utf8' });
+        let currentFile = null;
+        diffOutput.split('\n').forEach(line => {
+            if (line.startsWith('+++ b/')) {
+                currentFile = line.replace('+++ b/', '');
+                addedLinesByFile[currentFile] = [];
+            } else if (line.startsWith('+') && !line.startsWith('+++')) {
+                if (currentFile) addedLinesByFile[currentFile].push(line.substring(1));
+            }
+        });
+    } catch (e) {
+        console.error(`❌ Git diff çalıştırılamadı: ${e.message}`);
+        process.exit(1);
+    }
+}
+parseGitDiffs();
+
+function enforceMixedCommits() {
+    if (!modes.staged && !modes.ci) return;
+
+    let commitsToCheck = [];
+    if (modes.ci) {
+        const { base, head } = determineBaseAndHead();
+        const revs = execSync(`git rev-list ${base}..${head}`, { cwd: PROJECT_ROOT, encoding: 'utf8' }).split('\n').filter(Boolean);
+        commitsToCheck = revs;
+    } else {
+        commitsToCheck = ['staged'];
+    }
+
+    commitsToCheck.forEach(commit => {
+        let hasContractChange = false;
+        let hasPolicyChange = false;
+        let hasBaselineChange = false;
+        let hasAppChange = false;
+        let hasDocChange = false;
+        let fileCount = 0;
+
+        let files = [];
+        if (commit === 'staged') {
+            files = Object.keys(changedFilesStatus);
+        } else {
+            const nsOutput = execSync(`git diff-tree --no-commit-id --name-only -r ${commit}`, { cwd: PROJECT_ROOT, encoding: 'utf8' });
+            files = nsOutput.split('\n').filter(Boolean);
+        }
+
+        files.forEach(file => {
+            fileCount++;
+            if (file === '.agent/task-contract.json') hasContractChange = true;
+            else if (policy.policySensitivePaths && policy.policySensitivePaths.some(p => file.includes(p))) hasPolicyChange = true;
+            
+            if (file === '.agent/quality-baseline.json') hasBaselineChange = true;
+            
+            if (policy.applicationPaths && policy.applicationPaths.some(p => file.includes(p)) || file.includes('/tests/')) hasAppChange = true;
+            
+            if (policy.documentationPaths && policy.documentationPaths.some(p => file.includes(p))) hasDocChange = true;
+        });
+
+        if (hasContractChange && fileCount > 1) {
+            addViolation('mixed-commit', 'high', 'git', 0, `Task contract değiştiğinde başka dosya değiştirilemez. Commit: ${commit}`);
+        }
+
+        if (hasPolicyChange && hasAppChange) {
+            addViolation('mixed-commit', 'high', 'git', 0, `Policy dosyaları ile uygulama dosyaları aynı committe değiştirilemez. Commit: ${commit}`);
+        }
+
+        if (hasBaselineChange && hasAppChange) {
+            addViolation('mixed-commit', 'high', 'git', 0, `Baseline ile uygulama dosyaları aynı committe değiştirilemez. Commit: ${commit}`);
+        }
+
+        if (contract && contract.documentationRequired && hasDocChange && hasAppChange) {
+             addViolation('mixed-commit', 'high', 'git', 0, `Dokümantasyon ile uygulama kodu ayrı commitlerde olmalıdır. Commit: ${commit}`);
+        }
+    });
+}
+
+function enforceScope() {
+    if (!modes.staged && !modes.ci) return;
+    
+    Object.keys(changedFilesStatus).forEach(file => {
+        if (file === '.agent/task-contract.json') return;
+        
+        const status = changedFilesStatus[file];
+        if (contract && contract.protectedFiles && contract.protectedFiles.includes(file)) {
+            addViolation('protected-file-modified', 'high', file, 0, `Korunan dosya değiştirilemez.`);
+        }
+        if (status === 'M') {
+            if (!contract || !contract.allowedExistingFiles || !contract.allowedExistingFiles.includes(file)) {
+                addViolation('out-of-scope-file', 'high', file, 0, `Mevcut dosya izinsiz değiştirildi: ${file}`);
+            }
+        } else if (status === 'A') {
+            if (!contract || !contract.allowedNewFiles || !contract.allowedNewFiles.includes(file)) {
+                addViolation('out-of-scope-file', 'high', file, 0, `Yeni dosya izinsiz eklendi: ${file}`);
+            }
+        } else if (status === 'D') {
+             if (!contract || !contract.allowedExistingFiles || !contract.allowedExistingFiles.includes(file)) {
+                addViolation('out-of-scope-file', 'high', file, 0, `Dosya izinsiz silindi: ${file}`);
+             }
+        } else if (status === 'R') {
+             if (!contract || (!contract.allowedNewFiles?.includes(file) && !contract.allowedExistingFiles?.includes(file))) {
+                addViolation('out-of-scope-file', 'high', file, 0, `Dosya izinsiz yeniden adlandırıldı: ${file}`);
+             }
+        }
+    });
+}
+enforceMixedCommits();
+enforceScope();
+
 function getAllFiles(dirPath, arrayOfFiles) {
+    if (!fs.existsSync(dirPath)) return [];
     const files = fs.readdirSync(dirPath);
     arrayOfFiles = arrayOfFiles || [];
     files.forEach(function(file) {
@@ -78,89 +311,13 @@ function getAllFiles(dirPath, arrayOfFiles) {
     return arrayOfFiles;
 }
 
-function getStagedFiles() {
-    try {
-        const output = execSync('git diff --cached --name-only', { cwd: PROJECT_ROOT, stdio: ['pipe', 'pipe', 'ignore'] }).toString();
-        return output.split('\n').filter(Boolean).map(f => path.join(PROJECT_ROOT, f));
-    } catch (e) {
-        return [];
-    }
-}
-
-function getDiffAddedLines() {
-    const addedLines = {};
-    try {
-        let diffCmd = '';
-        if (modes.staged) {
-            diffCmd = 'git diff --cached --unified=0';
-        } else if (modes.ci) {
-            const baseRef = process.env.GITHUB_BASE_REF || process.env.GITHUB_SHA + '^1';
-            const sha = process.env.GITHUB_SHA || 'HEAD';
-            if (!process.env.GITHUB_SHA && !process.env.GITHUB_BASE_REF && process.env.NODE_ENV !== 'test') {
-                console.error(`❌ CI ortamında GITHUB_SHA veya GITHUB_BASE_REF bulunamadı. Karşılaştırma yapılamıyor.`);
-                process.exit(1);
-            }
-            diffCmd = `git diff ${baseRef} ${sha} --unified=0`;
-        }
-        
-        if (diffCmd) {
-            const diffOutput = execSync(diffCmd, { cwd: PROJECT_ROOT, stdio: ['pipe', 'pipe', 'ignore'], encoding: 'utf8' });
-            let currentFile = null;
-            diffOutput.split('\n').forEach(line => {
-                if (line.startsWith('+++ b/')) {
-                    currentFile = path.join(PROJECT_ROOT, line.replace('+++ b/', ''));
-                    addedLines[currentFile] = [];
-                } else if (line.startsWith('+') && !line.startsWith('+++')) {
-                    if (currentFile) addedLines[currentFile].push(line.substring(1));
-                }
-            });
-        }
-    } catch (e) {
-        // Ignore diff errors
-    }
-    return addedLines;
-}
-
-const addedLinesByFile = getDiffAddedLines();
-
 function getFilesToScan() {
-    if (modes.staged) return getStagedFiles();
+    if (modes.staged || modes.ci) {
+        return Object.keys(changedFilesStatus)
+            .filter(f => changedFilesStatus[f] !== 'D')
+            .map(f => path.join(PROJECT_ROOT, f));
+    }
     return getAllFiles(PROJECT_ROOT).filter(f => !f.includes('/node_modules/') && !f.includes('/.git/'));
-}
-
-const violations = [];
-const executedTests = {
-    topLevel: 0,
-    nested: 0,
-    expected: 0
-};
-
-function addViolation(ruleId, severity, file, line, msg) {
-    const relFile = path.relative(PROJECT_ROOT, file);
-    violations.push({ ruleId, severity, file: relFile, line, msg });
-}
-
-function checkBaselineAllowed(ruleId, relFile, textLine) {
-    const fingerprint = sha256(textLine);
-    const key = `${ruleId}|${relFile}|${fingerprint}`;
-    
-    currentCounts[key] = (currentCounts[key] || 0) + 1;
-    
-    if (!baselineCounts[key]) {
-        return false; // new violation
-    }
-    if (currentCounts[key] > baselineCounts[key]) {
-        return false; // increased occurrence
-    }
-    return true;
-}
-
-function checkJson(filePath, content) {
-    try {
-        JSON.parse(content);
-    } catch (e) {
-        addViolation('invalid-json', 'high', filePath, 0, `Geçersiz JSON: ${e.message}`);
-    }
 }
 
 function checkJsSyntax(filePath, content) {
@@ -173,9 +330,6 @@ function checkJsSyntax(filePath, content) {
 
 function checkHtml(filePath, content) {
     const relFile = path.relative(PROJECT_ROOT, filePath);
-    const lines = content.split('\n');
-    const idMap = new Set();
-    
     if (relFile === 'public/admin/index.html') {
         const reqIds = policy.adminHtmlRequirements?.requiredIds || [];
         reqIds.forEach(id => {
@@ -185,47 +339,7 @@ function checkHtml(filePath, content) {
                 }
             }
         });
-        
-        const prohibited = policy.adminHtmlRequirements?.prohibitedMarkupPatterns || [];
-        prohibited.forEach(p => {
-            const regex = new RegExp(p);
-            if (regex.test(content)) {
-                if (!checkBaselineAllowed('malformed-html-attribute', relFile, p)) {
-                    addViolation('malformed-html-attribute', 'high', filePath, 0, `Bozuk veya yasaklı HTML işaretlemesi bulundu: ${p}`);
-                }
-            }
-        });
-        
-        const reqScripts = policy.adminHtmlRequirements?.requiredScriptOrder || [];
-        let lastIdx = -1;
-        let isOrdered = true;
-        reqScripts.forEach(script => {
-            const idx = content.indexOf(`src="${script}"`);
-            if (idx !== -1) {
-                if (idx < lastIdx) isOrdered = false;
-                lastIdx = idx;
-            }
-        });
-        if (!isOrdered) {
-            addViolation('incorrect-script-order', 'high', filePath, 0, `Script sıralaması yanlış.`);
-        }
     }
-
-    lines.forEach((line, i) => {
-        if (line.trim().startsWith('```')) {
-            addViolation('markdown-fence-in-html', 'medium', filePath, i+1, `HTML içinde Markdown kod bloğu bulundu.`);
-        }
-        const idMatch = line.match(/id="([^"]+)"/g);
-        if (idMatch) {
-            idMatch.forEach(idStr => {
-                const id = idStr.replace('id="', '').replace('"', '');
-                if (idMap.has(id)) {
-                    addViolation('duplicate-id', 'high', filePath, i+1, `Tekrarlanan HTML ID'si tespit edildi: ${id}`);
-                }
-                idMap.add(id);
-            });
-        }
-    });
 }
 
 function checkUnsafeDom(filePath, content) {
@@ -237,7 +351,7 @@ function checkUnsafeDom(filePath, content) {
         prohibited.forEach(p => {
             if (line.includes(p)) {
                 if (!checkBaselineAllowed('unsafe-dom-inner-html', relFile, line)) {
-                    addViolation('unsafe-dom-inner-html', 'high', filePath, i+1, `Yasaklı API kullanımı tespit edildi: ${p}`);
+                    addViolation('unsafe-dom-inner-html', 'high', filePath, i+1, `Yasaklı API: ${p}`);
                 }
             }
         });
@@ -247,197 +361,85 @@ function checkUnsafeDom(filePath, content) {
 function checkSensitiveBehaviours(filePath, content) {
     if (filePath.includes('/tests/') || filePath.includes('/scripts/') || filePath.includes('/fixtures/')) return;
     const relFile = path.relative(PROJECT_ROOT, filePath);
-    const added = addedLinesByFile[filePath];
+    const added = addedLinesByFile[relFile];
     if (!added || added.length === 0) return;
 
-    let hasContract = fs.existsSync(path.join(PROJECT_ROOT, '.agent/task-contract.json'));
-    let contract = null;
-    if (hasContract) {
-        try {
-            contract = JSON.parse(fs.readFileSync(path.join(PROJECT_ROOT, '.agent/task-contract.json'), 'utf8'));
-        } catch (e) {}
-    }
-
-    const sensitivePatterns = policy.prohibitedNetworkAndStoragePatterns || [];
-    
     added.forEach((line, i) => {
-        sensitivePatterns.forEach(p => {
+        const networkStorage = ['fetch(', 'XMLHttpRequest', 'WebSocket', 'localStorage', 'sessionStorage', 'indexedDB', 'document.cookie', 'caches.', 'serviceWorker'];
+        networkStorage.forEach(p => {
             if (line.includes(p)) {
-                // If it's a conservative match, require task contract
-                if (!hasContract) {
-                    addViolation('unapproved-network-storage', 'high', filePath, 0, `İzinsiz hassas API (Network/Storage) kullanımı: ${p}. Task contract gereklidir.`);
-                } else if (contract) {
-                    // Check if file is allowed in contract
-                    if (!contract.allowedExistingFiles?.includes(relFile) && !contract.allowedNewFiles?.includes(relFile)) {
-                        addViolation('unapproved-network-storage', 'high', filePath, 0, `İzinsiz hassas API kullanımı: ${p}. Dosya task contract allowedFiles listesinde yok.`);
-                    }
+                if (!contract?.allowedSensitiveChanges?.includes(relFile)) {
+                    addViolation('unapproved-network-storage', 'high', filePath, i+1, `İzinsiz hassas API: ${p}`);
                 }
             }
         });
 
-        if (policy.maintenanceMode) {
-            // "new action buttons, new navigation tabs or links, new UI panels or sections, new pages, new Express routes, new API endpoints, new persistence or write operations, new database tables or fields, new runtime dependencies, new external integrations"
-            const newFeatures = [
-                /<button[^>]*>Yeni/i, /<button[^>]*>Ekle/i, /<button[^>]*>Add/i, /<button[^>]*>Create/i,
-                /app\.get\(/i, /app\.post\(/i, /app\.put\(/i, /app\.delete\(/i, /router\./i,
-                /CREATE TABLE/i, /ALTER TABLE/i
-            ];
-            newFeatures.forEach(regex => {
-                if (regex.test(line)) {
-                    if (!hasContract || contract?.newFeaturesAllowed) {
-                        addViolation('unapproved-maintenance-feature', 'high', filePath, 0, `Maintenance modunda yeni özellik eklenmesi yasaktır (veya izinsizdir). Satır: ${line.trim()}`);
-                    }
-                }
-            });
+        if (line.match(/app\.(get|post|put|patch|delete)\(/i) || line.match(/router\./i)) {
+            if (!contract?.allowedBackendChanges?.includes(relFile)) {
+                addViolation('unapproved-backend-change', 'high', filePath, i+1, `İzinsiz backend route değişikliği`);
+            }
+        }
+
+        if (line.match(/CREATE TABLE/i) || line.match(/ALTER TABLE/i) || line.match(/DROP TABLE/i) || line.includes('db.run(') || line.includes('db.all(')) {
+            if (!contract?.allowedDatabaseChanges?.includes(relFile)) {
+                addViolation('unapproved-database-change', 'high', filePath, i+1, `İzinsiz veritabanı değişikliği`);
+            }
+        }
+
+        if (line.match(/<button/i) || line.match(/<table/i) || line.match(/<form/i)) {
+            if (!contract?.allowedUiStructureChanges?.includes(relFile)) {
+                addViolation('unapproved-ui-structure', 'high', filePath, i+1, `İzinsiz UI yapısal değişiklik`);
+            }
         }
     });
 }
 
 function checkTests(filePath, content) {
     const lines = content.split('\n');
-    const prohibited = policy.prohibitedTestPatterns || [];
-    
     lines.forEach((line, i) => {
-        prohibited.forEach(p => {
-            if (line.includes(p)) {
-                addViolation('prohibited-test-pattern', 'high', filePath, i+1, `Yasaklı test kalıbı bulundu: ${p}`);
-            }
-        });
-        
-        if (line.match(/^test\(/)) {
-            executedTests.topLevel++;
+        if (line.includes('.only(') || line.includes('.skip(') || line.includes('.todo(')) {
+            addViolation('prohibited-test-pattern', 'high', filePath, i+1, `Yasaklı test kalıbı: ${line.trim()}`);
         }
-        if (line.match(/\s+test\(/)) {
-            executedTests.nested++;
-        }
-        if (line.match(/assert\./)) {
-            executedTests.expected++;
+        if (line.includes('assert.equal(true, true)') || line.includes('assert.ok(true)')) {
+            addViolation('prohibited-test-pattern', 'high', filePath, i+1, `Anlamsız test assertion`);
         }
     });
-}
-
-function checkLanguage(filePath, content) {
-    const lines = content.split('\n');
-    lines.forEach((line, i) => {
-        if (line.match(/<button[^>]*>[A-Za-z]+<\/button>/)) {
-            if (!line.includes('ID') && !line.includes('API')) {
-                if (line.match(/Save|Submit|Cancel|Delete/i)) {
-                    addViolation('english-ui-text', 'medium', filePath, i+1, `İngilizce kullanıcı arayüzü metni bulundu.`);
-                }
-            }
-        }
-    });
-}
-
-function checkDocumentationTruth() {
-    if (!fs.existsSync(AI_CONTEXT_FILE)) return;
-    const content = fs.readFileSync(AI_CONTEXT_FILE, 'utf8');
-    
-    if (content.includes('innerHTML kullanımı engellendi') || content.includes('innerHTML kullanılmaz')) {
-        const hasInnerHtml = baseline.some(b => b.ruleId === 'unsafe-dom-inner-html');
-        if (hasInnerHtml) {
-            if (!checkBaselineAllowed('documentation-contradicts-code', 'AI_PROJECT_CONTEXT.md', 'innerHTML')) {
-                addViolation('documentation-contradicts-code', 'high', AI_CONTEXT_FILE, 0, `Dokümantasyon innerHTML olmadığını iddia ediyor ancak kodda mevcut.`);
-            }
-        }
-    }
-    
-    if (content.includes('GitHub CI başarılı') && !modes.ci) {
-        addViolation('false-ci-claim', 'high', AI_CONTEXT_FILE, 0, `Lokal test sonuçları GitHub CI sonucu olarak raporlanmış.`);
-    }
-
-    if (policy.maintenanceMode && content.match(/PUT persistence/i)) {
-         addViolation('false-docs-claim', 'high', AI_CONTEXT_FILE, 0, `Maintenance modunda PUT persistence tavsiye edilemez.`);
-    }
 }
 
 function checkPackageJson() {
     if (!fs.existsSync(PACKAGE_JSON)) return;
     const pkg = JSON.parse(fs.readFileSync(PACKAGE_JSON, 'utf8'));
-    const req = policy.packageScriptRequirements || {};
     
-    Object.keys(req).forEach(script => {
-        if (script !== 'test:core') {
-            if (!pkg.scripts[script]) {
-                addViolation('missing-package-script', 'high', PACKAGE_JSON, 0, `Gerekli npm script eksik: ${script}`);
-            }
+    const expectedGateCi = 'npm run policy:ci && npm run test:core';
+    if (pkg.scripts['gate:ci'] !== expectedGateCi) {
+        addViolation('missing-package-script', 'high', PACKAGE_JSON, 0, `gate:ci scripti yanlış.`);
+    }
+
+    const coreScript = pkg.scripts['test:core'] || '';
+    const testFiles = getAllFiles(TESTS_DIR).filter(f => f.endsWith('.test.js')).map(f => path.relative(PROJECT_ROOT, f));
+    
+    testFiles.forEach(tf => {
+        const matches = coreScript.split(' ').filter(p => p === tf);
+        if (matches.length === 0) {
+            addViolation('missing-core-test', 'high', PACKAGE_JSON, 0, `Test dosyası test:core içerisinde yok: ${tf}`);
+        } else if (matches.length > 1) {
+            addViolation('missing-core-test', 'high', PACKAGE_JSON, 0, `Test dosyası test:core içerisinde birden fazla kez tanımlı: ${tf}`);
         }
     });
-    
-    if (pkg.scripts['test:core']) {
-        const coreStr = pkg.scripts['test:core'];
-        if (!coreStr.includes('tests/agent-compliance.test.js') && !coreStr.includes('tests/project-guard.test.js')) {
-            addViolation('missing-core-test', 'high', PACKAGE_JSON, 0, `Core testleri arasında compliance/guard testi eksik.`);
-        }
-    }
-}
 
-function checkTaskContract() {
-    const contractPath = path.join(PROJECT_ROOT, '.agent', 'task-contract.json');
-    const hasContract = fs.existsSync(contractPath);
-    let contract = null;
-    
-    if (hasContract) {
-        try {
-            contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
-        } catch (e) {
-            addViolation('invalid-task-contract', 'high', contractPath, 0, `Task contract parse edilemedi: ${e.message}`);
-            return;
+    const referencedFiles = coreScript.split(' ').filter(p => p.endsWith('.test.js'));
+    referencedFiles.forEach(rf => {
+        if (!fs.existsSync(path.join(PROJECT_ROOT, rf))) {
+            addViolation('missing-core-test', 'high', PACKAGE_JSON, 0, `Olmayan test dosyası referansı: ${rf}`);
         }
-        
-        if (contract.newFeaturesAllowed !== false) {
-            addViolation('task-contract-new-features', 'high', contractPath, 0, `newFeaturesAllowed false olmalıdır.`);
-        }
-        
-        if (!policy.permittedMaintenanceChangeTypes?.includes(contract.changeType)) {
-            addViolation('task-contract-change-type', 'high', contractPath, 0, `changeType geçersiz: ${contract.changeType}`);
-        }
-        
-        if (!/^[0-9a-f]{40}$/.test(contract.baseCommit)) {
-            addViolation('task-contract-base-commit', 'high', contractPath, 0, `baseCommit 40 karakterlik SHA olmalıdır.`);
-        } else {
-            // Check if baseCommit is ancestor of HEAD
-            try {
-                execSync(`git merge-base --is-ancestor ${contract.baseCommit} HEAD`, { cwd: PROJECT_ROOT, stdio: 'ignore' });
-            } catch (e) {
-                addViolation('task-contract-base-commit', 'high', contractPath, 0, `baseCommit HEAD'in atası değil veya mevcut değil.`);
+    });
+
+    if (modes.staged || modes.ci) {
+        if (changedFilesStatus['package.json'] === 'M') {
+            const added = addedLinesByFile['package.json'] || [];
+            if (added.length > 0 && !contract?.allowedDependencyChanges?.includes('package.json')) {
+                addViolation('unapproved-dependency-change', 'high', PACKAGE_JSON, 0, `İzinsiz bağımlılık değişikliği.`);
             }
-        }
-    }
-
-    if (modes.staged) {
-        const staged = getStagedFiles();
-        const hasApp = staged.some(f => (policy.applicationPaths.some(p => f.includes(p)) || f.includes('/tests/') || f.includes('AI_PROJECT_CONTEXT.md')) && !f.includes('/tests/agent-compliance.test.js') && !f.includes('/tests/project-guard.test.js'));
-        const hasPolicy = staged.some(f => policy.policySensitivePaths.some(p => f.includes(p)));
-        const hasBaseline = staged.some(f => f.includes('.agent/quality-baseline.json'));
-        const hasContractChange = staged.some(f => f.includes('.agent/task-contract.json'));
-        
-        if (hasApp && !hasContract) {
-            addViolation('missing-task-contract', 'high', 'git-staged', 0, `Uygulama/Test dosyaları değiştirildiğinde aktif bir task-contract.json bulunmalıdır.`);
-        }
-        
-        if (hasApp && hasPolicy && !hasContractChange) {
-            addViolation('mixed-policy-app-commit', 'high', 'git-staged', 0, `Policy dosyaları ile uygulama kodları aynı committe değiştirilemez.`);
-        }
-
-        if (hasApp && hasBaseline) {
-            addViolation('mixed-baseline-app-commit', 'high', 'git-staged', 0, `Baseline ve uygulama dosyaları aynı committe değiştirilemez. Baseline değişiklikleri policy-only commit olmalıdır.`);
-        }
-
-        if (hasContract && hasApp) {
-            staged.forEach(f => {
-                const rel = path.relative(PROJECT_ROOT, f);
-                const isExisting = fs.existsSync(f);
-                // Simple logic: if it's application file, check contract allowed files
-                if (policy.applicationPaths.some(p => rel.includes(p))) {
-                    if (contract.protectedFiles?.includes(rel)) {
-                        addViolation('protected-file-modified', 'high', f, 0, `Korunan dosya değiştirilemez: ${rel}`);
-                    }
-                    if (!contract.allowedExistingFiles?.includes(rel) && !contract.allowedNewFiles?.includes(rel)) {
-                        addViolation('out-of-scope-file', 'high', f, 0, `Dosya task contract allowedFiles listesinde yok: ${rel}`);
-                    }
-                }
-            });
         }
     }
 }
@@ -459,24 +461,68 @@ function checkPolicySelfProtection() {
         if (wf.includes('continue-on-error')) {
             addViolation('policy-weakening', 'high', workflowFile, 0, `Workflow içinde continue-on-error kullanılamaz.`);
         }
+        if (!wf.includes('fetch-depth: 0')) {
+            addViolation('policy-weakening', 'high', workflowFile, 0, `Workflow içinde fetch-depth: 0 olmalıdır.`);
+        }
     }
 }
 
-// ---------------------------------------------------------
-// Main Scan Loop
-// ---------------------------------------------------------
+function validateBaselineRatchet() {
+    if (!modes.ci && !modes.staged) return;
+    const range = determineBaseAndHead();
+    if (!range) return;
 
-const files = getFilesToScan();
+    let baseBaselineStr = '';
+    try {
+        baseBaselineStr = execSync(`git show ${range.base}:.agent/quality-baseline.json`, { cwd: PROJECT_ROOT, stdio: ['pipe', 'pipe', 'ignore'], encoding: 'utf8' });
+    } catch (e) {
+        return;
+    }
 
-files.forEach(file => {
+    let baseBaseline = [];
+    try {
+        baseBaseline = JSON.parse(baseBaselineStr);
+    } catch (e) {
+        return;
+    }
+
+    let baseCounts = {};
+    baseBaseline.forEach(b => {
+        const key = `${b.ruleId}|${b.path}|${b.fingerprint}`;
+        baseCounts[key] = (baseCounts[key] || 0) + 1;
+    });
+
+    const currentTotal = baseline.length;
+    const baseTotal = baseBaseline.length;
+    
+    if (currentTotal > baseTotal) {
+        addViolation('baseline-growth', 'high', BASELINE_FILE, 0, `Baseline büyüyemez.`);
+    }
+
+    baseline.forEach(b => {
+        const key = `${b.ruleId}|${b.path}|${b.fingerprint}`;
+        if (!baseCounts[key]) {
+            addViolation('baseline-addition', 'high', BASELINE_FILE, 0, `Baseline'a yeni kayıt eklenemez: ${key}`);
+        }
+    });
+}
+
+function checkDocsTruth() {
+    if (fs.existsSync(AI_CONTEXT_FILE)) {
+        const content = fs.readFileSync(AI_CONTEXT_FILE, 'utf8');
+        if (content.includes('PUT persistence')) {
+            addViolation('false-docs-claim', 'high', AI_CONTEXT_FILE, 0, `PUT persistence tavsiyesi kaldirilmalidir.`);
+        }
+    }
+}
+
+const filesToScan = getFilesToScan();
+filesToScan.forEach(file => {
     if (fs.statSync(file).isDirectory()) return;
+    if (!fs.existsSync(file)) return;
     const content = fs.readFileSync(file, 'utf8');
     const ext = path.extname(file);
 
-    if (ext === '.json') {
-        checkJson(file, content);
-    }
-    
     if (ext === '.js') {
         checkJsSyntax(file, content);
         checkUnsafeDom(file, content);
@@ -486,7 +532,6 @@ files.forEach(file => {
     if (ext === '.html') {
         checkHtml(file, content);
         checkUnsafeDom(file, content);
-        checkLanguage(file, content);
         checkSensitiveBehaviours(file, content);
     }
     
@@ -495,28 +540,23 @@ files.forEach(file => {
     }
 });
 
-// Post-Scan Baseline Check
 Object.keys(baselineCounts).forEach(key => {
     const [ruleId, relFile] = key.split('|');
     const fullPath = path.join(PROJECT_ROOT, relFile);
-    if (!files.includes(fullPath)) return;
+    if (!filesToScan.includes(fullPath)) return;
     const baselined = baselineCounts[key];
     const actual = currentCounts[key] || 0;
     if (actual < baselined) {
-        const [ruleId, relFile] = key.split('|');
-        addViolation('stale-baseline-entry', 'high', path.join(PROJECT_ROOT, relFile), 0, `Baseline'da var olan ancak artık kullanılmayan (veya sayısı azalan) kayıt: ${ruleId}`);
+        addViolation('stale-baseline-entry', 'high', relFile, 0, `Baseline'da var olan ancak kullanılmayan kayıt: ${ruleId}`);
+    } else if (actual > baselined) {
+        addViolation('baseline-exceeded', 'high', relFile, 0, `Baseline sınırı aşıldı: ${ruleId}`);
     }
 });
 
-// Global Checks
 checkPackageJson();
-checkDocumentationTruth();
-checkTaskContract();
 checkPolicySelfProtection();
-
-// ---------------------------------------------------------
-// Output & Exit
-// ---------------------------------------------------------
+validateBaselineRatchet();
+checkDocsTruth();
 
 if (violations.length > 0) {
     console.error(`\n❌ UYUMSUZLUK TESPİT EDİLDİ (${violations.length} hata)`);

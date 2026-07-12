@@ -16,7 +16,12 @@
     "requiredStaticChecks",
     "requiredTestCommands",
     "browserVerificationRequired",
-    "documentationRequired"
+    "documentationRequired",
+    "allowedSensitiveChanges",
+    "allowedUiStructureChanges",
+    "allowedBackendChanges",
+    "allowedDatabaseChanges",
+    "allowedDependencyChanges"
   ],
   "properties": {
     "taskId": { "type": "string" },
@@ -50,6 +55,11 @@
     "requiredStaticChecks": { "type": "array", "items": { "type": "string" } },
     "requiredTestCommands": { "type": "array", "items": { "type": "string" } },
     "browserVerificationRequired": { "type": "boolean" },
-    "documentationRequired": { "type": "boolean" }
+    "documentationRequired": { "type": "boolean" },
+    "allowedSensitiveChanges": { "type": "array", "items": { "type": "string" } },
+    "allowedUiStructureChanges": { "type": "array", "items": { "type": "string" } },
+    "allowedBackendChanges": { "type": "array", "items": { "type": "string" } },
+    "allowedDatabaseChanges": { "type": "array", "items": { "type": "string" } },
+    "allowedDependencyChanges": { "type": "array", "items": { "type": "string" } }
   }
 }
