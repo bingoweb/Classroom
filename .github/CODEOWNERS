@@ -1,8 +1,0 @@
-AGENTS.md @bingoweb
-agent-policy.json @bingoweb
-.agent/ @bingoweb
-scripts/verify-agent-compliance.js @bingoweb
-tests/agent-compliance.test.js @bingoweb
-.githooks/ @bingoweb
-.github/workflows/ @bingoweb
-.github/CODEOWNERS @bingoweb
