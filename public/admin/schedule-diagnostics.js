@@ -74,6 +74,10 @@
             return invalidModel;
         }
 
+        if (typeof response.source !== 'string' || !['database', 'empty', 'legacy-incomplete'].includes(response.source)) {
+            return invalidModel;
+        }
+
         if (typeof response.valid !== 'boolean') {
             return invalidModel;
         }
@@ -82,59 +86,55 @@
             return invalidModel;
         }
 
-        if (response.warnings && !Array.isArray(response.warnings)) {
+        if (!Array.isArray(response.warnings)) {
             return invalidModel;
         }
 
-        if (response.errors && !Array.isArray(response.errors)) {
+        if (!Array.isArray(response.errors)) {
             return invalidModel;
         }
 
-        const source = response.source || 'unknown';
+        const source = response.source;
 
-        if (source === 'empty') {
-            return {
-                state: 'empty',
-                valid: false,
-                source: source,
-                sourceLabel: translateSource(source),
-                day: expectedDay,
-                dayLabel: translateDay(expectedDay),
-                periods: [],
-                warnings: [],
-                errors: [],
-                periodCount: 0
-            };
-        }
-
-        if (source === 'legacy-incomplete') {
-            return {
-                state: 'legacy-incomplete',
-                valid: false,
-                source: source,
-                sourceLabel: translateSource(source),
-                day: expectedDay,
-                dayLabel: translateDay(expectedDay),
-                periods: [],
-                warnings: [],
-                errors: [],
-                periodCount: 0
-            };
-        }
-
-        if (source !== 'database') {
-            return invalidModel;
-        }
-
-        const warnings = (response.warnings || []).map(w => ({
+        const warnings = response.warnings.map(w => ({
             code: w.code,
             message: translateDiagnosticCode(w.code)
         }));
 
-        const errors = (response.errors || []).map(e => ({
+        const errors = response.errors.map(e => ({
             code: e.code,
             message: translateDiagnosticCode(e.code)
         }));
+
+        if (source === 'empty' || source === 'legacy-incomplete') {
+            return {
+                state: source,
+                valid: false,
+                source: source,
+                sourceLabel: translateSource(source),
+                day: expectedDay,
+                dayLabel: translateDay(expectedDay),
+                periods: [],
+                warnings: warnings,
+                errors: errors,
+                periodCount: 0
+            };
+        }
+
+        if (source === 'database' && response.valid === false) {
+            return {
+                state: 'invalid',
+                valid: false,
+                source: 'database',
+                sourceLabel: translateSource(source),
+                day: expectedDay,
+                dayLabel: translateDay(expectedDay),
+                periods: [],
+                warnings: warnings,
+                errors: errors,
+                periodCount: 0
+            };
+        }
 
         // Defensive copy of periods
         const periods = response.periods.map(p => ({ ...p }));
@@ -161,9 +161,6 @@
         const day = options.day || 'weekday';
         const timeoutMs = options.timeoutMs || 5000;
 
-        if (!api) throw new Error('api dependency is required');
-        if (!view) throw new Error('view dependency is required');
-
         let currentRequestPromise = null;
         let lastResult = null;
         let hasLoadedFlag = false;
@@ -174,6 +171,22 @@
         function load() {
             if (currentRequestPromise) {
                 return currentRequestPromise;
+            }
+
+            if (!api) {
+                const errorResult = { status: 'dependency-error', dependency: 'api', message: 'Ders programı tanılama hizmeti başlatılamadı.' };
+                lastResult = errorResult;
+                hasLoadedFlag = true;
+                if (logger && logger.error) logger.error('ADMIN_DIAGNOSTICS', 'api dependency missing');
+                return Promise.resolve(errorResult);
+            }
+
+            if (!view || typeof view.renderLoading !== 'function' || typeof view.renderResult !== 'function' || typeof view.renderTransportError !== 'function') {
+                const errorResult = { status: 'dependency-error', dependency: 'view', message: 'Ders programı tanılama hizmeti başlatılamadı.' };
+                lastResult = errorResult;
+                hasLoadedFlag = true;
+                if (logger && logger.error) logger.error('ADMIN_DIAGNOSTICS', 'view dependency missing or malformed');
+                return Promise.resolve(errorResult);
             }
 
             inFlight = true;
@@ -205,11 +218,13 @@
                 })
                 .catch(error => {
                     const transportError = { message: 'Ders programı bilgisi alınamadı.', retryable: true };
+                    lastResult = transportError;
+                    hasLoadedFlag = true;
                     try { view.renderTransportError(transportError); } catch (e) { }
                     if (logger && logger.error) {
                         logger.error('ADMIN_DIAGNOSTICS', 'Schedule request failed', error);
                     }
-                    return null;
+                    return transportError;
                 })
                 .finally(() => {
                     if (timeoutId) {
@@ -227,11 +242,14 @@
             isLoading: () => inFlight,
             getLastResult: () => {
                 if (!lastResult) return null;
+                if (lastResult.status === 'dependency-error' || lastResult.retryable) {
+                    return { ...lastResult };
+                }
                 return {
                     ...lastResult,
-                    periods: lastResult.periods.map(p => ({ ...p })),
-                    warnings: lastResult.warnings.map(w => ({ ...w })),
-                    errors: lastResult.errors.map(e => ({ ...e }))
+                    periods: (lastResult.periods || []).map(p => ({ ...p })),
+                    warnings: (lastResult.warnings || []).map(w => ({ ...w })),
+                    errors: (lastResult.errors || []).map(e => ({ ...e }))
                 };
             },
             hasLoaded: () => hasLoadedFlag
@@ -291,6 +309,9 @@
                 } else if (viewModel.state === 'legacy-incomplete') {
                     statusEl.textContent = 'Geçersiz (Eski)';
                     statusEl.style.color = '#f59e0b';
+                } else if (viewModel.state === 'invalid' && viewModel.source === 'database') {
+                    statusEl.textContent = 'Geçersiz';
+                    statusEl.style.color = '#dc2626';
                 } else {
                     statusEl.textContent = 'Tanımsız Hata';
                     statusEl.style.color = '#dc2626';
@@ -421,7 +442,10 @@
         createScheduleDiagnosticsViewModel,
         createScheduleDiagnosticsController,
         createDomScheduleDiagnosticsView,
-        translateDiagnosticCode
+        translateDiagnosticCode,
+        translatePeriodType: translateType,
+        translateSource,
+        translateDay
     };
 
 })));

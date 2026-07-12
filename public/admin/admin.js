@@ -2069,23 +2069,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Initialize Schedule Diagnostics
 document.addEventListener('DOMContentLoaded', () => {
-    if (window.AdminScheduleDiagnostics) {
-        const view = window.AdminScheduleDiagnostics.createDomScheduleDiagnosticsView(document);
-        window.scheduleDiagnosticsController = window.AdminScheduleDiagnostics.createScheduleDiagnosticsController({
-            api: APIService,
-            view: view,
-            logger: typeof logger !== 'undefined' ? logger : null,
-            endpoint: '/schedule/normalized',
-            day: 'weekday'
-        });
+    const diagnostics = window.AdminScheduleDiagnostics;
+    const api = window.api;
 
-        const refreshBtn = document.getElementById('refreshScheduleDiagnosticsBtn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => {
-                if (window.scheduleDiagnosticsController) {
-                    window.scheduleDiagnosticsController.load();
-                }
-            });
-        }
+    if (
+        !diagnostics ||
+        !api ||
+        typeof api.request !== 'function'
+    ) {
+        // Log safely; do not break the rest of the admin panel.
+        return;
+    }
+
+    const view = diagnostics.createDomScheduleDiagnosticsView(document);
+
+    window.scheduleDiagnosticsController = diagnostics.createScheduleDiagnosticsController({
+        api,
+        view,
+        logger: typeof logger !== 'undefined' ? logger : null,
+        endpoint: '/schedule/normalized',
+        day: 'weekday'
+    });
+
+    const refreshBtn = document.getElementById('refreshScheduleDiagnosticsBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            if (window.scheduleDiagnosticsController) {
+                window.scheduleDiagnosticsController.load();
+            }
+        });
     }
 });
