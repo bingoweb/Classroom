@@ -4,7 +4,8 @@
   "description": "Classroom Panel with Admin Interface",
   "main": "backend/server.js",
   "scripts": {
-    "start": "node backend/server.js"
+    "start": "node backend/server.js",
+    "test:schedule": "node --test tests/schedule-manager.test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

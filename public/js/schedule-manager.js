@@ -66,10 +66,21 @@ function rejectExternalSchedule(reason, warnings = [], errors = []) {
         fallbackActive: true,
         source: 'fallback',
         reason,
-        warnings,
-        errors,
+        warnings: warnings.map(item => ({ ...item })),
+        errors: errors.map(item => ({ ...item })),
         schedule: cloneSchedule(SCHOOL_SCHEDULE)
     };
+}
+
+function isNormalizerResult(value) {
+    return Boolean(
+        value &&
+        typeof value === 'object' &&
+        typeof value.valid === 'boolean' &&
+        Array.isArray(value.periods) &&
+        Array.isArray(value.warnings) &&
+        Array.isArray(value.errors)
+    );
 }
 
 function setExternalSchedule(rows) {
@@ -82,6 +93,10 @@ function setExternalSchedule(rows) {
         result = Normalizer.normalizeSchedule(rows);
     } catch (e) {
         return rejectExternalSchedule('SCHEDULE_VALIDATION_EXCEPTION', [], [{ code: 'SCHEDULE_VALIDATION_EXCEPTION', message: e.message }]);
+    }
+
+    if (!isNormalizerResult(result)) {
+        return rejectExternalSchedule('INVALID_NORMALIZER_RESULT');
     }
 
     if (!result.valid || result.periods.length === 0) {
@@ -116,13 +131,13 @@ function setExternalSchedule(rows) {
 
     activeExternalSchedule = newSchedule;
 
-    return {
-        accepted: true,
+    return { 
+        accepted: true, 
         fallbackActive: false,
-        source: 'external',
+        source: 'external', 
         reason: null,
-        warnings: result.warnings,
-        errors: result.errors,
+        warnings: result.warnings.map(item => ({ ...item })),
+        errors: result.errors.map(item => ({ ...item })),
         schedule: cloneSchedule(newSchedule)
     };
 }
