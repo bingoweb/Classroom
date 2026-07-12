@@ -1,5 +1,3 @@
-// Schedule cache
-let scheduleData = [];
 let currentSlideIndex = 0;
 
 // AKILLI VERİ KARŞILAŞTIRMA SİSTEMİ - gereksiz DOM güncellemelerini önler
@@ -204,12 +202,6 @@ async function fetchData() {
 
         // Stats
         updateStats();
-
-        // Fetch Schedule
-        const schedule = await Utils.fetchWithErrorHandling(`${CONFIG.API_URL}/schedule`);
-        if (schedule) {
-            scheduleData = schedule;
-        }
 
     } catch (error) {
         console.error('Error fetching data:', error);
@@ -1293,6 +1285,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Initialize Dashboard Schedule Loader
+    let scheduleLoader = null;
+    if (window.DashboardScheduleLoader && window.api && window.ScheduleManager) {
+        scheduleLoader = window.DashboardScheduleLoader.createDashboardScheduleLoader({
+            api: window.api,
+            scheduleManager: window.ScheduleManager,
+            logger: typeof logger !== 'undefined' ? logger : null,
+            onScheduleChanged: (result) => {
+                updateClock();
+            }
+        });
+        window.dashboardScheduleLoader = scheduleLoader;
+        // Start one normalized schedule load
+        scheduleLoader.load().catch(err => console.error('Initial schedule load error:', err));
+    }
+
     // Initialize and start fetching data
     fetchData().then(() => {
     }).catch(err => {
@@ -1322,5 +1330,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 logger.error(COMPONENTS.SYSTEM, 'Error in scheduled fetchData', err);
             }
         });
+
+        // Run one deduplicated normalized schedule refresh
+        if (scheduleLoader) {
+            scheduleLoader.load().catch(err => console.error('Interval schedule load error:', err));
+        }
     }, CONFIG.DATA_REFRESH_INTERVAL);
 });
