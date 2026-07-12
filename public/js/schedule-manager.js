@@ -24,10 +24,26 @@ const SCHOOL_SCHEDULE = {
     schoolEnd: '14:30'
 };
 
+function clonePeriod(period) {
+    return { ...period };
+}
+
+function cloneSchedule(schedule) {
+    return {
+        periods: schedule.periods.map(clonePeriod),
+        schoolStart: schedule.schoolStart,
+        schoolEnd: schedule.schoolEnd
+    };
+}
+
 let activeExternalSchedule = null;
 
-function getActiveSchedule() {
+function getInternalActiveSchedule() {
     return activeExternalSchedule || SCHOOL_SCHEDULE;
+}
+
+function getActiveSchedule() {
+    return cloneSchedule(getInternalActiveSchedule());
 }
 
 function getScheduleSource() {
@@ -36,43 +52,79 @@ function getScheduleSource() {
 
 function clearExternalSchedule() {
     activeExternalSchedule = null;
+    return {
+        source: 'fallback',
+        fallbackActive: true,
+        schedule: cloneSchedule(SCHOOL_SCHEDULE)
+    };
+}
+
+function rejectExternalSchedule(reason, warnings = [], errors = []) {
+    activeExternalSchedule = null;
+    return {
+        accepted: false,
+        fallbackActive: true,
+        source: 'fallback',
+        reason,
+        warnings,
+        errors,
+        schedule: cloneSchedule(SCHOOL_SCHEDULE)
+    };
 }
 
 function setExternalSchedule(rows) {
-    const Normalizer = typeof window !== 'undefined' ? window.ScheduleNormalizer : require('./schedule-normalizer.js');
-
-    if (!Normalizer || !Normalizer.normalizeSchedule) {
-        return { accepted: false, reason: 'Normalizer missing' };
+    let result;
+    try {
+        const Normalizer = typeof window !== 'undefined' ? window.ScheduleNormalizer : require('./schedule-normalizer.js');
+        if (!Normalizer || !Normalizer.normalizeSchedule) {
+            return rejectExternalSchedule('Normalizer missing');
+        }
+        result = Normalizer.normalizeSchedule(rows);
+    } catch (e) {
+        return rejectExternalSchedule('SCHEDULE_VALIDATION_EXCEPTION', [], [{ code: 'SCHEDULE_VALIDATION_EXCEPTION', message: e.message }]);
     }
 
-    const result = Normalizer.normalizeSchedule(rows);
-
     if (!result.valid || result.periods.length === 0) {
-        return { accepted: false, reason: 'Invalid schedule', result };
+        return rejectExternalSchedule('Invalid schedule', result.warnings, result.errors);
     }
 
     const hasLesson = result.periods.some(p => p.type === 'class');
     if (!hasLesson) {
-        return { accepted: false, reason: 'No lessons found', result };
+        return rejectExternalSchedule('No lessons found', result.warnings, result.errors);
     }
 
     for (let i = 0; i < result.periods.length - 1; i++) {
         const current = result.periods[i];
         const next = result.periods[i + 1];
         if (current.end !== next.start) {
-            result.valid = false;
-            result.errors.push({ code: 'SCHEDULE_GAP', message: `Gap detected between ${current.end} and ${next.start}.` });
-            return { accepted: false, reason: 'SCHEDULE_GAP', result };
+            const integrationErrors = [
+                ...(Array.isArray(result.errors) ? result.errors : []),
+                {
+                    code: 'SCHEDULE_GAP',
+                    message: `Gap detected between ${current.end} and ${next.start}.`
+                }
+            ];
+            return rejectExternalSchedule('SCHEDULE_GAP', result.warnings, integrationErrors);
         }
     }
 
-    activeExternalSchedule = {
-        periods: result.periods,
+    const newSchedule = {
+        periods: result.periods.map(clonePeriod),
         schoolStart: result.periods[0].start,
         schoolEnd: result.periods[result.periods.length - 1].end
     };
 
-    return { accepted: true, source: 'external', result };
+    activeExternalSchedule = newSchedule;
+
+    return {
+        accepted: true,
+        fallbackActive: false,
+        source: 'external',
+        reason: null,
+        warnings: result.warnings,
+        errors: result.errors,
+        schedule: cloneSchedule(newSchedule)
+    };
 }
 
 /**
@@ -131,7 +183,7 @@ function getScheduleStatus(now) {
     const currentMin = now.getMinutes();
     const currentTime = currentHour * 60 + currentMin;
 
-    const activeSchedule = getActiveSchedule();
+    const activeSchedule = getInternalActiveSchedule();
 
     const schoolStartMinutes = timeToMinutes(activeSchedule.schoolStart);
     const schoolEndMinutes = timeToMinutes(activeSchedule.schoolEnd);

@@ -233,7 +233,7 @@ The `public/js/schedule-normalizer.js` file provides a pure, dependency-free val
 
 * **Public API:** `window.ScheduleNormalizer.normalizeSchedule(rows)` returns `{ periods, warnings, errors, valid }`.
 * **Accepted Aliases:** `course` for `name`, `period_type` for `type`, `start_time` for `start`, `end_time` for `end`.
-* **Accepted Type Aliases (Case-insensitive):** 
+* **Accepted Type Aliases (Case-insensitive):**
   * `class`, `lesson`, `ders` -> `class`
   * `break`, `recess`, `teneffüs`, `teneffus`, `ara` -> `break`
 * **Validation Behaviour:** Drops rows with invalid/missing times, unknown types, or zero/negative durations with structured warnings. Exact duplicates are skipped.
@@ -491,49 +491,45 @@ Rules:
 * Verified HEAD before this task:
 
   ```text
-  a8f6235 docs: update AI context after normalizer
+  1e0b9b1 feat: integrate validated schedule fallback
+  ```
+* Defects Discovered & Fixed:
+
+  ```text
+  1. Rejected replacement retained previous external state.
+  2. Integration mutated normalizer result (pushed to result.errors, toggled result.valid).
+  3. Public getters exposed mutable active state (returned internal references allowing external mutation).
+  ```
+* Exact Implementation Correction:
+
+  ```text
+  Added deep-cloning helpers (`clonePeriod`, `cloneSchedule`). Created `getInternalActiveSchedule` for private operations and modified `getActiveSchedule` to return a defensive copy. Extracted rejection handling to `rejectExternalSchedule` to guarantee `activeExternalSchedule` is nulled on any failure (returning fallback). Removed array/object mutations from the gap verification logic and added an exception handler boundary for unexpected normalizer faults.
   ```
 * New commit message:
 
   ```text
-  feat: integrate validated schedule fallback
+  fix: harden external schedule fallback state
   ```
 * Working tree state before this document update:
 
   ```text
-  clean (with public/index.html and public/js/schedule-manager.js modified)
+  clean (with public/js/schedule-manager.js modified)
   ```
 * Files modified:
 
   ```text
-  public/index.html
   public/js/schedule-manager.js
   AI_PROJECT_CONTEXT.md
-  ```
-* New `ScheduleManager` APIs added:
-
-  ```text
-  setExternalSchedule(rows), clearExternalSchedule(), getActiveSchedule(), getScheduleSource()
-  ```
-* Fallback behaviour:
-
-  ```text
-  Invalid, empty, or missing schedules automatically revert to SCHOOL_SCHEDULE without throwing errors.
-  ```
-* Schedule-gap rejection:
-
-  ```text
-  Any uncovered time gaps between valid periods trigger a SCHEDULE_GAP error and the schedule is rejected to maintain countdown continuity.
   ```
 * Tests performed:
 
   ```text
-  Node regression tests covering 19 test conditions including fallback retention, gap detection, array mutability, zero-duration overlaps, browser/node execution, and syntax verification. Playwright UI tests verified no layout overflow and no duplicate scripts.
+  Manager tests: 22 passed, 0 failed. UI tests: 2 passed, 0 failed. UI tests were performed using Playwright launching a real Chromium browser automation. Syntax checks for both normalizer and manager passed.
   ```
 * Resolved risks:
 
   ```text
-  Schedule integration logic is now completed without connecting it to the faulty backend API yet.
+  Schedule integration logic is now completely immutable, defensive, and fails safely to SCHOOL_SCHEDULE across all error conditions.
   ```
 * Remaining risks:
 
