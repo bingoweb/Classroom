@@ -2098,9 +2098,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (editor && normalizer) {
         const editorView = editor.createDomScheduleDraftEditorView(document);
+        
+        let compositeView = editorView;
+        if (window.AdminScheduleReviewPanel) {
+            const reviewView = window.AdminScheduleReviewPanel.createDomScheduleReviewPanelView(document);
+            compositeView = {
+                render: function(state) {
+                    editorView.render(state);
+                    reviewView.render(state);
+                }
+            };
+        }
+
         window.scheduleDraftEditorController = editor.createScheduleDraftEditorController({
             normalizer,
-            view: editorView,
+            view: compositeView,
             logger: typeof logger !== 'undefined' ? logger : null
         });
 
