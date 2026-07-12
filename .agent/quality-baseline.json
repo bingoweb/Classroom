@@ -470,46 +470,6 @@
     "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
   },
   {
-    "ruleId": "malformed-html-attribute",
-    "path": "public/admin/index.html",
-    "line": 0,
-    "fingerprint": "manual-defect-malformed-table",
-    "severity": "high",
-    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
-    "status": "unresolved",
-    "descriptionTr": "Mevcut teknik borç; bozuk editable-table HTML."
-  },
-  {
-    "ruleId": "missing-required-id",
-    "path": "public/admin/index.html",
-    "line": 0,
-    "fingerprint": "manual-defect-missing-sdeEditableTableBody",
-    "severity": "high",
-    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
-    "status": "unresolved",
-    "descriptionTr": "Mevcut teknik borç; sdeEditableTableBody eksik."
-  },
-  {
-    "ruleId": "unsafe-dom-inner-html",
-    "path": "public/admin/schedule-review-panel.js",
-    "line": 0,
-    "fingerprint": "manual-defect-prohibited-innerhtml",
-    "severity": "high",
-    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
-    "status": "unresolved",
-    "descriptionTr": "Mevcut teknik borç; schedule-review-panel.js içinde innerHTML kullanımı."
-  },
-  {
-    "ruleId": "documentation-contradicts-code",
-    "path": "AI_PROJECT_CONTEXT.md",
-    "line": 1298,
-    "fingerprint": "manual-defect-false-documentation",
-    "severity": "medium",
-    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
-    "status": "unresolved",
-    "descriptionTr": "Mevcut teknik borç; dokümantasyon innerHTML olmadığını iddia ediyor ancak var."
-  },
-  {
     "ruleId": "unapproved-network-storage",
     "path": "public/admin/admin.js",
     "line": 28,
