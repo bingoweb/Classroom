@@ -703,3 +703,146 @@ test('65. Admin JS integration uses window.api instead of APIService class direc
     assert.ok(adminJs.includes('const api = window.api;'));
     assert.ok(!adminJs.includes('api: APIService,'));
 });
+
+test('66. Date response becomes invalid.', () => {
+    const vm = createScheduleDiagnosticsViewModel(new Date());
+    assert.strictEqual(vm.state, 'invalid');
+    assert.strictEqual(vm.valid, false);
+});
+
+test('67. Class-instance response becomes invalid.', () => {
+    class CustomResponse { constructor() { this.day = 'weekday'; } }
+    const vm = createScheduleDiagnosticsViewModel(new CustomResponse());
+    assert.strictEqual(vm.state, 'invalid');
+    assert.strictEqual(vm.valid, false);
+});
+
+test('68. Valid null-prototype response remains accepted.', () => {
+    const input = Object.create(null);
+    input.day = 'weekday';
+    input.source = 'database';
+    input.valid = true;
+    input.periods = [];
+    input.warnings = [];
+    input.errors = [];
+    const vm = createScheduleDiagnosticsViewModel(input);
+    assert.strictEqual(vm.state, 'valid');
+});
+
+test('69. Null warning entry becomes invalid.', () => {
+    const input = { day: 'weekday', source: 'database', valid: true, periods: [], warnings: [null], errors: [] };
+    const vm = createScheduleDiagnosticsViewModel(input);
+    assert.strictEqual(vm.state, 'invalid');
+});
+
+test('70. String warning entry becomes invalid.', () => {
+    const input = { day: 'weekday', source: 'database', valid: true, periods: [], warnings: ['INVALID_ROW'], errors: [] };
+    const vm = createScheduleDiagnosticsViewModel(input);
+    assert.strictEqual(vm.state, 'invalid');
+});
+
+test('71. Warning entry without code becomes invalid.', () => {
+    const input = { day: 'weekday', source: 'database', valid: true, periods: [], warnings: [{}], errors: [] };
+    const vm = createScheduleDiagnosticsViewModel(input);
+    assert.strictEqual(vm.state, 'invalid');
+});
+
+test('72. Warning entry with empty code becomes invalid.', () => {
+    const input = { day: 'weekday', source: 'database', valid: true, periods: [], warnings: [{ code: '  ' }], errors: [] };
+    const vm = createScheduleDiagnosticsViewModel(input);
+    assert.strictEqual(vm.state, 'invalid');
+});
+
+test('73. Null error entry becomes invalid.', () => {
+    const input = { day: 'weekday', source: 'database', valid: true, periods: [], warnings: [], errors: [null] };
+    const vm = createScheduleDiagnosticsViewModel(input);
+    assert.strictEqual(vm.state, 'invalid');
+});
+
+test('74. String error entry becomes invalid.', () => {
+    const input = { day: 'weekday', source: 'database', valid: true, periods: [], warnings: [], errors: ['FAIL'] };
+    const vm = createScheduleDiagnosticsViewModel(input);
+    assert.strictEqual(vm.state, 'invalid');
+});
+
+test('75. Error entry without code becomes invalid.', () => {
+    const input = { day: 'weekday', source: 'database', valid: true, periods: [], warnings: [], errors: [{ msg: 'err' }] };
+    const vm = createScheduleDiagnosticsViewModel(input);
+    assert.strictEqual(vm.state, 'invalid');
+});
+
+test('76. Malformed diagnostic response does not throw.', async () => {
+    const api = new MockAPI();
+    api.nextResponse = { day: 'weekday', source: 'database', valid: true, periods: [], warnings: [null], errors: [] };
+    const view = new MockView();
+    const ctrl = createScheduleDiagnosticsController({ api, view });
+    await ctrl.load();
+    assert.strictEqual(ctrl.getLastResult().state, 'invalid');
+});
+
+test('77. Malformed diagnostic response renders an invalid result.', async () => {
+    const api = new MockAPI();
+    api.nextResponse = { day: 'weekday', source: 'database', valid: true, periods: [], warnings: [null], errors: [] };
+    const view = new MockView();
+    const ctrl = createScheduleDiagnosticsController({ api, view });
+    await ctrl.load();
+    const resultAction = view.actions.find(a => a.type === 'result');
+    assert.ok(resultAction);
+    assert.strictEqual(resultAction.viewModel.state, 'invalid');
+});
+
+test('78. Malformed diagnostic response does not render a transport error.', async () => {
+    const api = new MockAPI();
+    api.nextResponse = { day: 'weekday', source: 'database', valid: true, periods: [], warnings: [null], errors: [] };
+    const view = new MockView();
+    const ctrl = createScheduleDiagnosticsController({ api, view });
+    await ctrl.load();
+    const errAction = view.actions.find(a => a.type === 'error');
+    assert.strictEqual(errAction, undefined);
+});
+
+test('79. Empty API object returns dependency-error.', async () => {
+    const view = new MockView();
+    const ctrl = createScheduleDiagnosticsController({ api: null, view });
+    const res = await ctrl.load();
+    assert.strictEqual(res.status, 'dependency-error');
+});
+
+test('80. API with non-function request returns dependency-error.', async () => {
+    const view = new MockView();
+    const ctrl = createScheduleDiagnosticsController({ api: { request: 'string' }, view });
+    const res = await ctrl.load();
+    assert.strictEqual(res.status, 'dependency-error');
+});
+
+test('81. Malformed API creates no network request.', async () => {
+    const api = { request: 'bad' };
+    const view = new MockView();
+    const ctrl = createScheduleDiagnosticsController({ api, view });
+    await ctrl.load();
+    // Doesn't throw
+});
+
+test('82. Dependency failure leaves isLoading() false.', async () => {
+    const view = new MockView();
+    const ctrl = createScheduleDiagnosticsController({ api: null, view });
+    await ctrl.load();
+    assert.strictEqual(ctrl.isLoading(), false);
+});
+
+test('83. Dependency failure sets hasLoaded() true.', async () => {
+    const view = new MockView();
+    const ctrl = createScheduleDiagnosticsController({ api: null, view });
+    await ctrl.load();
+    assert.strictEqual(ctrl.hasLoaded(), true);
+});
+
+test('84. Dependency getLastResult() is defensive.', async () => {
+    const view = new MockView();
+    const ctrl = createScheduleDiagnosticsController({ api: null, view });
+    await ctrl.load();
+    const r1 = ctrl.getLastResult();
+    const r2 = ctrl.getLastResult();
+    assert.deepEqual(r1, { status: 'dependency-error', dependency: 'api', message: 'Ders programı tanılama hizmeti başlatılamadı.' });
+    assert.notStrictEqual(r1, r2);
+});

@@ -52,6 +52,48 @@
         return 'Bilinmeyen';
     }
 
+    function isPlainObject(value) {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            return false;
+        }
+        const prototype = Object.getPrototypeOf(value);
+        return prototype === Object.prototype || prototype === null;
+    }
+
+    function normalizeDiagnostics(items) {
+        if (!Array.isArray(items)) {
+            return {
+                valid: false,
+                diagnostics: []
+            };
+        }
+
+        const diagnostics = [];
+
+        for (const item of items) {
+            if (
+                !isPlainObject(item) ||
+                typeof item.code !== 'string' ||
+                item.code.trim() === ''
+            ) {
+                return {
+                    valid: false,
+                    diagnostics: []
+                };
+            }
+
+            diagnostics.push({
+                code: item.code,
+                message: translateDiagnosticCode(item.code)
+            });
+        }
+
+        return {
+            valid: true,
+            diagnostics
+        };
+    }
+
     function createScheduleDiagnosticsViewModel(response, expectedDay = 'weekday') {
         const invalidModel = {
             state: 'invalid',
@@ -66,7 +108,7 @@
             periodCount: 0
         };
 
-        if (!response || typeof response !== 'object' || Array.isArray(response)) {
+        if (!isPlainObject(response)) {
             return invalidModel;
         }
 
@@ -86,25 +128,19 @@
             return invalidModel;
         }
 
-        if (!Array.isArray(response.warnings)) {
+        const warningsResult = normalizeDiagnostics(response.warnings);
+        if (!warningsResult.valid) {
             return invalidModel;
         }
 
-        if (!Array.isArray(response.errors)) {
+        const errorsResult = normalizeDiagnostics(response.errors);
+        if (!errorsResult.valid) {
             return invalidModel;
         }
 
         const source = response.source;
-
-        const warnings = response.warnings.map(w => ({
-            code: w.code,
-            message: translateDiagnosticCode(w.code)
-        }));
-
-        const errors = response.errors.map(e => ({
-            code: e.code,
-            message: translateDiagnosticCode(e.code)
-        }));
+        const warnings = warningsResult.diagnostics;
+        const errors = errorsResult.diagnostics;
 
         if (source === 'empty' || source === 'legacy-incomplete') {
             return {
@@ -173,11 +209,11 @@
                 return currentRequestPromise;
             }
 
-            if (!api) {
+            if (!api || typeof api.request !== 'function') {
                 const errorResult = { status: 'dependency-error', dependency: 'api', message: 'Ders programı tanılama hizmeti başlatılamadı.' };
                 lastResult = errorResult;
                 hasLoadedFlag = true;
-                if (logger && logger.error) logger.error('ADMIN_DIAGNOSTICS', 'api dependency missing');
+                if (logger && logger.error) logger.error('ADMIN_DIAGNOSTICS', 'api dependency missing or malformed');
                 return Promise.resolve(errorResult);
             }
 
