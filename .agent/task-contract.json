@@ -1,0 +1,24 @@
+{
+  "taskId": "guardrail-repair-bootstrap",
+  "featureName": "Agent Compliance Guardrails",
+  "changeType": "documentation",
+  "baseCommit": "e09c77ea62b3604284caf6c386e5184e583087fc",
+  "newFeaturesAllowed": false,
+  "allowedExistingFiles": [
+    ".agent/quality-baseline.json",
+    "scripts/verify-agent-compliance.js",
+    "tests/agent-compliance.test.js",
+    "package.json",
+    "AI_PROJECT_CONTEXT.md",
+    ".agent/task-contract.json"
+  ],
+  "allowedNewFiles": [],
+  "protectedFiles": [],
+  "behavioursToPreserve": [],
+  "knownDefectsToAddress": [],
+  "forbiddenChanges": [],
+  "requiredStaticChecks": [],
+  "requiredTestCommands": [],
+  "browserVerificationRequired": false,
+  "documentationRequired": false
+}

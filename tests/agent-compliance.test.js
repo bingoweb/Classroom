@@ -59,6 +59,8 @@ test('clean fixture exits zero', () => {
 
 test('stale baseline entry fails', () => {
     const dir = createFixtureDir();
+    fs.mkdirSync(path.join(dir, 'public/admin'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'public/admin/test.js'), '');
     fs.writeFileSync(path.join(dir, '.agent/quality-baseline.json'), JSON.stringify([
         { ruleId: 'fake-rule', path: 'public/admin/test.js', fingerprint: '0'.repeat(64), line: 1 }
     ]));

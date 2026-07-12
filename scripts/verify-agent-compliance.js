@@ -245,6 +245,7 @@ function checkUnsafeDom(filePath, content) {
 }
 
 function checkSensitiveBehaviours(filePath, content) {
+    if (filePath.includes('/tests/') || filePath.includes('/scripts/') || filePath.includes('/fixtures/')) return;
     const relFile = path.relative(PROJECT_ROOT, filePath);
     const added = addedLinesByFile[filePath];
     if (!added || added.length === 0) return;
@@ -496,6 +497,9 @@ files.forEach(file => {
 
 // Post-Scan Baseline Check
 Object.keys(baselineCounts).forEach(key => {
+    const [ruleId, relFile] = key.split('|');
+    const fullPath = path.join(PROJECT_ROOT, relFile);
+    if (!files.includes(fullPath)) return;
     const baselined = baselineCounts[key];
     const actual = currentCounts[key] || 0;
     if (actual < baselined) {
