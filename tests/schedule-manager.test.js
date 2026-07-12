@@ -336,13 +336,39 @@ test('28. Existing weekend status still works', () => {
 });
 
 test('29. Browser-style export works', () => {
-    const { window } = loadIsolatedManager();
-    assert.ok(window.ScheduleManager);
+    const normalizerCode = fs.readFileSync(path.join(__dirname, '../public/js/schedule-normalizer.js'), 'utf8');
+    const managerCode = fs.readFileSync(path.join(__dirname, '../public/js/schedule-manager.js'), 'utf8');
+    const context = { window: {} };
+    vm.createContext(context);
+    vm.runInContext(normalizerCode, context);
+    vm.runInContext(managerCode, context);
+    assert.ok(context.window.ScheduleNormalizer);
+    assert.ok(context.window.ScheduleManager);
 });
 
 test('30. Node.js export works', () => {
-    const { manager } = loadIsolatedManager();
-    assert.ok(manager);
+    const originalWindow = global.window;
+    delete global.window;
+    
+    // Clear require cache for the manager to ensure a fresh require
+    const managerPath = path.resolve(__dirname, '../public/js/schedule-manager.js');
+    delete require.cache[require.resolve(managerPath)];
+    
+    const ScheduleManager = require(managerPath);
+    
+    assert.ok(ScheduleManager);
+    assert.strictEqual(ScheduleManager.getScheduleSource(), 'fallback');
+    
+    const rows = [
+        { name: 'Ext 1', type: 'class', start: '08:00', end: '08:40' }
+    ];
+    const res = ScheduleManager.setExternalSchedule(rows);
+    assert.strictEqual(res.accepted, true);
+    
+    ScheduleManager.clearExternalSchedule();
+    assert.strictEqual(ScheduleManager.getScheduleSource(), 'fallback');
+    
+    global.window = originalWindow;
 });
 
 test('31. Malformed normalizer result: null', () => {

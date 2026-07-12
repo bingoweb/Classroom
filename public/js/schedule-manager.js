@@ -131,10 +131,10 @@ function setExternalSchedule(rows) {
 
     activeExternalSchedule = newSchedule;
 
-    return { 
-        accepted: true, 
+    return {
+        accepted: true,
         fallbackActive: false,
-        source: 'external', 
+        source: 'external',
         reason: null,
         warnings: result.warnings.map(item => ({ ...item })),
         errors: result.errors.map(item => ({ ...item })),
