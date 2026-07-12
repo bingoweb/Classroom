@@ -1283,21 +1283,17 @@ Add a read-only source-versus-draft review panel that summarizes added, removed 
 
 **Tarih:** 2026-07-12
 **Başlangıç Hash (Remote HEAD):** `34ae6ce3eb6423c0e065e99e2cc6cdf928f7093b`
-**Implementation Message:** `fix: repair schedule review panel prototype`
+**Implementation Message:** `docs: record schedule review panel prototype`
 
 #### Eklenen ve Değiştirilen Dosyalar
-- `package.json`
 - `public/admin/admin.js`
 - `public/admin/index.html`
 - `public/admin/schedule-review-panel.js`
-- `tests/admin-schedule-review-panel.test.js`
 
-#### Mimari Özellikleri
-- **Deterministic LCS Comparison:** `sourceSnapshot` ve `draft` arasındaki değişiklikleri belirlemek için algoritma kullanıldı.
-- **Composite View Kalıbı:** Yeni panel mantığı, mevcut `schedule-draft-editor.js` koduna dokunulmadan, `admin.js` içindeki render döngüsüne bir controller aracılığıyla entegre edildi. Controller "render-error" ve "dependency-error" döndürebilecek şekilde yapılandırıldı.
-- **XSS-Safe Rendering:** `innerHTML` kullanımı engellendi; tamamen güvenli olan `textContent` ve `document.createElement` kullanılarak render işlemleri sağlandı.
-- **Pure Functions:** Veri dönüştürme ve karşılaştırma fonksiyonları, DOM ve ağ isteklerinden izole edilerek tam test edilebilir hale getirildi.
-- **Türkçe Arayüz:** Kullanıcıya görünen tüm metinler ("Değiştirilen", "Kaldırılan", "Eklenen", "Önceki değer", "Taslak değeri" vb.) Türkçe ile yazıldı.
+#### Mimari Özellikleri ve Tespit Edilen Borçlar
+- Prototip tamamen eksiksiz değildir. İçerisinde çözülmemiş HTML yapısı sorunları (malformed markup) ve DOM mutasyonu borçları (innerHTML kullanımı) bulunmaktadır.
+- Bu hatalı kullanımlar ve teknik borçlar, yeni kurulan Agent Compliance Guardrail sistemi tarafından yakalanmış ve kalite taban çizgisine (quality baseline) kaydedilmiştir (baselined).
+- Kullanıcıya görünen tüm metinler Türkçe ile yazılmıştır.
 
 #### Test Kapsamı
 Kalıcı Node.js Test Toplamları:
@@ -1308,22 +1304,20 @@ Kalıcı Node.js Test Toplamları:
 5. **Dashboard Schedule Loader:** 55
 6. **Admin Schedule Diagnostics:** 84
 7. **Admin Schedule Draft Editor:** 121
-8. **Admin Schedule Review Panel:** 56 (Sentetik olmayan, tamamen davranışsal)
+8. **Agent Compliance Guardrails:** 15
 
 ##### 1. Kalıcı yapısal test bildirimleri
-`tests/admin-schedule-review-panel.test.js` dosyası 56 üst düzey ve bağımsız test içerir. padding testleri kullanılmamıştır. Toplam core test sayısı 539 olmuştur.
+Toplam core test sayısı 495 olmuştur. Uyum testleri ile birlikte toplam 510 Node.js testi bulunmaktadır.
 
 ##### 2. Bu düzeltme turundaki Antigravity yerel terminal sonuçları
-```bash
-npm run test:admin-schedule-review
-npm run test:admin-schedule-draft
+\`\`\`bash
+npm run test:agent-compliance
 npm run test:core
-```
-- Review Panel paketi: 56 başarılı, 0 başarısız.
-- Draft Editor paketi: 121 başarılı, 0 başarısız.
-- Core paketi: 539 başarılı, 0 başarısız.
+\`\`\`
+- Agent Compliance paketi: 15 başarılı, 0 başarısız.
+- Core paketi: 495 başarılı, 0 başarısız.
 
-GitHub bu sonuçları bağımsız olarak henüz doğrulamamıştır. Sürücü ortamı kullanılamadığından bu turda Chromium/Playwright çalıştırılamamıştır.
+Bu sonuçlar yalnızca yerel terminal sonuçlarıdır ve bir GitHub CI kanıtı değildir. GitHub bu sonuçları bağımsız olarak henüz doğrulamamıştır. Sürücü ortamı kullanılamadığından bu turda Chromium/Playwright çalıştırılamamıştır.
 
 #### Değişmeyen Bileşenler (Garantiler)
 Draft Editor state yapısı, ScheduleNormalizer algoritması, dashboard görünümleri, backend API rotaları ve veritabanı şeması kesinlikle değiştirilmemiştir. Sadece okunabilir, değişiklik göndermeyen yapısal bir ekleme yapılmıştır.
