@@ -484,7 +484,7 @@ Rules:
 * Verified HEAD before this task:
 
   ```text
-  575fe84 docs: evaluate active schedule simulator presets
+  ab0539f docs: update semantic simulator context
   ```
 * Initial working-tree state:
 
@@ -494,44 +494,41 @@ Rules:
 * Files added/modified during task:
 
   ```text
-  tests/dev-time-simulator.test.js (added)
-  tests/schedule-manager.test.js (modified)
-  package.json (modified)
   public/js/dev-time-simulator.js (modified)
-  public/js/schedule-manager.js (modified)
+  tests/dev-time-simulator.test.js (modified)
   AI_PROJECT_CONTEXT.md (modified)
   ```
-* Semantic preset rules & date construction:
+* Hardening Edge Cases:
 
   ```text
-  Values resolve at click time via getActiveSchedule(). `before-school` is start - 30m, `after-school` is end + 30m, `first-class`, `second-class`, `last-class`, `first-break`, and `longest-break` calculate exact midpoints. Local dates use `new Date(year, monthIndex, day, hours, minutes)` with Tuesday, January 2, 2024 as the weekday anchor and Saturday, January 6, 2024 for the weekend.
-  ```
-* Architecture & event strategy:
-
-  ```text
-  Dynamic click-time resolution ensures fresh schedules without requiring a global `schedule-change` event. Buttons disable and re-enable dynamically during UI focus or mouse entry if the chosen period isn't available in the current schedule, but they are never removed from the DOM and their Turkish labels are preserved.
+  - Strict `HH:MM` rule: Replaced permissive `split` with strict regex `/^(?:[01]\d|2[0-3]):[0-5]\d$/`.
+  - Weekend schedule-independence: Moved `weekend` evaluation to occur before missing schedule checks. `isSemanticPresetAvailable` ensures `weekend` is available without a schedule.
+  - Malformed-period protection: `classes` and `breaks` filters check `p && typeof p === 'object'`.
+  - Stale availability refresh strategy: Added `pointerover`, `focusin`, and `keydown` event listeners to update UI dynamically without global schedule-change events.
+  - Duplicate-initialization guard: `init` exits early if `document.getElementById('dev-time-simulator')` exists.
+  - TimeProvider-unavailable: All buttons disable automatically with a tooltip "Zaman sağlayıcısı kullanılamıyor." if `!window.TimeProvider`.
   ```
 * Exact Node test totals:
 
   ```text
   Persistent ScheduleManager tests: 33
-  Persistent Simulator tests: 24
-  Combined core test total: 57
+  Persistent Simulator tests: 42
+  Combined core test total: 75
   ```
 * Exact Playwright UI test total:
 
   ```text
-  28 passed, 0 failed (verified via real Chromium, no horizontal/vertical overflow)
+  37 passed, 0 failed (verified via real Chromium)
   ```
 * Implementation commit:
 
   ```text
-  eb40b9c feat: derive simulator presets from active schedule
+  e58785e fix: harden semantic simulator edge cases
   ```
 * Documentation commit:
 
   ```text
-  (hash available in Git history) docs: update semantic simulator context
+  (hash available in Git history) docs: record simulator hardening results
   ```
 * Final working-tree state:
 
