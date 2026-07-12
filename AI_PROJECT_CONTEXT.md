@@ -436,7 +436,7 @@ The safe planned sequence is:
 ## 16. Next Recommended Task
 
 ```text
-Integrate the verified schedule normalizer into schedule-manager.js so it can accept an explicitly supplied external schedule, while retaining the existing hardcoded schedule as the fallback.
+Add focused regression coverage for ScheduleManager external injection and evaluate whether simulator presets should derive from the active schedule, without connecting /api/schedule.
 ```
 
 The next task must explicitly state:
@@ -491,26 +491,57 @@ Rules:
 * Verified HEAD before this task:
 
   ```text
-  378efbd feat: add schedule normalizer and validation
+  a8f6235 docs: update AI context after normalizer
   ```
-* Working tree before creating this document update:
+* New commit message:
 
   ```text
-  clean
+  feat: integrate validated schedule fallback
   ```
-* Files modified or created:
+* Working tree state before this document update:
 
   ```text
-  public/js/schedule-normalizer.js (created)
-  AI_PROJECT_CONTEXT.md (modified)
+  clean (with public/index.html and public/js/schedule-manager.js modified)
+  ```
+* Files modified:
+
+  ```text
+  public/index.html
+  public/js/schedule-manager.js
+  AI_PROJECT_CONTEXT.md
+  ```
+* New `ScheduleManager` APIs added:
+
+  ```text
+  setExternalSchedule(rows), clearExternalSchedule(), getActiveSchedule(), getScheduleSource()
+  ```
+* Fallback behaviour:
+
+  ```text
+  Invalid, empty, or missing schedules automatically revert to SCHOOL_SCHEDULE without throwing errors.
+  ```
+* Schedule-gap rejection:
+
+  ```text
+  Any uncovered time gaps between valid periods trigger a SCHEDULE_GAP error and the schedule is rejected to maintain countdown continuity.
   ```
 * Tests performed:
 
   ```text
-  Node regression tests covering 30 edge cases (valid canonical, aliases, whitespace, negative durations, overlaps, exact duplicates, mutability, determinism, browser/node execution, prototype anomalies, warning schedules). All 30 tests passed.
+  Node regression tests covering 19 test conditions including fallback retention, gap detection, array mutability, zero-duration overlaps, browser/node execution, and syntax verification. Playwright UI tests verified no layout overflow and no duplicate scripts.
+  ```
+* Resolved risks:
+
+  ```text
+  Schedule integration logic is now completed without connecting it to the faulty backend API yet.
+  ```
+* Remaining risks:
+
+  ```text
+  Simulator presets remain hardcoded and may be invalid against new schedules. Backend database still lacks the required temporal fields to be safely consumed.
   ```
 * Status:
 
   ```text
-  The schedule normalizer is fully implemented, verified, and committed (378efbd). Task completed successfully.
+  Task completed successfully.
   ```

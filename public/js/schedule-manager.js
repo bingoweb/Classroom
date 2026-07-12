@@ -24,6 +24,57 @@ const SCHOOL_SCHEDULE = {
     schoolEnd: '14:30'
 };
 
+let activeExternalSchedule = null;
+
+function getActiveSchedule() {
+    return activeExternalSchedule || SCHOOL_SCHEDULE;
+}
+
+function getScheduleSource() {
+    return activeExternalSchedule ? 'external' : 'fallback';
+}
+
+function clearExternalSchedule() {
+    activeExternalSchedule = null;
+}
+
+function setExternalSchedule(rows) {
+    const Normalizer = typeof window !== 'undefined' ? window.ScheduleNormalizer : require('./schedule-normalizer.js');
+
+    if (!Normalizer || !Normalizer.normalizeSchedule) {
+        return { accepted: false, reason: 'Normalizer missing' };
+    }
+
+    const result = Normalizer.normalizeSchedule(rows);
+
+    if (!result.valid || result.periods.length === 0) {
+        return { accepted: false, reason: 'Invalid schedule', result };
+    }
+
+    const hasLesson = result.periods.some(p => p.type === 'class');
+    if (!hasLesson) {
+        return { accepted: false, reason: 'No lessons found', result };
+    }
+
+    for (let i = 0; i < result.periods.length - 1; i++) {
+        const current = result.periods[i];
+        const next = result.periods[i + 1];
+        if (current.end !== next.start) {
+            result.valid = false;
+            result.errors.push({ code: 'SCHEDULE_GAP', message: `Gap detected between ${current.end} and ${next.start}.` });
+            return { accepted: false, reason: 'SCHEDULE_GAP', result };
+        }
+    }
+
+    activeExternalSchedule = {
+        periods: result.periods,
+        schoolStart: result.periods[0].start,
+        schoolEnd: result.periods[result.periods.length - 1].end
+    };
+
+    return { accepted: true, source: 'external', result };
+}
+
 /**
  * Saati dakikaya çevir (örn: '09:00' -> 540)
  */
@@ -80,8 +131,10 @@ function getScheduleStatus(now) {
     const currentMin = now.getMinutes();
     const currentTime = currentHour * 60 + currentMin;
 
-    const schoolStartMinutes = timeToMinutes(SCHOOL_SCHEDULE.schoolStart);
-    const schoolEndMinutes = timeToMinutes(SCHOOL_SCHEDULE.schoolEnd);
+    const activeSchedule = getActiveSchedule();
+
+    const schoolStartMinutes = timeToMinutes(activeSchedule.schoolStart);
+    const schoolEndMinutes = timeToMinutes(activeSchedule.schoolEnd);
 
     // Hafta sonu kontrolü
     if (isWeekend(dayIndex)) {
@@ -122,7 +175,7 @@ function getScheduleStatus(now) {
         return {
             mode: 'before-school',
             message: 'Ders Başlamasına Kalan Süre',
-            subtitle: `${SCHOOL_SCHEDULE.schoolStart} - Ders Başlıyor`,
+            subtitle: `${activeSchedule.schoolStart} - Ders Başlıyor`,
             countdown: `${hours}:${String(mins).padStart(2, '0')}`,
             progress: 0,
             visual: 'clock',
@@ -161,12 +214,12 @@ function getScheduleStatus(now) {
     let currentPeriod = null;
     let nextBreak = null;
     let periodProgress = 0;
-    
+
     let nextEventNameStr = null;
     let nextLessonNameStr = null;
 
-    for (let i = 0; i < SCHOOL_SCHEDULE.periods.length; i++) {
-        const period = SCHOOL_SCHEDULE.periods[i];
+    for (let i = 0; i < activeSchedule.periods.length; i++) {
+        const period = activeSchedule.periods[i];
         if (!period || !period.type || !period.name) continue;
 
         const periodStart = timeToMinutes(period.start);
@@ -175,9 +228,9 @@ function getScheduleStatus(now) {
         // Şu anki dönem içindeyiz
         if (currentTime >= periodStart && currentTime < periodEnd) {
             currentPeriod = period;
-            
-            const nextPeriod = findNextPeriod(SCHOOL_SCHEDULE.periods, i);
-            const nextClassPeriod = findNextPeriodByType(SCHOOL_SCHEDULE.periods, i, 'class');
+
+            const nextPeriod = findNextPeriod(activeSchedule.periods, i);
+            const nextClassPeriod = findNextPeriodByType(activeSchedule.periods, i, 'class');
 
             nextEventNameStr = nextPeriod ? nextPeriod.name : 'Okul Sonu';
             nextLessonNameStr = nextClassPeriod ? nextClassPeriod.name : null;
@@ -256,7 +309,11 @@ if (typeof window !== 'undefined') {
         getScheduleStatus,
         isWeekday,
         isWeekend,
-        SCHOOL_SCHEDULE
+        SCHOOL_SCHEDULE,
+        setExternalSchedule,
+        clearExternalSchedule,
+        getActiveSchedule,
+        getScheduleSource
     };
 }
 
@@ -266,7 +323,11 @@ if (typeof module !== 'undefined' && module.exports) {
         getScheduleStatus,
         isWeekday,
         isWeekend,
-        SCHOOL_SCHEDULE
+        SCHOOL_SCHEDULE,
+        setExternalSchedule,
+        clearExternalSchedule,
+        getActiveSchedule,
+        getScheduleSource
     };
 }
 
