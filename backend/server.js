@@ -8,6 +8,7 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const { Logger, COMPONENTS, LOG_LEVELS } = require('./logger');
 const { normalizePath } = require('./utils');
+const { getIstanbulDateKey } = require('./date-utils');
 
 // File deletion utility - prevents code duplication
 function safeDeleteFile(filePath, component = COMPONENTS.API) {
@@ -709,7 +710,7 @@ app.get('/api/stats', (req, res) => {
             db.get("SELECT COUNT(*) as boys FROM students WHERE gender = 'M'", [], (err, boysRow) => {
                 if (err) return res.status(500).json({ error: err.message });
 
-                const today = new Date().toISOString().split('T')[0];
+                const today = getIstanbulDateKey();
                 db.get("SELECT COUNT(*) as present FROM attendance WHERE date = ? AND status = 'present'", [today], (err, presentRow) => {
                     if (err) return res.status(500).json({ error: err.message });
 
@@ -738,7 +739,7 @@ app.get('/api/stats', (req, res) => {
 
 // Get Today's Attendance
 app.get('/api/attendance/today', (req, res) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getIstanbulDateKey();
     const sql = `SELECT attendance.*, students.name, students.gender 
                  FROM attendance 
                  JOIN students ON attendance.student_id = students.id 
