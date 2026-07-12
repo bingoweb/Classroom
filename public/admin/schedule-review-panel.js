@@ -4,24 +4,6 @@ const AdminScheduleReviewPanel = (function() {
         return Object.prototype.toString.call(val) === '[object Object]';
     }
 
-    function createCanonicalDraftRow(row) {
-        if (!isPlainObject(row)) return {};
-        const canonical = {};
-        if (typeof row.name === 'string') canonical.name = row.name.trim();
-        else if (row.name !== undefined && row.name !== null) canonical.name = String(row.name).trim();
-
-        if (typeof row.type === 'string') canonical.type = row.type.trim();
-        else if (row.type !== undefined && row.type !== null) canonical.type = String(row.type).trim();
-
-        if (typeof row.start === 'string') canonical.start = row.start.trim();
-        else if (row.start !== undefined && row.start !== null) canonical.start = String(row.start).trim();
-
-        if (typeof row.end === 'string') canonical.end = row.end.trim();
-        else if (row.end !== undefined && row.end !== null) canonical.end = String(row.end).trim();
-
-        return canonical;
-    }
-
     function areCanonicalRowsEqual(a, b) {
         return a.name === b.name && a.type === b.type && a.start === b.start && a.end === b.end;
     }
@@ -75,19 +57,39 @@ const AdminScheduleReviewPanel = (function() {
 
     function compareSchedules(sourceSnapshot, draftRows) {
         if (!Array.isArray(sourceSnapshot) || !Array.isArray(draftRows)) {
-            return { status: 'invalid-input' };
+            return { status: 'invalid-input', side: 'root' };
         }
 
         const sourceCanonicals = [];
         for (let i = 0; i < sourceSnapshot.length; i++) {
-            if (!isPlainObject(sourceSnapshot[i])) return { status: 'invalid-input' };
-            sourceCanonicals.push(createCanonicalDraftRow(sourceSnapshot[i]));
+            const row = sourceSnapshot[i];
+            if (!isPlainObject(row)) return { status: 'invalid-input', side: 'source', index: i, field: 'row' };
+            if (typeof row.name !== 'string') return { status: 'invalid-input', side: 'source', index: i, field: 'name' };
+            if (typeof row.type !== 'string') return { status: 'invalid-input', side: 'source', index: i, field: 'type' };
+            if (typeof row.start !== 'string') return { status: 'invalid-input', side: 'source', index: i, field: 'start' };
+            if (typeof row.end !== 'string') return { status: 'invalid-input', side: 'source', index: i, field: 'end' };
+            sourceCanonicals.push({
+                name: row.name.trim(),
+                type: row.type.trim(),
+                start: row.start.trim(),
+                end: row.end.trim()
+            });
         }
 
         const draftCanonicals = [];
-        for (let i = 0; i < draftRows.length; i++) {
-            if (!isPlainObject(draftRows[i])) return { status: 'invalid-input' };
-            draftCanonicals.push(createCanonicalDraftRow(draftRows[i]));
+        for (let j = 0; j < draftRows.length; j++) {
+            const row = draftRows[j];
+            if (!isPlainObject(row)) return { status: 'invalid-input', side: 'draft', index: j, field: 'row' };
+            if (typeof row.name !== 'string') return { status: 'invalid-input', side: 'draft', index: j, field: 'name' };
+            if (typeof row.type !== 'string') return { status: 'invalid-input', side: 'draft', index: j, field: 'type' };
+            if (typeof row.start !== 'string') return { status: 'invalid-input', side: 'draft', index: j, field: 'start' };
+            if (typeof row.end !== 'string') return { status: 'invalid-input', side: 'draft', index: j, field: 'end' };
+            draftCanonicals.push({
+                name: row.name.trim(),
+                type: row.type.trim(),
+                start: row.start.trim(),
+                end: row.end.trim()
+            });
         }
 
         const { sourceMatches, draftMatches, length: unchangedCount } = computeLCS(sourceCanonicals, draftCanonicals);
@@ -185,7 +187,7 @@ const AdminScheduleReviewPanel = (function() {
         };
     }
 
-    function createDomScheduleReviewPanelView(document) {
+    function createScheduleReviewPanelView(document) {
         
         function formatType(typeValue) {
             if (typeValue === 'class') return 'Ders';
@@ -198,40 +200,30 @@ const AdminScheduleReviewPanel = (function() {
             return `${row.start || '-'} - ${row.end || '-'} | ${t} | ${row.name || '-'}`;
         }
 
+        function getContainer() {
+            const container = document.getElementById('srpContainer');
+            if (!container) throw new Error('dependency-container');
+            return container;
+        }
+
         return {
-            render(state) {
-                const container = document.getElementById('srpContainer');
-                if (!container) return; // Optional in DOM
-
-                if (!state || !state.initialized) {
-                    container.textContent = 'Karşılaştırma için program henüz hazırlanmadı.';
-                    container.style.color = '#64748b';
-                    return;
-                }
-
-                if (!state.sourceAvailable) {
-                    container.textContent = 'Geçerli kaynak program alınamadığı için karşılaştırma yapılamıyor.';
-                    container.style.color = '#f59e0b';
-                    return;
-                }
-
-                // If view rendering throws, draft editor catches it, but this view should ideally be robust.
-                // Draft editor guarantees state.sourceSnapshot and state.draft are arrays.
-                let comparison;
-                try {
-                    comparison = compareSchedules(state.sourceSnapshot, state.draft);
-                } catch (e) {
-                    container.textContent = 'Karşılaştırma sırasında bir hata oluştu.';
-                    container.style.color = '#ef4444';
-                    return;
-                }
-
-                if (comparison.status === 'invalid-input') {
-                    container.textContent = 'Geçersiz veri formatı nedeniyle karşılaştırma yapılamıyor.';
-                    container.style.color = '#ef4444';
-                    return;
-                }
-
+            renderNotInitialized() {
+                const container = getContainer();
+                container.textContent = 'Karşılaştırma için program henüz hazırlanmadı.';
+                container.style.color = '#64748b';
+            },
+            renderSourceUnavailable() {
+                const container = getContainer();
+                container.textContent = 'Geçerli kaynak program alınamadığı için karşılaştırma yapılamıyor.';
+                container.style.color = '#f59e0b';
+            },
+            renderInvalidInput() {
+                const container = getContainer();
+                container.textContent = 'Geçersiz veri biçimi nedeniyle karşılaştırma yapılamıyor.';
+                container.style.color = '#ef4444';
+            },
+            renderComparison(comparison) {
+                const container = getContainer();
                 container.replaceChildren();
 
                 // Explanatory Notice
@@ -264,7 +256,10 @@ const AdminScheduleReviewPanel = (function() {
                 cAdded.style.border = '1px solid #10b981';
                 cAdded.style.borderRadius = '8px';
                 cAdded.style.color = '#047857';
-                cAdded.innerHTML = `<strong>Eklenen:</strong> ${comparison.counts.added}`;
+                const sAdded = document.createElement('strong');
+                sAdded.textContent = 'Eklenen: ';
+                cAdded.appendChild(sAdded);
+                cAdded.appendChild(document.createTextNode(comparison.counts.added));
                 countsDiv.appendChild(cAdded);
 
                 const cRemoved = document.createElement('div');
@@ -273,7 +268,10 @@ const AdminScheduleReviewPanel = (function() {
                 cRemoved.style.border = '1px solid #ef4444';
                 cRemoved.style.borderRadius = '8px';
                 cRemoved.style.color = '#b91c1c';
-                cRemoved.innerHTML = `<strong>Kaldırılan:</strong> ${comparison.counts.removed}`;
+                const sRemoved = document.createElement('strong');
+                sRemoved.textContent = 'Kaldırılan: ';
+                cRemoved.appendChild(sRemoved);
+                cRemoved.appendChild(document.createTextNode(comparison.counts.removed));
                 countsDiv.appendChild(cRemoved);
 
                 const cChanged = document.createElement('div');
@@ -282,7 +280,10 @@ const AdminScheduleReviewPanel = (function() {
                 cChanged.style.border = '1px solid #3b82f6';
                 cChanged.style.borderRadius = '8px';
                 cChanged.style.color = '#1d4ed8';
-                cChanged.innerHTML = `<strong>Değiştirilen:</strong> ${comparison.counts.changed}`;
+                const sChanged = document.createElement('strong');
+                sChanged.textContent = 'Değiştirilen: ';
+                cChanged.appendChild(sChanged);
+                cChanged.appendChild(document.createTextNode(comparison.counts.changed));
                 countsDiv.appendChild(cChanged);
 
                 const cUnchanged = document.createElement('div');
@@ -291,7 +292,10 @@ const AdminScheduleReviewPanel = (function() {
                 cUnchanged.style.border = '1px solid #cbd5e1';
                 cUnchanged.style.borderRadius = '8px';
                 cUnchanged.style.color = '#475569';
-                cUnchanged.innerHTML = `<strong>Değişmeyen:</strong> ${comparison.counts.unchanged}`;
+                const sUnchanged = document.createElement('strong');
+                sUnchanged.textContent = 'Değişmeyen: ';
+                cUnchanged.appendChild(sUnchanged);
+                cUnchanged.appendChild(document.createTextNode(comparison.counts.unchanged));
                 countsDiv.appendChild(cUnchanged);
 
                 container.appendChild(countsDiv);
@@ -361,27 +365,100 @@ const AdminScheduleReviewPanel = (function() {
                         prevDiv.style.fontSize = '0.9rem';
                         prevDiv.style.color = '#ef4444';
                         prevDiv.style.textDecoration = 'line-through';
-                        prevDiv.textContent = createRowText(item.before);
+                        prevDiv.textContent = `Önceki değer: ${createRowText(item.before)}`;
                         li.appendChild(prevDiv);
 
                         const newDiv = document.createElement('div');
                         newDiv.style.fontSize = '0.9rem';
                         newDiv.style.color = '#10b981';
-                        newDiv.textContent = createRowText(item.after);
+                        newDiv.textContent = `Taslak değeri: ${createRowText(item.after)}`;
                         li.appendChild(newDiv);
 
                         chList.appendChild(li);
                     });
                     container.appendChild(chList);
                 }
+            }
+        };
+    }
 
+    function createScheduleReviewPanelController({ view, logger }) {
+        return {
+            renderEditorState(editorState) {
+                if (!view) {
+                    return { status: 'dependency-error', dependency: 'view', rendered: false };
+                }
+
+                if (!editorState || !editorState.initialized) {
+                    try {
+                        view.renderNotInitialized();
+                        return { status: 'not-initialized', rendered: true };
+                    } catch (e) {
+                        if (e.message === 'dependency-container') {
+                            return { status: 'dependency-error', dependency: 'container', rendered: false };
+                        }
+                        return { status: 'render-error', dependency: 'view', rendered: false };
+                    }
+                }
+
+                if (!editorState.sourceAvailable) {
+                    try {
+                        view.renderSourceUnavailable();
+                        return { status: 'source-unavailable', rendered: true };
+                    } catch (e) {
+                        if (e.message === 'dependency-container') {
+                            return { status: 'dependency-error', dependency: 'container', rendered: false };
+                        }
+                        return { status: 'render-error', dependency: 'view', rendered: false };
+                    }
+                }
+
+                let comparison;
+                try {
+                    comparison = compareSchedules(editorState.sourceSnapshot, editorState.draft);
+                } catch (e) {
+                    return { status: 'render-error', dependency: 'view', rendered: false };
+                }
+
+                if (comparison.status === 'invalid-input') {
+                    try {
+                        view.renderInvalidInput();
+                        return { 
+                            status: 'invalid-input', 
+                            side: comparison.side, 
+                            index: comparison.index, 
+                            field: comparison.field, 
+                            rendered: true 
+                        };
+                    } catch (e) {
+                        if (e.message === 'dependency-container') {
+                            return { status: 'dependency-error', dependency: 'container', rendered: false };
+                        }
+                        return { status: 'render-error', dependency: 'view', rendered: false };
+                    }
+                }
+
+                try {
+                    view.renderComparison(comparison);
+                    return { 
+                        status: 'ok', 
+                        rendered: true, 
+                        comparison: JSON.parse(JSON.stringify(comparison)) 
+                    };
+                } catch (e) {
+                    if (e.message === 'dependency-container') {
+                        return { status: 'dependency-error', dependency: 'container', rendered: false };
+                    }
+                    return { status: 'render-error', dependency: 'view', rendered: false };
+                }
             }
         };
     }
 
     return {
         compareSchedules,
-        createDomScheduleReviewPanelView
+        createScheduleReviewPanelView,
+        createScheduleReviewPanelController
     };
 
 })();

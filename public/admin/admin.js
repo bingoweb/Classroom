@@ -2101,11 +2101,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let compositeView = editorView;
         if (window.AdminScheduleReviewPanel) {
-            const reviewView = window.AdminScheduleReviewPanel.createDomScheduleReviewPanelView(document);
+            const reviewView = window.AdminScheduleReviewPanel.createScheduleReviewPanelView(document);
+            window.scheduleReviewPanelController = window.AdminScheduleReviewPanel.createScheduleReviewPanelController({
+                view: reviewView,
+                logger: typeof logger !== 'undefined' ? logger : null
+            });
             compositeView = {
                 render: function(state) {
                     editorView.render(state);
-                    reviewView.render(state);
+                    window.scheduleReviewPanelController.renderEditorState(state);
                 }
             };
         }
