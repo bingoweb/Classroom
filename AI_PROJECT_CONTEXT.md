@@ -98,6 +98,7 @@
 * `public/index.html`: The main dashboard HTML layout utilizing the bento-grid.
 * `public/css/style.css`: The styling file for the main dashboard (glassmorphism, layout, typography).
 * `public/js/script.js`: Main frontend logic connecting components, rendering the dashboard, and making API calls.
+* `public/js/schedule-normalizer.js`: A pure, dependency-free validation layer that normalizes and validates external schedule arrays.
 * `public/js/schedule-manager.js`: Handles lesson schedules, active period detection, and countdown generation logic.
 * `public/js/time-provider.js`: Abstracts time retrieval to support dev simulation or real time.
 * `public/js/dev-time-simulator.js`: A development toolbar that controls and mocks time states.
@@ -226,6 +227,18 @@ Current behaviour:
 * The simulator JavaScript file is downloaded in normal mode but exits before initialisation.
 * No duplicate timer is created.
 
+## 8.5. Schedule Normalizer Layer
+
+The `public/js/schedule-normalizer.js` file provides a pure, dependency-free validation layer.
+
+* **Public API:** `window.ScheduleNormalizer.normalizeSchedule(rows)` returns `{ periods, warnings, errors, valid }`.
+* **Accepted Aliases:** `course` for `name`, `period_type` for `type`, `start_time` for `start`, `end_time` for `end`.
+* **Turkish Types:** `Ders`, `lesson` -> `class`; `Teneffüs`, `ara`, `recess` -> `break`.
+* **Validation Behaviour:** Drops rows with invalid/missing times, unknown types, or zero/negative durations with structured warnings. Exact duplicates are skipped.
+* **Overlap Handling:** Detects intersecting times, triggers a fatal `OVERLAP` error, and marks the schedule `valid: false`.
+* **Non-Mutation:** Deeply guarantees that original input objects and arrays remain strictly untouched.
+* **Connection Status:** Currently **not connected** to the dashboard, admin panel, or any other system.
+
 ## 9. Current Hardcoded School Schedule
 
 | Index | Name               | Type  | Start | End   |
@@ -304,6 +317,11 @@ Do not connect the current dashboard directly to the current schedule API. The d
 
 * Missing start/end time and type fields.
 * Current backend rows cannot represent breaks or countdown duration.
+
+### Schedule normalisation integration
+
+* The pure `schedule-normalizer.js` validation layer now exists.
+* Integration with `schedule-manager.js` and fallback selection are still pending.
 
 ### Simulator preset coupling
 
@@ -403,8 +421,8 @@ The project is moving toward a validated, dynamic lesson-schedule system while p
 
 The safe planned sequence is:
 
-1. Add a pure schedule normalisation and validation layer.
-2. Test malformed, unsorted, overlapping, and incomplete input.
+1. Add a pure schedule normalisation and validation layer (COMPLETED).
+2. Test malformed, unsorted, overlapping, and incomplete input (COMPLETED).
 3. Allow `schedule-manager.js` to consume a validated schedule.
 4. Keep the current hardcoded schedule as fallback.
 5. Upgrade the backend schedule schema.
@@ -416,38 +434,16 @@ The safe planned sequence is:
 ## 16. Next Recommended Task
 
 ```text
-Create a pure schedule normalizer and validator without connecting the backend API.
+Integrate the verified schedule normalizer into schedule-manager.js while retaining the current hardcoded schedule as fallback.
 ```
 
-The normalizer should eventually:
+The integration should:
+* allow `schedule-manager.js` to accept a validated schedule from an external source (such as the backend API)
+* continue using `SCHOOL_SCHEDULE` seamlessly if the external schedule is empty or invalid
+* safely handle validation warnings
+* connect the schedule fetching to the frontend (e.g. via `api-service.js`) only when it's safe to do so
 
-* accept an array of external schedule rows
-* validate required fields
-* normalise names and types
-* parse `HH:MM` values
-* reject invalid times
-* sort by start time
-* detect overlaps
-* detect zero or negative durations
-* ignore malformed entries safely
-* return validation warnings
-* avoid mutating its input
-* preserve the existing hardcoded schedule as fallback
-
-Likely initial file scope:
-
-* new file:
-
-  ```text
-  public/js/schedule-normalizer.js
-  ```
-* possible later integration:
-
-  ```text
-  public/js/schedule-manager.js
-  ```
-
-State clearly that the API, database, and admin panel must not be changed in the first normalizer task.
+State clearly that the database and admin panel must not be changed until frontend integration is stable.
 
 ## 17. Update Protocol for Every Future Task
 
@@ -491,18 +487,24 @@ Rules:
   ```text
   ilk-surum-gelistirme
   ```
-* Verified HEAD:
+* Verified HEAD before this task:
 
   ```text
-  9d4c658
+  e6d65dc docs: add persistent AI project context
   ```
-* Working tree before creating this document:
+* Files modified or created:
 
   ```text
-  clean
+  public/js/schedule-normalizer.js (created)
+  AI_PROJECT_CONTEXT.md (modified)
   ```
-* Current next task:
+* Tests performed:
 
   ```text
-  Create a pure schedule normalizer and validator without connecting the backend API.
+  Node regression tests covering 20 edge cases (valid canonical, aliases, whitespace, negative durations, overlaps, exact duplicates, mutability, and determinism). All 20 tests passed.
+  ```
+* Status:
+
+  ```text
+  The schedule normalizer is fully implemented and verified but NOT YET COMMITTED.
   ```
