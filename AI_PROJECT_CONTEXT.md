@@ -1121,3 +1121,38 @@ Rules:
   ```text
   Build the first read-only schedule diagnostics section in the admin panel.
   ```
+
+---
+
+## Task 10: Publish Dashboard Loader Persistent Tests
+
+* Objective: Complete the missing persistent-test publication and documentation correction for the dashboard normalized-schedule integration.
+* Implementation Hash:
+
+  ```text
+  332ef18167e8b6d4f12baaf1c945fd0f7d58dbe8
+  ```
+* Files added/modified during task:
+
+  ```text
+  tests/dashboard-schedule-loader.test.js (added)
+  public/js/dashboard-schedule-loader.js (modified)
+  package.json (modified)
+  ```
+* Final verification results:
+
+  ```text
+  Loader tests: 55
+  Combined core test total: 219
+  UI tests: 24 passed, 0 failed
+  ```
+* Final working-tree state:
+
+  ```text
+  clean (after committing this documentation)
+  ```
+* Next recommended task:
+
+  ```text
+  Build the first read-only schedule diagnostics section in the admin panel.
+  ```
