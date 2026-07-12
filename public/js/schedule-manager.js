@@ -56,6 +56,20 @@ function isWeekend(dayIndex) {
 }
 
 /**
+ * İleriye dönük geçerli bir periyodu bul (type veya name kontrolü yaparak null değerleri atlar)
+ */
+function findNextPeriod(periods, currentIndex) {
+    return periods.slice(currentIndex + 1).find(p => p && p.type && p.name) || null;
+}
+
+/**
+ * İleriye dönük belirli bir tipe sahip periyodu bul
+ */
+function findNextPeriodByType(periods, currentIndex, type) {
+    return periods.slice(currentIndex + 1).find(p => p && p.type === type && p.name) || null;
+}
+
+/**
  * Mevcut zamanın durumunu belirle
  * @param {Date} now - Şu anki zaman
  * @returns {Object} - { mode, message, countdown, progress, visual }
@@ -153,23 +167,27 @@ function getScheduleStatus(now) {
 
     for (let i = 0; i < SCHOOL_SCHEDULE.periods.length; i++) {
         const period = SCHOOL_SCHEDULE.periods[i];
+        if (!period || !period.type || !period.name) continue;
+
         const periodStart = timeToMinutes(period.start);
         const periodEnd = timeToMinutes(period.end);
 
         // Şu anki dönem içindeyiz
         if (currentTime >= periodStart && currentTime < periodEnd) {
             currentPeriod = period;
+            
+            const nextPeriod = findNextPeriod(SCHOOL_SCHEDULE.periods, i);
+            const nextClassPeriod = findNextPeriodByType(SCHOOL_SCHEDULE.periods, i, 'class');
 
-            // Eğer ders ise, bir sonraki teneffüsü bul
+            nextEventNameStr = nextPeriod ? nextPeriod.name : 'Okul Sonu';
+            nextLessonNameStr = nextClassPeriod ? nextClassPeriod.name : null;
+
             if (period.type === 'class') {
-                nextEventNameStr = i < SCHOOL_SCHEDULE.periods.length - 1 ? SCHOOL_SCHEDULE.periods[i + 1].name : 'Okul Sonu';
-                nextLessonNameStr = i < SCHOOL_SCHEDULE.periods.length - 2 ? SCHOOL_SCHEDULE.periods[i + 2].name : null;
-
-                // Bu dersin bitiş zamanı = teneffüs başlangıcı
+                // Bu dersin bitiş zamanı = sonraki etkinliğin başlangıcı
                 nextBreak = {
                     time: periodEnd,
                     name: nextEventNameStr,
-                    duration: i < SCHOOL_SCHEDULE.periods.length - 1 ? SCHOOL_SCHEDULE.periods[i + 1].duration : 0
+                    duration: nextPeriod && nextPeriod.duration ? nextPeriod.duration : 0
                 };
 
                 // Progress hesapla
@@ -177,14 +195,11 @@ function getScheduleStatus(now) {
                 const elapsed = currentTime - periodStart;
                 periodProgress = Math.min(100, Math.max(0, (elapsed / periodDuration) * 100));
             } else {
-                nextEventNameStr = i < SCHOOL_SCHEDULE.periods.length - 1 ? SCHOOL_SCHEDULE.periods[i + 1].name : 'Okul Sonu';
-                nextLessonNameStr = i < SCHOOL_SCHEDULE.periods.length - 1 ? SCHOOL_SCHEDULE.periods[i + 1].name : null;
-
-                // Teneffüsteyiz, bir sonraki dersin başlangıcını bul
-                if (i < SCHOOL_SCHEDULE.periods.length - 1) {
+                // Teneffüsteyiz
+                if (nextPeriod) {
                     nextBreak = {
                         time: periodEnd,
-                        name: SCHOOL_SCHEDULE.periods[i + 1].name,
+                        name: nextPeriod.name,
                         duration: 0
                     };
                 }
