@@ -1328,5 +1328,27 @@ GitHub bu sonuçları bağımsız olarak henüz doğrulamamıştır. Sürücü o
 #### Değişmeyen Bileşenler (Garantiler)
 Draft Editor state yapısı, ScheduleNormalizer algoritması, dashboard görünümleri, backend API rotaları ve veritabanı şeması kesinlikle değiştirilmemiştir. Sadece okunabilir, değişiklik göndermeyen yapısal bir ekleme yapılmıştır.
 
+### 10. Agent Compliance Guardrails
+
+**Tarih:** 2026-07-13
+**Başlangıç Hash (Remote HEAD):** `ec0745265e5514b69727b4d26e8fd7b86454c871`
+**Implementation Message:** `chore: add executable agent compliance guardrails`
+
+#### Eklenen ve Değiştirilen Dosyalar
+- `AGENTS.md`
+- `agent-policy.json`
+- `scripts/verify-agent-compliance.js`
+- `tests/agent-compliance.test.js`
+- `.githooks/pre-commit`
+- `.github/workflows/agent-compliance.yml`
+- `package.json`
+
+#### Mimari Özellikleri
+- **Executable Policy Checker:** Yazılı kuralları otomatik olarak doğrulayan bağımsız (third-party kütüphane içermeyen) Node.js betiği oluşturuldu.
+- **Git Hook & Actions:** Kuralların her commit öncesi `.githooks/pre-commit` ve her push/PR durumunda `.github/workflows/agent-compliance.yml` ile zorunlu kılınması sağlandı. GitHub yapılandırması repo üzerinde bağımsız olarak aktif edilmelidir.
+- **Agent Policy JSON:** Kod kalite kuralları, yasaklı Git komutları (`git add .` vb.), yasaklı test kalıpları (padding, `.skip`), güvenli DOM API (`innerHTML` yasakları) ve gerekli script sıralamaları JSON ile deklaratif hale getirildi.
+- **Compliance Testing:** Kendi ihlallerini doğrulayabilen 12 adet test içeren davranışsal test paketi `tests/agent-compliance.test.js` eklendi. Toplam core test sayısı 551 olmuştur.
+
 #### Bir Sonraki Önerilen Görev
 Design and implement the actual persistence mechanism (e.g. Save Button) that sends the draft via PUT request to the backend and handles errors gracefully.
+
