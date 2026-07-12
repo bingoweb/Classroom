@@ -897,11 +897,11 @@ Rules:
 * Exact persistent suite totals from final runs:
 
   ```text
-  ScheduleManager tests: 142
+  ScheduleManager tests: 33
   Simulator tests: 42
   Backend Date tests: 20
   Backend Schedule tests: 47
-  Combined core test total: 251
+  Combined core test total: 142
   ```
 * Exact API smoke-test outcomes:
 
@@ -938,3 +938,109 @@ Rules:
   ```text
   Connect the dashboard to GET /api/schedule/normalized through a guarded loader that activates ScheduleManager external schedules only when the backend response is valid, while preserving permanent fallback behaviour and without building the admin editor yet.
   ```
+
+## 22. Last Context Update
+
+* Date:
+
+  ```text
+  2026-07-12
+  ```
+* Verified branch:
+
+  ```text
+  ilk-surum-gelistirme
+  ```
+* Verified HEAD before this task:
+
+  ```text
+  2c00d5e docs: record schedule API hardening
+  ```
+* Initial working-tree state:
+
+  ```text
+  clean
+  ```
+* Implementation commit hash and message:
+
+  ```text
+  51889df test: correct schedule API contracts and totals
+  ```
+* Files added/modified during task:
+
+  ```text
+  backend/schedule-service.js (modified)
+  backend/server.js (modified)
+  tests/backend-schedule.test.js (modified)
+  AI_PROJECT_CONTEXT.md (modified)
+  ```
+* Corrected test-count arithmetic:
+
+  ```text
+  Fixed incorrect persistent test totals from a previous task. ScheduleManager tests count was mistakenly recorded as 142 instead of 33, causing the combined core test total to be mistakenly listed as 251 instead of 142.
+  ```
+* `isValidDayKey(undefined)` root cause and fix:
+
+  ```text
+  The function resolveScheduleDayKey used `options.defaultDay || 'weekday'`, which incorrectly resolved `undefined` to truthy 'weekday'. It was fixed to use `Object.prototype.hasOwnProperty.call(options, 'defaultDay')`.
+  ```
+* Invalid-day GET response code:
+
+  ```text
+  The GET route for invalid days now correctly returns HTTP 400 with both `code: 'INVALID_SCHEDULE_DAY'` and `error: 'Geçersiz gün anahtarı.'`.
+  ```
+* Remaining `assert.ok(true)` removal:
+
+  ```text
+  The last placeholder migration test (Migration may run twice without failure) was replaced with genuine schema checks verifying columns and indices.
+  ```
+* Persistent HTTP tests added:
+
+  ```text
+  21 new persistent HTTP tests were added to tests/backend-schedule.test.js.
+  ```
+* Assertion strategy change:
+
+  ```text
+  Changed assertion strategy from `console.assert` to `node:assert/strict` inside integration tests.
+  ```
+* Exact persistent suite totals from final runs:
+
+  ```text
+  ScheduleManager tests: 33
+  Simulator tests: 42
+  Backend Date tests: 20
+  Backend Schedule tests: 69
+  Combined core test total: 164
+  ```
+* Smoke-test result:
+
+  ```text
+  All 21 persistent HTTP integration tests passed (throwing assertions via node:assert/strict).
+  ```
+* 503 result:
+
+  ```text
+  Migration-failure path verified. An unusable database location results in HTTP 503, code SCHEDULE_STORAGE_UNAVAILABLE, with no SQLite path, errno or stack exposed.
+  ```
+* Playwright result:
+
+  ```text
+  UI tests: 37 passed, 0 failed.
+  ```
+* Confirmation that the real database was untouched:
+
+  ```text
+  backend/classroom.db and other real project artifacts were not touched or committed. All execution used isolated temporary DB paths.
+  ```
+* Final working-tree state:
+
+  ```text
+  clean (after committing this documentation)
+  ```
+* Next recommended task:
+
+  ```text
+  Connect the dashboard to GET /api/schedule/normalized through a guarded loader that activates ScheduleManager external schedules only when the backend response is valid, while preserving permanent fallback behaviour and without building the admin editor yet.
+  ```
+
