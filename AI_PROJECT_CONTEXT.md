@@ -1162,13 +1162,17 @@ Rules:
 ## Task 11: Admin Schedule Diagnostics Integration
 
 * Objective: Build a read-only diagnostics section in the admin panel to display normalized schedule status.
-* Starting HEAD: `8f177e6`
+* Starting HEAD: `ec14fc4`
+* Date: 2026-07-13T00:08:38+03:00
 * Critical Defects Resolved:
   * Fixed `APIService` class-versus-instance defect by using instantiated `window.api`.
   * Enforced strict required-array contract for `warnings` and `errors`.
   * Safely mapped database invalid state (`valid === false`) to an explicit `'invalid'` UI state (`Geçersiz`).
   * Preserved legacy diagnostics (`warnings` and `errors`) correctly when rendering `legacy-incomplete` or `empty`.
   * Implemented safe dependency-error handling instead of throwing to the UI.
+  * Corrected malformed API dependency detection (checking for `request` function).
+  * Implemented a plain-object response policy, safely handling arrays, nulls, Date, or class instances as safe invalid state.
+  * Implemented a strict malformed diagnostic-entry policy, safely treating missing codes as invalid state.
 * Files added/modified during task:
 
   ```text
@@ -1182,18 +1186,19 @@ Rules:
 * Final verification results:
 
   ```text
-  Exact numbered behaviour tests: 65
-  Exact Node diagnostics test total: 65
-  Combined six-suite Node test total: 284 (219 + 65)
+  Exact numbered behaviour tests: 84
+  Exact Node diagnostics test total: 84
+  Combined six-suite Node test total: 303 (219 + 84)
   Exact dashboard Chromium result: 24 passed, 0 failed
-  Exact diagnostics Chromium result: 42 passed, 0 failed
+  Exact diagnostics (admin) Chromium result: 46 passed, 0 failed
   ```
 * Rendering Guarantees:
   * GET-only guarantee verified (no modifying requests).
   * XSS-safe rendering verified (only textContent/createElement, no innerHTML).
   * Simulated temporary database strategy for Chromium coverage.
-* Expected Expected console messages: Network transport failure logs are properly generated and trapped without throwing.
+* Expected console messages: Network transport failure logs are properly generated and trapped without throwing.
 * Final working-tree state: clean (after committing this documentation)
+* Remaining risks: The dashboard might still behave unexpectedly under severe network instability, though it falls back defensively.
 * Next recommended task:
 
   ```text
