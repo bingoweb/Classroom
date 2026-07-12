@@ -426,7 +426,7 @@ test('malformed view render throw is caught', () => {
     const throwingView = { render: () => { throw new Error("Render error"); } };
     const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: throwingView });
     const res = controller.loadSourcePeriods([{ name: 'A' }]);
-    assert.equal(res.status, 'initialized');
+    assert.equal(res.status, 'render-error');
     assert.equal(res.changed, true);
 });
 test('getState exposes safe dependency status', () => {
@@ -479,6 +479,10 @@ test('translateDraftIssueCode handles warning prevents ready', () => {
 // Static guarantees via parsing
 const htmlContent = fs.readFileSync(path.join(__dirname, '..', 'public', 'admin', 'index.html'), 'utf8');
 const scriptContent = fs.readFileSync(path.join(__dirname, '..', 'public', 'admin', 'schedule-draft-editor.js'), 'utf8');
+const adminContent = fs.readFileSync(path.join(__dirname, '..', 'public', 'admin', 'admin.js'), 'utf8');
+const normalizerContent = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'schedule-normalizer.js'), 'utf8');
+const normalizerFactory = new Function('module', normalizerContent + '\nreturn ScheduleNormalizer;');
+const realNormalizer = normalizerFactory({});
 
 test('HTML buttons use type="button"', () => {
     assert.match(htmlContent, /<button type="button" id="sdeAddRowBtn"/);
@@ -524,89 +528,312 @@ test('No dynamic innerHTML in draft editor script', () => {
     assert.equal(scriptContent.includes('.innerHTML'), false);
 });
 test('structured diagnostics result is passed directly to editor (no DOM rereading)', () => {
-    assert.equal(scriptContent.includes('document.getElementById('), true); // only for UI updating, not reading state
-    assert.equal(scriptContent.includes('.innerText'), false); // ensure no reading from DOM
+    assert.match(adminContent, /const\s+result\s*=\s*await\s+window\.scheduleDiagnosticsController\.load\(\);/);
+    assert.match(adminContent, /window\.scheduleDraftEditorController\.acceptDiagnosticsResult\(result\);/);
+    assert.equal(adminContent.includes('innerText = result'), false);
 });
 test('unknown type is preserved correctly in edit view rendering', () => {
-    // Verified implicitly by script not rewriting unknown types to class
-    assert.equal(true, true);
+    const row = createCanonicalDraftRow({ type: 'unknown_magic' });
+    assert.equal(row.type, 'unknown_magic');
 });
 test('no schedule write requests in draft editor script', () => {
     assert.equal(scriptContent.includes('request('), false);
 });
-test('missing normalizer validation does not break', () => {
-    assert.equal(true, true);
+test('missing normalizer validation returns dependency-error', () => {
+    const controller = createScheduleDraftEditorController({ view: createMockView() });
+    controller.acceptDiagnosticsResult({ state: 'valid', valid: true, periods: [{ name: 'A' }] });
+    const res = controller.validate();
+    assert.equal(res.status, 'dependency-error');
 });
-test('missing view mutation does not break', () => {
-    assert.equal(true, true);
+test('missing view mutation returns dependency-error', () => {
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer() });
+    controller.acceptDiagnosticsResult({ state: 'valid', valid: true, periods: [{ name: 'A' }] });
+    const res = controller.addRow();
+    assert.equal(res.status, 'dependency-error');
 });
 test('all translations are ignored for raw english messages', () => {
-    assert.equal(true, true);
+    const tr = translateDraftIssueCode('INPUT_NOT_ARRAY');
+    assert.notEqual(tr, 'INPUT_NOT_ARRAY');
+    assert.ok(tr.includes('dizi'));
 });
 test('ID stability check', () => {
-    assert.equal(true, true);
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    const id = controller.getState().draft[0].id;
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    assert.equal(controller.getState().draft[0].id, id);
 });
 test('automatic revalidation on editing', () => {
-    assert.equal(true, true);
+    let calls = 0;
+    const normalizer = {
+        normalizeSchedule: (rows) => { calls++; return { valid: true, periods: rows, warnings: [], errors: [] }; }
+    };
+    const controller = createScheduleDraftEditorController({ normalizer, view: createMockView() });
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    const prevCalls = calls;
+    controller.updateRow(controller.getState().draft[0].id, { name: 'B' });
+    assert.equal(calls, prevCalls + 1);
 });
 test('dirty state clearing after returning to source', () => {
-    assert.equal(true, true);
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    const id = controller.getState().draft[0].id;
+    controller.updateRow(id, { name: 'B' });
+    assert.equal(controller.getState().dirty, true);
+    controller.updateRow(id, { name: 'A' });
+    assert.equal(controller.getState().dirty, false);
 });
 test('empty draft is invalid', () => {
-    assert.equal(true, true);
+    const res = createDraftValidationResult({ valid: true, periods: [], warnings: [], errors: [] }, 0);
+    assert.equal(res.ready, false);
 });
 test('defensive validation copies', () => {
-    assert.equal(true, true);
+    const result = { valid: true, periods: [{ name: 'A' }], warnings: [], errors: [] };
+    const res = createDraftValidationResult(result, 1);
+    result.periods[0].name = 'B';
+    assert.equal(res.normalizedPeriods[0].name, 'A');
 });
 test('row-count mismatch prevents ready', () => {
-    assert.equal(true, true);
-});
-test('sorted normalized preview is checked', () => {
-    assert.equal(true, true);
+    const res = createDraftValidationResult({ valid: true, periods: [{ name: 'A' }], warnings: [], errors: [] }, 2);
+    assert.equal(res.ready, false);
 });
 test('ignored unknown patch fields is validated', () => {
-    assert.equal(true, true);
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    const id = controller.getState().draft[0].id;
+    controller.updateRow(id, { name: 'B', unknown: 'C' });
+    assert.equal(controller.getState().draft[0].unknown, undefined);
 });
 test('unknown remove ID returns not-found', () => {
-    assert.equal(true, true);
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    const res = controller.removeRow('123');
+    assert.equal(res.status, 'not-found');
 });
-test('valid initialization sets state correctly', () => {
-    assert.equal(true, true);
+test('valid initialization creates separate source and draft objects', () => {
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    const state = controller.getState();
+    assert.notEqual(state.sourceSnapshot, state.draft);
+    assert.notEqual(state.sourceSnapshot[0], state.draft[0]);
 });
 test('valid empty initialization sets state correctly', () => {
-    assert.equal(true, true);
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.loadSourcePeriods([]);
+    const state = controller.getState();
+    assert.equal(state.initialized, true);
+    assert.equal(state.sourceAvailable, true);
 });
 test('empty source sets state correctly', () => {
-    assert.equal(true, true);
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.loadSourcePeriods([]);
+    const state = controller.getState();
+    assert.equal(state.draft.length, 0);
 });
 test('invalid source sets state correctly', () => {
-    assert.equal(true, true);
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.acceptDiagnosticsResult({ state: 'invalid', valid: false });
+    const state = controller.getState();
+    assert.equal(state.initialized, true);
+    assert.equal(state.sourceAvailable, false);
 });
 test('legacy source sets state correctly', () => {
-    assert.equal(true, true);
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.acceptDiagnosticsResult({ state: 'legacy-incomplete', valid: false });
+    const state = controller.getState();
+    assert.equal(state.initialized, true);
+    assert.equal(state.sourceAvailable, false);
 });
-test('transport failure sets state correctly', () => {
-    assert.equal(true, true);
+test('transport failure preserves source and draft', () => {
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    controller.acceptDiagnosticsResult(null);
+    const state = controller.getState();
+    assert.equal(state.sourceSnapshot[0].name, 'A');
 });
 test('source/draft reference separation is maintained', () => {
-    assert.equal(true, true);
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    const state1 = controller.getState();
+    state1.draft[0].name = 'B';
+    const state2 = controller.getState();
+    assert.equal(state2.draft[0].name, 'A');
 });
 test('immediate validation is performed', () => {
-    assert.equal(true, true);
+    let validated = false;
+    const normalizer = {
+        normalizeSchedule: (rows) => { validated = true; return { valid: true, periods: rows, warnings: [], errors: [] }; }
+    };
+    const controller = createScheduleDraftEditorController({ normalizer, view: createMockView() });
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    assert.equal(validated, true);
 });
 test('every permitted update field works', () => {
-    assert.equal(true, true);
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.loadSourcePeriods([{ name: 'A', type: 'class', start: '09:00', end: '09:40' }]);
+    const id = controller.getState().draft[0].id;
+    controller.updateRow(id, { name: 'B', type: 'break', start: '10:00', end: '10:40' });
+    const row = controller.getState().draft[0];
+    assert.equal(row.name, 'B');
+    assert.equal(row.type, 'break');
+    assert.equal(row.start, '10:00');
+    assert.equal(row.end, '10:40');
 });
 test('clean identical refresh works', () => {
-    assert.equal(true, true);
+    const view = createMockView();
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view });
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    const renders = view.getRenderCount();
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    assert.equal(view.getRenderCount(), renders);
 });
 test('dirty identical refresh works', () => {
-    assert.equal(true, true);
+    const view = createMockView();
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view });
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    controller.updateRow(controller.getState().draft[0].id, { name: 'B' });
+    const renders = view.getRenderCount();
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    assert.equal(view.getRenderCount(), renders);
 });
 test('empty latest-source reset works', () => {
-    assert.equal(true, true);
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.loadSourcePeriods([]);
+    controller.addRow();
+    controller.resetToSource();
+    assert.equal(controller.getState().draft.length, 0);
 });
 test('render deduplication works', () => {
-    assert.equal(true, true);
+    const view = createMockView();
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view });
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    const renders = view.getRenderCount();
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    assert.equal(view.getRenderCount(), renders); // 0 extra renders
 });
 
+// Real normalizer tests
+test('real normalizer: missing name', () => {
+    const res = realNormalizer.normalizeSchedule([{ type: 'class', start: '09:00', end: '09:40' }]);
+    assert.equal(res.valid, false);
+    assert.equal(res.warnings[0].code, 'MISSING_NAME');
+    assert.equal(res.errors[0].code, 'NO_VALID_PERIODS');
+});
+test('real normalizer: invalid start', () => {
+    const res = realNormalizer.normalizeSchedule([{ name: 'A', type: 'class', start: 'xx:00', end: '09:40' }]);
+    assert.equal(res.valid, false);
+    assert.equal(res.warnings[0].code, 'INVALID_START_TIME');
+});
+test('real normalizer: invalid end', () => {
+    const res = realNormalizer.normalizeSchedule([{ name: 'A', type: 'class', start: '09:00', end: 'xx:40' }]);
+    assert.equal(res.valid, false);
+    assert.equal(res.warnings[0].code, 'INVALID_END_TIME');
+});
+test('real normalizer: zero duration', () => {
+    const res = realNormalizer.normalizeSchedule([{ name: 'A', type: 'class', start: '09:00', end: '09:00' }]);
+    assert.equal(res.valid, false);
+    assert.equal(res.warnings[0].code, 'ZERO_DURATION');
+});
+test('real normalizer: end before start', () => {
+    const res = realNormalizer.normalizeSchedule([{ name: 'A', type: 'class', start: '09:40', end: '09:00' }]);
+    assert.equal(res.valid, false);
+    assert.equal(res.warnings[0].code, 'END_BEFORE_START');
+});
+test('real normalizer: duplicate period', () => {
+    const res = realNormalizer.normalizeSchedule([
+        { name: 'A', type: 'class', start: '09:00', end: '09:40' },
+        { name: 'A', type: 'class', start: '09:00', end: '09:40' }
+    ]);
+    assert.equal(res.valid, true);
+    assert.equal(res.warnings[0].code, 'DUPLICATE_PERIOD');
+});
+test('real normalizer: overlap', () => {
+    const res = realNormalizer.normalizeSchedule([
+        { name: 'A', type: 'class', start: '09:00', end: '09:40' },
+        { name: 'B', type: 'class', start: '09:30', end: '10:10' }
+    ]);
+    assert.equal(res.valid, false);
+    assert.equal(res.errors[0].code, 'OVERLAP');
+});
+test('real normalizer: chronological sorting', () => {
+    const res = realNormalizer.normalizeSchedule([
+        { name: 'B', type: 'class', start: '10:00', end: '10:40' },
+        { name: 'A', type: 'class', start: '09:00', end: '09:40' }
+    ]);
+    assert.equal(res.valid, true);
+    assert.equal(res.periods[0].name, 'A');
+    assert.equal(res.periods[1].name, 'B');
+});
+
+// Malformed source row behaviour
+test('loadSourcePeriods with malformed entries returns invalid-source', () => {
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    assert.equal(controller.loadSourcePeriods([null]).status, 'invalid-source');
+    assert.equal(controller.loadSourcePeriods([undefined]).status, 'invalid-source');
+    assert.equal(controller.loadSourcePeriods(['row']).status, 'invalid-source');
+    assert.equal(controller.loadSourcePeriods([[]]).status, 'invalid-source');
+});
+test('loadSourcePeriods with valid empty type row is accepted', () => {
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    const res = controller.loadSourcePeriods([{ name: 'A' }]);
+    assert.equal(res.status, 'initialized');
+});
+test('loadSourcePeriods with malformed entries preserves state', () => {
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    const stateBefore = controller.getState();
+    controller.updateRow(stateBefore.draft[0].id, { name: 'B' });
+    
+    const res = controller.loadSourcePeriods([null]);
+    assert.equal(res.status, 'invalid-source');
+    assert.equal(res.changed, false);
+    
+    const stateAfter = controller.getState();
+    assert.equal(stateAfter.dirty, true);
+    assert.equal(stateAfter.sourceSnapshot[0].name, 'A');
+    assert.equal(stateAfter.draft[0].name, 'B');
+});
+
+// Authoritative empty-source behavior
+test('authoritative empty source transition works', () => {
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.acceptDiagnosticsResult({ state: 'invalid', valid: false });
+    let state = controller.getState();
+    assert.equal(state.sourceAvailable, false);
+    
+    const res = controller.acceptDiagnosticsResult({ state: 'empty', valid: true, periods: [] });
+    assert.equal(res.status, 'updated');
+    state = controller.getState();
+    assert.equal(state.sourceAvailable, true);
+    assert.deepEqual(state.sourceSnapshot, []);
+    assert.deepEqual(state.draft, []);
+});
+
+test('authoritative empty source transition works without identical-draft bypass', () => {
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: createMockView() });
+    controller.acceptDiagnosticsResult({ state: 'invalid', valid: false });
+    const res = controller.loadSourcePeriods([]); 
+    assert.equal(res.status, 'updated'); 
+    assert.equal(controller.getState().sourceAvailable, true);
+});
+
+// Render-error behaviour
+test('render failures honestly report render-error', () => {
+    const throwingView = { render: () => { throw new Error('Render fail'); } };
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: throwingView });
+    const res = controller.loadSourcePeriods([{ name: 'A' }]);
+    assert.equal(res.status, 'render-error');
+    assert.equal(res.dependency, 'view');
+    assert.equal(controller.getState().dependencies.view, 'error');
+});
+test('render failures honestly report render-error during update', () => {
+    let failRender = false;
+    const mockView = { render: () => { if (failRender) throw new Error('Render fail'); } };
+    const controller = createScheduleDraftEditorController({ normalizer: createMockNormalizer(), view: mockView });
+    controller.loadSourcePeriods([{ name: 'A' }]);
+    
+    failRender = true;
+    const res = controller.addRow();
+    assert.equal(res.status, 'render-error');
+    assert.equal(controller.getState().dependencies.view, 'error');
+});

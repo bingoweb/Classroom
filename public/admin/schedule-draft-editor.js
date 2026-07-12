@@ -393,6 +393,7 @@ const AdminScheduleDraftEditor = (function() {
         let sourceUpdatedWhileDirty = false;
         let sourceAvailable = false;
         let lastValidation = createDraftValidationResult(null, 0);
+        let lastRenderStatus = 'ok';
 
         function validateDraft() {
             if (!normalizer || typeof normalizer.normalizeSchedule !== 'function') {
@@ -427,15 +428,18 @@ const AdminScheduleDraftEditor = (function() {
 
         function rerender() {
             if (!view || typeof view.render !== 'function') {
+                lastRenderStatus = 'dependency-error';
                 return 'dependency-error';
             }
             try {
                 view.render(controller.getState());
+                lastRenderStatus = 'ok';
                 return 'ok';
             } catch (e) {
                 if (logger && logger.error) {
                     logger.error('DRAFT_EDITOR', 'View threw during render', e);
                 }
+                lastRenderStatus = 'error';
                 return 'error';
             }
         }
@@ -460,9 +464,10 @@ const AdminScheduleDraftEditor = (function() {
             });
         }
 
-        function checkDeps(normStatus, viewStatus) {
-            if (normStatus === 'dependency-error') return { status: 'dependency-error', dependency: 'normalizer' };
-            if (viewStatus === 'dependency-error') return { status: 'dependency-error', dependency: 'view' };
+        function checkDeps(normStatus, viewStatus, defaultReturn) {
+            if (normStatus === 'dependency-error') return Object.assign({ status: 'dependency-error', dependency: 'normalizer' }, defaultReturn);
+            if (viewStatus === 'dependency-error') return Object.assign({ status: 'dependency-error', dependency: 'view' }, defaultReturn);
+            if (viewStatus === 'error') return Object.assign({ status: 'render-error', dependency: 'view' }, defaultReturn);
             return null;
         }
 
@@ -490,8 +495,8 @@ const AdminScheduleDraftEditor = (function() {
                         sourceUpdatedWhileDirty = false;
                         const n = revalidate();
                         const v = rerender();
-                        const dep = checkDeps(n, v);
-                        if (dep) return dep;
+                        const dep = checkDeps(n, v, { changed: true });
+                    if (dep) return dep;
                         return { status: 'source-unavailable', changed: true };
                     }
                     return { status: 'source-unavailable', changed: false };
@@ -504,6 +509,11 @@ const AdminScheduleDraftEditor = (function() {
                 if (!Array.isArray(periods)) {
                     return { status: 'invalid-source', changed: false };
                 }
+                for (let i = 0; i < periods.length; i++) {
+                    if (!isPlainObject(periods[i])) {
+                        return { status: 'invalid-source', changed: false };
+                    }
+                }
                 const newSource = copySourceRows(periods);
 
                 if (!initialized) {
@@ -515,12 +525,12 @@ const AdminScheduleDraftEditor = (function() {
                     sourceUpdatedWhileDirty = false;
                     const n = revalidate();
                     const v = rerender();
-                    const dep = checkDeps(n, v);
+                    const dep = checkDeps(n, v, { changed: true, draftPreserved: false });
                     if (dep) return dep;
                     return { status: 'initialized', changed: true, draftPreserved: false };
                 }
 
-                if (areDraftRowsEqual(sourceSnapshot, newSource)) {
+                if (sourceAvailable === true && areDraftRowsEqual(sourceSnapshot, newSource)) {
                     return { status: 'unchanged', changed: false };
                 }
 
@@ -531,7 +541,7 @@ const AdminScheduleDraftEditor = (function() {
                     sourceUpdatedWhileDirty = false;
                     const n = revalidate();
                     const v = rerender();
-                    const dep = checkDeps(n, v);
+                    const dep = checkDeps(n, v, { changed: true, draftPreserved: false });
                     if (dep) return dep;
                     return { status: 'updated', changed: true, draftPreserved: false };
                 } else {
@@ -539,7 +549,8 @@ const AdminScheduleDraftEditor = (function() {
                     sourceAvailable = true;
                     sourceUpdatedWhileDirty = true;
                     const v = rerender();
-                    if (v === 'dependency-error') return { status: 'dependency-error', dependency: 'view' };
+                    const dep = checkDeps('ok', v, { changed: true, draftPreserved: true });
+                    if (dep) return dep;
                     return { status: 'updated', changed: true, draftPreserved: true };
                 }
             },
@@ -556,8 +567,8 @@ const AdminScheduleDraftEditor = (function() {
                 dirty = !areDraftRowsEqual(sourceSnapshot, draftRows);
                 const n = revalidate();
                 const v = rerender();
-                const dep = checkDeps(n, v);
-                if (dep) return dep;
+                const dep = checkDeps(n, v, { changed: true });
+                    if (dep) return dep;
                 return { status: 'updated', changed: true };
             },
 
@@ -582,7 +593,7 @@ const AdminScheduleDraftEditor = (function() {
                     dirty = !areDraftRowsEqual(sourceSnapshot, draftRows);
                     const n = revalidate();
                     const v = rerender();
-                    const dep = checkDeps(n, v);
+                    const dep = checkDeps(n, v, { changed: true });
                     if (dep) return dep;
                     return { status: 'updated', changed: true };
                 }
@@ -599,8 +610,8 @@ const AdminScheduleDraftEditor = (function() {
                 dirty = !areDraftRowsEqual(sourceSnapshot, draftRows);
                 const n = revalidate();
                 const v = rerender();
-                const dep = checkDeps(n, v);
-                if (dep) return dep;
+                const dep = checkDeps(n, v, { changed: true });
+                    if (dep) return dep;
                 return { status: 'updated', changed: true };
             },
 
@@ -611,8 +622,8 @@ const AdminScheduleDraftEditor = (function() {
                 sourceUpdatedWhileDirty = false;
                 const n = revalidate();
                 const v = rerender();
-                const dep = checkDeps(n, v);
-                if (dep) return dep;
+                const dep = checkDeps(n, v, { changed: true });
+                    if (dep) return dep;
                 return { status: 'updated', changed: true };
             },
 
@@ -620,14 +631,14 @@ const AdminScheduleDraftEditor = (function() {
                 if (!initialized) return { status: 'not-initialized', changed: false };
                 const n = revalidate();
                 const v = rerender();
-                const dep = checkDeps(n, v);
-                if (dep) return dep;
+                const dep = checkDeps(n, v, { changed: true });
+                    if (dep) return dep;
                 return { status: 'ok', changed: true };
             },
 
             getState: function() {
                 const normStatus = (!normalizer || typeof normalizer.normalizeSchedule !== 'function') ? 'dependency-error' : 'ok';
-                const viewStatus = (!view || typeof view.render !== 'function') ? 'dependency-error' : 'ok';
+                const viewStatus = (!view || typeof view.render !== 'function') ? 'dependency-error' : lastRenderStatus;
                 return {
                     initialized,
                     dirty,
