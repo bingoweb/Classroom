@@ -1209,8 +1209,8 @@ Rules:
 
 **Tarih:** 2026-07-13
 **Başlangıç Hash (Remote HEAD):** `28936037ba4fd480c0426e5207eceeff9fcd60ff`
-**Implementation Hash:** `3f39688`
-**Implementation Message:** `feat: add admin schedule draft editor prototype`
+**Implementation Hash:** `7611aa0`
+**Implementation Message:** `fix: complete draft editor behavioural test coverage`
 
 #### Eklenen ve Değiştirilen Dosyalar
 - `package.json`
@@ -1238,9 +1238,9 @@ Kalıcı Node.js Test Toplamları:
 4. **Backend Schedule:** 69
 5. **Dashboard Schedule Loader:** 55
 6. **Admin Schedule Diagnostics:** 84
-7. **Admin Schedule Draft Editor:** 107
+7. **Admin Schedule Draft Editor:** 121
 
-**Kesin Aritmetik Toplam:** 303 + 107 = 410 (410 test başarılı)
+**Kesin Aritmetik Toplam:** 303 + 121 = 424 (424 test başarılı)
 
 Geçici Veritabanında Chromium Test Sonuçları:
 - Dashboard Chromium: 24 passed, 0 failed
