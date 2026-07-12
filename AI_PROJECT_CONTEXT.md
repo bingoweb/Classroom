@@ -1193,7 +1193,7 @@ Rules:
   Exact diagnostics (admin) Chromium result: 46 passed, 0 failed
   ```
 * Rendering Guarantees:
-  * GET-only guarantee verified (no modifying requests).
+* GET-only guarantee verified (no modifying requests).
   * XSS-safe rendering verified (only textContent/createElement, no innerHTML).
   * Simulated temporary database strategy for Chromium coverage.
 * Expected console messages: Network transport failure logs are properly generated and trapped without throwing.
@@ -1204,3 +1204,55 @@ Rules:
   ```text
   Add a non-persistent schedule editor prototype in the admin panel that edits a local draft and validates it with ScheduleNormalizer without sending PUT requests yet.
   ```
+
+### 8. Admin Schedule Draft Editor Prototype
+
+**Tarih:** 2026-07-13
+**Başlangıç Hash (Remote HEAD):** `28936037ba4fd480c0426e5207eceeff9fcd60ff`
+**Implementation Hash:** `3f39688`
+**Implementation Message:** `feat: add admin schedule draft editor prototype`
+
+#### Eklenen ve Değiştirilen Dosyalar
+- `package.json`
+- `public/admin/admin.js`
+- `public/admin/index.html`
+- `public/admin/schedule-draft-editor.js`
+- `tests/admin-schedule-draft-editor.test.js`
+
+#### Mimari Özellikleri
+- **In-memory-only:** Yeni hiçbir ağ isteği yapılmaz (GET/POST/PUT/DELETE) ve hiçbir tarayıcı depolama API'si (localStorage vs.) kullanılmaz.
+- **Canonical Row Model:** Taslak satırlarında veritabanı ID'leri veya dış meta veriler bulunmaz; sadece `name`, `type`, `start` ve `end` normalizere aktarılır.
+- **Source vs Draft Separation:** Güncel doğrulanmış sunucu yanıtı (source snapshot) ve kullanıcının düzenlediği taslak (draft) birbirinden kesin olarak ayrılmış, kopya oluşturularak (defensive copying) reference sızıntıları önlenmiştir.
+- **Dirty Refresh Protection:** Arka planda veya yenileme tıklandığında diagnostics yeniden alınsa da, eğer taslak "dirty" (kaydedilmemiş değişiklik) durumundaysa taslak üzerine yazılmaz, kullanıcı sadece uyarı (sourceUpdatedWhileDirty) ile bilgilendirilir.
+- **Latest-source Reset:** İptal butonuna basıldığında taslak, en son alınmış doğrulanmış diagnostics durumuna sıfırlanır.
+- **Strict Validation-Ready Policy:** Taslağın "hazır" kabul edilmesi için normalizer sonucunun valid olması, warning/error içermemesi ve girdi satır sayısının normalize edilen sayıya eşit (sıfırdan büyük) olması gerekir.
+- **Normalized Preview:** Doğrulama sonucunda sunucu tarafında işlenecek saatler önizleme olarak sunulur.
+- **XSS-Safe Rendering:** Metin güncellemelerinde `innerHTML` kullanılmaz; her zaman güvenli DOM apileri (textContent vb.) kullanılır.
+- **GET-only Diagnostics:** Draft editör hiçbir veri göndermez, sadece `/api/schedule/normalized?day=weekday` sonucunu kullanır.
+
+#### Test Kapsamı
+Kalıcı Node.js Test Toplamları:
+1. **ScheduleManager:** 33
+2. **Simulator:** 42
+3. **Backend Date:** 20
+4. **Backend Schedule:** 69
+5. **Dashboard Schedule Loader:** 55
+6. **Admin Schedule Diagnostics:** 84
+7. **Admin Schedule Draft Editor:** 39
+
+**Kesin Aritmetik Toplam:** 303 + 39 = 342 (342 test başarılı)
+
+Geçici Veritabanında Chromium Test Sonuçları:
+- Dashboard Chromium: 24 passed, 0 failed
+- Admin diagnostics Chromium: 46 passed, 0 failed
+- Draft-editor Chromium: 62 Playwright assertions passed, 0 failed
+
+#### Değişmeyen Bileşenler (Garantiler)
+Gerçek veritabanı, backend kodları, dashboard kartları, büyük saat ve dashboard düzeni kesinlikle değişmemiştir. Geçici veritabanı stratejisiyle test edilmiştir.
+
+#### Kalan Riskler
+- Kullanıcı çoklu sekme açtığında taslaklar eşitlenmeyecektir (çünkü storage yok).
+- Kaydetme özelliği hala yok (prototip).
+
+#### Bir Sonraki Önerilen Görev
+Add a read-only source-versus-draft review panel that summarizes added, removed and changed periods without sending PUT requests yet.
