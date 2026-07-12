@@ -666,7 +666,7 @@ app.get('/api/schedule/normalized', async (req, res) => {
     try {
         const resolved = resolveScheduleDayKey(req.query.day, { defaultDay: 'weekday' });
         if (!resolved.valid) {
-            return res.status(400).json({ error: resolved.error.message });
+            return res.status(400).json({ code: resolved.error.code, error: resolved.error.message });
         }
         const day = resolved.day;
 

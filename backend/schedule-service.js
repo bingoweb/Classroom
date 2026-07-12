@@ -96,10 +96,10 @@ function createScheduleValidator(normalizer = ScheduleNormalizer) {
 const validateNormalizedSchedule = createScheduleValidator();
 
 function resolveScheduleDayKey(value, options = {}) {
-    const defaultDay = options.defaultDay || 'weekday';
-    const useDefault = value === undefined;
+    const hasDefaultDay = Object.prototype.hasOwnProperty.call(options, 'defaultDay');
+    const defaultDay = hasDefaultDay ? options.defaultDay : 'weekday';
 
-    const candidate = useDefault ? defaultDay : value;
+    const candidate = value === undefined ? defaultDay : value;
 
     if (typeof candidate !== 'string') {
         return {

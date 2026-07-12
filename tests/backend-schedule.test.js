@@ -5,7 +5,7 @@ const path = require('node:path');
 const os = require('node:os');
 const { spawn } = require('node:child_process');
 const sqlite3 = require('sqlite3').verbose();
-
+const http = require('node:http');
 const { ensureScheduleSchema } = require('../backend/schedule-schema');
 const { createScheduleValidator, validateNormalizedSchedule, resolveScheduleDayKey, isValidDayKey } = require('../backend/schedule-service');
 const { getNormalizedScheduleRows, replaceNormalizedSchedule } = require('../backend/schedule-repository');
@@ -104,8 +104,16 @@ test('Schedule API and Migration Tests', async (t) => {
 
         await t.test('7. Migration may run twice without failure', async () => {
             await ensureScheduleSchema(db);
+            await runSql(db, `INSERT INTO schedule (day, period, course) VALUES ('weekday', 1, 'Math')`);
             await ensureScheduleSchema(db);
-            assert.ok(true);
+            const cols = await allSql(db, "PRAGMA table_info(schedule)");
+            assert.equal(cols.length, 8);
+            const indices = await allSql(db, "PRAGMA index_list(schedule)");
+            const targetIndices = indices.filter(i => i.name === 'idx_schedule_day_active_period');
+            assert.equal(targetIndices.length, 1);
+            const rows = await allSql(db, "SELECT * FROM schedule");
+            assert.equal(rows.length, 1);
+            assert.equal(rows[0].course, 'Math');
         });
 
         await t.test('8. Migration may run repeatedly without adding duplicate columns', async () => {
@@ -468,6 +476,316 @@ test('Schedule API and Migration Tests', async (t) => {
             const exitCode = await new Promise(resolve => p.on('close', resolve));
             fs.unlinkSync(tmpPath);
             assert.equal(exitCode, 0);
+        });
+    });
+
+    await t.test('API HTTP Integration Tests', async (t) => {
+        let serverProcess;
+        let dbPath;
+        let tmpDir;
+        let port;
+
+        async function request(method, reqPath, body = null) {
+            return new Promise((resolve, reject) => {
+                const req = http.request({
+                    hostname: '127.0.0.1',
+                    port: port,
+                    path: reqPath,
+                    method: method,
+                    headers: body ? { 'Content-Type': 'application/json' } : {}
+                }, res => {
+                    let data = '';
+                    res.on('data', chunk => data += chunk);
+                    res.on('end', () => resolve({ status: res.statusCode, data: JSON.parse(data || '{}'), raw: data }));
+                });
+                req.on('error', reject);
+                if (body) req.write(JSON.stringify(body));
+                req.end();
+            });
+        }
+
+        async function startServer() {
+            const tmp = createTempDb();
+            tmpDir = tmp.tmpDir;
+            dbPath = tmp.dbPath;
+
+            const scriptPath = path.join(tmpDir, 'start.js');
+            fs.writeFileSync(scriptPath, `
+                const path = require('path');
+                const app = require(path.join(process.cwd(), 'backend/server.js'));
+                const server = app.listen(0, '127.0.0.1', () => {
+                    console.log('port: ' + server.address().port);
+                });
+            `);
+
+            serverProcess = spawn(process.execPath, [scriptPath], {
+                cwd: process.cwd(),
+                env: { ...process.env, CLASSROOM_DB_PATH: dbPath }
+            });
+
+            // Wait for port
+            port = await new Promise((resolve, reject) => {
+                serverProcess.stdout.on('data', (data) => {
+                    const match = data.toString().match(/port:\s*(\d+)/);
+                    if (match) resolve(parseInt(match[1], 10));
+                });
+                serverProcess.stderr.on('data', (data) => {
+                    // console.error(data.toString());
+                });
+                setTimeout(() => reject(new Error('Timeout waiting for server start')), 5000);
+            });
+        }
+
+        async function stopServer() {
+            if (serverProcess) {
+                serverProcess.kill();
+                await new Promise(resolve => serverProcess.on('close', resolve));
+            }
+            if (tmpDir) {
+                cleanupTempDb(tmpDir);
+            }
+        }
+
+        await t.test('1. Fresh-start legacy GET returns HTTP 200 and an array', async () => {
+            await startServer();
+            try {
+                const res = await request('GET', '/api/schedule');
+                assert.equal(res.status, 200);
+                assert.ok(Array.isArray(res.data));
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('2. Fresh-start legacy POST succeeds', async () => {
+            await startServer();
+            try {
+                const res = await request('POST', '/api/schedule', { day: 'weekday', period: 1, course: 'Math' });
+                assert.equal(res.status, 200);
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('3. Fresh-start normalized GET returns HTTP 200', async () => {
+            await startServer();
+            try {
+                const res = await request('GET', '/api/schedule/normalized');
+                assert.equal(res.status, 200);
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('4. Normalized GET with omitted day returns day: weekday', async () => {
+            await startServer();
+            try {
+                const res = await request('GET', '/api/schedule/normalized');
+                assert.equal(res.data.day, 'weekday');
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('5. Normalized PUT with omitted day stores and returns weekday', async () => {
+            await startServer();
+            try {
+                const res = await request('PUT', '/api/schedule/normalized', { periods: [{ name: 'Math', type: 'class', start: '09:00', end: '09:40' }] });
+                assert.equal(res.status, 200);
+                assert.equal(res.data.day, 'weekday');
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('6. Normalized PUT with padded day stores and returns the trimmed day', async () => {
+            await startServer();
+            try {
+                const res = await request('PUT', '/api/schedule/normalized', { day: ' weekday ', periods: [{ name: 'Math', type: 'class', start: '09:00', end: '09:40' }] });
+                assert.equal(res.status, 200);
+                assert.equal(res.data.day, 'weekday');
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('7. Normalized GET with padded day queries the trimmed day', async () => {
+            await startServer();
+            try {
+                await request('PUT', '/api/schedule/normalized', { day: 'weekday', periods: [{ name: 'Math', type: 'class', start: '09:00', end: '09:40' }] });
+                const res = await request('GET', '/api/schedule/normalized?day=%20weekday%20');
+                assert.equal(res.status, 200);
+                assert.equal(res.data.day, 'weekday');
+                assert.equal(res.data.valid, true);
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('8. Missing periods returns HTTP 400 and INVALID_SCHEDULE_BODY', async () => {
+            await startServer();
+            try {
+                const res = await request('PUT', '/api/schedule/normalized', { day: 'weekday' });
+                assert.equal(res.status, 400);
+                assert.equal(res.data.errors[0].code, 'INVALID_SCHEDULE_BODY');
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('9. Object-valued periods returns HTTP 400', async () => {
+            await startServer();
+            try {
+                const res = await request('PUT', '/api/schedule/normalized', { day: 'weekday', periods: {} });
+                assert.equal(res.status, 400);
+                assert.equal(res.data.errors[0].code, 'INVALID_SCHEDULE_BODY');
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('10. String-valued periods returns HTTP 400', async () => {
+            await startServer();
+            try {
+                const res = await request('PUT', '/api/schedule/normalized', { day: 'weekday', periods: 'Math' });
+                assert.equal(res.status, 400);
+                assert.equal(res.data.errors[0].code, 'INVALID_SCHEDULE_BODY');
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('11. Array-valued request body returns HTTP 400', async () => {
+            await startServer();
+            try {
+                const res = await request('PUT', '/api/schedule/normalized', [{ name: 'Math' }]);
+                assert.equal(res.status, 400);
+                assert.equal(res.data.errors[0].code, 'INVALID_SCHEDULE_BODY');
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('12. Empty periods: [] returns HTTP 422', async () => {
+            await startServer();
+            try {
+                const res = await request('PUT', '/api/schedule/normalized', { day: 'weekday', periods: [] });
+                assert.equal(res.status, 422);
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('13. Invalid supplied day on GET returns HTTP 400 and INVALID_SCHEDULE_DAY', async () => {
+            await startServer();
+            try {
+                const res = await request('GET', '/api/schedule/normalized?day=invalid@');
+                assert.equal(res.status, 400);
+                assert.equal(res.data.code, 'INVALID_SCHEDULE_DAY');
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('14. Invalid supplied day on PUT returns HTTP 400 and INVALID_SCHEDULE_DAY', async () => {
+            await startServer();
+            try {
+                const res = await request('PUT', '/api/schedule/normalized', { day: 'invalid@', periods: [] });
+                assert.equal(res.status, 400);
+                assert.equal(res.data.errors[0].code, 'INVALID_SCHEDULE_DAY');
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('15. Semantic rejection does not alter the existing schedule', async () => {
+            await startServer();
+            try {
+                await request('PUT', '/api/schedule/normalized', { day: 'weekday', periods: [{ name: 'Math', type: 'class', start: '09:00', end: '09:40' }] });
+                const badRes = await request('PUT', '/api/schedule/normalized', { day: 'weekday', periods: [{ name: 'Bad', type: 'bad', start: '09:00', end: '09:40' }] });
+                assert.equal(badRes.status, 422);
+                
+                const getRes = await request('GET', '/api/schedule/normalized');
+                assert.equal(getRes.status, 200);
+                assert.equal(getRes.data.periods[0].name, 'Math');
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('16. Legacy-incomplete GET returns source: legacy-incomplete and valid: false', async () => {
+            await startServer();
+            try {
+                await request('POST', '/api/schedule', { day: 'legacyday', period: 1, course: 'Math' });
+                const res = await request('GET', '/api/schedule/normalized?day=legacyday');
+                assert.equal(res.status, 200);
+                assert.equal(res.data.source, 'legacy-incomplete');
+                assert.equal(res.data.valid, false);
+                assert.deepEqual(res.data.periods, []);
+                assert.ok(res.data.warnings.length > 0 || res.data.errors.length > 0);
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('17. Valid replacement returns HTTP 200', async () => {
+            await startServer();
+            try {
+                const res = await request('PUT', '/api/schedule/normalized', { day: 'weekday', periods: [{ name: 'Math', type: 'class', start: '09:00', end: '09:40' }] });
+                assert.equal(res.status, 200);
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('18. Valid GET after replacement returns source: database and valid: true', async () => {
+            await startServer();
+            try {
+                await request('PUT', '/api/schedule/normalized', { day: 'weekday', periods: [{ name: 'Math', type: 'class', start: '09:00', end: '09:40' }] });
+                const res = await request('GET', '/api/schedule/normalized?day=weekday');
+                assert.equal(res.status, 200);
+                assert.equal(res.data.source, 'database');
+                assert.equal(res.data.valid, true);
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('19. Legacy GET remains an array after normalized writes', async () => {
+            await startServer();
+            try {
+                await request('PUT', '/api/schedule/normalized', { day: 'weekday', periods: [{ name: 'Math', type: 'class', start: '09:00', end: '09:40' }] });
+                const res = await request('GET', '/api/schedule');
+                assert.equal(res.status, 200);
+                assert.ok(Array.isArray(res.data));
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('20. Legacy POST response remains compatible', async () => {
+            await startServer();
+            try {
+                const res = await request('POST', '/api/schedule', { day: 'weekday', period: 2, course: 'Science' });
+                assert.equal(res.status, 200);
+                assert.ok(res.data.message || res.data.id);
+            } finally {
+                await stopServer();
+            }
+        });
+
+        await t.test('21. No invalid-response body exposes SQLITE_, stack, errno, database path', async () => {
+            await startServer();
+            try {
+                const res = await request('GET', '/api/schedule/normalized?day=invalid@');
+                assert.equal(res.status, 400);
+                assert.ok(!res.raw.includes('SQLITE'));
+                assert.ok(!res.raw.includes('stack'));
+                assert.ok(!res.raw.includes('errno'));
+                assert.ok(!res.raw.includes('test.db'));
+            } finally {
+                await stopServer();
+            }
         });
     });
 });
