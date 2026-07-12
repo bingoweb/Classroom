@@ -1044,3 +1044,80 @@ Rules:
   Connect the dashboard to GET /api/schedule/normalized through a guarded loader that activates ScheduleManager external schedules only when the backend response is valid, while preserving permanent fallback behaviour and without building the admin editor yet.
   ```
 
+
+## 23. Last Context Update
+
+* Date:
+
+  ```text
+  2026-07-12
+  ```
+* Verified branch:
+
+  ```text
+  ilk-surum-gelistirme
+  ```
+* Verified HEAD before this task:
+
+  ```text
+  717ce15 docs: correct schedule hardening results
+  ```
+* Initial working-tree state:
+
+  ```text
+  clean
+  ```
+* Implementation commit hash and message:
+
+  ```text
+  28824e0 fix: integrate dashboard with normalized schedule API
+  ```
+* Files added/modified during task:
+
+  ```text
+  public/js/dashboard-schedule-loader.js (added)
+  public/js/script.js (modified)
+  public/index.html (modified)
+  public/js/time-provider.js (modified)
+  ```
+* Dashboard Schedule Loader:
+
+  ```text
+  Created a dependency-free UMD loader `DashboardScheduleLoader` that calls the `/api/schedule/normalized?day=weekday` API and integrates it with `ScheduleManager`.
+  ```
+* Fallback guarantee:
+
+  ```text
+  The loader protects the dashboard layout by enforcing strict validation: if the network fails, or the schedule is empty/malformed, the application safely preserves or restores the local offline fallback schedule.
+  ```
+* UI tests:
+
+  ```text
+  Added a new Playwright UI testing suite `test-ui.js` that intercepts API calls and asserts the state of `ScheduleManager`.
+  ```
+* Exact Playwright UI test total:
+
+  ```text
+  UI tests: 24 passed, 0 failed.
+  ```
+* Exact Node test totals:
+
+  ```text
+  Persistent Backend Schedule tests: 69
+  Combined core test total: 164
+  ```
+* Confirmation of unchanged scope:
+
+  ```text
+  The admin panel, schedule management interface, backend date logic, and existing dashboard bento layout remained completely untouched.
+  ```
+* Final working-tree state:
+
+  ```text
+  clean (after committing this documentation)
+  ```
+* Next recommended task:
+
+  ```text
+  Build the first read-only schedule diagnostics section in the admin panel.
+  ```
