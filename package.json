@@ -10,7 +10,8 @@
     "test:date": "node --test tests/backend-date-utils.test.js",
     "test:backend-schedule": "node --test tests/backend-schedule.test.js",
     "test:dashboard-schedule": "node --test tests/dashboard-schedule-loader.test.js",
-    "test:core": "node --test tests/schedule-manager.test.js tests/dev-time-simulator.test.js tests/backend-date-utils.test.js tests/backend-schedule.test.js tests/dashboard-schedule-loader.test.js"
+    "test:admin-schedule-diagnostics": "node --test tests/admin-schedule-diagnostics.test.js",
+    "test:core": "node --test tests/schedule-manager.test.js tests/dev-time-simulator.test.js tests/backend-date-utils.test.js tests/backend-schedule.test.js tests/dashboard-schedule-loader.test.js tests/admin-schedule-diagnostics.test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

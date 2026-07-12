@@ -12,6 +12,10 @@ window.showTab = function (tabName) {
             btn.classList.add('active');
         }
     });
+
+    if (tabName === 'scheduleDiagnostics' && window.scheduleDiagnosticsController) {
+        window.scheduleDiagnosticsController.load();
+    }
 }
 
 // Fetch Data
@@ -2061,4 +2065,27 @@ function updateThemePreview(themeName) {
 // Sayfa yüklendiğinde ekolayzer barlarını oluştur
 document.addEventListener('DOMContentLoaded', function () {
     initAdminEqualizer();
+});
+
+// Initialize Schedule Diagnostics
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.AdminScheduleDiagnostics) {
+        const view = window.AdminScheduleDiagnostics.createDomScheduleDiagnosticsView(document);
+        window.scheduleDiagnosticsController = window.AdminScheduleDiagnostics.createScheduleDiagnosticsController({
+            api: APIService,
+            view: view,
+            logger: typeof logger !== 'undefined' ? logger : null,
+            endpoint: '/schedule/normalized',
+            day: 'weekday'
+        });
+
+        const refreshBtn = document.getElementById('refreshScheduleDiagnosticsBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                if (window.scheduleDiagnosticsController) {
+                    window.scheduleDiagnosticsController.load();
+                }
+            });
+        }
+    }
 });

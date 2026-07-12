@@ -1156,3 +1156,30 @@ Rules:
   ```text
   Build the first read-only schedule diagnostics section in the admin panel.
   ```
+
+---
+
+## Task 11: Admin Schedule Diagnostics Integration
+
+* Objective: Build a read-only diagnostics section in the admin panel to display normalized schedule status.
+* Files added/modified during task:
+
+  ```text
+  public/admin/index.html (modified)
+  public/admin/schedule-diagnostics.js (added)
+  public/admin/admin.js (modified)
+  tests/admin-schedule-diagnostics.test.js (added)
+  package.json (modified)
+  ```
+* Final verification results:
+
+  ```text
+  Diagnostics tests: 62
+  Combined core test total: 282
+  Playwright tests verified for admin integration.
+  ```
+* Next recommended task:
+
+  ```text
+  Build the non-persistent schedule editor prototype for the admin panel.
+  ```
