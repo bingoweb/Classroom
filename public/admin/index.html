@@ -1314,7 +1314,7 @@
                     <div>
                         <h2 style="margin: 0 0 10px 0; font-size: 1.8rem;">📝 Ders Programı Taslağı (Prototip)</h2>
                         <p style="margin: 0; opacity: 0.9; font-size: 0.95rem;">
-                            ⚠️ DİKKAT: Bu yerel bir bellek içi taslaktır. Yaptığınız değişiklikler sunucuya GÖNDERİLMEZ ve sayfa yenilendiğinde KAYBOLUR.
+                            ⚠️ DİKKAT: Bu bir prototip taslaktır. Değişiklikler sunucuya gönderilmez ve sayfa yenilendiğinde kaybolur.
                         </p>
                     </div>
                 </div>
@@ -1322,19 +1322,19 @@
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
                 <div style="background: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center;">
-                    <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 5px;">Durum</div>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 5px;">Taslak Durumu</div>
                     <div id="sdeStatus" style="font-weight: bold; font-size: 1.1rem; color: #64748b;">Henüz hazırlanmadı</div>
                 </div>
                 <div style="background: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center;">
-                    <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 5px;">Değişiklik</div>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 5px;">Değişiklik Durumu</div>
                     <div id="sdeDirtyStatus" style="font-weight: bold; font-size: 1.1rem; color: #10b981;">Değişiklik yok</div>
                 </div>
                 <div style="background: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center;">
-                    <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 5px;">Satır Sayısı</div>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 5px;">Taslak Satır Sayısı</div>
                     <div id="sdeRowCount" style="font-weight: bold; font-size: 1.1rem; color: #334155;">0</div>
                 </div>
                 <div style="background: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center;">
-                    <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 5px;">Geçerli Dönem</div>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 5px;">Geçerli Dönem Sayısı</div>
                     <div id="sdeValidCount" style="font-weight: bold; font-size: 1.1rem; color: #334155;">0</div>
                 </div>
             </div>
@@ -1343,9 +1343,9 @@
             </div>
 
             <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button id="sdeAddRowBtn" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s;">➕ Satır Ekle</button>
-                <button id="sdeValidateBtn" style="padding: 10px 20px; background: #8b5cf6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s;">✨ Taslağı Doğrula</button>
-                <button id="sdeResetBtn" style="padding: 10px 20px; background: #f43f5e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s;">↩️ Kaynak Programa Dön</button>
+                <button type="button" id="sdeAddRowBtn" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s;">➕ Satır Ekle</button>
+                <button type="button" id="sdeValidateBtn" style="padding: 10px 20px; background: #8b5cf6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s;">✨ Taslağı Doğrula</button>
+                <button type="button" id="sdeResetBtn" style="padding: 10px 20px; background: #f43f5e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s;">↩️ Kaynak Programa Dön</button>
             </div>
 
             <div style="background: white; border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; overflow-x: auto; margin-bottom: 30px;">

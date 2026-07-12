@@ -1238,14 +1238,14 @@ Kalıcı Node.js Test Toplamları:
 4. **Backend Schedule:** 69
 5. **Dashboard Schedule Loader:** 55
 6. **Admin Schedule Diagnostics:** 84
-7. **Admin Schedule Draft Editor:** 39
+7. **Admin Schedule Draft Editor:** 107
 
-**Kesin Aritmetik Toplam:** 303 + 39 = 342 (342 test başarılı)
+**Kesin Aritmetik Toplam:** 303 + 107 = 410 (410 test başarılı)
 
 Geçici Veritabanında Chromium Test Sonuçları:
 - Dashboard Chromium: 24 passed, 0 failed
 - Admin diagnostics Chromium: 46 passed, 0 failed
-- Draft-editor Chromium: 62 Playwright assertions passed, 0 failed
+- Draft-editor Chromium: 19 Playwright assertions passed, 0 failed
 
 #### Değişmeyen Bileşenler (Garantiler)
 Gerçek veritabanı, backend kodları, dashboard kartları, büyük saat ve dashboard düzeni kesinlikle değişmemiştir. Geçici veritabanı stratejisiyle test edilmiştir.

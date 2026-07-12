@@ -417,18 +417,26 @@ const AdminScheduleDraftEditor = (function() {
         }
 
         function revalidate() {
+            if (!normalizer || typeof normalizer.normalizeSchedule !== 'function') {
+                lastValidation = createDraftValidationResult(null, draftRows.length);
+                return 'dependency-error';
+            }
             lastValidation = validateDraft();
+            return 'ok';
         }
 
         function rerender() {
-            if (view && typeof view.render === 'function') {
-                try {
-                    view.render(controller.getState());
-                } catch (e) {
-                    if (logger && logger.error) {
-                        logger.error('DRAFT_EDITOR', 'View threw during render', e);
-                    }
+            if (!view || typeof view.render !== 'function') {
+                return 'dependency-error';
+            }
+            try {
+                view.render(controller.getState());
+                return 'ok';
+            } catch (e) {
+                if (logger && logger.error) {
+                    logger.error('DRAFT_EDITOR', 'View threw during render', e);
                 }
+                return 'error';
             }
         }
 
@@ -444,92 +452,100 @@ const AdminScheduleDraftEditor = (function() {
             return periods.map(p => {
                 return {
                     id: generateId(),
-                    name: p.name || '',
-                    type: p.type || 'class',
-                    start: p.start || '',
-                    end: p.end || ''
+                    name: typeof p.name === 'string' ? p.name.trim() : '',
+                    type: typeof p.type === 'string' ? p.type.trim() : '',
+                    start: typeof p.start === 'string' ? p.start.trim() : '',
+                    end: typeof p.end === 'string' ? p.end.trim() : ''
                 };
             });
+        }
+
+        function checkDeps(normStatus, viewStatus) {
+            if (normStatus === 'dependency-error') return { status: 'dependency-error', dependency: 'normalizer' };
+            if (viewStatus === 'dependency-error') return { status: 'dependency-error', dependency: 'view' };
+            return null;
         }
 
         const controller = {
             acceptDiagnosticsResult: function(result) {
                 if (!isPlainObject(result)) {
-                    if (!initialized) {
-                        sourceSnapshot = [];
-                        draftRows = [];
-                        initialized = true;
-                        sourceAvailable = false;
-                        dirty = false;
-                        sourceUpdatedWhileDirty = false;
-                        revalidate();
-                        rerender();
-                    }
-                    return;
+                    return { status: 'preserved', changed: false };
                 }
-
-                let incomingPeriods = [];
-                let incomingSourceAvailable = false;
 
                 if (result.state === 'valid' && result.valid === true && Array.isArray(result.periods)) {
-                    incomingPeriods = copySourceRows(result.periods);
-                    incomingSourceAvailable = true;
-                } else if (result.state === 'empty' || result.state === 'legacy-incomplete' || result.state === 'invalid') {
-                    incomingPeriods = [];
-                    incomingSourceAvailable = false;
-                } else {
-                    if (!initialized) {
-                        sourceSnapshot = [];
-                        draftRows = [];
-                        initialized = true;
-                        sourceAvailable = false;
-                        dirty = false;
-                        sourceUpdatedWhileDirty = false;
-                        revalidate();
-                        rerender();
-                    }
-                    return;
+                    return controller.loadSourcePeriods(result.periods);
                 }
 
+                if (result.state === 'empty') {
+                    return controller.loadSourcePeriods([]);
+                }
+
+                if (result.state === 'legacy-incomplete' || result.state === 'invalid') {
+                    if (!initialized) {
+                        initialized = true;
+                        sourceAvailable = false;
+                        sourceSnapshot = [];
+                        draftRows = [];
+                        dirty = false;
+                        sourceUpdatedWhileDirty = false;
+                        const n = revalidate();
+                        const v = rerender();
+                        const dep = checkDeps(n, v);
+                        if (dep) return dep;
+                        return { status: 'source-unavailable', changed: true };
+                    }
+                    return { status: 'source-unavailable', changed: false };
+                }
+
+                return { status: 'preserved', changed: false };
+            },
+
+            loadSourcePeriods: function(periods) {
+                if (!Array.isArray(periods)) {
+                    return { status: 'invalid-source', changed: false };
+                }
+                const newSource = copySourceRows(periods);
+
                 if (!initialized) {
-                    sourceSnapshot = copyRows(incomingPeriods);
-                    draftRows = copyRows(incomingPeriods);
+                    sourceSnapshot = newSource;
+                    draftRows = copyRows(newSource);
                     initialized = true;
-                    sourceAvailable = incomingSourceAvailable;
+                    sourceAvailable = true;
                     dirty = false;
                     sourceUpdatedWhileDirty = false;
-                    revalidate();
-                    rerender();
-                    return;
+                    const n = revalidate();
+                    const v = rerender();
+                    const dep = checkDeps(n, v);
+                    if (dep) return dep;
+                    return { status: 'initialized', changed: true, draftPreserved: false };
+                }
+
+                if (areDraftRowsEqual(sourceSnapshot, newSource)) {
+                    return { status: 'unchanged', changed: false };
                 }
 
                 if (!dirty) {
-                    sourceSnapshot = copyRows(incomingPeriods);
-                    draftRows = copyRows(incomingPeriods);
-                    sourceAvailable = incomingSourceAvailable;
+                    sourceSnapshot = newSource;
+                    draftRows = copyRows(newSource);
+                    sourceAvailable = true;
                     sourceUpdatedWhileDirty = false;
-                    revalidate();
-                    rerender();
-                    return;
+                    const n = revalidate();
+                    const v = rerender();
+                    const dep = checkDeps(n, v);
+                    if (dep) return dep;
+                    return { status: 'updated', changed: true, draftPreserved: false };
+                } else {
+                    sourceSnapshot = newSource;
+                    sourceAvailable = true;
+                    sourceUpdatedWhileDirty = true;
+                    const v = rerender();
+                    if (v === 'dependency-error') return { status: 'dependency-error', dependency: 'view' };
+                    return { status: 'updated', changed: true, draftPreserved: true };
                 }
-
-                if (areDraftRowsEqual(sourceSnapshot, incomingPeriods)) {
-                    sourceAvailable = incomingSourceAvailable;
-                    return;
-                }
-
-                sourceSnapshot = copyRows(incomingPeriods);
-                sourceAvailable = incomingSourceAvailable;
-                sourceUpdatedWhileDirty = true;
-                rerender();
-            },
-
-            loadSourcePeriods: function() {
-                return { status: 'ok' };
             },
 
             addRow: function() {
-                if (!initialized) return { status: 'not_initialized' };
+                if (!initialized) return { status: 'not-initialized', changed: false };
                 draftRows.push({
                     id: generateId(),
                     name: '',
@@ -538,17 +554,19 @@ const AdminScheduleDraftEditor = (function() {
                     end: ''
                 });
                 dirty = !areDraftRowsEqual(sourceSnapshot, draftRows);
-                revalidate();
-                rerender();
-                return { status: 'ok' };
+                const n = revalidate();
+                const v = rerender();
+                const dep = checkDeps(n, v);
+                if (dep) return dep;
+                return { status: 'updated', changed: true };
             },
 
             updateRow: function(id, patch) {
-                if (!initialized) return { status: 'not_initialized' };
-                if (!isPlainObject(patch)) return { status: 'invalid_patch' };
+                if (!initialized) return { status: 'not-initialized', changed: false };
+                if (!isPlainObject(patch)) return { status: 'invalid-patch', changed: false };
                 
                 const idx = draftRows.findIndex(r => r.id === id);
-                if (idx === -1) return { status: 'not_found' };
+                if (idx === -1) return { status: 'not-found', changed: false };
 
                 const row = draftRows[idx];
                 let changed = false;
@@ -562,44 +580,54 @@ const AdminScheduleDraftEditor = (function() {
 
                 if (changed) {
                     dirty = !areDraftRowsEqual(sourceSnapshot, draftRows);
-                    revalidate();
-                    rerender();
+                    const n = revalidate();
+                    const v = rerender();
+                    const dep = checkDeps(n, v);
+                    if (dep) return dep;
+                    return { status: 'updated', changed: true };
                 }
 
-                return { status: 'ok' };
+                return { status: 'unchanged', changed: false };
             },
 
             removeRow: function(id) {
-                if (!initialized) return { status: 'not_initialized' };
+                if (!initialized) return { status: 'not-initialized', changed: false };
                 const idx = draftRows.findIndex(r => r.id === id);
-                if (idx === -1) return { status: 'not_found' };
+                if (idx === -1) return { status: 'not-found', changed: false };
 
                 draftRows.splice(idx, 1);
                 dirty = !areDraftRowsEqual(sourceSnapshot, draftRows);
-                revalidate();
-                rerender();
-
-                return { status: 'ok' };
+                const n = revalidate();
+                const v = rerender();
+                const dep = checkDeps(n, v);
+                if (dep) return dep;
+                return { status: 'updated', changed: true };
             },
 
             resetToSource: function() {
-                if (!initialized) return { status: 'not_initialized' };
+                if (!initialized) return { status: 'not-initialized', changed: false };
                 draftRows = copyRows(sourceSnapshot);
                 dirty = false;
                 sourceUpdatedWhileDirty = false;
-                revalidate();
-                rerender();
-                return { status: 'ok' };
+                const n = revalidate();
+                const v = rerender();
+                const dep = checkDeps(n, v);
+                if (dep) return dep;
+                return { status: 'updated', changed: true };
             },
 
             validate: function() {
-                if (!initialized) return { status: 'not_initialized' };
-                revalidate();
-                rerender();
-                return { status: 'ok' };
+                if (!initialized) return { status: 'not-initialized', changed: false };
+                const n = revalidate();
+                const v = rerender();
+                const dep = checkDeps(n, v);
+                if (dep) return dep;
+                return { status: 'ok', changed: true };
             },
 
             getState: function() {
+                const normStatus = (!normalizer || typeof normalizer.normalizeSchedule !== 'function') ? 'dependency-error' : 'ok';
+                const viewStatus = (!view || typeof view.render !== 'function') ? 'dependency-error' : 'ok';
                 return {
                     initialized,
                     dirty,
@@ -607,7 +635,11 @@ const AdminScheduleDraftEditor = (function() {
                     sourceUpdatedWhileDirty,
                     sourceSnapshot: copyRows(sourceSnapshot),
                     draft: copyRows(draftRows),
-                    validation: JSON.parse(JSON.stringify(lastValidation))
+                    validation: JSON.parse(JSON.stringify(lastValidation)),
+                    dependencies: {
+                        normalizer: normStatus,
+                        view: viewStatus
+                    }
                 };
             },
 
