@@ -1209,7 +1209,7 @@ Rules:
 
 **Tarih:** 2026-07-13
 **Başlangıç Hash (Remote HEAD):** `28936037ba4fd480c0426e5207eceeff9fcd60ff`
-**Implementation Hash:** `7611aa0`
+**Implementation Hash:** `7611aa09de55ceeab2d4f04bada05ad53c27f06d`
 **Implementation Message:** `fix: complete draft editor behavioural test coverage`
 
 #### Eklenen ve Değiştirilen Dosyalar
@@ -1240,12 +1240,16 @@ Kalıcı Node.js Test Toplamları:
 6. **Admin Schedule Diagnostics:** 84
 7. **Admin Schedule Draft Editor:** 121
 
-**Kesin Aritmetik Toplam:** 303 + 121 = 424 (424 test başarılı)
+**Kesin Aritmetik Toplam:** 303 + 121 = 424 (The test file contains exactly 121 permanent top-level Node test declarations. 303 + 121 = 424 is the structural combined test count.)
+
+*Not: Başarıyla çalıştırılan Node test komutları bir Antigravity local terminal result (yerel terminal sonucu) olup, GitHub CI veya bağımsız doğrulama değildir. GitHub'da bu HEAD için hiçbir CI kanıtı (evidence) bulunmamaktadır. 424 testin GitHub CI kanıtı olmadan bağımsız olarak doğrulandığı iddia edilemez.*
 
 Geçici Veritabanında Chromium Test Sonuçları:
-- Dashboard Chromium: 24 passed, 0 failed
-- Admin diagnostics Chromium: 46 passed, 0 failed
-- Draft-editor Chromium: 19 Playwright assertions passed, 0 failed
+- Dashboard Chromium: 24 passed, 0 failed (Historical previously verified result, not rerun)
+- Admin diagnostics Chromium: 46 passed, 0 failed (Historical previously verified result, not rerun)
+- Draft-editor Chromium: 19 Playwright assertions passed, 0 failed (Explicitly labelled as a historical, non-rerun, GitHub-unverifiable local result)
+
+*Not: Sürücü (driver) ortamı kullanılamadığından Chromium/Playwright bu düzeltme aşamasında çalıştırılmamıştır.*
 
 #### Değişmeyen Bileşenler (Garantiler)
 Gerçek veritabanı, backend kodları, dashboard kartları, büyük saat ve dashboard düzeni kesinlikle değişmemiştir. Geçici veritabanı stratejisiyle test edilmiştir.
