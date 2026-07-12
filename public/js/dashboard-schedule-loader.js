@@ -116,12 +116,12 @@
             const endpointWithQuery = `${endpoint}?day=${encodeURIComponent(day)}`;
 
             let response;
+            let timeoutId = null;
             try {
                 // Using API service
                 const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
                 const signal = controller ? controller.signal : undefined;
                 
-                let timeoutId;
                 if (controller) {
                     timeoutId = setTimeout(() => controller.abort(), timeoutMs);
                 }
@@ -132,11 +132,12 @@
                     // Safe timeout race if AbortController is not available
                     response = await Promise.race([
                         fetchPromise,
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeoutMs))
+                        new Promise((_, reject) => {
+                            timeoutId = setTimeout(() => reject(new Error('Timeout')), timeoutMs);
+                        })
                     ]);
                 } else {
                     response = await fetchPromise;
-                    clearTimeout(timeoutId);
                 }
             } catch (error) {
                 // Transport failure: do not clear, do not throw
@@ -148,6 +149,10 @@
                 };
                 logOnce('warn', 'schedule request failed; current schedule preserved', { error: lastResult.error });
                 return lastResult;
+            } finally {
+                if (timeoutId !== null) {
+                    clearTimeout(timeoutId);
+                }
             }
 
             const classification = classifyNormalizedScheduleResponse(response, day);
