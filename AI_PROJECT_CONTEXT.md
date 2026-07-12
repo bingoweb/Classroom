@@ -436,7 +436,7 @@ The safe planned sequence is:
 ## 16. Next Recommended Task
 
 ```text
-Add focused regression coverage for ScheduleManager external injection and evaluate whether simulator presets should derive from the active schedule, without connecting /api/schedule.
+Refactor development simulator presets to resolve semantic times from ScheduleManager.getActiveSchedule() at click time, while preserving the existing simulator layout and without connecting /api/schedule.
 ```
 
 The next task must explicitly state:
@@ -491,50 +491,66 @@ Rules:
 * Verified HEAD before this task:
 
   ```text
-  1e0b9b1 feat: integrate validated schedule fallback
+  5f7302f fix: harden external schedule fallback state
   ```
-* Defects Discovered & Fixed:
+* Initial working-tree state:
 
   ```text
-  1. Rejected replacement retained previous external state.
-  2. Integration mutated normalizer result (pushed to result.errors, toggled result.valid).
-  3. Public getters exposed mutable active state (returned internal references allowing external mutation).
+  clean
   ```
-* Exact Implementation Correction:
+* Files added/modified during task:
 
   ```text
-  Added deep-cloning helpers (`clonePeriod`, `cloneSchedule`). Created `getInternalActiveSchedule` for private operations and modified `getActiveSchedule` to return a defensive copy. Extracted rejection handling to `rejectExternalSchedule` to guarantee `activeExternalSchedule` is nulled on any failure (returning fallback). Removed array/object mutations from the gap verification logic and added an exception handler boundary for unexpected normalizer faults.
+  tests/schedule-manager.test.js (added)
+  package.json (modified)
+  public/js/schedule-manager.js (modified)
+  AI_PROJECT_CONTEXT.md (modified)
   ```
-* New commit message:
+* Persistent test framework used:
 
   ```text
-  fix: harden external schedule fallback state
+  node:test / node:assert/strict (Node version: v24.18.0)
   ```
-* Working tree state before this document update:
+* Exact Node test totals:
 
   ```text
-  clean (with public/js/schedule-manager.js modified)
+  33 named tests
+  33 passed, 0 failed
   ```
-* Files modified:
+* Malformed normalizer-result tests:
 
   ```text
-  public/js/schedule-manager.js
-  AI_PROJECT_CONTEXT.md
+  Tests for `null`, `{}`, and `{ valid: true, periods: null }` successfully verified the rejection logic. `isNormalizerResult` was added to `schedule-manager.js` to protect against missing/malformed normalizer diagnostic structures, returning the `INVALID_NORMALIZER_RESULT` code.
   ```
-* Tests performed:
+* Exact Playwright UI test total:
 
   ```text
-  Manager tests: 22 passed, 0 failed. UI tests: 2 passed, 0 failed. UI tests were performed using Playwright launching a real Chromium browser automation. Syntax checks for both normalizer and manager passed.
+  2 passed, 0 failed (verified using actual script execution)
   ```
-* Resolved risks:
+* Simulator Evaluation Decision:
 
   ```text
-  Schedule integration logic is now completely immutable, defensive, and fails safely to SCHOOL_SCHEDULE across all error conditions.
+  Fixed times (e.g. 09:10) become incorrect when the external schedule uses completely different times, mapping buttons to wrong semantic periods. Click-time semantic resolution is accepted because it guarantees lazy fetching from the most recent `getActiveSchedule()`, avoiding stale presets and eliminating the need for a global schedule-change event. Timezone issues will be avoided by using `new Date(year, monthIndex, day, hours, minutes)` instead of ISO strings. Missing periods will gracefully disable/hide the preset without generating invalid dates or falling back to misleading times. The current simulator layout and Turkish labels will be preserved by swapping `data-preset="09:10"` to `data-preset="first-class"`.
   ```
-* Remaining risks:
+* Implementation commit:
 
   ```text
-  Simulator presets remain hardcoded and may be invalid against new schedules. Backend database still lacks the required temporal fields to be safely consumed.
+  f9a5146 test: add persistent schedule regression coverage
+  ```
+* Documentation commit:
+
+  ```text
+  (to be committed) docs: evaluate active schedule simulator presets
+  ```
+* Final working-tree state:
+
+  ```text
+  clean (after committing this documentation)
+  ```
+* Confirmation of unchanged scope:
+
+  ```text
+  Backend, database, API connection, admin panel, simulator production code, layout, cards, clock, CSS, and visual design were definitely NOT changed.
   ```
 * Status:
 
