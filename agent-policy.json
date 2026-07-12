@@ -1,0 +1,97 @@
+{
+  "prohibitedGitCommands": [
+    "git add .",
+    "git commit -a",
+    "git commit -am",
+    "push --force",
+    "push -f"
+  ],
+  "prohibitedSystemCommands": [
+    "killall",
+    "pkill"
+  ],
+  "prohibitedTestPatterns": [
+    "assert.equal(true, true)",
+    "assert.strictEqual(true, true)",
+    "assert.ok(true)",
+    ".skip(",
+    ".todo(",
+    "console.assert",
+    "placeholder",
+    "padding"
+  ],
+  "permanentProtectedDirectories": [
+    "backend",
+    "tests"
+  ],
+  "innerHTMLProhibitedFiles": [
+    "public/admin/schedule-review-panel.js"
+  ],
+  "prohibitedNetworkAndStoragePatterns": {
+    "files": [
+      "public/admin/schedule-review-panel.js"
+    ],
+    "patterns": [
+      "fetch(",
+      "XMLHttpRequest",
+      "window.api",
+      "localStorage",
+      "sessionStorage",
+      "indexedDB",
+      "document.cookie",
+      "caches.",
+      "serviceWorker",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE"
+    ]
+  },
+  "adminHtmlRequirements": {
+    "file": "public/admin/index.html",
+    "requiredIds": [
+      "sdeEditableTable",
+      "sdeEditableTableBody",
+      "sdePreviewTableBody",
+      "srpContainer"
+    ],
+    "requiredHeadings": [
+      "#",
+      "Tür",
+      "Ad",
+      "Başlangıç",
+      "Bitiş",
+      "İşlem"
+    ],
+    "requiredScriptOrder": [
+      "schedule-diagnostics.js",
+      "schedule-draft-editor.js",
+      "schedule-review-panel.js",
+      "admin.js"
+    ],
+    "prohibitedMarkupPatterns": [
+      "style=\"[^\"]*<h3"
+    ]
+  },
+  "packageRequirements": {
+    "file": "package.json",
+    "requiredScripts": [
+      "test:admin-schedule-review",
+      "test:admin-schedule-draft",
+      "test:core",
+      "test:policy",
+      "test:gate"
+    ],
+    "coreTestFiles": [
+      "tests/schedule-manager.test.js",
+      "tests/dev-time-simulator.test.js",
+      "tests/backend-date-utils.test.js",
+      "tests/backend-schedule.test.js",
+      "tests/dashboard-schedule-loader.test.js",
+      "tests/admin-schedule-diagnostics.test.js",
+      "tests/admin-schedule-draft-editor.test.js",
+      "tests/admin-schedule-review-panel.test.js",
+      "tests/agent-compliance.test.js"
+    ]
+  }
+}
