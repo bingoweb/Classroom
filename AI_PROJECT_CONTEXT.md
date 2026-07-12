@@ -1240,16 +1240,32 @@ Kalıcı Node.js Test Toplamları:
 6. **Admin Schedule Diagnostics:** 84
 7. **Admin Schedule Draft Editor:** 121
 
-**Kesin Aritmetik Toplam:** 303 + 121 = 424 (The test file contains exactly 121 permanent top-level Node test declarations. 303 + 121 = 424 is the structural combined test count.)
+##### 1. Kalıcı yapısal test bildirimleri
+`tests/admin-schedule-draft-editor.test.js` tam olarak 121 kalıcı üst düzey Node.js test bildirimi içerir.
+Daha önce doğrulanan kalıcı ara toplam 303'tür.
+`303 + 121 = 424` yapısal birleşik test sayısıdır.
+Yapısal test sayısı, kendi başına testlerin başarıyla çalıştığının bir kanıtı değildir.
 
-*Not: Başarıyla çalıştırılan Node test komutları bir Antigravity local terminal result (yerel terminal sonucu) olup, GitHub CI veya bağımsız doğrulama değildir. GitHub'da bu HEAD için hiçbir CI kanıtı (evidence) bulunmamaktadır. 424 testin GitHub CI kanıtı olmadan bağımsız olarak doğrulandığı iddia edilemez.*
+##### 2. Bu düzeltme turundaki Antigravity yerel terminal sonuçları
+```bash
+npm run test:admin-schedule-draft
+npm run test:core
+```
+- Draft Editor paketi: 121 başarılı, 0 başarısız.
+- Core paketi: 424 başarılı, 0 başarısız.
 
-Geçici Veritabanında Chromium Test Sonuçları:
-- Dashboard Chromium: 24 passed, 0 failed (Historical previously verified result, not rerun)
-- Admin diagnostics Chromium: 46 passed, 0 failed (Historical previously verified result, not rerun)
-- Draft-editor Chromium: 19 Playwright assertions passed, 0 failed (Explicitly labelled as a historical, non-rerun, GitHub-unverifiable local result)
+Bu sonuçların yalnızca Antigravity yerel terminal sonuçları olduğu unutulmamalıdır. GitHub bu sonuçları bağımsız olarak doğrulamamıştır.
 
-*Not: Sürücü (driver) ortamı kullanılamadığından Chromium/Playwright bu düzeltme aşamasında çalıştırılmamıştır.*
+##### 3. GitHub CI kanıtları
+Bu HEAD için herhangi bir GitHub CI durumu veya GitHub Actions iş akışı çalışması bulunmamaktadır.
+Bu nedenle, ne 121 testlik sonuç ne de 424 testlik sonuç GitHub CI tarafından bağımsız olarak doğrulanmamıştır.
+
+##### 4. Önceki Chromium/Playwright Kayıtları — Bu Turda Yeniden Çalıştırılmadı
+- Dashboard Chromium: 24 passed, 0 failed — daha önce bağımsız olarak doğrulanmış tarihsel sonuç; bu turda yeniden çalıştırılmadı.
+- Admin Diagnostics Chromium: 46 passed, 0 failed — daha önce bağımsız olarak doğrulanmış tarihsel sonuç; bu turda yeniden çalıştırılmadı.
+- Draft Editor Chromium: 19 Playwright assertion passed, 0 failed — geçmişte raporlanmış yerel sonuç; bu turda yeniden çalıştırılmadı ve GitHub üzerinden bağımsız olarak doğrulanamıyor.
+
+Sürücü ortamı kullanılamadığından bu düzeltme turunda Chromium/Playwright çalıştırılmamıştır.
 
 #### Değişmeyen Bileşenler (Garantiler)
 Gerçek veritabanı, backend kodları, dashboard kartları, büyük saat ve dashboard düzeni kesinlikle değişmemiştir. Geçici veritabanı stratejisiyle test edilmiştir.
