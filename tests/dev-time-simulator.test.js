@@ -200,3 +200,111 @@ test('24. Midpoints with fractional minutes round down', () => {
     assert.strictEqual(res.getHours(), 9);
     assert.strictEqual(res.getMinutes(), 2);
 });
+
+test('25. Weekend resolves with null schedule', () => {
+    const res = simulator.resolveSemanticPresetDate('weekend', null);
+    assert.ok(res);
+    assert.strictEqual(res.getDay(), 6);
+    assert.strictEqual(res.getHours(), 10);
+    assert.strictEqual(res.getMinutes(), 0);
+});
+
+test('26. Weekend resolves with missing periods', () => {
+    const res = simulator.resolveSemanticPresetDate('weekend', {});
+    assert.ok(res);
+    assert.strictEqual(res.getDay(), 6);
+});
+
+test('27. 24:00 school start is rejected', () => {
+    const sch = { schoolStart: '24:00', schoolEnd: '10:00', periods: [{ type: 'class', start: '24:00', end: '10:00' }] };
+    assert.strictEqual(simulator.resolveSemanticPresetDate('before-school', sch), null);
+});
+
+test('28. 25:00 school start is rejected', () => {
+    const sch = { schoolStart: '25:00', schoolEnd: '10:00', periods: [{ type: 'class', start: '25:00', end: '10:00' }] };
+    assert.strictEqual(simulator.resolveSemanticPresetDate('before-school', sch), null);
+});
+
+test('29. 09:60 school start is rejected', () => {
+    const sch = { schoolStart: '09:60', schoolEnd: '10:00', periods: [{ type: 'class', start: '09:60', end: '10:00' }] };
+    assert.strictEqual(simulator.resolveSemanticPresetDate('before-school', sch), null);
+});
+
+test('30. 09:5 school start is rejected', () => {
+    const sch = { schoolStart: '09:5', schoolEnd: '10:00', periods: [{ type: 'class', start: '09:5', end: '10:00' }] };
+    assert.strictEqual(simulator.resolveSemanticPresetDate('before-school', sch), null);
+});
+
+test('31. 09:30:00 school start is rejected', () => {
+    const sch = { schoolStart: '09:30:00', schoolEnd: '10:00', periods: [{ type: 'class', start: '09:30:00', end: '10:00' }] };
+    assert.strictEqual(simulator.resolveSemanticPresetDate('before-school', sch), null);
+});
+
+test('32. Invalid school-end range is rejected', () => {
+    const sch = { schoolStart: '09:00', schoolEnd: '30:00', periods: [{ type: 'class', start: '09:00', end: '30:00' }] };
+    assert.strictEqual(simulator.resolveSemanticPresetDate('after-school', sch), null);
+});
+
+test('33. Invalid period-hour range is rejected', () => {
+    const sch = { schoolStart: '09:00', schoolEnd: '10:00', periods: [{ type: 'class', start: '99:00', end: '10:00' }] };
+    assert.strictEqual(simulator.resolveSemanticPresetDate('first-class', sch), null);
+});
+
+test('34. Invalid period-minute range is rejected', () => {
+    const sch = { schoolStart: '09:00', schoolEnd: '10:00', periods: [{ type: 'class', start: '09:00', end: '10:99' }] };
+    assert.strictEqual(simulator.resolveSemanticPresetDate('first-class', sch), null);
+});
+
+test('35. A null period entry does not throw', () => {
+    const sch = { schoolStart: '09:00', schoolEnd: '10:00', periods: [null, { type: 'class', start: '09:00', end: '10:00' }] };
+    const res = simulator.resolveSemanticPresetDate('first-class', sch);
+    assert.ok(res);
+});
+
+test('36. A primitive period entry does not throw', () => {
+    const sch = { schoolStart: '09:00', schoolEnd: '10:00', periods: ['invalid string', { type: 'class', start: '09:00', end: '10:00' }] };
+    const res = simulator.resolveSemanticPresetDate('first-class', sch);
+    assert.ok(res);
+});
+
+test('37. Valid periods after malformed entries can still be resolved', () => {
+    const sch = { schoolStart: '09:00', schoolEnd: '10:00', periods: [null, 42, { type: 'class', start: '09:00', end: '10:00' }] };
+    const res = simulator.resolveSemanticPresetDate('first-class', sch);
+    assert.strictEqual(res.getHours(), 9);
+    assert.strictEqual(res.getMinutes(), 30);
+});
+
+test('38. An entirely malformed period array returns null', () => {
+    const sch = { schoolStart: '09:00', schoolEnd: '10:00', periods: [null, undefined, 42] };
+    assert.strictEqual(simulator.resolveSemanticPresetDate('first-class', sch), null);
+});
+
+test('39. Longest-break ignores malformed and non-positive break periods', () => {
+    const sch = { schoolStart: '09:00', schoolEnd: '12:00', periods: [
+        null,
+        { type: 'break', start: '09:00', end: '08:00' },
+        { type: 'break', start: '09:00', end: '09:00' },
+        { type: 'break', start: '09:00', end: '09:10' }
+    ] };
+    const res = simulator.resolveSemanticPresetDate('longest-break', sch);
+    assert.strictEqual(res.getHours(), 9);
+    assert.strictEqual(res.getMinutes(), 5);
+});
+
+test('40. Availability helper marks weekend available without a schedule, if the helper is introduced', () => {
+    assert.strictEqual(simulator.isSemanticPresetAvailable('weekend', null), true);
+    assert.strictEqual(simulator.isSemanticPresetAvailable('weekend', undefined), true);
+    assert.strictEqual(simulator.isSemanticPresetAvailable('real-time', null), true);
+});
+
+test('41. Availability helper rejects unknown identifiers, if introduced', () => {
+    assert.strictEqual(simulator.isSemanticPresetAvailable('unknown-preset', mockSchedule), false);
+});
+
+test('42. Repeated calls do not mutate malformed input schedules', () => {
+    const sch = { schoolStart: '09:00', schoolEnd: '10:00', periods: [null, { type: 'class', start: '09:00', end: '10:00' }] };
+    const jsonStr = JSON.stringify(sch);
+    simulator.resolveSemanticPresetDate('first-class', sch);
+    simulator.resolveSemanticPresetDate('first-class', sch);
+    assert.strictEqual(JSON.stringify(sch), jsonStr);
+});

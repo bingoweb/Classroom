@@ -11,9 +11,9 @@
 })(function() {
     // Pure helpers
     function timeToMinutes(str) {
-        if (!str || typeof str !== 'string' || !str.includes(':')) return null;
+        if (!str || typeof str !== 'string') return null;
+        if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(str)) return null;
         const [h, m] = str.split(':').map(Number);
-        if (isNaN(h) || isNaN(m)) return null;
         return h * 60 + m;
     }
 
@@ -27,14 +27,14 @@
     }
 
     function resolveSemanticPresetDate(preset, schedule) {
+        if (preset === 'weekend') {
+            return createLocalDate(6, 10, 0);
+        }
+
         if (!schedule || !Array.isArray(schedule.periods)) return null;
         if (!schedule.schoolStart || !schedule.schoolEnd) return null;
 
         const periods = schedule.periods;
-
-        if (preset === 'weekend') {
-            return createLocalDate(6, 10, 0);
-        }
 
         if (preset === 'before-school') {
             const startMins = timeToMinutes(schedule.schoolStart);
@@ -50,8 +50,8 @@
             return createLocalDate(2, 0, target);
         }
 
-        const classes = periods.filter(p => p.type === 'class');
-        const breaks = periods.filter(p => p.type === 'break');
+        const classes = periods.filter(p => p && typeof p === 'object' && p.type === 'class');
+        const breaks = periods.filter(p => p && typeof p === 'object' && p.type === 'break');
 
         let targetPeriod = null;
 
@@ -92,7 +92,15 @@
         return createLocalDate(2, 0, midpoint);
     }
 
+    function isSemanticPresetAvailable(preset, schedule) {
+        if (preset === 'real-time') return true;
+        if (preset === 'weekend') return true;
+        return resolveSemanticPresetDate(preset, schedule) !== null;
+    }
+
     function init(window, document) {
+        if (document.getElementById('dev-time-simulator')) return;
+
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('gelistirme') !== '1') {
             return;
@@ -181,44 +189,35 @@
         }
 
         function refreshButtonAvailability() {
-            if (!window.ScheduleManager) {
+            if (!window.TimeProvider) {
                 buttons.forEach(btn => {
-                    const preset = btn.getAttribute('data-preset');
-                    if (preset !== 'real-time' && preset !== 'weekend') {
-                        btn.disabled = true;
-                        btn.setAttribute('aria-disabled', 'true');
-                        btn.title = 'Bu programda uygun dönem bulunmuyor.';
-                    }
+                    btn.disabled = true;
+                    btn.setAttribute('aria-disabled', 'true');
+                    btn.title = 'Zaman sağlayıcısı kullanılamıyor.';
                 });
                 return;
             }
 
-            const schedule = window.ScheduleManager.getActiveSchedule();
+            const schedule = window.ScheduleManager ? window.ScheduleManager.getActiveSchedule() : null;
+
             buttons.forEach(btn => {
                 const preset = btn.getAttribute('data-preset');
-                if (preset === 'real-time' || preset === 'weekend') {
+                if (isSemanticPresetAvailable(preset, schedule)) {
                     btn.disabled = false;
                     btn.removeAttribute('aria-disabled');
                     btn.title = '';
-                    return;
-                }
-
-                const resolved = resolveSemanticPresetDate(preset, schedule);
-                if (!resolved) {
+                } else {
                     btn.disabled = true;
                     btn.setAttribute('aria-disabled', 'true');
                     btn.title = 'Bu programda uygun dönem bulunmuyor.';
-                } else {
-                    btn.disabled = false;
-                    btn.removeAttribute('aria-disabled');
-                    btn.title = '';
                 }
             });
         }
 
-        // Attach mouse events to refresh availability without a global interval/event
-        container.addEventListener('mouseenter', refreshButtonAvailability);
+        // Attach interaction events to refresh availability without a global interval/event
+        container.addEventListener('pointerover', refreshButtonAvailability);
         container.addEventListener('focusin', refreshButtonAvailability);
+        container.addEventListener('keydown', refreshButtonAvailability);
 
         buttons.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -230,13 +229,14 @@
                     return;
                 }
 
-                if (!window.ScheduleManager) {
-                    errorMsg.textContent = 'Bu programda seçilen zaman dilimi bulunmuyor.';
-                    errorMsg.style.display = 'block';
+                if (preset === 'weekend') {
+                    if (window.TimeProvider) window.TimeProvider.setSimulatedDate(resolveSemanticPresetDate('weekend', null));
                     return;
                 }
 
-                const schedule = window.ScheduleManager.getActiveSchedule();
+                refreshButtonAvailability();
+
+                const schedule = window.ScheduleManager ? window.ScheduleManager.getActiveSchedule() : null;
                 const resolved = resolveSemanticPresetDate(preset, schedule);
 
                 if (!resolved) {
@@ -278,6 +278,7 @@
 
     return {
         resolveSemanticPresetDate,
+        isSemanticPresetAvailable,
         init
     };
 });
