@@ -1,16 +1,19 @@
 {
-  "taskId": "guardrail-repair-bootstrap",
-  "featureName": "Agent Compliance Guardrails",
-  "changeType": "documentation",
-  "baseCommit": "e09c77ea62b3604284caf6c386e5184e583087fc",
+  "taskId": "guardrail-hardening-v3",
+  "featureName": "Project-wide maintenance enforcement",
+  "changeType": "security",
+  "baseCommit": "2c4186e358ad1c564d386a529d7ca341ceff2afa",
   "newFeaturesAllowed": false,
   "allowedExistingFiles": [
+    ".agent/task-contract.json",
+    ".agent/task-contract.schema.json",
     ".agent/quality-baseline.json",
+    "agent-policy.json",
     "scripts/verify-agent-compliance.js",
     "tests/agent-compliance.test.js",
+    ".github/workflows/agent-compliance.yml",
     "package.json",
-    "AI_PROJECT_CONTEXT.md",
-    ".agent/task-contract.json"
+    "AI_PROJECT_CONTEXT.md"
   ],
   "allowedNewFiles": [],
   "protectedFiles": [],
@@ -20,5 +23,10 @@
   "requiredStaticChecks": [],
   "requiredTestCommands": [],
   "browserVerificationRequired": false,
-  "documentationRequired": false
+  "documentationRequired": true,
+  "allowedSensitiveChanges": [],
+  "allowedUiStructureChanges": [],
+  "allowedBackendChanges": [],
+  "allowedDatabaseChanges": [],
+  "allowedDependencyChanges": []
 }
