@@ -1282,23 +1282,22 @@ Add a read-only source-versus-draft review panel that summarizes added, removed 
 ### 9. Admin Schedule Review Panel Prototype
 
 **Tarih:** 2026-07-12
-**Başlangıç Hash (Remote HEAD):** `f1963f6db76d8692686217f99dfa9b9007227e40`
-**Implementation Hash:** `8e34e94`
-**Implementation Message:** `feat: add read-only source-versus-draft review panel prototype`
+**Başlangıç Hash (Remote HEAD):** `34ae6ce3eb6423c0e065e99e2cc6cdf928f7093b`
+**Implementation Message:** `fix: repair schedule review panel prototype`
 
 #### Eklenen ve Değiştirilen Dosyalar
 - `package.json`
 - `public/admin/admin.js`
 - `public/admin/index.html`
-- `public/admin/schedule-review-panel.js` (Yeni)
-- `tests/admin-schedule-review-panel.test.js` (Yeni)
+- `public/admin/schedule-review-panel.js`
+- `tests/admin-schedule-review-panel.test.js`
 
 #### Mimari Özellikleri
-- **Deterministic LCS Comparison:** `sourceSnapshot` ve `draft` arasındaki değişiklikleri belirlemek için Longest Common Subsequence (LCS) algoritması kullanıldı. Öğeler, ID'lerinden bağımsız olarak tamamen kanonik yapıları (name, type, start, end) üzerinden karşılaştırıldı.
-- **Composite View Kalıbı:** Yeni panel mantığı, mevcut `schedule-draft-editor.js` koduna dokunulmadan, `admin.js` içindeki render döngüsüne bir "composite view" sarmalayıcısı aracılığıyla entegre edildi.
+- **Deterministic LCS Comparison:** `sourceSnapshot` ve `draft` arasındaki değişiklikleri belirlemek için algoritma kullanıldı.
+- **Composite View Kalıbı:** Yeni panel mantığı, mevcut `schedule-draft-editor.js` koduna dokunulmadan, `admin.js` içindeki render döngüsüne bir controller aracılığıyla entegre edildi. Controller "render-error" ve "dependency-error" döndürebilecek şekilde yapılandırıldı.
 - **XSS-Safe Rendering:** `innerHTML` kullanımı engellendi; tamamen güvenli olan `textContent` ve `document.createElement` kullanılarak render işlemleri sağlandı.
 - **Pure Functions:** Veri dönüştürme ve karşılaştırma fonksiyonları, DOM ve ağ isteklerinden izole edilerek tam test edilebilir hale getirildi.
-- **Türkçe Arayüz:** Kullanıcıya görünen tüm metinler, talep edildiği üzere doğal ve akıcı Türkçe ile ("Değiştirilen", "Kaldırılan", "Eklenen" vb.) yazıldı.
+- **Türkçe Arayüz:** Kullanıcıya görünen tüm metinler ("Değiştirilen", "Kaldırılan", "Eklenen", "Önceki değer", "Taslak değeri" vb.) Türkçe ile yazıldı.
 
 #### Test Kapsamı
 Kalıcı Node.js Test Toplamları:
@@ -1309,10 +1308,10 @@ Kalıcı Node.js Test Toplamları:
 5. **Dashboard Schedule Loader:** 55
 6. **Admin Schedule Diagnostics:** 84
 7. **Admin Schedule Draft Editor:** 121
-8. **Admin Schedule Review Panel:** 13 (Sentetik olmayan, tamamen davranışsal)
+8. **Admin Schedule Review Panel:** 56 (Sentetik olmayan, tamamen davranışsal)
 
 ##### 1. Kalıcı yapısal test bildirimleri
-`tests/admin-schedule-review-panel.test.js` dosyası 13 davranışsal test içerir. Bunlar padding testleri değildir. Toplam core test sayısı `424 + 13 = 437` olmuştur.
+`tests/admin-schedule-review-panel.test.js` dosyası 56 üst düzey ve bağımsız test içerir. padding testleri kullanılmamıştır. Toplam core test sayısı 539 olmuştur.
 
 ##### 2. Bu düzeltme turundaki Antigravity yerel terminal sonuçları
 ```bash
@@ -1320,9 +1319,9 @@ npm run test:admin-schedule-review
 npm run test:admin-schedule-draft
 npm run test:core
 ```
-- Review Panel paketi: 13 başarılı, 0 başarısız.
+- Review Panel paketi: 56 başarılı, 0 başarısız.
 - Draft Editor paketi: 121 başarılı, 0 başarısız.
-- Core paketi: 437 başarılı, 0 başarısız.
+- Core paketi: 539 başarılı, 0 başarısız.
 
 GitHub bu sonuçları bağımsız olarak henüz doğrulamamıştır. Sürücü ortamı kullanılamadığından bu turda Chromium/Playwright çalıştırılamamıştır.
 
