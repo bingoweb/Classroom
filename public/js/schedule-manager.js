@@ -147,6 +147,9 @@ function getScheduleStatus(now) {
     let currentPeriod = null;
     let nextBreak = null;
     let periodProgress = 0;
+    
+    let nextEventNameStr = null;
+    let nextLessonNameStr = null;
 
     for (let i = 0; i < SCHOOL_SCHEDULE.periods.length; i++) {
         const period = SCHOOL_SCHEDULE.periods[i];
@@ -159,10 +162,13 @@ function getScheduleStatus(now) {
 
             // Eğer ders ise, bir sonraki teneffüsü bul
             if (period.type === 'class') {
+                nextEventNameStr = i < SCHOOL_SCHEDULE.periods.length - 1 ? SCHOOL_SCHEDULE.periods[i + 1].name : 'Okul Sonu';
+                nextLessonNameStr = i < SCHOOL_SCHEDULE.periods.length - 2 ? SCHOOL_SCHEDULE.periods[i + 2].name : null;
+
                 // Bu dersin bitiş zamanı = teneffüs başlangıcı
                 nextBreak = {
                     time: periodEnd,
-                    name: i < SCHOOL_SCHEDULE.periods.length - 1 ? SCHOOL_SCHEDULE.periods[i + 1].name : 'Okul Sonu',
+                    name: nextEventNameStr,
                     duration: i < SCHOOL_SCHEDULE.periods.length - 1 ? SCHOOL_SCHEDULE.periods[i + 1].duration : 0
                 };
 
@@ -171,6 +177,9 @@ function getScheduleStatus(now) {
                 const elapsed = currentTime - periodStart;
                 periodProgress = Math.min(100, Math.max(0, (elapsed / periodDuration) * 100));
             } else {
+                nextEventNameStr = i < SCHOOL_SCHEDULE.periods.length - 1 ? SCHOOL_SCHEDULE.periods[i + 1].name : 'Okul Sonu';
+                nextLessonNameStr = i < SCHOOL_SCHEDULE.periods.length - 1 ? SCHOOL_SCHEDULE.periods[i + 1].name : null;
+
                 // Teneffüsteyiz, bir sonraki dersin başlangıcını bul
                 if (i < SCHOOL_SCHEDULE.periods.length - 1) {
                     nextBreak = {
@@ -218,7 +227,11 @@ function getScheduleStatus(now) {
         progress: periodProgress,
         visual: currentPeriod.type === 'class' ? 'countdown' : 'break',
         currentPeriod: currentPeriod.name,
-        nextEvent: nextBreak ? nextBreak.name : 'Okul Sonu'
+        nextEvent: nextBreak ? nextBreak.name : 'Okul Sonu',
+        currentPeriodName: currentPeriod.name,
+        currentPeriodType: currentPeriod.type,
+        nextEventName: nextEventNameStr,
+        nextLessonName: nextLessonNameStr
     };
 }
 

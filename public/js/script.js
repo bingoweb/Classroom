@@ -989,7 +989,7 @@ if (typeof window !== 'undefined') {
 }
 
 function updateClock() {
-    const now = new Date();
+    const now = window.TimeProvider ? window.TimeProvider.now() : new Date();
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     document.getElementById('clock').innerHTML = `${hours}<span class="blink">:</span>${minutes}`;
@@ -1138,17 +1138,37 @@ function updateCountdown(now) {
             const titleEl = countdownMode.querySelector('h3');
             if (titleEl) titleEl.textContent = status.message;
 
+            let subtitleText = status.subtitle;
+            if (status.currentPeriodName) {
+                if (status.currentPeriodType === 'class') {
+                    if (status.nextLessonName) {
+                        subtitleText = `Şu an: ${status.currentPeriodName} • Sıradaki ders: ${status.nextLessonName}`;
+                    } else {
+                        subtitleText = `Şu an: ${status.currentPeriodName} • Sonraki: ${status.nextEventName || 'Okul Sonu'}`;
+                    }
+                } else if (status.currentPeriodType === 'break') {
+                    if (status.nextLessonName) {
+                        subtitleText = `Şu an: ${status.currentPeriodName} • Sıradaki: ${status.nextLessonName}`;
+                    } else {
+                        subtitleText = `Şu an: ${status.currentPeriodName} • Sonraki: ${status.nextEventName || 'Okul Sonu'}`;
+                    }
+                }
+            }
+
             const subtitleEl = countdownMode.querySelector('.countdown-subtitle');
             if (subtitleEl) {
-                subtitleEl.textContent = status.subtitle;
+                subtitleEl.textContent = subtitleText;
             } else {
                 // Create subtitle if it doesn't exist
                 const h3 = countdownMode.querySelector('h3');
-                if (h3 && !h3.nextElementSibling || h3.nextElementSibling.className !== 'countdown-subtitle') {
-                    const newSubtitle = document.createElement('div');
-                    newSubtitle.className = 'countdown-subtitle';
-                    newSubtitle.textContent = status.subtitle;
-                    h3.insertAdjacentElement('afterend', newSubtitle);
+                if (h3) {
+                    const nextElement = h3.nextElementSibling;
+                    if (!nextElement || !nextElement.classList.contains('countdown-subtitle')) {
+                        const newSubtitle = document.createElement('div');
+                        newSubtitle.className = 'countdown-subtitle';
+                        newSubtitle.textContent = subtitleText;
+                        h3.insertAdjacentElement('afterend', newSubtitle);
+                    }
                 }
             }
 
@@ -1290,6 +1310,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearInterval(clockInterval);
     }
     clockInterval = intervalManager.setInterval(updateClock, CONFIG.CLOCK_UPDATE_INTERVAL);
+    window.addEventListener('timeSimulationChanged', updateClock);
 
     // Set up data refresh interval with cleanup tracking
     if (dataRefreshInterval) {

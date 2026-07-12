@@ -1,0 +1,134 @@
+#dev-time-simulator {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(15, 20, 35, 0.95);
+    border: 2px solid #ff9800;
+    border-radius: 12px;
+    padding: 15px;
+    z-index: 9999;
+    color: white;
+    font-family: sans-serif;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+    max-width: 300px;
+    transition: transform 0.3s ease;
+}
+
+#dev-time-simulator.collapsed {
+    transform: translateY(calc(100% - 40px));
+}
+
+#dev-time-simulator header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    padding-bottom: 5px;
+}
+
+#dev-time-simulator h4 {
+    margin: 0;
+    font-size: 14px;
+    color: #ff9800;
+}
+
+#dev-time-simulator button.toggle-btn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+    opacity: 0.7;
+}
+#dev-time-simulator button.toggle-btn:hover,
+#dev-time-simulator button.toggle-btn:focus {
+    opacity: 1;
+    outline: 2px solid #ff9800;
+}
+
+#dev-time-simulator .badge {
+    background: #ff9800;
+    color: #000;
+    font-size: 11px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    display: block;
+    text-align: center;
+}
+
+#dev-time-simulator .badge.real-time {
+    background: #4caf50;
+    color: white;
+}
+
+#dev-time-simulator .buttons-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+#dev-time-simulator button.sim-btn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    padding: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s;
+}
+
+#dev-time-simulator button.sim-btn:hover,
+#dev-time-simulator button.sim-btn:focus {
+    background: rgba(255,255,255,0.2);
+    outline: 2px solid #ff9800;
+}
+
+#dev-time-simulator button.real-time-btn {
+    grid-column: span 2;
+    background: #4caf50;
+    color: white;
+    border-color: #4caf50;
+}
+
+#dev-time-simulator button.real-time-btn:hover,
+#dev-time-simulator button.real-time-btn:focus {
+    background: #43a047;
+}
+
+#dev-time-simulator .custom-time {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+    padding-top: 10px;
+}
+
+#dev-time-simulator label {
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+#dev-time-simulator input[type="datetime-local"] {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white;
+    padding: 5px;
+    border-radius: 4px;
+    color-scheme: dark;
+}
+
+#dev-time-simulator input[type="datetime-local"]:focus {
+    outline: 2px solid #ff9800;
+}
+
+#dev-time-simulator .error-msg {
+    color: #ff5252;
+    font-size: 11px;
+    display: none;
+}
