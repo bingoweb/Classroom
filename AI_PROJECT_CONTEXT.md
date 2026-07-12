@@ -436,15 +436,8 @@ The safe planned sequence is:
 ## 16. Next Recommended Task
 
 ```text
-Refactor development simulator presets to resolve semantic times from ScheduleManager.getActiveSchedule() at click time, while preserving the existing simulator layout and without connecting /api/schedule.
+Fix Istanbul-local date key generation in date-sensitive backend paths without changing the schedule schema, admin panel, API contract, or dashboard design.
 ```
-
-The next task must explicitly state:
-* do not fetch `/api/schedule` yet
-* do not modify the backend schema yet
-* do not modify the admin panel yet
-* do not connect the current incomplete database schedule
-* first add safe schedule injection and fallback behaviour only
 
 ## 17. Update Protocol for Every Future Task
 
@@ -491,7 +484,7 @@ Rules:
 * Verified HEAD before this task:
 
   ```text
-  5f7302f fix: harden external schedule fallback state
+  575fe84 docs: evaluate active schedule simulator presets
   ```
 * Initial working-tree state:
 
@@ -501,46 +494,44 @@ Rules:
 * Files added/modified during task:
 
   ```text
-  tests/schedule-manager.test.js (added)
+  tests/dev-time-simulator.test.js (added)
+  tests/schedule-manager.test.js (modified)
   package.json (modified)
+  public/js/dev-time-simulator.js (modified)
   public/js/schedule-manager.js (modified)
   AI_PROJECT_CONTEXT.md (modified)
   ```
-* Persistent test framework used:
+* Semantic preset rules & date construction:
 
   ```text
-  node:test / node:assert/strict (Node version: v24.18.0)
+  Values resolve at click time via getActiveSchedule(). `before-school` is start - 30m, `after-school` is end + 30m, `first-class`, `second-class`, `last-class`, `first-break`, and `longest-break` calculate exact midpoints. Local dates use `new Date(year, monthIndex, day, hours, minutes)` with Tuesday, January 2, 2024 as the weekday anchor and Saturday, January 6, 2024 for the weekend.
+  ```
+* Architecture & event strategy:
+
+  ```text
+  Dynamic click-time resolution ensures fresh schedules without requiring a global `schedule-change` event. Buttons disable and re-enable dynamically during UI focus or mouse entry if the chosen period isn't available in the current schedule, but they are never removed from the DOM and their Turkish labels are preserved.
   ```
 * Exact Node test totals:
 
   ```text
-  33 named tests
-  33 passed, 0 failed
-  ```
-* Malformed normalizer-result tests:
-
-  ```text
-  Tests for `null`, `{}`, and `{ valid: true, periods: null }` successfully verified the rejection logic. `isNormalizerResult` was added to `schedule-manager.js` to protect against missing/malformed normalizer diagnostic structures, returning the `INVALID_NORMALIZER_RESULT` code.
+  Persistent ScheduleManager tests: 33
+  Persistent Simulator tests: 24
+  Combined core test total: 57
   ```
 * Exact Playwright UI test total:
 
   ```text
-  2 passed, 0 failed (verified using actual script execution)
-  ```
-* Simulator Evaluation Decision:
-
-  ```text
-  Fixed times (e.g. 09:10) become incorrect when the external schedule uses completely different times, mapping buttons to wrong semantic periods. Click-time semantic resolution is accepted because it guarantees lazy fetching from the most recent `getActiveSchedule()`, avoiding stale presets and eliminating the need for a global schedule-change event. Timezone issues will be avoided by using `new Date(year, monthIndex, day, hours, minutes)` instead of ISO strings. Missing periods will gracefully disable/hide the preset without generating invalid dates or falling back to misleading times. The current simulator layout and Turkish labels will be preserved by swapping `data-preset="09:10"` to `data-preset="first-class"`.
+  28 passed, 0 failed (verified via real Chromium, no horizontal/vertical overflow)
   ```
 * Implementation commit:
 
   ```text
-  f9a5146 test: add persistent schedule regression coverage
+  eb40b9c feat: derive simulator presets from active schedule
   ```
 * Documentation commit:
 
   ```text
-  (to be committed) docs: evaluate active schedule simulator presets
+  (hash available in Git history) docs: update semantic simulator context
   ```
 * Final working-tree state:
 
@@ -550,7 +541,12 @@ Rules:
 * Confirmation of unchanged scope:
 
   ```text
-  Backend, database, API connection, admin panel, simulator production code, layout, cards, clock, CSS, and visual design were definitely NOT changed.
+  Backend, database, API connection, admin panel, dashboard visual design, clock layout, cards, and CSS were definitely NOT changed.
+  ```
+* Remaining risks:
+
+  ```text
+  Backend uses server-local time (often UTC on servers) or problematic date generation causing Istanbul time bugs. Database schema requires updating to handle dynamic temporal fields correctly.
   ```
 * Status:
 
