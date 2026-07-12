@@ -808,3 +808,133 @@ Rules:
   ```text
   Connect the dashboard to GET /api/schedule/normalized through a guarded loader that activates ScheduleManager external schedules only when the backend response is valid, while preserving permanent fallback behaviour and without building the admin editor yet.
   ```
+
+## 21. Last Context Update
+
+* Date:
+
+  ```text
+  2026-07-12
+  ```
+* Verified branch:
+
+  ```text
+  ilk-surum-gelistirme
+  ```
+* Verified HEAD before this task:
+
+  ```text
+  1af105b docs: record normalized schedule API
+  ```
+* Initial working-tree state:
+
+  ```text
+  clean
+  ```
+* Implementation commit hash and message:
+
+  ```text
+  26c32f8 fix: harden normalized schedule API correctness
+  ```
+* Files added/modified during task:
+
+  ```text
+  backend/database.js (modified)
+  backend/schedule-service.js (modified)
+  backend/server.js (modified)
+  tests/backend-schedule.test.js (modified)
+  ```
+* Readiness Promise race and correction:
+
+  ```text
+  db.scheduleMigrationPromise is now immediately available upon requiring database.js, preventing race conditions where the Promise didn't exist initially.
+  ```
+* Swallowed-rejection correction:
+
+  ```text
+  SQLite open failures and schema migration failures now explicitly reject db.scheduleMigrationPromise instead of swallowing the error.
+  ```
+* Shared four-route migration gate:
+
+  ```text
+  A single middleware requireScheduleStorageReady ensures that all 4 legacy and normalized routes wait for migration or fail gracefully.
+  ```
+* 503 contract:
+
+  ```text
+  Rejections of db.scheduleMigrationPromise return HTTP 503 withSCHEDULE_STORAGE_UNAVAILABLE and natural Turkish error text, hiding internal paths and SQLITE_ errors.
+  ```
+* Canonical day-key policy:
+
+  ```text
+  resolveScheduleDayKey trims and sanitizes the day parameter before querying/saving. Invalid names return HTTP 400. Padded requests are cleaned.
+  ```
+* Omitted-day default policy:
+
+  ```text
+  Normalized PUT without a 'day' falls back to 'weekday'. Omitted GET falls back to 'weekday'.
+  ```
+* 400 versus 422 policy:
+
+  ```text
+  Malformed payloads without a 'periods' array return 400 (INVALID_SCHEDULE_BODY). Structurally valid but semantically empty/invalid schedules (e.g. periods: []) return 422.
+  ```
+* Legacy-incomplete diagnostics policy:
+
+  ```text
+  A legacy row without temporal data fetched from normalized GET retains its structure and returns valid: false along with explicit warnings/errors from the pure normalizer.
+  ```
+* Exact number of placeholder tests removed:
+
+  ```text
+  8 placeholder tests replaced.
+  ```
+* Names or categories of placeholder tests replaced:
+
+  ```text
+  API Wiring Tests and Readiness Script Tests.
+  ```
+* Exact persistent suite totals from final runs:
+
+  ```text
+  ScheduleManager tests: 142
+  Simulator tests: 42
+  Backend Date tests: 20
+  Backend Schedule tests: 47
+  Combined core test total: 251
+  ```
+* Exact API smoke-test outcomes:
+
+  ```text
+  15/15 valid endpoints checked and passed via smoke-test script targeting the new 3001 testing port.
+  ```
+* Migration-failure HTTP test:
+
+  ```text
+  503 response generated and returned successfully with no SQLite paths leaked (tested on port 3002).
+  ```
+* Playwright result:
+
+  ```text
+  UI tests: 37 passed, 0 failed.
+  ```
+* Confirmation that the real database was untouched:
+
+  ```text
+  backend/classroom.db and other real project artifacts were not touched or committed. All execution used isolated temporary DB paths.
+  ```
+* Final working-tree state:
+
+  ```text
+  clean (after committing this documentation)
+  ```
+* Remaining risks:
+
+  ```text
+  Dashboard uses old logic and needs wiring to GET /api/schedule/normalized.
+  ```
+* Next recommended task:
+
+  ```text
+  Connect the dashboard to GET /api/schedule/normalized through a guarded loader that activates ScheduleManager external schedules only when the backend response is valid, while preserving permanent fallback behaviour and without building the admin editor yet.
+  ```
