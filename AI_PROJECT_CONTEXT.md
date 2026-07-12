@@ -664,3 +664,147 @@ Rules:
   ```text
   Design and implement a backward-compatible schedule-table migration and validated backend schedule API for normalized period fields, without connecting the admin panel or dashboard yet.
   ```
+
+## 20. Last Context Update
+
+* Date:
+
+  ```text
+  2026-07-12
+  ```
+* Verified branch:
+
+  ```text
+  ilk-surum-gelistirme
+  ```
+* Verified HEAD before this task:
+
+  ```text
+  d1e4411 docs: record Istanbul date key fix
+  ```
+* Initial working-tree state:
+
+  ```text
+  clean
+  ```
+* Files added/modified during task:
+
+  ```text
+  backend/schedule-schema.js (added)
+  backend/schedule-service.js (added)
+  backend/schedule-repository.js (added)
+  tests/backend-schedule.test.js (added)
+  backend/database.js (modified)
+  backend/server.js (modified)
+  package.json (modified)
+  ```
+* Original legacy schema:
+
+  ```text
+  id INTEGER PRIMARY KEY AUTOINCREMENT, day TEXT NOT NULL, period INTEGER NOT NULL, course TEXT NOT NULL, UNIQUE(day, period)
+  ```
+* Additive migration fields:
+
+  ```text
+  period_type TEXT, start_time TEXT, end_time TEXT, is_active INTEGER NOT NULL DEFAULT 1
+  ```
+* Legacy-row preservation policy:
+
+  ```text
+  All existing id, day, period, and course values remain unmodified.
+  ```
+* No-fabricated-times policy:
+
+  ```text
+  Legacy rows receive NULL for temporal fields because they cannot be inferred safely.
+  ```
+* Normalized API route contracts:
+
+  ```text
+  GET /api/schedule/normalized returns unified structure: day, source, valid, periods, warnings, errors.
+  PUT /api/schedule/normalized validates inputs and replaces periods via atomic transaction.
+  ```
+* Strict partial-input rejection policy:
+
+  ```text
+  PUT /api/schedule/normalized rejects writes returning PARTIAL_SCHEDULE_REJECTED if normalizer issues ANY row-dropping warnings.
+  ```
+* Exact duplicate policy:
+
+  ```text
+  DUPLICATE_PERIOD is treated as a nonfatal warning and safely merged.
+  ```
+* Atomic replacement behaviour:
+
+  ```text
+  Successful update runs in BEGIN IMMEDIATE replacing all rows for target day, ROLLBACK on any failure.
+  ```
+* Rollback behaviour:
+
+  ```text
+  Checked and verified via tests/backend-schedule.test.js handling SQLITE_IOERR and constraint failures safely.
+  ```
+* Temporary database test strategy:
+
+  ```text
+  getNormalizedScheduleRows and replaceNormalizedSchedule use an injected db object. Tests map temp sqlite DB using process.env.CLASSROOM_DB_PATH.
+  ```
+* `CLASSROOM_DB_PATH` internal override:
+
+  ```text
+  Reads process.env.CLASSROOM_DB_PATH before opening SQLite, safely isolating DB operations during testing.
+  ```
+* Exact Node version:
+
+  ```text
+  v24.18.0
+  ```
+* Exact Node test totals:
+
+  ```text
+  Persistent ScheduleManager tests: 33
+  Persistent Simulator tests: 42
+  Persistent Backend Date tests: 20
+  Persistent Backend Schedule tests: 48
+  Combined core test total: 143
+  ```
+* Exact Server smoke-test result:
+
+  ```text
+  Smoke tests passed for legacy arrays, POST success, normalized GET partial, PUT validation errors vs atomic update success.
+  ```
+* Exact Playwright UI test total:
+
+  ```text
+  37 passed, 0 failed (verified via real Chromium with test DB)
+  ```
+* Implementation commit:
+
+  ```text
+  bb8933a feat: add validated normalized schedule API
+  ```
+* Documentation commit:
+
+  ```text
+  (hash available in Git history) docs: record normalized schedule API
+  ```
+* Final working-tree state:
+
+  ```text
+  clean (after committing this documentation)
+  ```
+* Confirmation of unchanged scope:
+
+  ```text
+  Dashboard, admin panel, frontend API integration, cards, large clock, CSS, and visual design were not changed.
+  ```
+* Remaining risks:
+
+  ```text
+  Dashboard uses old logic and needs wiring to GET /api/schedule/normalized.
+  ```
+* Updated next recommended task:
+
+  ```text
+  Connect the dashboard to GET /api/schedule/normalized through a guarded loader that activates ScheduleManager external schedules only when the backend response is valid, while preserving permanent fallback behaviour and without building the admin editor yet.
+  ```
