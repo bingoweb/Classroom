@@ -13,8 +13,12 @@ window.showTab = function (tabName) {
         }
     });
 
-    if (tabName === 'scheduleDiagnostics' && window.scheduleDiagnosticsController) {
-        window.scheduleDiagnosticsController.load();
+    if (tabName === 'scheduleDiagnostics') {
+        if (typeof window.loadScheduleIntegration === 'function') {
+            window.loadScheduleIntegration();
+        } else if (window.scheduleDiagnosticsController) {
+            window.scheduleDiagnosticsController.load();
+        }
     }
 }
 
@@ -2067,9 +2071,11 @@ document.addEventListener('DOMContentLoaded', function () {
     initAdminEqualizer();
 });
 
-// Initialize Schedule Diagnostics
+// Initialize Schedule Diagnostics and Draft Editor
 document.addEventListener('DOMContentLoaded', () => {
     const diagnostics = window.AdminScheduleDiagnostics;
+    const editor = window.AdminScheduleDraftEditor;
+    const normalizer = window.ScheduleNormalizer;
     const api = window.api;
 
     if (
@@ -2077,26 +2083,74 @@ document.addEventListener('DOMContentLoaded', () => {
         !api ||
         typeof api.request !== 'function'
     ) {
-        // Log safely; do not break the rest of the admin panel.
         return;
     }
 
-    const view = diagnostics.createDomScheduleDiagnosticsView(document);
+    const diagView = diagnostics.createDomScheduleDiagnosticsView(document);
 
     window.scheduleDiagnosticsController = diagnostics.createScheduleDiagnosticsController({
         api,
-        view,
+        view: diagView,
         logger: typeof logger !== 'undefined' ? logger : null,
         endpoint: '/schedule/normalized',
         day: 'weekday'
     });
 
+    if (editor && normalizer) {
+        const editorView = editor.createDomScheduleDraftEditorView(document);
+        window.scheduleDraftEditorController = editor.createScheduleDraftEditorController({
+            normalizer,
+            view: editorView,
+            logger: typeof logger !== 'undefined' ? logger : null
+        });
+
+        // Set up event listeners for the editor buttons
+        const addRowBtn = document.getElementById('sdeAddRowBtn');
+        const validateBtn = document.getElementById('sdeValidateBtn');
+        const resetBtn = document.getElementById('sdeResetBtn');
+
+        if (addRowBtn) {
+            addRowBtn.addEventListener('click', () => {
+                window.scheduleDraftEditorController.addRow();
+            });
+        }
+        if (validateBtn) {
+            validateBtn.addEventListener('click', () => {
+                window.scheduleDraftEditorController.validate();
+            });
+        }
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                window.scheduleDraftEditorController.resetToSource();
+            });
+        }
+    }
+
+    // Integration Loader
+    let integrationLoadPromise = null;
+    window.loadScheduleIntegration = async function() {
+        if (!window.scheduleDiagnosticsController) return;
+        if (integrationLoadPromise) return integrationLoadPromise;
+
+        integrationLoadPromise = (async () => {
+            try {
+                const result = await window.scheduleDiagnosticsController.load();
+                if (window.scheduleDraftEditorController) {
+                    window.scheduleDraftEditorController.acceptDiagnosticsResult(result);
+                }
+                return result;
+            } finally {
+                integrationLoadPromise = null;
+            }
+        })();
+        
+        return integrationLoadPromise;
+    };
+
     const refreshBtn = document.getElementById('refreshScheduleDiagnosticsBtn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => {
-            if (window.scheduleDiagnosticsController) {
-                window.scheduleDiagnosticsController.load();
-            }
+            window.loadScheduleIntegration();
         });
     }
 });
