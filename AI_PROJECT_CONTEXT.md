@@ -1162,24 +1162,40 @@ Rules:
 ## Task 11: Admin Schedule Diagnostics Integration
 
 * Objective: Build a read-only diagnostics section in the admin panel to display normalized schedule status.
+* Starting HEAD: `8f177e6`
+* Critical Defects Resolved:
+  * Fixed `APIService` class-versus-instance defect by using instantiated `window.api`.
+  * Enforced strict required-array contract for `warnings` and `errors`.
+  * Safely mapped database invalid state (`valid === false`) to an explicit `'invalid'` UI state (`Geçersiz`).
+  * Preserved legacy diagnostics (`warnings` and `errors`) correctly when rendering `legacy-incomplete` or `empty`.
+  * Implemented safe dependency-error handling instead of throwing to the UI.
 * Files added/modified during task:
 
   ```text
-  public/admin/index.html (modified)
-  public/admin/schedule-diagnostics.js (added)
+  public/admin/schedule-diagnostics.js (modified)
   public/admin/admin.js (modified)
-  tests/admin-schedule-diagnostics.test.js (added)
-  package.json (modified)
+  tests/admin-schedule-diagnostics.test.js (modified)
   ```
+* Test Coverage Replacements:
+  * Replaced exact placeholder tests: 21, 22, 23, 46, 47 with genuine assertions (timer spying included).
+  * Tested exact diagnostic codes: INVALID_ROW, MISSING_NAME, UNKNOWN_TYPE, INVALID_START_TIME, INVALID_END_TIME, ZERO_DURATION, END_BEFORE_START, DUPLICATE_PERIOD, OVERLAP, SCHEDULE_GAP, NO_CLASS_PERIOD, PARTIAL_SCHEDULE_REJECTED, INVALID_NORMALIZER_RESULT, SCHEDULE_VALIDATION_EXCEPTION, INVALID_SCHEDULE_DAY, INVALID_SCHEDULE_BODY, SCHEDULE_STORAGE_UNAVAILABLE.
 * Final verification results:
 
   ```text
-  Diagnostics tests: 62
-  Combined core test total: 282
-  Playwright tests verified for admin integration.
+  Exact numbered behaviour tests: 65
+  Exact Node diagnostics test total: 65
+  Combined six-suite Node test total: 284 (219 + 65)
+  Exact dashboard Chromium result: 24 passed, 0 failed
+  Exact diagnostics Chromium result: 42 passed, 0 failed
   ```
+* Rendering Guarantees:
+  * GET-only guarantee verified (no modifying requests).
+  * XSS-safe rendering verified (only textContent/createElement, no innerHTML).
+  * Simulated temporary database strategy for Chromium coverage.
+* Expected Expected console messages: Network transport failure logs are properly generated and trapped without throwing.
+* Final working-tree state: clean (after committing this documentation)
 * Next recommended task:
 
   ```text
-  Build the non-persistent schedule editor prototype for the admin panel.
+  Add a non-persistent schedule editor prototype in the admin panel that edits a local draft and validates it with ScheduleNormalizer without sending PUT requests yet.
   ```
