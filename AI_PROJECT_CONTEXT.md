@@ -233,7 +233,9 @@ The `public/js/schedule-normalizer.js` file provides a pure, dependency-free val
 
 * **Public API:** `window.ScheduleNormalizer.normalizeSchedule(rows)` returns `{ periods, warnings, errors, valid }`.
 * **Accepted Aliases:** `course` for `name`, `period_type` for `type`, `start_time` for `start`, `end_time` for `end`.
-* **Turkish Types:** `Ders`, `lesson` -> `class`; `Teneffüs`, `ara`, `recess` -> `break`.
+* **Accepted Type Aliases (Case-insensitive):** 
+  * `class`, `lesson`, `ders` -> `class`
+  * `break`, `recess`, `teneffüs`, `teneffus`, `ara` -> `break`
 * **Validation Behaviour:** Drops rows with invalid/missing times, unknown types, or zero/negative durations with structured warnings. Exact duplicates are skipped.
 * **Overlap Handling:** Detects intersecting times, triggers a fatal `OVERLAP` error, and marks the schedule `valid: false`.
 * **Non-Mutation:** Deeply guarantees that original input objects and arrays remain strictly untouched.
@@ -434,16 +436,15 @@ The safe planned sequence is:
 ## 16. Next Recommended Task
 
 ```text
-Integrate the verified schedule normalizer into schedule-manager.js while retaining the current hardcoded schedule as fallback.
+Integrate the verified schedule normalizer into schedule-manager.js so it can accept an explicitly supplied external schedule, while retaining the existing hardcoded schedule as the fallback.
 ```
 
-The integration should:
-* allow `schedule-manager.js` to accept a validated schedule from an external source (such as the backend API)
-* continue using `SCHOOL_SCHEDULE` seamlessly if the external schedule is empty or invalid
-* safely handle validation warnings
-* connect the schedule fetching to the frontend (e.g. via `api-service.js`) only when it's safe to do so
-
-State clearly that the database and admin panel must not be changed until frontend integration is stable.
+The next task must explicitly state:
+* do not fetch `/api/schedule` yet
+* do not modify the backend schema yet
+* do not modify the admin panel yet
+* do not connect the current incomplete database schedule
+* first add safe schedule injection and fallback behaviour only
 
 ## 17. Update Protocol for Every Future Task
 
@@ -490,7 +491,12 @@ Rules:
 * Verified HEAD before this task:
 
   ```text
-  e6d65dc docs: add persistent AI project context
+  378efbd feat: add schedule normalizer and validation
+  ```
+* Working tree before creating this document update:
+
+  ```text
+  clean
   ```
 * Files modified or created:
 
@@ -501,10 +507,10 @@ Rules:
 * Tests performed:
 
   ```text
-  Node regression tests covering 20 edge cases (valid canonical, aliases, whitespace, negative durations, overlaps, exact duplicates, mutability, and determinism). All 20 tests passed.
+  Node regression tests covering 30 edge cases (valid canonical, aliases, whitespace, negative durations, overlaps, exact duplicates, mutability, determinism, browser/node execution, prototype anomalies, warning schedules). All 30 tests passed.
   ```
 * Status:
 
   ```text
-  The schedule normalizer is fully implemented and verified but NOT YET COMMITTED.
+  The schedule normalizer is fully implemented, verified, and committed (378efbd). Task completed successfully.
   ```
