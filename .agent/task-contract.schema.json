@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "taskId",
+    "featureName",
+    "changeType",
+    "baseCommit",
+    "newFeaturesAllowed",
+    "allowedExistingFiles",
+    "allowedNewFiles",
+    "protectedFiles",
+    "behavioursToPreserve",
+    "knownDefectsToAddress",
+    "forbiddenChanges",
+    "requiredStaticChecks",
+    "requiredTestCommands",
+    "browserVerificationRequired",
+    "documentationRequired"
+  ],
+  "properties": {
+    "taskId": { "type": "string" },
+    "featureName": { "type": "string" },
+    "changeType": {
+      "type": "string",
+      "enum": [
+        "audit",
+        "diagnosis",
+        "bugfix",
+        "refactor",
+        "test",
+        "performance",
+        "security",
+        "accessibility",
+        "localisation",
+        "documentation"
+      ]
+    },
+    "baseCommit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "newFeaturesAllowed": { "type": "boolean", "const": false },
+    "allowedExistingFiles": { "type": "array", "items": { "type": "string" } },
+    "allowedNewFiles": { "type": "array", "items": { "type": "string" } },
+    "protectedFiles": { "type": "array", "items": { "type": "string" } },
+    "behavioursToPreserve": { "type": "array", "items": { "type": "string" } },
+    "knownDefectsToAddress": { "type": "array", "items": { "type": "string" } },
+    "forbiddenChanges": { "type": "array", "items": { "type": "string" } },
+    "requiredStaticChecks": { "type": "array", "items": { "type": "string" } },
+    "requiredTestCommands": { "type": "array", "items": { "type": "string" } },
+    "browserVerificationRequired": { "type": "boolean" },
+    "documentationRequired": { "type": "boolean" }
+  }
+}

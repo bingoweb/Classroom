@@ -1,0 +1,2072 @@
+[
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 87,
+    "fingerprint": "c9d89584044d011405b474af80a8872a7587230392a805120aaa438338238ac4",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 97,
+    "fingerprint": "a6e978ee0d3d8dc0013ed43bc3c246ca2fe54833639a0109dd89c2643e361234",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 262,
+    "fingerprint": "4d906bc1ef49e975ccfb0f3cef38a19348bc40ab9ec7606ac974c6ab7904d13f",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 263,
+    "fingerprint": "bcd3d3a305b123c9a88fb620c76a405b75d5c24687d1641a7ef30713f0dc9fd1",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 264,
+    "fingerprint": "07ec5f1e5279c7acc726f352e08083b8663a4a1225e1c6ef53eaf3f3bfc581f2",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 265,
+    "fingerprint": "063ab5329c69b8bd1440de04d88fbc06c04d618f859db2304bccd9e887e2425d",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 311,
+    "fingerprint": "33c54133ed1e56c2c599455694333883336038cd83d1d3b1383b0422ebdb298b",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 314,
+    "fingerprint": "27d1f0c8cada2f812f5aa949255deb86c595a79f06ecdb47966fda809bd31044",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 319,
+    "fingerprint": "99aaeb2c9d8b07fcfb343e194ad98968447d23ec1a9fa542e82cac9d2e1e5838",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 324,
+    "fingerprint": "7f0ec0ab942b280adfb5e117f6bade28f388e7c7ba9ccdf0249498da046c1afb",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 409,
+    "fingerprint": "523274cd63c5e16e6a80878efeb63ad92b6d911661e6e2e332702632684de1d8",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 596,
+    "fingerprint": "0514eee723dd4e47c2299a9f05afc9573292ef6406ea3f25b1a7e376eaaf666a",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 628,
+    "fingerprint": "7439efe5e7976ac60864af115add15f2036f9456ac417a059d96763194f2def1",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 636,
+    "fingerprint": "7a3ec0b6fe927e3d1c60bf36b8758987541623eb65e5404f678c3bb1b2a29605",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 673,
+    "fingerprint": "8d0f3a2fb0a78c30361af23b18e0808227e326262f725783348a2f97bbb90b64",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 738,
+    "fingerprint": "250454e27fbd5511e11a6c96a1b01d50aaa00681988d3dc9584de860fa2542eb",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 746,
+    "fingerprint": "11d0b650339b4d6ffb1675664d3f3a84a42c4effe30bdfe091789d1a6ed0a3fa",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 757,
+    "fingerprint": "7a3ec0b6fe927e3d1c60bf36b8758987541623eb65e5404f678c3bb1b2a29605",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 790,
+    "fingerprint": "43986eac22c943f4240ba6c0fc1a124a5624c068a0b3fb6222128082fb6253fd",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 820,
+    "fingerprint": "b75601e9958c6a54fc0a8f2c7384bf8ce8ad133b641b55d8e5c40867bf946f95",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 840,
+    "fingerprint": "3a820d325a408e7ee91d807d25059f209c23298ee7b566e498809e531d606aff",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 850,
+    "fingerprint": "64b0c263abd99533a7bff72630f56c4dac4f32ad8192c651b9fd59eaacfee871",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 875,
+    "fingerprint": "9f8cc33c7d717667866b0ae98f8831debb7e33a1598a4a798a71ccecf56e602d",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1001,
+    "fingerprint": "d7816b56eada62bfa4c3b4f8fa541c110819e66836df19f512a0ef6511dba69b",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1005,
+    "fingerprint": "e0b4b42653963e66418efc19913d03f20790d65c469eaf1bd9081eb631b4df21",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1038,
+    "fingerprint": "bd7cb657edca291cc9922d71ddfd89def7b369d18eed368721456e0c2a5abfdc",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1223,
+    "fingerprint": "339fdd1ce27d86d4121ca07993227a553e2876a0a6709a939932a8f3b6a7336e",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1227,
+    "fingerprint": "d51e050627d9b702ae951e5ed5159a22eca229631a28d9be5474078ebf4105ec",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1234,
+    "fingerprint": "d51e050627d9b702ae951e5ed5159a22eca229631a28d9be5474078ebf4105ec",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1243,
+    "fingerprint": "d5930056346a8f46229d24d8605e7591adbf8a3ac7067ddcf3021bd6f0c1e855",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1257,
+    "fingerprint": "d09c4f119799fe22e8adcfb190cfdc234f3d8f16542ee57160b32ef52723dacf",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1276,
+    "fingerprint": "d2edce3878432ad06b5ebc30dd1fca9db4a0f2f0ad064bdbed9b55651917a0d8",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1296,
+    "fingerprint": "339fdd1ce27d86d4121ca07993227a553e2876a0a6709a939932a8f3b6a7336e",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1299,
+    "fingerprint": "d51e050627d9b702ae951e5ed5159a22eca229631a28d9be5474078ebf4105ec",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1306,
+    "fingerprint": "d51e050627d9b702ae951e5ed5159a22eca229631a28d9be5474078ebf4105ec",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1338,
+    "fingerprint": "e4ecd6b31938b815c90b9b2a05b6f34472620a494428e5dd7a33ffa1e4e2df3d",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1345,
+    "fingerprint": "e4ecd6b31938b815c90b9b2a05b6f34472620a494428e5dd7a33ffa1e4e2df3d",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1703,
+    "fingerprint": "a6e978ee0d3d8dc0013ed43bc3c246ca2fe54833639a0109dd89c2643e361234",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1734,
+    "fingerprint": "dddb0c2430e19ce43960089196c7eaf4a0727d51cf474da0acb141c73b832948",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/admin.js",
+    "line": 1916,
+    "fingerprint": "a64477e5c2c359ee89796ef8e233e5fd69110fd9e98c6ce868105ebc13aebb12",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/settings-handler.js",
+    "line": 202,
+    "fingerprint": "828cdf8822be85aa7f821799fb691997dcc3169e644a1f0ff1e67a949019d260",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/settings-handler.js",
+    "line": 205,
+    "fingerprint": "d3e777c8e5e0e0e38c6c2b427ef405d427ceccb33c4ed049d839254f83f0621f",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/settings-handler.js",
+    "line": 341,
+    "fingerprint": "d351a19d49a310d96a49012cff9f1c542fe13a055babd271b5d90de58f8d3e02",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/settings-handler.js",
+    "line": 346,
+    "fingerprint": "223c02980928589930e798d2976b2a9ea28e6fc7df9ed0e4898c5a5ff855341d",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/settings-handler.js",
+    "line": 352,
+    "fingerprint": "8847c0922fcea8543dc5a8878ffade83174454251136b6c3bd90d8e9d5fdf523",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/settings-handler.js",
+    "line": 434,
+    "fingerprint": "b9bd6be033b502ee8ca7ef4726d74d66f69e60f0e09137fe1032ee1bc9c5716c",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/settings-handler.js",
+    "line": 437,
+    "fingerprint": "7ad67f049f76db894cbb58ed57ebf69c8aaa1e0db0f0a6eb242655cb94ae38eb",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yeni kullanım için izin değildir."
+  },
+  {
+    "ruleId": "malformed-html-attribute",
+    "path": "public/admin/index.html",
+    "line": 0,
+    "fingerprint": "manual-defect-malformed-table",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; bozuk editable-table HTML."
+  },
+  {
+    "ruleId": "missing-required-id",
+    "path": "public/admin/index.html",
+    "line": 0,
+    "fingerprint": "manual-defect-missing-sdeEditableTableBody",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; sdeEditableTableBody eksik."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/admin/schedule-review-panel.js",
+    "line": 0,
+    "fingerprint": "manual-defect-prohibited-innerhtml",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; schedule-review-panel.js içinde innerHTML kullanımı."
+  },
+  {
+    "ruleId": "documentation-contradicts-code",
+    "path": "AI_PROJECT_CONTEXT.md",
+    "line": 1298,
+    "fingerprint": "manual-defect-false-documentation",
+    "severity": "medium",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; dokümantasyon innerHTML olmadığını iddia ediyor ancak var."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 28,
+    "fingerprint": "ca9c77a6a9591ada011d93fada9a923cda7f27f12c2320819eb2e666b6f7d3cc",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 39,
+    "fingerprint": "92c30f5e5eac7975b5c3644c15372a42eea1d39f794b99f5cf2ba64ead7181c9",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 51,
+    "fingerprint": "c96d161893a044b22b19e57df50ee1c49eb215a186bbae5113cce283094d4c20",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 183,
+    "fingerprint": "727d12a137afc30e42a7f594a26893c9f11ba1f6701665e4a02f0630c6942387",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 184,
+    "fingerprint": "5511ccea77b6503ff114831085781944592a1606f4158dfdf45f5eae1551d3b8",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 210,
+    "fingerprint": "6aabf9cb14ce6d8048177c64f06bbd1da207f2952f103bf2722a9fd945939b12",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 282,
+    "fingerprint": "3342e8dafa57c1c121fbc2d0201da100a47eb270294c92a1b12da4e6069e7eb1",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 335,
+    "fingerprint": "e8ef3cab94b35017ab2e11cb8ce58b719c54ebb3907f0947f3593650bc37773e",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 385,
+    "fingerprint": "96e010e06392cb5de8ac64abe2ef3adb4ef4eb41d24123f4ecf3624bd949de55",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 475,
+    "fingerprint": "d9515a58827f2e8de6d031440007a80fcab697657da2ce3abae3f9fea02a3b5c",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 476,
+    "fingerprint": "7e06baef4394ac4fda2cf2d5822ed65f60b122638e3b74b8f295e5b8c8d0b127",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 793,
+    "fingerprint": "07a0e4e0e6cee64e6d740bb581be40ceb73c332ec778ceabf993f781c74f81dc",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 794,
+    "fingerprint": "0b717cfe36285428eb4233d4928e67940ab10d72c60b3cf7d5e8ebb3013e933f",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 955,
+    "fingerprint": "c6e85085a4da8cb00428e4cd7f82c0c5882308c582b1b5901857d0431e6e355b",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 977,
+    "fingerprint": "766d4a79c0cf80bd996a12572ac86f34c21524cf9b91ad9b5fef7b96e907db25",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 1140,
+    "fingerprint": "febdb90883e3cf58b0068a8cb1714e149aacb528c5daa6b222775ba612f36968",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 1141,
+    "fingerprint": "97abf3ab98cfa53c88a69076999e547292d3beb565eef9ff8815af2fc252a8d8",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 1480,
+    "fingerprint": "ab06df462d049f42f14c94de27259d5e8f485e3f7688d3c6623fbe8a3547a9ac",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 1482,
+    "fingerprint": "2cb6cecf697faaf41a31279b7e11f8651ae7cd3b40d9c27038cf59f6b9f73eda",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 1544,
+    "fingerprint": "38e72a4e708b8c83eff5a00657d322debeec8690194387366804c3ff89cdfc50",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 1587,
+    "fingerprint": "fc942a9aa6539a3fbffcc3dbdb3dab015f536c4a2f4156648be676833adf4475",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 1630,
+    "fingerprint": "7b10397d26176796276ca971937de67a81fb7a1f70dd97c6ed73d7fc9382935f",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 1678,
+    "fingerprint": "8ac3c2c36afcc1fe6f673d8e72ea35250ef3fa307a8ed21978fe8e4b59063646",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 1683,
+    "fingerprint": "35451c5f057e966e1f026294d095dab0ee22c8fed19512607e150d659d3b8fd7",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/admin.js",
+    "line": 1764,
+    "fingerprint": "006bc3a8b699bb3b4409748dede7e4981acdddad35a38871805a0aa223e5257c",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/schedule-draft-editor.js",
+    "line": 9,
+    "fingerprint": "4bc9d985c36b02e958e1e2e218afdb9ae58898f2bc795b82e1d1adc63fc035bf",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/settings-handler.js",
+    "line": 2,
+    "fingerprint": "021bc5f82c3a44f2f9294c427247e6de01438c498a84e4e12777a206a9324cde",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/settings-handler.js",
+    "line": 28,
+    "fingerprint": "c96d161893a044b22b19e57df50ee1c49eb215a186bbae5113cce283094d4c20",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/settings-handler.js",
+    "line": 41,
+    "fingerprint": "5a0320acccc283e0ff493e9e79e2ecbcd766f6262e10e1cd9f94bc0f03e2a8f1",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/admin/settings-handler.js",
+    "line": 42,
+    "fingerprint": "5511ccea77b6503ff114831085781944592a1606f4158dfdf45f5eae1551d3b8",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/api-service.js",
+    "line": 19,
+    "fingerprint": "31b087abd138df416427e23fb89d91538de63547e3cb6058b4354119a9ba588c",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/api-service.js",
+    "line": 63,
+    "fingerprint": "5511ccea77b6503ff114831085781944592a1606f4158dfdf45f5eae1551d3b8",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/api-service.js",
+    "line": 70,
+    "fingerprint": "97abf3ab98cfa53c88a69076999e547292d3beb565eef9ff8815af2fc252a8d8",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/api-service.js",
+    "line": 76,
+    "fingerprint": "75f09f8c9630ed11c0abb920671ba366e55520f370a5796bd9c957d770bfedb6",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/display-mode-manager.js",
+    "line": 158,
+    "fingerprint": "63d6b40daaecba8b2caae974b62b79021caec17501ebbd373eed9c60c252b9f6",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/face-focus.js",
+    "line": 301,
+    "fingerprint": "3ef8d7b6462dc634a75ca37e14eb4b9c70068a528aa546e1b09e98c8ea894751",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/face-focus.js",
+    "line": 306,
+    "fingerprint": "0c7fcd20b5d1320495b3f8d07a9195817d4bb4ed1e0c922b8efe17ceb32d88c0",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/face-focus.js",
+    "line": 313,
+    "fingerprint": "be7b9f600fb3964f2cb8295bbe2d2659c09467364e6e58cf174a2a66855eb012",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/face-focus.js",
+    "line": 317,
+    "fingerprint": "95f2b8e66c58ce94da2e9e8138b2e29ddab96488fc2849ed71ce754cead40426",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/logger.js",
+    "line": 43,
+    "fingerprint": "4ed4cf5b75e96ed368c5d58e58dd4cfa4c9341a751ac1a9d0cd5c7f9094e3c28",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/logger.js",
+    "line": 44,
+    "fingerprint": "44a294b013a57ae4e9c6852b6f426651df66b3d6f87fec2ae91cc252f92df317",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/logger.js",
+    "line": 107,
+    "fingerprint": "1ac28ab69636aaf30391a25388dd8ae2ce440e6faeb1920ed12de5de4ccd4e73",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/logger.js",
+    "line": 108,
+    "fingerprint": "0b717cfe36285428eb4233d4928e67940ab10d72c60b3cf7d5e8ebb3013e933f",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/logger.js",
+    "line": 205,
+    "fingerprint": "eab656f250757f16c2177e57f224c6429175c39b923caf31b1a1069e411cb8fc",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/logger.js",
+    "line": 206,
+    "fingerprint": "b2a1471b53ce9f11305fa9cdeab6537b458eca380def11aa2dbfa229fd8ac112",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/schedule-normalizer.js",
+    "line": 59,
+    "fingerprint": "4e9a1dd2642b2deb9fe31a81bcf55dbe66f749054d5598882dea171fe1d7c155",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/script.js",
+    "line": 329,
+    "fingerprint": "9c9a78a35b5aa14f9d59b0b21b11e8dde7c6bd32dcbae79c384246c6e75a5b14",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/script.js",
+    "line": 1193,
+    "fingerprint": "5cbd9814d3a336333eba33a20f0537fb3212c8d66875112a8230265528095797",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/settings-loader.js",
+    "line": 38,
+    "fingerprint": "fc4917455ec5f44ad0b8fb25ac520e35fb4096d5b829d31986760bd926a3f96d",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/time-provider.js",
+    "line": 6,
+    "fingerprint": "c90ace21943e2197147bca7d386c38e4f8f1b82832d8a7ba1a755b9bb5ff3c39",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/time-provider.js",
+    "line": 25,
+    "fingerprint": "2b492c836820045a1a065909deb427161ba14f1bbb379494f710f3abae8277ad",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/time-provider.js",
+    "line": 35,
+    "fingerprint": "09da24eea937de18cf60ab188481b415192df693e4058f57e9f4cb32890d05c5",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "public/js/utils.js",
+    "line": 97,
+    "fingerprint": "94c79b1cc5277cf196b0c084a968024b9562933d2b10d67bcc24e3c01ba61cd8",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-diagnostics.test.js",
+    "line": 614,
+    "fingerprint": "2ab18eff36925d29460023af3234a87b4ca1c34d0f568f65ecded5b9be1803a2",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-diagnostics.test.js",
+    "line": 615,
+    "fingerprint": "40c45cf8ce7082c91f0ca65843d35d2fb3b84ac0abb67800a80510bc74c80415",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-diagnostics.test.js",
+    "line": 619,
+    "fingerprint": "b79734adfe1ba737fbf81262179aa0efebe5da37c92524931bd187f8b17d3521",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-diagnostics.test.js",
+    "line": 620,
+    "fingerprint": "c587db0d2542eb22f45e59dceb1f7e418c5a1143d0b41d1c6b34110fc5ded453",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-diagnostics.test.js",
+    "line": 621,
+    "fingerprint": "7431e07a8f28f4be8ac54e563c55400b7d2df413870880e2e4b72d8e0bf3892a",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-diagnostics.test.js",
+    "line": 622,
+    "fingerprint": "1056118f027896dbaa1b72439ea77b0814ac7bf2ca30ab8873c18a79394a244c",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 78,
+    "fingerprint": "c372e7a2ea700ce6fd3f5d0caf13a229c5197912cae4a709dae31ebcc6c9923f",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 496,
+    "fingerprint": "fb2adddacf60410b0c61279521c487c3ad5d1f96b7de41b8386796bd37973779",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 498,
+    "fingerprint": "7385a2d4be99f9d91971ac35c65227a411bee54fddb2bcf600d0166f1004a896",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 499,
+    "fingerprint": "39bf97f338861e473b382a8e228c8577a8e4f912cb420e1dec1d7a7238d4b47a",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 505,
+    "fingerprint": "7129f5e65eefa5ac3b902b5c216b1605d7c7b49c93021864b3be6cb878df808e",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 506,
+    "fingerprint": "29dac2468a4f79c306996ed2363701d38463b57ed4fa24a3cb6fe906cf4aadad",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 507,
+    "fingerprint": "46a041d95d4b79bcec6bc6763b427f7f1ab402543f3368133fbc1341126f6a24",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 510,
+    "fingerprint": "3f79d21ee35b641a1debb162ab2628bc5577c7021b01aa902d64d64465ab32a1",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 513,
+    "fingerprint": "7134963fc6cc64332677b50c06fdb79dd23bfc797d031e1e5fc0b4eef18124dc",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 516,
+    "fingerprint": "4ec02e433aef6872e485acaeece4d9082ef290812202852b35a72666f6ab4497",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 518,
+    "fingerprint": "4185dae6439e02bde57b40cf29ac317b517f04b755a95483ca5afea5ee3e3aca",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 519,
+    "fingerprint": "0769b817c8b5f89324bb332f59d04cd097f31d9fa565786465f9609d636f1a54",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 520,
+    "fingerprint": "da25e7763adcf6d760846d19e29651c25a4077ea23f096513e9658c79928a0de",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 521,
+    "fingerprint": "6b4e670acf25c568d60cd26cb18e283a4a457fc146ba8a1e2a7e7546fa891849",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 522,
+    "fingerprint": "46ec2d992334bdff570a06c82aa2fe805f31fea4ad1de0f2cec40d84001a2ad6",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 555,
+    "fingerprint": "7c73dae38c2ab02365e77638c408fdc4102424fd52364aca6b3d3f451680baa2",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 556,
+    "fingerprint": "e615d4ee38a77cedae524f3477cc8b5c5b8634379a384d3c0a52c7754e10e76d",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-review-panel.test.js",
+    "line": 611,
+    "fingerprint": "c3a5aa52bca001ae7a8d1c20bf55c0fb80486dbde4fe69b9b4722c3dfb65097e",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-review-panel.test.js",
+    "line": 612,
+    "fingerprint": "398e8383a6550df1ce48d2abbd7ba7622a40ed9e76598d33659e7e35533db74a",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-review-panel.test.js",
+    "line": 614,
+    "fingerprint": "45a4992eef857963f80ef2433b0981d48573c4eab3aadc3a4d8e1d1a5497dd3b",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-review-panel.test.js",
+    "line": 615,
+    "fingerprint": "5082fdc840c34deb96161758e773c8797effe21da322c3f12dcda36fc6605692",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-review-panel.test.js",
+    "line": 616,
+    "fingerprint": "4e6bcbfd9077f05338c102af4b509029b745d78cf7c94f0efef7f389e46d55a9",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-review-panel.test.js",
+    "line": 617,
+    "fingerprint": "a71c8b84986c1fce85b1a3a87eb4515ad673ed039a42477a3258d5360666f8db",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-review-panel.test.js",
+    "line": 618,
+    "fingerprint": "74e57096cab28464d228a48b1640aebb0c17c319144f0e6d37ce1d3a86df6f5a",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-review-panel.test.js",
+    "line": 619,
+    "fingerprint": "033b122778a9e3ee4c95b7adc2518587526b5853938117321a668a65bea9893c",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-review-panel.test.js",
+    "line": 620,
+    "fingerprint": "1e6cfcd2498675bfbf7f0db86325dedd12b008ec02d6c9cae621d5cb44879b73",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-review-panel.test.js",
+    "line": 621,
+    "fingerprint": "444253d636f1dc018621ac2e54ab4aa474655c7061f294d3b30862265717055c",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-review-panel.test.js",
+    "line": 622,
+    "fingerprint": "35dc4356c1378d0fe3ba805d67ef85e107b02f02c6a6af83a6d6e0618ac1c052",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/admin-schedule-review-panel.test.js",
+    "line": 623,
+    "fingerprint": "1116b3fd8ebe80de74d4563fb8ca554072980eaeb49538bd38ae76a13a37e5dd",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 196,
+    "fingerprint": "0bd4d70c9c8b10286c1e162059fd299352b7d0f17e40d6961d36919cd05813c3",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 311,
+    "fingerprint": "302fae2afc5a56b913724ff47885f5c3ed716e295aeff761cd23776567684d6d",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 560,
+    "fingerprint": "cc93b183751a80ab85997d17e727cea2aa2b01f001e29cf38f34d546274e611e",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 563,
+    "fingerprint": "d66a35f1b9e88cb3bef883b5797ba2c2fc3e90bc1cfcb080b728b0934d5ac49b",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 590,
+    "fingerprint": "42ff06348eb559c083e29b26a73a6d0be448aaea85586646d28d4994a89f1b22",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 593,
+    "fingerprint": "677aacbbcb930fed36a4b4ebe8007773f5e7850a3a69e1d160f600f6d680bc31",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 601,
+    "fingerprint": "62c645c9b2f35f3a404ee2ce9076ba4d4b0572426bea1b1d250d8e2a5ff4614e",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 604,
+    "fingerprint": "00f0762696950f5fb0a3ccdf9d16891c52ca3af745f7c12f2e4c4123ed6d5886",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 615,
+    "fingerprint": "204f9f064cf1304df4ec91bc99442b46058bf90b4a0a5ac08a9e15321afa323c",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 628,
+    "fingerprint": "9affd16bb5e2a08832ec3a4cb3db827cbdbb42e5b10fac25bfcbc64cf50d2a33",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 639,
+    "fingerprint": "5f7c12553aeed70c29496546746e972590402c0b4a36c6a8e33ea9f393bb691e",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 650,
+    "fingerprint": "1b49c32d5bd4c2cceb6b897fe790c6679ed3b7da122604a732a0ff7b3c16287b",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 661,
+    "fingerprint": "a1d92ecc2eb74609c2a4cef6fd02e10892fe1c30065965eb8bd7b8ad7f623851",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 672,
+    "fingerprint": "26810ada0786468d77d40a1c5195215e6ac645db3312493e0ae7f875f4d0e89f",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 690,
+    "fingerprint": "b00d7bd4ac01ef2b15a343bb8dcef5a2b922e7a02fdea74c745e2b697af17488",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 693,
+    "fingerprint": "03c3b21c056e0e16981ff1712bd214b98e38a4e95514e4e63a2da9dd3076c89e",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 705,
+    "fingerprint": "1af06807bab91632e347e96c74223b257d98e874b441017f58dd57249033db8b",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 719,
+    "fingerprint": "e57f9554af6fe7069f28fb1db9d8fa36e6fc36423207eceebc75608cd3d53378",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 734,
+    "fingerprint": "23253ccba9409e264cd85992119c7b88a6793e6517d307a874853c2a4bf91aad",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 766,
+    "fingerprint": "e0e06a73832226a03985ec0b8c67f026758a87f62760eab6af7d96691d2b1dbc",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "tests/backend-schedule.test.js",
+    "line": 769,
+    "fingerprint": "38c8f310384cd1dd31d27a534504031aec46e213c436d78a47588d83fba385a1",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/database.js",
+    "line": 61,
+    "fingerprint": "00a691007b0e8dbc4401765fff0d9b51f7518af86710c303e3a4fef4943142e1",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/database.js",
+    "line": 78,
+    "fingerprint": "0e425eacad187e4963846a9b86b775c0c1c9df71108fcfafa9cfc97e43a33d0a",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/logger.js",
+    "line": 43,
+    "fingerprint": "4ed4cf5b75e96ed368c5d58e58dd4cfa4c9341a751ac1a9d0cd5c7f9094e3c28",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/logger.js",
+    "line": 44,
+    "fingerprint": "44a294b013a57ae4e9c6852b6f426651df66b3d6f87fec2ae91cc252f92df317",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/logger.js",
+    "line": 107,
+    "fingerprint": "1ac28ab69636aaf30391a25388dd8ae2ce440e6faeb1920ed12de5de4ccd4e73",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/logger.js",
+    "line": 108,
+    "fingerprint": "0b717cfe36285428eb4233d4928e67940ab10d72c60b3cf7d5e8ebb3013e933f",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/logger.js",
+    "line": 205,
+    "fingerprint": "eab656f250757f16c2177e57f224c6429175c39b923caf31b1a1069e411cb8fc",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/logger.js",
+    "line": 206,
+    "fingerprint": "b2a1471b53ce9f11305fa9cdeab6537b458eca380def11aa2dbfa229fd8ac112",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/schedule-repository.js",
+    "line": 36,
+    "fingerprint": "3603fd285ec78f9daef0b6860f332d5c3c635acd8802a9ee5cd2c00682e7b533",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/schedule-service.js",
+    "line": 6,
+    "fingerprint": "553c98f9b7d58d7f0d2b3beefd3b9fa254c3fd8609a1569c1584936fede70f32",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/server.js",
+    "line": 396,
+    "fingerprint": "b997f79425f82d75501b52c61e8927ab15cfaac2f8109943b3ae0fa603b53ab9",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/server.js",
+    "line": 525,
+    "fingerprint": "87b0a740ae7fbc7b0a7dc34f724d9433765d6a6848e437b3a784a8a997a3b17c",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/server.js",
+    "line": 601,
+    "fingerprint": "d0fe9f117811d42e6e4ba156f8ab302d1402c3db4487e19385e5c0b0bccbe630",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/server.js",
+    "line": 901,
+    "fingerprint": "b58444f25b833569154493aa49046ac79eec8c02ae2217aedb7d547d1c15a90f",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/server.js",
+    "line": 1327,
+    "fingerprint": "93e45db79cc7ccf12f544550c1ff97cd08e2262f88a23ef6fb350c40cf5f61e8",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/server.js",
+    "line": 1610,
+    "fingerprint": "0aa9c519261adab4bba21dc56e84a206c50afc638cfa9e4790ee612ecedd4cc8",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "backend/utils.js",
+    "line": 97,
+    "fingerprint": "94c79b1cc5277cf196b0c084a968024b9562933d2b10d67bcc24e3c01ba61cd8",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/dev-time-simulator.js",
+    "line": 119,
+    "fingerprint": "6274ba147cf02234d143e60f00eb706385945f363f31c4597a0991ffb191ea7d",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/noise-meter.js",
+    "line": 74,
+    "fingerprint": "da921d68954819ce9c0b7377b6ceb38024a5dfb84c6b84306eac98b5e2c90b82",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/noise-meter.js",
+    "line": 328,
+    "fingerprint": "3f70a2f39cb88b1e913fd8c239dc2fa62f977cab6e34a2c44aa8e2a6f8bfe02b",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/noise-meter.js",
+    "line": 332,
+    "fingerprint": "889d09b8639f44570e29ad60d1ec193794f480d13c189d156793239a2040c5c1",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/noise-meter.js",
+    "line": 336,
+    "fingerprint": "a477607d69f211aae6ec42000aa978e7009e69122251dce8649b82a983883841",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 94,
+    "fingerprint": "18cc7580ccfdfa03506084e136fccd0cc9b293de9a3716d8df3f7cca76c31bfa",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 122,
+    "fingerprint": "bb440c2f848d555270b22453f0f1b400aa1ac4dd4fe3daf91a4ecc4e00601261",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 153,
+    "fingerprint": "74602ef559047f939b123bc6b4dca76b770fd58756d37d5eb848f93b969df9f9",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 186,
+    "fingerprint": "14683e69770fea55d925633128d1ede6c1b52073f43031cfb6ca0aa982d41fa6",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 192,
+    "fingerprint": "759eb487934e89970376bda9d1ec3da85f066202c3677b562d3a94477287b89f",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 363,
+    "fingerprint": "58c09a3c8673e1c49f2c7f7d0255b5fbec7e6bdaeca733041d888b5c3ba7dc47",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 376,
+    "fingerprint": "f2a6b1b9ce47db33888477170d269b226fe1e93be63e0e8ff50f65a8f34470c2",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 411,
+    "fingerprint": "6274ba147cf02234d143e60f00eb706385945f363f31c4597a0991ffb191ea7d",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 987,
+    "fingerprint": "5a06cb612a2fa8a5d7e02ac77375c741f3ddd1d0571e5dccad30d47028887d02",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 1048,
+    "fingerprint": "d7c5f252d105a108adfef553bc072817da3522dc4007dd560449483503411a7a",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 1053,
+    "fingerprint": "25adc700fb4b52ae4fcc52fc64435f07c5a28bfa19c4a3f84abe9d1dd0fd7127",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 1071,
+    "fingerprint": "74c841141be5f0727be755d40828361c7691f8f761c6acf59cc0e1d0795113e8",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 1105,
+    "fingerprint": "165401146ff15187d235d5f7faf3bb32433f2ef5bd99ae417433a148b16518ed",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 1110,
+    "fingerprint": "1b9620e280644135d63042994fbc372b522ade1df57759cf971539d0ee70b3bc",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 1207,
+    "fingerprint": "d2c44d1a53ea7e9e3371edeaa64229ef8156928017d0f38fe704dfe3a832de10",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "public/js/script.js",
+    "line": 1236,
+    "fingerprint": "84c1f5c2abf7e088fa872f9cfbc00c194323da99af1a97c01452be69ab5bec07",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "tests/admin-schedule-diagnostics.test.js",
+    "line": 11,
+    "fingerprint": "502a4285867689778b969d42aa7ede2dbcfc94d62966386876454685796e18b2",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 8,
+    "fingerprint": "96701c15d6e570d635b8963022c9f6eef5011b95f46b2a7b7c45581898958c97",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 484,
+    "fingerprint": "0afde3d45335013fda57c0fec292b10abd5579c58a1f3586d235aec3520afeec",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unsafe-dom-inner-html",
+    "path": "tests/admin-schedule-draft-editor.test.js",
+    "line": 528,
+    "fingerprint": "078e49c47156621c2f6303abb1c4f24729451283056dd0b817cdc63e45ef3a30",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "scripts/seed_data.js",
+    "line": 32,
+    "fingerprint": "6263751c18e9712edd039b204d34f0ddb7e6b45689dae4521454aa27c21f4fb9",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "scripts/seed_data.js",
+    "line": 33,
+    "fingerprint": "1d5a54a99ce75f9ccfe34c2d8c7341e1a83b9156765ca3c103d2835301bc02a8",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "scripts/seed_data.js",
+    "line": 34,
+    "fingerprint": "c94d5f34a68421d327d2615e09132c72d80b36066b409734531982b671d64a1e",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "scripts/seed_data.js",
+    "line": 35,
+    "fingerprint": "cfd7da50fe38d1ae9b98708bba8ad2a4ff4a5df272423f768d8154f57df8691d",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  },
+  {
+    "ruleId": "unapproved-network-storage",
+    "path": "scripts/seed_schedule.js",
+    "line": 52,
+    "fingerprint": "5acd313ef24bfbf4682b41abebe3e940d3502afccdffa912f0699c849994a02f",
+    "severity": "high",
+    "firstRecordedAtCommit": "de017723b3760942785aa2c3314155126d85d7de",
+    "status": "unresolved",
+    "descriptionTr": "Mevcut teknik borç; yasaklı veya onaysız network/storage API kullanımı."
+  }
+]

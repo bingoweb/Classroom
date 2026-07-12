@@ -1,5 +1,2 @@
-#!/usr/bin/env bash
-set -e
-
-npm run test:policy
-npm run test:core
+#!/bin/sh
+npm run gate:commit

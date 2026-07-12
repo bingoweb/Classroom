@@ -1,29 +1,40 @@
-name: Agent Compliance
+name: Project Quality Gate
 
 on:
   push:
     branches:
-      - main
       - ilk-surum-gelistirme
+      - main
   pull_request:
+    branches:
+      - ilk-surum-gelistirme
+      - main
 
 jobs:
   compliance:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run compliance policy check
-        run: npm run test:policy
+      - name: Run CI Policy Check
+        run: npm run policy:ci
 
-      - name: Run core tests
+      - name: Run Guardrail Tests
+        run: npm run test:agent-compliance
+
+      - name: Run Complete Core Tests
         run: npm run test:core
+
+      - name: Execute Complete CI Gate
+        run: npm run gate:ci

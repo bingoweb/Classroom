@@ -1,0 +1,35 @@
+{
+  "taskId": "fix-123",
+  "featureName": "Schedule Review Panel",
+  "changeType": "bugfix",
+  "baseCommit": "de017723b3760942785aa2c3314155126d85d7de",
+  "newFeaturesAllowed": false,
+  "allowedExistingFiles": [
+    "public/admin/schedule-review-panel.js"
+  ],
+  "allowedNewFiles": [],
+  "protectedFiles": [
+    ".git/",
+    "backend/",
+    "server.js",
+    "agent-policy.json"
+  ],
+  "behavioursToPreserve": [
+    "Panel must render diff correctly without innerHTML"
+  ],
+  "knownDefectsToAddress": [
+    "Prohibited innerHTML use"
+  ],
+  "forbiddenChanges": [
+    "Do not add any new UI buttons",
+    "Do not implement save functionality"
+  ],
+  "requiredStaticChecks": [
+    "npm run policy:staged"
+  ],
+  "requiredTestCommands": [
+    "npm run test:admin-schedule-review"
+  ],
+  "browserVerificationRequired": true,
+  "documentationRequired": true
+}

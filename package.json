@@ -14,8 +14,16 @@
     "test:admin-schedule-draft": "node --test tests/admin-schedule-draft-editor.test.js",
     "test:admin-schedule-review": "node --test tests/admin-schedule-review-panel.test.js",
     "test:core": "node --test tests/schedule-manager.test.js tests/dev-time-simulator.test.js tests/backend-date-utils.test.js tests/backend-schedule.test.js tests/dashboard-schedule-loader.test.js tests/admin-schedule-diagnostics.test.js tests/admin-schedule-draft-editor.test.js tests/admin-schedule-review-panel.test.js tests/agent-compliance.test.js",
-    "test:policy": "node scripts/verify-agent-compliance.js",
-    "test:gate": "npm run test:policy && npm run test:core"
+    "test:policy": "npm run policy:repository",
+    "test:gate": "npm run gate:project",
+    "policy:scan": "node scripts/verify-agent-compliance.js --scan",
+    "policy:staged": "node scripts/verify-agent-compliance.js --staged",
+    "policy:repository": "node scripts/verify-agent-compliance.js --repository",
+    "policy:ci": "node scripts/verify-agent-compliance.js --ci",
+    "test:agent-compliance": "node --test tests/agent-compliance.test.js",
+    "gate:commit": "npm run policy:staged",
+    "gate:project": "npm run policy:repository && npm run test:core",
+    "gate:ci": "npm run policy:ci && npm run test:core"
   },
   "dependencies": {
     "cors": "^2.8.5",
