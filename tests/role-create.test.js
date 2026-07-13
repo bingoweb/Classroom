@@ -816,6 +816,11 @@ test('Role Create ID Validation Tests', async (t) => {
         const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'star' } });
         assert.strictEqual(resObj.statusCode, 200);
         assert.deepEqual(resObj.body, { id: 99, message: 'Rol başarıyla atandı' });
+        
+        assert.strictEqual(runCalls.length, 1);
+        assert.ok(runCalls[0].sql.includes('INSERT INTO roles'));
+        assert.ok(runCalls[0].sql.includes('WHERE NOT EXISTS'));
+        assert.deepEqual(runCalls[0].params, [47, 'star', 47, 'star']);
     });
 
     // Q. Valid duty assignment
@@ -833,6 +838,76 @@ test('Role Create ID Validation Tests', async (t) => {
         const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'duty' } });
         assert.strictEqual(resObj.statusCode, 200);
         assert.deepEqual(resObj.body, { id: 101, message: 'Rol başarıyla atandı' });
+        
+        assert.strictEqual(runCalls.length, 1);
+        assert.ok(runCalls[0].sql.includes('INSERT INTO roles'));
+        assert.ok(runCalls[0].sql.includes('WHERE NOT EXISTS'));
+        assert.deepEqual(runCalls[0].params, [47, 'duty', 47, 'duty']);
+    });
+
+    // R. Duty count equals 4
+    await t.test('R. Duty count equals 4', async () => {
+        let runCalls = 0;
+        db.get = function(sql, params, cb) {
+            cb(null, { count: 4 });
+        };
+        db.run = function() {
+            runCalls++;
+        };
+        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'duty' } });
+        assert.strictEqual(resObj.statusCode, 400);
+        assert.deepEqual(resObj.body, { error: 'En fazla 4 nöbetçi atanabilir' });
+        assert.strictEqual(runCalls, 0);
+    });
+
+    // S. Guarded non-president insert fails
+    await t.test('S. Guarded non-president insert fails', async () => {
+        let runCalls = [];
+        db.run = function(sql, params, cb) {
+            runCalls.push({ sql, params });
+            cb(new Error('insert failed'));
+        };
+        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'star' } });
+        assert.strictEqual(resObj.statusCode, 500);
+        assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu: insert failed' });
+        assert.strictEqual(runCalls.length, 1);
+    });
+
+    // T. Real SQLite regression duplicate constraints
+    await t.test('T. Real SQLite regression duplicate constraints', async () => {
+        await runDb("DELETE FROM roles", []);
+        await runDb("DELETE FROM students", []);
+
+        const studentRes = await runDb("INSERT INTO students (name) VALUES (?)", ['Test Duplicate']);
+        const studentId = studentRes.lastID;
+
+        // Star duplicate
+        const star1 = await invokeHandler({ body: { student_id: studentId, role_type: 'star' } });
+        assert.strictEqual(star1.statusCode, 200);
+
+        const starRows1 = await allDb("SELECT * FROM roles WHERE role_type = 'star'", []);
+        assert.strictEqual(starRows1.length, 1);
+
+        const star2 = await invokeHandler({ body: { student_id: studentId, role_type: 'star' } });
+        assert.strictEqual(star2.statusCode, 400);
+        assert.deepEqual(star2.body, { error: 'Bu öğrenci zaten haftanın yıldızı' });
+
+        const starRows2 = await allDb("SELECT * FROM roles WHERE role_type = 'star'", []);
+        assert.strictEqual(starRows2.length, 1);
+
+        // Duty duplicate
+        const duty1 = await invokeHandler({ body: { student_id: studentId, role_type: 'duty' } });
+        assert.strictEqual(duty1.statusCode, 200);
+
+        const dutyRows1 = await allDb("SELECT * FROM roles WHERE role_type = 'duty'", []);
+        assert.strictEqual(dutyRows1.length, 1);
+
+        const duty2 = await invokeHandler({ body: { student_id: studentId, role_type: 'duty' } });
+        assert.strictEqual(duty2.statusCode, 400);
+        assert.deepEqual(duty2.body, { error: 'Bu öğrenci zaten nöbetçi' });
+
+        const dutyRows2 = await allDb("SELECT * FROM roles WHERE role_type = 'duty'", []);
+        assert.strictEqual(dutyRows2.length, 1);
     });
 
 });
