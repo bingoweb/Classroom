@@ -1443,6 +1443,11 @@ app.post('/api/slides', uploadSlide.single('slide'), (req, res, next) => {
                     slideId: this.lastID,
                     requestId: req.requestId
                 });
+                
+                // Invalidate cache
+                slidesCache = null;
+                cacheTimestamp = null;
+
                 res.json({ id: this.lastID, message: 'Slayt başarıyla oluşturuldu' });
             }
         );
