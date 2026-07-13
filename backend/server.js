@@ -157,6 +157,12 @@ function validateStudentInput(name, gender) {
 
 // Add student
 app.post('/api/students', upload.single('photo'), (req, res) => {
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        if (req.file) {
+            safeDeleteFile(req.file.path);
+        }
+        return res.status(400).json({ error: 'Öğrenci adı gereklidir' });
+    }
     const { name, gender } = req.body;
 
     // Input validation using helper function
