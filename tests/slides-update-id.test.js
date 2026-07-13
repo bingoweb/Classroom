@@ -86,31 +86,91 @@ test('Slides Update Route ID Validation', async (t) => {
 
     function invokeHandler(req) {
         return new Promise((resolve, reject) => {
-            let called = 0;
+            let responseCount = 0;
+            let responseSnapshot = null;
+            let settled = false;
+            let completionScheduled = false;
+
+            const fail = (err) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                reject(err);
+            };
+
+            const scheduleCompletion = () => {
+                if (completionScheduled) {
+                    return;
+                }
+                completionScheduled = true;
+                setImmediate(() => {
+                    if (settled) {
+                        return;
+                    }
+                    if (responseCount !== 1 || !responseSnapshot) {
+                        fail(new Error(`Expected exactly one response, received ${responseCount}`));
+                        return;
+                    }
+                    settled = true;
+                    resolve({
+                        ...responseSnapshot,
+                        count: responseCount
+                    });
+                });
+            };
+
             const res = {
-                status: function(code) {
+                statusCode: 200,
+                status(code) {
                     this.statusCode = code;
                     return this;
                 },
-                json: function(data) {
-                    called++;
-                    if (called > 1) {
-                        return reject(new Error('Response sent more than once'));
+                json(data) {
+                    responseCount++;
+                    if (responseCount > 1) {
+                        fail(new Error('Response sent more than once'));
+                        return this;
                     }
-                    this.body = data;
-                    resolve({ statusCode: this.statusCode || 200, body: this.body, count: called });
+                    responseSnapshot = {
+                        statusCode: this.statusCode || 200,
+                        body: data
+                    };
+                    scheduleCompletion();
+                    return this;
                 }
             };
+
             const next = (err) => {
-                if (err) return reject(err);
+                if (err) {
+                    fail(err);
+                }
             };
+
             try {
                 updateHandler(req, res, next);
             } catch (err) {
-                reject(err);
+                fail(err);
             }
         });
     }
+
+    await t.test('Helper regression: reject multiple responses', async () => {
+        const originalUpdateHandler = updateHandler;
+        updateHandler = (req, res, next) => {
+            res.status(200).json({ first: true });
+            res.status(200).json({ second: true });
+        };
+
+        try {
+            await invokeHandler({});
+            assert.fail('Should have rejected due to multiple responses');
+        } catch (err) {
+            assert.strictEqual(err.message, 'Response sent more than once');
+        } finally {
+            updateHandler = originalUpdateHandler;
+        }
+    });
 
     await t.test('1. Mandatory malformed-string tests without a file', async () => {
         const invalidStrings = [
@@ -416,11 +476,15 @@ test('Slides Update Route ID Validation', async (t) => {
         assert.strictEqual(existsCalled, 1);
         assert.strictEqual(unlinkCalled, 1);
 
-        // the deleted path is the path produced by existing path.join(__dirname, oldMediaPath)
-        const expectedOldPath = path.join(__dirname, '..', 'backend', 'uploads/old-slide-media.jpg');
-        // Because the handler is executing inside backend/server.js, __dirname there is /.../backend
-        assert.ok(unlinkPath.includes('old-slide-media.jpg'));
-        assert.strictEqual(unlinkPath, existsPath);
+        const expectedOldPath = path.join(
+            path.dirname(require.resolve('../backend/server.js')),
+            'uploads/old-slide-media.jpg'
+        );
+        assert.strictEqual(existsCalled, 1);
+        assert.strictEqual(unlinkCalled, 1);
+        assert.strictEqual(existsPath, expectedOldPath);
+        assert.strictEqual(unlinkPath, expectedOldPath);
+        assert.notStrictEqual(unlinkPath, req.file.path);
     });
 
 });
