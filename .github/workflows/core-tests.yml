@@ -1,0 +1,35 @@
+name: Core Tests
+
+on:
+  push:
+    branches:
+      - ilk-surum-gelistirme
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Node.js core tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run focused API-base tests
+        run: npm run test:api-base
+
+      - name: Run complete core test suite
+        run: npm run test:core
