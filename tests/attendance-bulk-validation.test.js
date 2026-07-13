@@ -472,11 +472,11 @@ test('Attendance Bulk Validation Tests', async (t) => {
         let rollbackCallbackCompleted = false;
 
         const originalLogError = Logger.prototype.error;
-        let errorLogArgs = null;
+        const errorLogCalls = [];
 
         try {
             Logger.prototype.error = function (...args) {
-                errorLogArgs = args;
+                errorLogCalls.push(args);
             };
 
             const insertionError = new Error('insertion failed');
@@ -526,7 +526,12 @@ test('Attendance Bulk Validation Tests', async (t) => {
             assert.strictEqual(runCalls[4], "ROLLBACK");
             assert.strictEqual(insertRunCalls, 2);
 
-            assert.ok(errorLogArgs !== null, 'Logger.error should be called');
+            assert.strictEqual(
+                errorLogCalls.length,
+                1,
+                'Logger.error must be called exactly once for the insertion failure'
+            );
+            const errorLogArgs = errorLogCalls[0];
             assert.strictEqual(errorLogArgs[0], COMPONENTS.API);
             assert.strictEqual(errorLogArgs[1], 'Error inserting attendance');
             assert.strictEqual(errorLogArgs[2], insertionError);
