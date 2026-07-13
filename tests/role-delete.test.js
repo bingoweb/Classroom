@@ -18,43 +18,49 @@ const db = require('../backend/database.js');
 
 test('Role Delete ID Validation Tests', async (t) => {
     t.after(async () => {
-        global.setInterval = originalSetInterval;
-
-        if (originalDbPath === undefined) {
-            delete process.env.CLASSROOM_DB_PATH;
-        } else {
-            process.env.CLASSROOM_DB_PATH = originalDbPath;
-        }
-
-        await new Promise(resolve => {
-            db.close((err) => {
-                resolve();
-            });
-        });
-
-        const filesToRemove = [
-            testDbPath,
-            testDbPath + '-journal',
-            testDbPath + '-wal',
-            testDbPath + '-shm'
-        ];
-
-        for (const file of filesToRemove) {
-            try {
-                if (fs.existsSync(file)) {
-                    fs.unlinkSync(file);
-                }
-            } catch (e) {
-                // Ignore missing files or unlinking errors during cleanup
-            }
-        }
-
         try {
-            if (fs.existsSync(tempDir)) {
-                fs.rmdirSync(tempDir);
+            await new Promise((resolve, reject) => {
+                db.close((err) => {
+                    if (err) {
+                        reject(err);
+                        return;
+                    }
+                    resolve();
+                });
+            });
+
+            const filesToRemove = [
+                testDbPath,
+                testDbPath + '-journal',
+                testDbPath + '-wal',
+                testDbPath + '-shm'
+            ];
+
+            for (const file of filesToRemove) {
+                try {
+                    fs.unlinkSync(file);
+                } catch (e) {
+                    if (e.code !== 'ENOENT') {
+                        throw e;
+                    }
+                }
             }
-        } catch (e) {
-            // Ignore
+
+            try {
+                fs.rmdirSync(tempDir);
+            } catch (e) {
+                if (e.code !== 'ENOENT') {
+                    throw e;
+                }
+            }
+        } finally {
+            global.setInterval = originalSetInterval;
+
+            if (originalDbPath === undefined) {
+                delete process.env.CLASSROOM_DB_PATH;
+            } else {
+                process.env.CLASSROOM_DB_PATH = originalDbPath;
+            }
         }
     });
 
@@ -182,5 +188,49 @@ test('Role Delete ID Validation Tests', async (t) => {
             done();
         });
         handler(req, res);
+    });
+});
+
+test('Teardown Failure Verification', async (t) => {
+    await t.test('1. simulated db.close error rejects', async () => {
+        const fakeDb = {
+            close: (cb) => { cb(new Error('Simulated close error')); }
+        };
+        await assert.rejects(
+            new Promise((resolve, reject) => {
+                fakeDb.close((err) => {
+                    if (err) {
+                        reject(err);
+                        return;
+                    }
+                    resolve();
+                });
+            }),
+            /Simulated close error/
+        );
+    });
+
+    await t.test('2. genuine non-ENOENT filesystem error rethrows', (t, done) => {
+        const fakeFs = {
+            unlinkSync: () => {
+                const err = new Error('EACCES: permission denied');
+                err.code = 'EACCES';
+                throw err;
+            }
+        };
+
+        assert.throws(
+            () => {
+                try {
+                    fakeFs.unlinkSync('fake/file');
+                } catch (e) {
+                    if (e.code !== 'ENOENT') {
+                        throw e;
+                    }
+                }
+            },
+            /EACCES/
+        );
+        done();
     });
 });
