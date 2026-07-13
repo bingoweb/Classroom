@@ -461,7 +461,7 @@ app.put('/api/students/:id/photo', upload.single('photo'), (req, res) => {
         }
 
         const oldPhoto = row.photo;
-        const newPhoto = normalizePath(req.file.path, false);
+        const newPhoto = `/uploads/${path.posix.basename(String(req.file.filename).replace(/\\/g, '/'))}`;
 
         // Update the photo in database
         db.run("UPDATE students SET photo = ? WHERE id = ?", [newPhoto, studentId], function (updateErr) {
@@ -483,8 +483,10 @@ app.put('/api/students/:id/photo', upload.single('photo'), (req, res) => {
 
             // Delete old photo file if it exists and is not a default photo
             if (oldPhoto && oldPhoto !== 'assets/default_boy.png' && oldPhoto !== 'assets/default_girl.png') {
-                const oldPhotoPath = path.join(__dirname, oldPhoto);
-                safeDeleteFile(oldPhotoPath);
+                const oldFilePath = oldPhoto.startsWith('/uploads/') 
+                    ? path.join(__dirname, oldPhoto) 
+                    : path.join(__dirname, '..', oldPhoto);
+                safeDeleteFile(oldFilePath);
             }
 
             res.json({ message: "Resim başarıyla güncellendi", photo: newPhoto });

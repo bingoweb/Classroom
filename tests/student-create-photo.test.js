@@ -262,3 +262,207 @@ test('Student Create Photo Web Path Tests', async (t) => {
         handler(req, res);
     });
 });
+
+test('Student Update Photo Web Path Tests', async (t) => {
+    const stack = app._router.stack;
+    const routeLayer = stack.find(layer => layer.route && layer.route.path === '/api/students/:id/photo' && layer.route.methods.put);
+    if (!routeLayer) throw new Error("PUT /api/students/:id/photo route not found");
+    const middlewares = routeLayer.route.stack;
+    const handler = middlewares[middlewares.length - 1].handle;
+
+    let originalDbGet;
+    let originalDbRun;
+    let deletedFiles = [];
+    let fileCleanupSpy;
+    let existsSyncSpy;
+
+    t.beforeEach(() => {
+        deletedFiles = [];
+        originalDbGet = db.get;
+        originalDbRun = db.run;
+        
+        const fs = require('node:fs');
+        existsSyncSpy = t.mock.method(fs, 'existsSync', () => true);
+        fileCleanupSpy = t.mock.method(fs, 'unlinkSync', (filePath) => {
+            deletedFiles.push(filePath);
+        });
+    });
+
+    t.afterEach(() => {
+        db.get = originalDbGet;
+        db.run = originalDbRun;
+        existsSyncSpy.mock.restore();
+        fileCleanupSpy.mock.restore();
+    });
+
+    function createMockRes(onEnd) {
+        return {
+            status: function(code) { this.statusCode = code; return this; },
+            json: function(data) {
+                if (onEnd) onEnd(this.statusCode || 200, data);
+                return this;
+            }
+        };
+    }
+
+    const defaultReq = (overrides = {}) => ({
+        params: { id: '1' },
+        file: { filename: 'file.jpg', path: 'backend/uploads/file.jpg', mimetype: 'image/jpeg', size: 1000, ...overrides.file },
+        ...overrides
+    });
+
+    await t.test('1-3, 7. Normal generated filename, response exact path, no req.file.path, no backslashes', (t, done) => {
+        let storedPhoto;
+        db.get = (sql, params, cb) => cb(null, { photo: 'old.jpg' });
+        db.run = function(sql, params, cb) {
+            storedPhoto = params[0];
+            cb.call({ changes: 1 }, null);
+        };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.equal(storedPhoto, '/uploads/file.jpg');
+            assert.equal(data.photo, '/uploads/file.jpg');
+            assert.ok(!storedPhoto.includes('backend'));
+            assert.ok(!storedPhoto.includes('\\'));
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('4-6. Sanitization of ../, ..\\, and folder\\subfolder\\', (t, done) => {
+        let storedPhoto;
+        db.get = (sql, params, cb) => cb(null, { photo: 'old.jpg' });
+        db.run = function(sql, params, cb) {
+            storedPhoto = params[0];
+            cb.call({ changes: 1 }, null);
+        };
+        const cases = [
+            { filename: '../config.json', expected: '/uploads/config.json' },
+            { filename: '..\\config.json', expected: '/uploads/config.json' },
+            { filename: 'folder\\subfolder\\photo.jpg', expected: '/uploads/photo.jpg' }
+        ];
+
+        let i = 0;
+        const nextCase = () => {
+            if (i >= cases.length) return done();
+            const current = cases[i++];
+            const req = defaultReq({ file: { filename: current.filename, path: `backend/uploads/${current.filename}`, mimetype: 'image/jpeg', size: 100 } });
+            const res = createMockRes((status, data) => {
+                assert.equal(storedPhoto, current.expected);
+                nextCase();
+            });
+            handler(req, res);
+        };
+        nextCase();
+    });
+
+    await t.test('8. invalid student ID deletes only req.file.path', (t, done) => {
+        const req = defaultReq({ params: { id: 'abc' } });
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 400);
+            assert.equal(deletedFiles.length, 1);
+            assert.equal(deletedFiles[0], req.file.path);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('9. invalid MIME type deletes only req.file.path', (t, done) => {
+        const req = defaultReq({ file: { filename: 'test.pdf', path: 'backend/uploads/test.pdf', mimetype: 'application/pdf', size: 100 } });
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 400);
+            assert.equal(deletedFiles.length, 1);
+            assert.equal(deletedFiles[0], req.file.path);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('10. oversized upload deletes only req.file.path', (t, done) => {
+        const req = defaultReq({ file: { filename: 'big.jpg', path: 'backend/uploads/big.jpg', mimetype: 'image/jpeg', size: 10000000 } });
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 400);
+            assert.equal(deletedFiles.length, 1);
+            assert.equal(deletedFiles[0], req.file.path);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('11. lookup failure deletes only req.file.path', (t, done) => {
+        db.get = (sql, params, cb) => cb(new Error('DB Error'));
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 500);
+            assert.equal(deletedFiles.length, 1);
+            assert.equal(deletedFiles[0], req.file.path);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('12. missing student deletes only req.file.path', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, undefined); // row is undefined
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 404);
+            assert.equal(deletedFiles.length, 1);
+            assert.equal(deletedFiles[0], req.file.path);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('13. update failure deletes only req.file.path, not previous photo', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: '/uploads/old.jpg' });
+        db.run = function(sql, params, cb) { cb(new Error('Update Error')); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 500);
+            assert.equal(deletedFiles.length, 1);
+            assert.equal(deletedFiles[0], req.file.path);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('14. zero-row update deletes only req.file.path', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: '/uploads/old.jpg' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 0 }, null); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 404);
+            assert.equal(deletedFiles.length, 1);
+            assert.equal(deletedFiles[0], req.file.path);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('15-18. successful update deletes old photo (resolved path) but protects default avatars and keeps new file', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: '/uploads/old-photo.jpg' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.equal(deletedFiles.length, 1);
+            assert.ok(deletedFiles[0].includes('old-photo.jpg'), 'Old photo deleted');
+            assert.notEqual(deletedFiles[0], req.file.path, 'New photo not deleted');
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('17. default avatars remain protected', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: 'assets/default_boy.png' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.equal(deletedFiles.length, 0, 'No files should be deleted (default avatar is protected, new file kept)');
+            done();
+        });
+        handler(req, res);
+    });
+});
