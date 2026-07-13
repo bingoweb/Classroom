@@ -616,12 +616,21 @@ app.post('/api/roles', (req, res) => {
     // star: unlimited
 
     if (role_type === 'president') {
-        db.run("DELETE FROM roles WHERE role_type = ?", [role_type], (err) => {
+        db.get("SELECT id FROM students WHERE id = ?", [studentId], (err, row) => {
             if (err) {
-                logger.error(COMPONENTS.API, 'Error clearing president role', err);
+                logger.error(COMPONENTS.API, 'Error checking president student', err);
                 return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
             }
-            insertRole();
+            if (!row) {
+                return res.status(400).json({ error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
+            }
+            db.run("DELETE FROM roles WHERE role_type = ?", [role_type], (err) => {
+                if (err) {
+                    logger.error(COMPONENTS.API, 'Error clearing president role', err);
+                    return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
+                }
+                insertRole();
+            });
         });
     } else if (role_type === 'vice_president') {
         // Check if already 2 vice presidents
