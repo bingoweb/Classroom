@@ -713,7 +713,14 @@ app.post('/api/roles', (req, res) => {
     }
 
     function insertRole() {
-        db.run("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [studentId, role_type], function (err) {
+        const sql = `
+            INSERT INTO roles (student_id, role_type)
+            SELECT ?, ?
+            WHERE NOT EXISTS (
+                SELECT 1 FROM roles WHERE student_id = ? AND role_type = ?
+            )
+        `;
+        db.run(sql, [studentId, role_type, studentId, role_type], function (err) {
             if (err) {
                 console.error('DATABASE ERROR inserting role:', err.message, {
                     studentId: studentId,
@@ -735,6 +742,15 @@ app.post('/api/roles', (req, res) => {
 
                 return res.status(500).json({ error: 'Rol atanırken hata oluştu: ' + (err.message || 'Bilinmeyen hata') });
             }
+
+            if (this.changes === 0) {
+                let dupMsg = 'Öğrenci zaten bu role sahip';
+                if (role_type === 'duty') dupMsg = 'Bu öğrenci zaten nöbetçi';
+                if (role_type === 'star') dupMsg = 'Bu öğrenci zaten haftanın yıldızı';
+                if (role_type === 'vice_president') dupMsg = 'Bu öğrenci zaten başkan yardımcısı';
+                return res.status(400).json({ error: dupMsg });
+            }
+
             console.log('Role inserted successfully:', { id: this.lastID, student_id: studentId, role_type });
             res.json({ id: this.lastID, message: 'Rol başarıyla atandı' });
         });

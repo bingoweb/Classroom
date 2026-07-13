@@ -764,4 +764,75 @@ test('Role Create ID Validation Tests', async (t) => {
         assert.deepEqual(unrelatedRolesAfter, unrelatedRolesBefore);
     });
 
+    // N. Duplicate star assignment
+    await t.test('N. Duplicate star assignment', async () => {
+        let runCalls = [];
+        db.run = function(sql, params, cb) {
+            runCalls.push({ sql, params });
+            this.changes = 0;
+            cb.call(this, null);
+        };
+        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'star' } });
+        assert.strictEqual(resObj.statusCode, 400);
+        assert.deepEqual(resObj.body, { error: 'Bu öğrenci zaten haftanın yıldızı' });
+        
+        assert.strictEqual(runCalls.length, 1);
+        assert.ok(runCalls[0].sql.includes('INSERT INTO roles'));
+        assert.ok(runCalls[0].sql.includes('WHERE NOT EXISTS'));
+        assert.deepEqual(runCalls[0].params, [47, 'star', 47, 'star']);
+    });
+
+    // O. Duplicate duty assignment
+    await t.test('O. Duplicate duty assignment', async () => {
+        let runCalls = [];
+        db.get = function(sql, params, cb) {
+            // mock duty limit check
+            cb(null, { count: 1 });
+        };
+        db.run = function(sql, params, cb) {
+            runCalls.push({ sql, params });
+            this.changes = 0;
+            cb.call(this, null);
+        };
+        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'duty' } });
+        assert.strictEqual(resObj.statusCode, 400);
+        assert.deepEqual(resObj.body, { error: 'Bu öğrenci zaten nöbetçi' });
+        
+        assert.strictEqual(runCalls.length, 1);
+        assert.ok(runCalls[0].sql.includes('INSERT INTO roles'));
+        assert.ok(runCalls[0].sql.includes('WHERE NOT EXISTS'));
+        assert.deepEqual(runCalls[0].params, [47, 'duty', 47, 'duty']);
+    });
+
+    // P. Valid star assignment
+    await t.test('P. Valid star assignment', async () => {
+        let runCalls = [];
+        db.run = function(sql, params, cb) {
+            runCalls.push({ sql, params });
+            this.changes = 1;
+            this.lastID = 99;
+            cb.call(this, null);
+        };
+        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'star' } });
+        assert.strictEqual(resObj.statusCode, 200);
+        assert.deepEqual(resObj.body, { id: 99, message: 'Rol başarıyla atandı' });
+    });
+
+    // Q. Valid duty assignment
+    await t.test('Q. Valid duty assignment', async () => {
+        let runCalls = [];
+        db.get = function(sql, params, cb) {
+            cb(null, { count: 1 });
+        };
+        db.run = function(sql, params, cb) {
+            runCalls.push({ sql, params });
+            this.changes = 1;
+            this.lastID = 101;
+            cb.call(this, null);
+        };
+        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'duty' } });
+        assert.strictEqual(resObj.statusCode, 200);
+        assert.deepEqual(resObj.body, { id: 101, message: 'Rol başarıyla atandı' });
+    });
+
 });
