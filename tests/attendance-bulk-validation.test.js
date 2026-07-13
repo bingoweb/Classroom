@@ -187,6 +187,41 @@ test('Attendance Bulk Validation Tests', async (t) => {
         }
     });
 
+    // 0. Structural body validation
+    const structuralBodies = [
+        undefined, null, [], 'attendance', 42, true, false
+    ];
+
+    await t.test('0. Structural body validation', async (subT) => {
+        for (let i = 0; i < structuralBodies.length; i++) {
+            const body = structuralBodies[i];
+            const typeName = Object.prototype.toString.call(body);
+            await subT.test(`structurally invalid body ${typeName} at index ${i} returns 400 and performs no db operations`, async () => {
+                let dbCalls = 0;
+                db.run = () => { dbCalls++; };
+                db.prepare = () => { dbCalls++; };
+
+                const resObj = await invokeHandler({ body });
+                assert.strictEqual(resObj.statusCode, 400);
+                assert.deepEqual(resObj.body, { error: 'Tarih ve yoklama listesi gereklidir' });
+                assert.strictEqual(resObj.count, 1);
+                assert.strictEqual(dbCalls, 0);
+            });
+        }
+    });
+
+    await t.test('0. Missing field validation', async () => {
+        let dbCalls = 0;
+        db.run = () => { dbCalls++; };
+        db.prepare = () => { dbCalls++; };
+
+        const resObj = await invokeHandler({ body: {} });
+        assert.strictEqual(resObj.statusCode, 400);
+        assert.deepEqual(resObj.body, { error: 'Tarih ve yoklama listesi gereklidir' });
+        assert.strictEqual(resObj.count, 1);
+        assert.strictEqual(dbCalls, 0);
+    });
+
     // A. Existing top-level validation
     const topLevelInvalid = [
         { date: '', attendanceList: [] },

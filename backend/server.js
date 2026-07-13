@@ -1051,6 +1051,9 @@ app.get('/api/attendance/:date', (req, res) => {
 
 // Save Attendance (Bulk - multiple students at once)
 app.post('/api/attendance', (req, res) => {
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        return res.status(400).json({ error: 'Tarih ve yoklama listesi gereklidir' });
+    }
     const { date, attendanceList } = req.body;
 
     if (!date || !attendanceList || !Array.isArray(attendanceList)) {
