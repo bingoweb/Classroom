@@ -551,8 +551,9 @@ test('Slides Reorder Route Tests', async (t) => {
             let serializeCalled = 0;
             let prepareCalled = 0;
             let preparedSql = null;
-            let runCalls = [];
+            let stmtRunCalls = [];
             let finalizeCalled = 0;
+            let dbRunCalls = [];
 
             db.serialize = (cb) => { serializeCalled++; cb(); };
             db.prepare = (sql) => {
@@ -560,7 +561,7 @@ test('Slides Reorder Route Tests', async (t) => {
                 preparedSql = sql;
                 return {
                     run: (params, cb) => {
-                        runCalls.push(params);
+                        stmtRunCalls.push(params);
                         if (cb) cb(null);
                     },
                     finalize: () => {
@@ -569,7 +570,11 @@ test('Slides Reorder Route Tests', async (t) => {
                 };
             };
             db.get = () => { throw new Error('db.get must not be called'); };
-            db.run = () => { throw new Error('db.run must not be called'); };
+            db.run = (sql, params, cb) => {
+                if (typeof params === 'function') cb = params;
+                dbRunCalls.push(sql);
+                if (cb) cb(null);
+            };
 
             const req = {
                 body: {
@@ -591,12 +596,260 @@ test('Slides Reorder Route Tests', async (t) => {
             assert.strictEqual(serializeCalled, 1);
             assert.strictEqual(prepareCalled, 1);
             assert.strictEqual(preparedSql, 'UPDATE slides SET display_order = ? WHERE id = ?');
-            assert.strictEqual(runCalls.length, 2);
-            assert.deepStrictEqual(runCalls, [
+            assert.strictEqual(stmtRunCalls.length, 2);
+            assert.deepStrictEqual(stmtRunCalls, [
                 [1, 1],
                 [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]
             ]);
             assert.strictEqual(finalizeCalled, 1);
+            assert.deepStrictEqual(dbRunCalls, ["BEGIN IMMEDIATE TRANSACTION", "COMMIT"]);
         });
+    });
+
+    await t.test('7. Mocked transaction sequencing', async (t2) => {
+        const matchingRoutes = app._router.stack.filter(layer => layer.route && layer.route.path === '/api/slides/reorder' && layer.route.methods.put);
+        const handler = matchingRoutes[0].route.stack[matchingRoutes[0].route.stack.length - 1].handle;
+
+        function invokeHandlerMockDb(reqBody, dbMock, timeoutMs = 500) {
+            return new Promise((resolve, reject) => {
+                let resCount = 0;
+                let resBody = null;
+                let resCode = 200;
+                let settled = false;
+                const fail = (err) => { if (!settled) { settled = true; reject(err); } };
+                const res = {
+                    status(code) { resCode = code; return this; },
+                    json(data) {
+                        resCount++;
+                        resBody = data;
+                        if (resCount > 1) {
+                            fail(new Error('Multiple responses'));
+                            return;
+                        }
+                        settled = true;
+                        resolve({ statusCode: resCode, body: resBody });
+                        return this;
+                    }
+                };
+                setTimeout(() => fail(new Error('Timeout waiting for response')), timeoutMs);
+
+                let originalSerialize = db.serialize;
+                let originalRun = db.run;
+                let originalPrepare = db.prepare;
+
+                db.serialize = dbMock.serialize || ((cb) => cb());
+                db.run = dbMock.run;
+                db.prepare = dbMock.prepare;
+
+                try {
+                    handler({ body: reqBody, requestId: 'test' }, res);
+                } catch (err) {
+                    fail(err);
+                } finally {
+                    db.serialize = originalSerialize;
+                    db.run = originalRun;
+                    db.prepare = originalPrepare;
+                }
+            });
+        }
+
+        await t2.test('Begin failure causes zero prepare/update calls', async () => {
+            let runCalls = [];
+            let prepareCalled = false;
+            const resObj = await invokeHandlerMockDb({ slideOrders: [{ id: 1, display_order: 1 }] }, {
+                run: (sql, cb) => {
+                    if (typeof cb !== 'function' && typeof params === 'function') cb = params;
+                    runCalls.push(sql);
+                    if (sql === "BEGIN IMMEDIATE TRANSACTION") {
+                        if (cb) cb(new Error('begin failed'));
+                    }
+                },
+                prepare: () => { prepareCalled = true; return { run: () => {}, finalize: () => {} }; }
+            });
+            assert.strictEqual(resObj.statusCode, 500);
+            assert.deepStrictEqual(resObj.body, { error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+            assert.strictEqual(prepareCalled, false);
+            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION"]);
+        });
+
+        await t2.test('Update failure causes statement finalization followed by ROLLBACK', async () => {
+            let runCalls = [];
+            let prepareCalls = [];
+            let finalizeCalled = false;
+            let stmtRunCalls = 0;
+            const resObj = await invokeHandlerMockDb({ slideOrders: [{ id: 1, display_order: 1 }, { id: 2, display_order: 2 }] }, {
+                run: (sql, cb) => {
+                    if (typeof cb !== 'function' && typeof params === 'function') cb = params;
+                    runCalls.push(sql);
+                    if (cb) cb(null);
+                },
+                prepare: (sql) => {
+                    prepareCalls.push(sql);
+                    return {
+                        run: (params, cb) => {
+                            stmtRunCalls++;
+                            if (stmtRunCalls === 1) {
+                                cb(new Error('update failed'));
+                            } else {
+                                cb(null);
+                            }
+                        },
+                        finalize: () => { finalizeCalled = true; }
+                    };
+                }
+            });
+            assert.strictEqual(resObj.statusCode, 500);
+            assert.strictEqual(stmtRunCalls, 1);
+            assert.strictEqual(finalizeCalled, true);
+            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
+        });
+
+        await t2.test('Commit failure causes ROLLBACK', async () => {
+            let runCalls = [];
+            let finalizeCalled = false;
+            const resObj = await invokeHandlerMockDb({ slideOrders: [{ id: 1, display_order: 1 }] }, {
+                run: (sql, cb) => {
+                    runCalls.push(sql);
+                    if (sql === "COMMIT") {
+                        if (cb) cb(new Error('commit failed'));
+                    } else {
+                        if (cb) cb(null);
+                    }
+                },
+                prepare: (sql) => {
+                    return {
+                        run: (params, cb) => cb(null),
+                        finalize: () => { finalizeCalled = true; }
+                    };
+                }
+            });
+            assert.strictEqual(resObj.statusCode, 500);
+            assert.strictEqual(finalizeCalled, true);
+            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "COMMIT", "ROLLBACK"]);
+        });
+
+        await t2.test('Successful updates cause finalization followed by COMMIT and success not sent before commit callback', async () => {
+            let runCalls = [];
+            let finalizeCalled = false;
+            let commitCallbackCompleted = false;
+            const resObj = await invokeHandlerMockDb({ slideOrders: [{ id: 1, display_order: 1 }, { id: 2, display_order: 2 }] }, {
+                run: (sql, cb) => {
+                    runCalls.push(sql);
+                    if (sql === "COMMIT") {
+                        setTimeout(() => {
+                            commitCallbackCompleted = true;
+                            if (cb) cb(null);
+                        }, 10);
+                    } else {
+                        if (cb) cb(null);
+                    }
+                },
+                prepare: (sql) => {
+                    return {
+                        run: (params, cb) => cb(null),
+                        finalize: () => { finalizeCalled = true; }
+                    };
+                }
+            });
+            assert.strictEqual(resObj.statusCode, 200);
+            assert.strictEqual(finalizeCalled, true);
+            assert.strictEqual(commitCallbackCompleted, true);
+            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "COMMIT"]);
+        });
+    });
+
+    await t.test('8. Real SQLite atomicity regression', async () => {
+        function runSql(sql, params = []) {
+            return new Promise((resolve, reject) => {
+                db.run(sql, params, function(err) {
+                    if (err) reject(err);
+                    else resolve(this);
+                });
+            });
+        }
+
+        function allSql(sql, params = []) {
+            return new Promise((resolve, reject) => {
+                db.all(sql, params, (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows);
+                });
+            });
+        }
+
+        await runSql("DELETE FROM slides");
+        const id1 = (await runSql("INSERT INTO slides (content_type, media_type, media_path, display_order) VALUES ('test', 'image', '1.jpg', 1)")).lastID;
+        const id2 = (await runSql("INSERT INTO slides (content_type, media_type, media_path, display_order) VALUES ('test', 'image', '2.jpg', 2)")).lastID;
+        const id3 = (await runSql("INSERT INTO slides (content_type, media_type, media_path, display_order) VALUES ('test', 'image', '3.jpg', 3)")).lastID;
+
+        await runSql(`
+            CREATE TRIGGER abort_middle_slide
+            BEFORE UPDATE ON slides
+            FOR EACH ROW
+            WHEN NEW.id = ${id2}
+            BEGIN
+                SELECT RAISE(ABORT, 'Simulated update failure');
+            END;
+        `);
+
+        const http = require('node:http');
+        const server = http.createServer(app);
+        await new Promise(resolve => server.listen(0, resolve));
+        const port = server.address().port;
+
+        const makeRequest = (body) => new Promise((resolve, reject) => {
+            const req = http.request({
+                hostname: 'localhost',
+                port,
+                path: '/api/slides/reorder',
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' }
+            }, (res) => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => resolve({ statusCode: res.statusCode, body: JSON.parse(data) }));
+            });
+            req.on('error', reject);
+            req.write(JSON.stringify(body));
+            req.end();
+        });
+
+        const res = await makeRequest({
+            slideOrders: [
+                { id: id1, display_order: 10 },
+                { id: id2, display_order: 20 },
+                { id: id3, display_order: 30 }
+            ]
+        });
+
+        assert.strictEqual(res.statusCode, 500);
+        assert.deepStrictEqual(res.body, { error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+
+        const rows = await allSql("SELECT id, display_order FROM slides ORDER BY id");
+        assert.deepStrictEqual(rows, [
+            { id: id1, display_order: 1 },
+            { id: id2, display_order: 2 },
+            { id: id3, display_order: 3 }
+        ]);
+
+        await runSql("DROP TRIGGER abort_middle_slide");
+
+        const resSuccess = await makeRequest({
+            slideOrders: [
+                { id: id1, display_order: 10 },
+                { id: id2, display_order: 20 },
+                { id: id3, display_order: 30 }
+            ]
+        });
+
+        assert.strictEqual(resSuccess.statusCode, 200);
+        const newRows = await allSql("SELECT id, display_order FROM slides ORDER BY id");
+        assert.deepStrictEqual(newRows, [
+            { id: id1, display_order: 10 },
+            { id: id2, display_order: 20 },
+            { id: id3, display_order: 30 }
+        ]);
+
+        server.close();
     });
 });

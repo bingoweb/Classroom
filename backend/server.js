@@ -1530,36 +1530,66 @@ app.put('/api/slides/reorder', (req, res) => {
     }
 
     db.serialize(() => {
-        const stmt = db.prepare("UPDATE slides SET display_order = ? WHERE id = ?");
-        let completed = 0;
-        let hasError = false;
-        const totalItems = slideOrders.length;
+        db.run("BEGIN IMMEDIATE TRANSACTION", function (beginErr) {
+            if (beginErr) {
+                logger.error(COMPONENTS.API, 'Error beginning transaction for slides reorder', beginErr, { requestId: req.requestId });
+                return res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+            }
 
-        slideOrders.forEach((item) => {
-            stmt.run([item.display_order, item.id], (err) => {
-                if (err) {
-                    logger.error(COMPONENTS.API, 'Error updating slide order', err, {
-                        slideId: item.id,
-                        displayOrder: item.display_order,
-                        requestId: req.requestId
-                    });
-                    hasError = true;
-                }
-                completed++;
-                if (completed === totalItems) {
+            let stmt;
+            try {
+                stmt = db.prepare("UPDATE slides SET display_order = ? WHERE id = ?");
+            } catch (prepErr) {
+                logger.error(COMPONENTS.API, 'Error preparing statement for slides reorder', prepErr, { requestId: req.requestId });
+                return db.run("ROLLBACK", () => {
+                    res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                });
+            }
+
+            let i = 0;
+            const totalItems = slideOrders.length;
+
+            function nextUpdate() {
+                if (i >= totalItems) {
                     stmt.finalize();
-                    if (hasError) {
-                        return res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
-                    }
-                    slidesCache = null;
-                    cacheTimestamp = null;
-                    logger.info(COMPONENTS.API, 'Slides reordered successfully', null, {
-                        totalItems,
-                        requestId: req.requestId
+                    db.run("COMMIT", function (commitErr) {
+                        if (commitErr) {
+                            logger.error(COMPONENTS.API, 'Error committing slides reorder', commitErr, { requestId: req.requestId });
+                            return db.run("ROLLBACK", () => {
+                                res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                            });
+                        }
+
+                        slidesCache = null;
+                        cacheTimestamp = null;
+                        logger.info(COMPONENTS.API, 'Slides reordered successfully', null, {
+                            totalItems,
+                            requestId: req.requestId
+                        });
+                        res.json({ message: 'Sıralama başarıyla güncellendi' });
                     });
-                    res.json({ message: 'Sıralama başarıyla güncellendi' });
+                    return;
                 }
-            });
+
+                const item = slideOrders[i];
+                stmt.run([item.display_order, item.id], function (err) {
+                    if (err) {
+                        logger.error(COMPONENTS.API, 'Error updating slide order', err, {
+                            slideId: item.id,
+                            displayOrder: item.display_order,
+                            requestId: req.requestId
+                        });
+                        stmt.finalize();
+                        return db.run("ROLLBACK", () => {
+                            res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                        });
+                    }
+                    i++;
+                    nextUpdate();
+                });
+            }
+
+            nextUpdate();
         });
     });
 });

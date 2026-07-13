@@ -199,6 +199,16 @@ test('Slides Reorder Cache Tests', async (t) => {
         let capturedSql = null;
         const capturedParams = [];
         const capturedCallbacks = [];
+        let runCalls = [];
+
+        db.run = function(sql, params, cb) {
+            if (typeof params === 'function') cb = params;
+            runCalls.push(sql);
+            if (cb) {
+                if (sql === "COMMIT") setTimeout(() => cb(null), 5);
+                else cb(null);
+            }
+        };
 
         db.serialize = function(cb) {
             serializeCount++;
@@ -234,7 +244,7 @@ test('Slides Reorder Cache Tests', async (t) => {
 
         assert.strictEqual(reorderRes.responseCount, 0);
         assert.strictEqual(finalizeCount, 0);
-        assert.strictEqual(capturedCallbacks.length, 2);
+        assert.strictEqual(capturedCallbacks.length, 1);
 
         // Execute first item callback
         capturedCallbacks[0](null);
@@ -266,6 +276,7 @@ test('Slides Reorder Cache Tests', async (t) => {
         assert.strictEqual(result.statusCode, 200);
         assert.deepStrictEqual(result.body, { message: 'Sıralama başarıyla güncellendi' });
         assert.strictEqual(result.responseCount, 1);
+        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "COMMIT"]);
 
         // Immediately after success
         activeSlidesRow = [
@@ -306,6 +317,13 @@ test('Slides Reorder Cache Tests', async (t) => {
         let capturedSql = null;
         const capturedParams = [];
         const capturedCallbacks = [];
+        let runCalls = [];
+
+        db.run = function(sql, params, cb) {
+            if (typeof params === 'function') cb = params;
+            runCalls.push(sql);
+            if (cb) cb(null);
+        };
 
         db.serialize = function(cb) { cb(); };
 
@@ -344,9 +362,11 @@ test('Slides Reorder Cache Tests', async (t) => {
         reorderHandler(reorderReq, reorderRes);
 
         const reorderError = new Error('second reorder update failed');
+        assert.strictEqual(capturedCallbacks.length, 1);
         capturedCallbacks[0](null);
         
         assert.strictEqual(reorderRes.responseCount, 0);
+        assert.strictEqual(capturedCallbacks.length, 2);
 
         capturedCallbacks[1](reorderError);
 
@@ -359,6 +379,7 @@ test('Slides Reorder Cache Tests', async (t) => {
         assert.strictEqual(capturedCallbacks.length, 2);
         assert.strictEqual(capturedSql, 'UPDATE slides SET display_order = ? WHERE id = ?');
         assert.deepStrictEqual(capturedParams, [ [1, 2], [2, 1] ]);
+        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
 
         assert.strictEqual(loggedComponent, COMPONENTS.API);
         assert.strictEqual(loggedMessage, 'Error updating slide order');
