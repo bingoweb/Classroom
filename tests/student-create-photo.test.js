@@ -124,12 +124,12 @@ test('Student Create Photo Web Path Tests', async (t) => {
 
         const req = {
             body: { name: 'Test Student', gender: 'M' },
-            file: { filename: 'file.jpg', path: 'C:\\backend\\uploads\\file.jpg' }
+            file: { filename: '..\\config.json', path: 'C:\\backend\\uploads\\..\\config.json' }
         };
 
         const res = createMockRes((status, data) => {
             assert.ok(!dbStoredPhoto.includes('\\'));
-            assert.equal(dbStoredPhoto, '/uploads/file.jpg');
+            assert.equal(dbStoredPhoto, '/uploads/config.json');
             done();
         });
 
@@ -235,6 +235,27 @@ test('Student Create Photo Web Path Tests', async (t) => {
             assert.equal(status, 500);
             assert.equal(deletedFiles.length, 1);
             assert.equal(deletedFiles[0], req.file.path);
+            done();
+        });
+
+        handler(req, res);
+    });
+
+    await t.test('10. Nested Windows-style filename is sanitized correctly', (t, done) => {
+        let dbStoredPhoto;
+        db.run = function(sql, params, cb) {
+            dbStoredPhoto = params[1];
+            cb.call({ lastID: 1 }, null);
+        };
+
+        const req = {
+            body: { name: 'Test Student', gender: 'M' },
+            file: { filename: 'folder\\subfolder\\photo.jpg', path: 'backend/uploads/folder\\subfolder\\photo.jpg' }
+        };
+
+        const res = createMockRes((status, data) => {
+            assert.ok(!dbStoredPhoto.includes('\\'));
+            assert.equal(dbStoredPhoto, '/uploads/photo.jpg');
             done();
         });
 

@@ -138,7 +138,7 @@ app.post('/api/students', upload.single('photo'), (req, res) => {
         return res.status(400).json({ error: validation.error });
     }
 
-    const photo = req.file ? `/uploads/${path.basename(req.file.filename)}` : null;
+    const photo = req.file ? `/uploads/${path.posix.basename(String(req.file.filename).replace(/\\/g, '/'))}` : null;
     db.run("INSERT INTO students (name, photo, gender) VALUES (?, ?, ?)", [name.trim(), photo, gender], function (err) {
         if (err) {
             logger.error(COMPONENTS.API, 'Error adding student', err, {
