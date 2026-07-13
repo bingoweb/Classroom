@@ -482,10 +482,14 @@ app.put('/api/students/:id/photo', upload.single('photo'), (req, res) => {
             }
 
             // Delete old photo file if it exists and is not a default photo
-            if (oldPhoto && oldPhoto !== 'assets/default_boy.png' && oldPhoto !== 'assets/default_girl.png') {
-                const oldFilePath = oldPhoto.startsWith('/uploads/') 
-                    ? path.join(__dirname, oldPhoto) 
-                    : path.join(__dirname, '..', oldPhoto);
+            if (
+                typeof oldPhoto === 'string' &&
+                oldPhoto !== 'assets/default_boy.png' &&
+                oldPhoto !== 'assets/default_girl.png' &&
+                oldPhoto.startsWith('/uploads/')
+            ) {
+                const oldFilename = path.posix.basename(String(oldPhoto).replace(/\\/g, '/'));
+                const oldFilePath = path.join(uploadsDir, oldFilename);
                 safeDeleteFile(oldFilePath);
             }
 

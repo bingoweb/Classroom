@@ -440,27 +440,103 @@ test('Student Update Photo Web Path Tests', async (t) => {
         handler(req, res);
     });
 
-    await t.test('15-18. successful update deletes old photo (resolved path) but protects default avatars and keeps new file', (t, done) => {
+    await t.test('15. /uploads/old-photo.jpg deletes exactly the corresponding file inside backend/uploads', (t, done) => {
         db.get = (sql, params, cb) => cb(null, { photo: '/uploads/old-photo.jpg' });
         db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
         const req = defaultReq();
+        const pathObj = require('node:path');
         const res = createMockRes((status, data) => {
             assert.equal(status, 200);
             assert.equal(deletedFiles.length, 1);
-            assert.ok(deletedFiles[0].includes('old-photo.jpg'), 'Old photo deleted');
-            assert.notEqual(deletedFiles[0], req.file.path, 'New photo not deleted');
+            assert.equal(deletedFiles[0], pathObj.join(__dirname, '../backend/uploads/old-photo.jpg'));
             done();
         });
         handler(req, res);
     });
 
-    await t.test('17. default avatars remain protected', (t, done) => {
+    await t.test('16. the newly uploaded req.file.path is not deleted after success', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: '/uploads/old-photo.jpg' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.ok(!deletedFiles.includes(req.file.path), 'New photo path should not be in deletedFiles');
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('17. assets/default_boy.png is not deleted', (t, done) => {
         db.get = (sql, params, cb) => cb(null, { photo: 'assets/default_boy.png' });
         db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
         const req = defaultReq();
         const res = createMockRes((status, data) => {
             assert.equal(status, 200);
-            assert.equal(deletedFiles.length, 0, 'No files should be deleted (default avatar is protected, new file kept)');
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('18. assets/default_girl.png is not deleted', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: 'assets/default_girl.png' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('19. ../../etc/passwd is not passed to safeDeleteFile', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: '../../etc/passwd' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('20. an absolute filesystem path is not passed to safeDeleteFile', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: '/var/www/uploads/old.jpg' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            // It starts with /uploads/ so it triggers deletion? No, starts with /var.
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('21. backend/uploads/legacy.jpg is not deleted as part of this non-legacy task', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: 'backend/uploads/legacy.jpg' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('22. a nested public value such as /uploads/folder/old.jpg cannot escape or create a nested deletion target', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: '/uploads/folder/old.jpg' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
+        const req = defaultReq();
+        const pathObj = require('node:path');
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.equal(deletedFiles.length, 1);
+            // Must delete EXACTLY backend/uploads/old.jpg (not inside folder)
+            assert.equal(deletedFiles[0], pathObj.join(__dirname, '../backend/uploads/old.jpg'));
             done();
         });
         handler(req, res);
