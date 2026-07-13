@@ -1451,6 +1451,9 @@ app.post('/api/slides', uploadSlide.single('slide'), (req, res, next) => {
 
 // Reorder slides (bulk update)
 app.put('/api/slides/reorder', (req, res) => {
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        return res.status(400).json({ error: 'Geçersiz sıralama verisi' });
+    }
     const { slideOrders } = req.body; // Array of {id, display_order}
 
     if (!slideOrders || !Array.isArray(slideOrders) || slideOrders.length === 0) {

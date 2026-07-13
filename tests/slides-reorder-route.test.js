@@ -271,4 +271,104 @@ test('Slides Reorder Route Tests', async (t) => {
         assert.strictEqual(typeof getParams[0], 'number');
         assert.ok(runSql.includes('UPDATE slides SET'));
     });
+    await t.test('6. Mandatory actual handler discovery and structural tests', async (t2) => {
+        const matchingRoutes = app._router.stack.filter(
+            layer =>
+                layer.route &&
+                layer.route.path === '/api/slides/reorder' &&
+                layer.route.methods.put
+        );
+
+        assert.strictEqual(
+            matchingRoutes.length,
+            1,
+            'Exactly one matching PUT /api/slides/reorder route must exist'
+        );
+
+        const routeLayer = matchingRoutes[0];
+        const middlewares = routeLayer.route.stack;
+        const handler = middlewares[middlewares.length - 1].handle;
+
+        function createMockRes() {
+            const res = {
+                statusCode: 200,
+                responseCount: 0,
+                body: null,
+                status(code) {
+                    this.statusCode = code;
+                    return this;
+                },
+                json(data) {
+                    this.responseCount++;
+                    if (this.responseCount > 1) {
+                        throw new Error('Multiple responses sent');
+                    }
+                    this.body = data;
+                    return this;
+                }
+            };
+            return res;
+        }
+
+        const primitiveBodies = [undefined, null, [], 'reorder', 42, true, false];
+
+        for (const testedBody of primitiveBodies) {
+            const testName = Array.isArray(testedBody) ? '[]' : String(testedBody);
+            await t2.test(`Structural body regression: ${testName} is rejected with 400`, () => {
+                let serializeCalled = false;
+                let prepareCalled = false;
+                let getCalled = false;
+                let runCalled = false;
+
+                db.serialize = () => { serializeCalled = true; };
+                db.prepare = () => { prepareCalled = true; };
+                db.get = () => { getCalled = true; };
+                db.run = () => { runCalled = true; };
+
+                const req = { body: testedBody };
+                const res = createMockRes();
+
+                assert.doesNotThrow(() => {
+                    handler(req, res);
+                });
+
+                assert.strictEqual(res.statusCode, 400);
+                assert.deepStrictEqual(res.body, { error: 'Geçersiz sıralama verisi' });
+                assert.strictEqual(res.responseCount, 1);
+
+                assert.strictEqual(serializeCalled, false);
+                assert.strictEqual(prepareCalled, false);
+                assert.strictEqual(getCalled, false);
+                assert.strictEqual(runCalled, false);
+            });
+        }
+
+        await t2.test(`Mandatory empty-object regression`, () => {
+            let serializeCalled = false;
+            let prepareCalled = false;
+            let getCalled = false;
+            let runCalled = false;
+
+            db.serialize = () => { serializeCalled = true; };
+            db.prepare = () => { prepareCalled = true; };
+            db.get = () => { getCalled = true; };
+            db.run = () => { runCalled = true; };
+
+            const req = { body: {} };
+            const res = createMockRes();
+
+            assert.doesNotThrow(() => {
+                handler(req, res);
+            });
+
+            assert.strictEqual(res.statusCode, 400);
+            assert.deepStrictEqual(res.body, { error: 'Geçersiz sıralama verisi' });
+            assert.strictEqual(res.responseCount, 1);
+
+            assert.strictEqual(serializeCalled, false);
+            assert.strictEqual(prepareCalled, false);
+            assert.strictEqual(getCalled, false);
+            assert.strictEqual(runCalled, false);
+        });
+    });
 });
