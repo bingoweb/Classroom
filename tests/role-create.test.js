@@ -684,27 +684,46 @@ test('Role Create ID Validation Tests', async (t) => {
 
     // M. Mandatory real SQLite successful new president regression (no-existing-president)
     await t.test('M. Mandatory real SQLite successful new president regression (no-existing-president)', async () => {
-        await runDb("DELETE FROM roles WHERE role_type = 'president'", []);
-
-        const initialPresidents = await allDb("SELECT COUNT(*) as count FROM roles WHERE role_type = 'president'", []);
-        assert.strictEqual(initialPresidents[0].count, 0);
+        await runDb("DELETE FROM roles", []);
+        await runDb("DELETE FROM students", []);
 
         const studentRes = await runDb("INSERT INTO students (name) VALUES (?)", ['Target Student M']);
         const targetStudentId = studentRes.lastID;
 
+        const unrelatedStudentRes = await runDb("INSERT INTO students (name) VALUES (?)", ['Unrelated Student M']);
+        const unrelatedStudentId = unrelatedStudentRes.lastID;
+
+        await runDb("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [unrelatedStudentId, 'vice_president']);
+        await runDb("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [unrelatedStudentId, 'duty']);
+        await runDb("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [unrelatedStudentId, 'star']);
+
+        const initialPresidents = await allDb("SELECT COUNT(*) as count FROM roles WHERE role_type = 'president'", []);
+        assert.strictEqual(initialPresidents[0].count, 0);
+
         const unrelatedRolesBefore = await allDb("SELECT id, student_id, role_type FROM roles WHERE role_type <> 'president' ORDER BY id", []);
+        assert.ok(unrelatedRolesBefore.length > 0);
+        assert.strictEqual(unrelatedRolesBefore.length, 3);
 
         const resObj = await invokeHandler({ body: { student_id: targetStudentId.toString(), role_type: 'president' } });
 
         assert.strictEqual(resObj.statusCode, 200);
+        assert.ok(resObj.body !== null && typeof resObj.body === 'object' && !Array.isArray(resObj.body));
+        assert.deepEqual(Object.keys(resObj.body).sort(), ['id', 'message']);
         assert.strictEqual(resObj.body.message, 'Rol başarıyla atandı');
-        const newRoleId = resObj.body.id;
-        assert.ok(newRoleId > 0);
+        assert.strictEqual(Number.isSafeInteger(resObj.body.id), true);
+        assert.ok(resObj.body.id > 0);
+
+        const insertedRoleId = resObj.body.id;
+
+        assert.deepEqual(resObj.body, {
+            id: insertedRoleId,
+            message: 'Rol başarıyla atandı'
+        });
 
         const presidentsAfter = await allDb("SELECT id, student_id, role_type FROM roles WHERE role_type = ? ORDER BY id", ['president']);
         assert.strictEqual(presidentsAfter.length, 1);
         assert.strictEqual(presidentsAfter[0].student_id, targetStudentId);
-        assert.strictEqual(presidentsAfter[0].id, newRoleId);
+        assert.strictEqual(presidentsAfter[0].id, insertedRoleId);
 
         const unrelatedRolesAfter = await allDb("SELECT id, student_id, role_type FROM roles WHERE role_type <> 'president' ORDER BY id", []);
         assert.deepEqual(unrelatedRolesAfter, unrelatedRolesBefore);
