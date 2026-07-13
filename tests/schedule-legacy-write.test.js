@@ -4,7 +4,12 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 
-process.env.CLASSROOM_DB_PATH = path.join(os.tmpdir(), `dummy-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.db`);
+const originalDbPath = process.env.CLASSROOM_DB_PATH;
+const tempDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'classroom-schedule-legacy-write-test-')
+);
+const testDbPath = path.join(tempDir, 'test.db');
+process.env.CLASSROOM_DB_PATH = testDbPath;
 
 const originalSetInterval = global.setInterval;
 global.setInterval = () => {};
@@ -15,11 +20,20 @@ const db = require('../backend/database');
 test('Legacy Schedule Write Tests', async (t) => {
     await db.scheduleMigrationPromise;
 
-    const routeLayer = app._router.stack.find(
-        (layer) => layer.route && layer.route.path === '/api/schedule' && layer.route.methods.post
+    const matchingRoutes = app._router.stack.filter(
+        layer =>
+            layer.route &&
+            layer.route.path === '/api/schedule' &&
+            layer.route.methods.post
     );
 
-    assert.ok(routeLayer, 'POST /api/schedule route not found');
+    assert.strictEqual(
+        matchingRoutes.length,
+        1,
+        'Exactly one matching POST /api/schedule route must exist'
+    );
+    
+    const routeLayer = matchingRoutes[0];
     
     const middlewares = routeLayer.route.stack;
     const handler = middlewares[middlewares.length - 1].handle;
@@ -43,18 +57,58 @@ test('Legacy Schedule Write Tests', async (t) => {
         db.prepare = originalDbPrepare;
     });
 
-    t.after(async () => {
-        return new Promise((resolve) => {
-            db.close((err) => {
-                try { fs.unlinkSync(process.env.CLASSROOM_DB_PATH); } catch (e) {}
-                try { fs.unlinkSync(process.env.CLASSROOM_DB_PATH + '-journal'); } catch (e) {}
-                try { fs.unlinkSync(process.env.CLASSROOM_DB_PATH + '-wal'); } catch (e) {}
-                try { fs.unlinkSync(process.env.CLASSROOM_DB_PATH + '-shm'); } catch (e) {}
-                global.setInterval = originalSetInterval;
+    function closeDatabase(database) {
+        return new Promise((resolve, reject) => {
+            database.close((err) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
                 resolve();
             });
         });
+    }
+
+    function removeFileIfPresent(fsApi, filePath) {
+        try {
+            fsApi.unlinkSync(filePath);
+        } catch (err) {
+            if (err.code !== 'ENOENT') {
+                throw err;
+            }
+        }
+    }
+
+    function removeDirectoryIfPresent(fsApi, directoryPath) {
+        try {
+            fsApi.rmdirSync(directoryPath);
+        } catch (err) {
+            if (err.code !== 'ENOENT') {
+                throw err;
+            }
+        }
+    }
+
+    t.after(async () => {
+        try {
+            await closeDatabase(db);
+        } finally {
+            removeFileIfPresent(fs, testDbPath);
+            removeFileIfPresent(fs, testDbPath + '-journal');
+            removeFileIfPresent(fs, testDbPath + '-wal');
+            removeFileIfPresent(fs, testDbPath + '-shm');
+            removeDirectoryIfPresent(fs, tempDir);
+
+            global.setInterval = originalSetInterval;
+
+            if (originalDbPath === undefined) {
+                delete process.env.CLASSROOM_DB_PATH;
+            } else {
+                process.env.CLASSROOM_DB_PATH = originalDbPath;
+            }
+        }
     });
+
 
     function createMockRes() {
         const res = {
