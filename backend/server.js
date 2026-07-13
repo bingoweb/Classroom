@@ -1084,10 +1084,16 @@ app.post('/api/attendance', (req, res) => {
 
 // Update Single Attendance Record
 app.put('/api/attendance/:id', (req, res) => {
-    const attendanceId = parseInt(req.params.id);
+    const rawAttendanceId = req.params.id;
     const { status } = req.body;
 
-    if (isNaN(attendanceId)) {
+    if (typeof rawAttendanceId !== 'string' || !/^[1-9]\d*$/.test(rawAttendanceId)) {
+        return res.status(400).json({ error: 'Geçersiz yoklama ID' });
+    }
+
+    const attendanceId = Number(rawAttendanceId);
+
+    if (!Number.isSafeInteger(attendanceId)) {
         return res.status(400).json({ error: 'Geçersiz yoklama ID' });
     }
 
