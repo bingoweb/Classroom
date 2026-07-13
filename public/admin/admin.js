@@ -613,7 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                             <div>
                                 <div style="font-weight: 600; margin-bottom: 5px;">📄 Seçilen dosya:</div>
-                                <div style="font-size: 0.9rem;">${file.name}</div>
+                                <div style="font-size: 0.9rem;">${Utils.escapeHtml(file.name)}</div>
                                 <div style="font-size: 0.85rem; opacity: 0.9; margin-top: 3px;">
                                     ${(file.size / 1024).toFixed(2)} KB
                                 </div>
@@ -728,7 +728,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const cellStyle = i === 0
                             ? 'padding: 8px; border: 1px solid #ddd; background: var(--primary); color: white; font-weight: 600; white-space: nowrap;'
                             : 'padding: 8px; border: 1px solid #ddd; white-space: nowrap; color: #333; background: white;';
-                        tableHTML += `<td style="${cellStyle}">${cellValue}</td>`;
+                        tableHTML += `<td style="${cellStyle}">${Utils.escapeHtml(cellValue)}</td>`;
                     }
                     tableHTML += '</tr>';
                 }
@@ -760,7 +760,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Excel parse error:', error);
                 document.getElementById('excelContentPreview').innerHTML = `
                     <div style="color: #d32f2f; padding: 10px; background: rgba(211, 47, 47, 0.1); border-radius: 6px;">
-                        ⚠️ Excel dosyası okunamadı: ${error.message}
+                        ⚠️ Excel dosyası okunamadı: ${Utils.escapeHtml(error.message)}
                         <br><small style="opacity: 0.8;">Tarayıcı console'unu kontrol edin (F12)</small>
                     </div>
                 `;
@@ -815,21 +815,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     const responseClone = response.clone();
                     try {
                         const errorData = await responseClone.json();
-                        errorMessage = errorData.error || errorMessage;
+                        errorMessage = errorData.error ? Utils.escapeHtml(errorData.error) : errorMessage;
                         if (errorData.errors && Array.isArray(errorData.errors)) {
                             errorMessage += '<br><ul style="margin-top: 10px; padding-left: 20px;">';
                             errorData.errors.forEach(err => {
-                                errorMessage += `<li>${err}</li>`;
+                                errorMessage += `<li>${Utils.escapeHtml(err)}</li>`;
                             });
                             errorMessage += '</ul>';
                         }
                     } catch (parseError) {
                         try {
                             const errorText = await responseClone.text();
-                            errorMessage = errorText || errorMessage;
+                            errorMessage = errorText ? Utils.escapeHtml(errorText) : errorMessage;
                         } catch (textError) {
                             // Silent - nested error
-                            errorMessage = `Excel yüklenirken hata oluştu (${response.status} ${response.statusText})`;
+                            errorMessage = Utils.escapeHtml(`Excel yüklenirken hata oluştu (${response.status} ${response.statusText})`);
                         }
                     }
                     resultDiv.innerHTML = `<p style="color: #d32f2f;">${errorMessage}</p>`;
@@ -838,7 +838,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const data = await response.json();
-                let resultHtml = `<p style="color: #2e7d32; font-weight: bold;">${data.message}</p>`;
+                let resultHtml = `<p style="color: #2e7d32; font-weight: bold;">${Utils.escapeHtml(data.message)}</p>`;
 
                 if (data.failed > 0) {
                     resultHtml += `<p style="color: #d32f2f;">${data.failed} öğrenci eklenemedi</p>`;
@@ -847,7 +847,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.errors && data.errors.length > 0) {
                     resultHtml += '<ul style="margin-top: 10px; padding-left: 20px; color: #d32f2f;">';
                     data.errors.forEach(err => {
-                        resultHtml += `<li>${err}</li>`;
+                        resultHtml += `<li>${Utils.escapeHtml(err)}</li>`;
                     });
                     resultHtml += '</ul>';
                 }
