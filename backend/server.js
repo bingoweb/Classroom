@@ -489,9 +489,21 @@ app.delete('/api/students/:id', (req, res) => {
 
 // Update student photo
 app.put('/api/students/:id/photo', upload.single('photo'), (req, res) => {
-    const studentId = parseInt(req.params.id);
+    const rawStudentId = req.params.id;
 
-    if (isNaN(studentId)) {
+    if (
+        typeof rawStudentId !== 'string' ||
+        !/^[1-9]\d*$/.test(rawStudentId)
+    ) {
+        if (req.file) {
+            safeDeleteFile(req.file.path);
+        }
+        return res.status(400).json({ error: 'Geçersiz öğrenci ID' });
+    }
+
+    const studentId = Number(rawStudentId);
+
+    if (!Number.isSafeInteger(studentId)) {
         if (req.file) {
             safeDeleteFile(req.file.path);
         }

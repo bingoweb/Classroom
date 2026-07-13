@@ -484,16 +484,73 @@ test('Student Update Photo Web Path Tests', async (t) => {
         nextCase();
     });
 
-    await t.test('8. invalid student ID deletes only req.file.path', (t, done) => {
-        const req = defaultReq({ params: { id: 'abc' } });
+    const invalidIds = [
+        'abc', '1abc', 'abc1', '1.5', '1e2', '+1', '-1', '0', '00', '01', '1 ', ' 1', '', '   ', '9007199254740992'
+    ];
+
+    for (const invalidId of invalidIds) {
+        await t.test(`8a. invalid ID "${invalidId}" with req.file returns 400, no db, and deletes req.file.path`, (t, done) => {
+            let dbCalled = false;
+            db.get = () => { dbCalled = true; };
+            db.run = () => { dbCalled = true; };
+
+            const req = defaultReq({ params: { id: invalidId } });
+            const res = createMockRes((status, data) => {
+                assert.equal(status, 400);
+                assert.equal(data.error, 'Geçersiz öğrenci ID');
+                assert.equal(dbCalled, false);
+                assert.equal(deletedFiles.length, 1);
+                assert.equal(deletedFiles[0], req.file.path);
+                done();
+            });
+            handler(req, res);
+        });
+    }
+
+    await t.test('8b. malformed ID without req.file returns 400, no db, and no file deletion', (t, done) => {
+        let dbCalled = false;
+        db.get = () => { dbCalled = true; };
+        db.run = () => { dbCalled = true; };
+
+        const req = defaultReq({ params: { id: 'abc' }, file: undefined });
         const res = createMockRes((status, data) => {
             assert.equal(status, 400);
-            assert.equal(deletedFiles.length, 1);
-            assert.equal(deletedFiles[0], req.file.path);
+            assert.equal(data.error, 'Geçersiz öğrenci ID');
+            assert.equal(dbCalled, false);
+            assert.equal(deletedFiles.length, 0);
             done();
         });
         handler(req, res);
     });
+
+    const validIds = [
+        { raw: '1', numeric: 1 },
+        { raw: '47', numeric: 47 }
+    ];
+
+    for (const validId of validIds) {
+        await t.test(`8c. valid ID "${validId.raw}" converts to numeric ${validId.numeric} and is passed to db methods`, (t, done) => {
+            let getQueryParam = null;
+            let runQueryParam = null;
+            db.get = (sql, params, cb) => {
+                getQueryParam = params[0];
+                cb(null, { photo: '/uploads/old-photo.jpg' });
+            };
+            db.run = function(sql, params, cb) {
+                runQueryParam = params[1]; // UPDATE ... WHERE id = ? -> params[1] is the ID
+                cb.call({ changes: 1 }, null);
+            };
+
+            const req = defaultReq({ params: { id: validId.raw } });
+            const res = createMockRes((status, data) => {
+                assert.equal(status, 200);
+                assert.strictEqual(getQueryParam, validId.numeric);
+                assert.strictEqual(runQueryParam, validId.numeric);
+                done();
+            });
+            handler(req, res);
+        });
+    }
 
     await t.test('9. invalid MIME type deletes only req.file.path', (t, done) => {
         const req = defaultReq({ file: { filename: 'test.pdf', path: 'backend/uploads/test.pdf', mimetype: 'application/pdf', size: 100 } });
