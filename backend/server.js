@@ -1494,6 +1494,8 @@ app.put('/api/slides/reorder', (req, res) => {
                     if (hasError) {
                         return res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
                     }
+                    slidesCache = null;
+                    cacheTimestamp = null;
                     logger.info(COMPONENTS.API, 'Slides reordered successfully', null, {
                         totalItems,
                         requestId: req.requestId
