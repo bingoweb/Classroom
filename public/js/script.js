@@ -65,7 +65,7 @@ async function fetchData() {
                 html += `
                     <div class="president-main">
                         <img id="${imgId}" src="${avatarPath}" class="president-avatar-large" onerror="this.onerror=null; this.src='${CONFIG.DEFAULT_AVATAR_BOY}'">
-                        <div class="president-name-large">${president.name || '---'}</div>
+                        <div class="president-name-large">${Utils.escapeHtml(president.name || '---')}</div>
                     </div>
                 `;
             }
@@ -80,7 +80,7 @@ async function fetchData() {
                     html += `
                         <div class="vice-president-item">
                             <img id="${imgId}" src="${avatarPath}" class="vice-president-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
-                            <div class="vice-president-name">${vp.name || '---'}</div>
+                            <div class="vice-president-name">${Utils.escapeHtml(vp.name || '---')}</div>
                         </div>
                     `;
                 });
@@ -168,7 +168,7 @@ async function fetchData() {
                 return `
                 <div class="star-slide ${isActive}" data-index="${index}">
                     <img src="${avatarPath}" class="star-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
-                    <div class="star-name">${s.name || '---'}</div>
+                    <div class="star-name">${Utils.escapeHtml(s.name || '---')}</div>
                 </div>
             `;
             }).join('');
@@ -1230,7 +1230,7 @@ async function updateStats() {
                     return `
                         <span class="marquee-item">
                             <img src="${avatarPath}" class="marquee-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
-                            ${student.name}
+                            ${Utils.escapeHtml(student.name)}
                         </span>
                     `;
                 }).join('');

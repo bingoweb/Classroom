@@ -115,8 +115,7 @@ function displayStudents(students) {
             <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s; border: 2px solid transparent; position: relative;"
                  onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.15)'; this.style.borderColor='var(--primary)'"
                  onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'; this.style.borderColor='transparent'"
-                 data-gender="${s.gender}"
-                 data-student-name="${s.name.toLowerCase()}">
+                 data-gender="${s.gender}">
                 
                 <!-- Gender Badge -->
                 <div style="position: absolute; top: 10px; right: 10px; background: ${genderColor}; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; z-index: 1;">
@@ -132,13 +131,13 @@ function displayStudents(students) {
 
                 <!-- Info -->
                 <div style="padding: 15px;">
-                    <div style="font-size: 1.1rem; font-weight: 600; color: #333; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                        ${s.name}
+                    <div style="font-size: 1.1rem; font-weight: 600; color: #333; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${Utils.escapeHtml(s.name)}">
+                        ${Utils.escapeHtml(s.name)}
                     </div>
 
                     <!-- Actions -->
                     <div style="display: flex; gap: 8px;">
-                        <button class="upload-photo-btn" data-id="${s.id}" data-name="${s.name}"
+                        <button class="upload-photo-btn" data-id="${s.id}"
                             style="flex: 1; padding: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;"
                             onmouseover="this.style.opacity='0.9'"
                             onmouseout="this.style.opacity='1'">
@@ -258,7 +257,7 @@ window.deleteStudent = async function (id) {
 
 // Update Role Selects
 function updateRoleSelects(students) {
-    const options = students.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    const options = students.map(s => `<option value="${s.id}">${Utils.escapeHtml(s.name)}</option>`).join('');
     document.getElementById('presidentSelect').innerHTML = options;
     document.getElementById('vicePresidentSelect').innerHTML = options;
     document.getElementById('dutySelect').innerHTML = options;
@@ -307,22 +306,22 @@ function renderRoles(roles) {
 
     const president = roles.find(r => r.role_type === 'president');
     const presidentHtml = president ?
-        `✅ ${president.name} <button class="remove-role-btn" data-id="${president.role_id}">Kaldır</button>` : '---';
+        `✅ ${Utils.escapeHtml(president.name)} <button class="remove-role-btn" data-id="${president.role_id}">Kaldır</button>` : '---';
     document.getElementById('currentPresident').innerHTML = presidentHtml;
 
     const vicePresidents = roles.filter(r => r.role_type === 'vice_president');
     document.getElementById('currentVicePresidents').innerHTML = vicePresidents.map(vp => {
-        return `<div>👑 ${vp.name} <button class="remove-role-btn" data-id="${vp.role_id}">Kaldır</button></div>`;
+        return `<div>👑 ${Utils.escapeHtml(vp.name)} <button class="remove-role-btn" data-id="${vp.role_id}">Kaldır</button></div>`;
     }).join('') || '---';
 
     const duties = roles.filter(r => r.role_type === 'duty');
     document.getElementById('currentDuty').innerHTML = duties.map(d => {
-        return `<div>📋 ${d.name} <button class="remove-role-btn" data-id="${d.role_id}">Kaldır</button></div>`;
+        return `<div>📋 ${Utils.escapeHtml(d.name)} <button class="remove-role-btn" data-id="${d.role_id}">Kaldır</button></div>`;
     }).join('');
 
     const stars = roles.filter(r => r.role_type === 'star');
     document.getElementById('currentStars').innerHTML = stars.map(s => {
-        return `<div>⭐ ${s.name} <button class="remove-role-btn" data-id="${s.role_id}">Kaldır</button></div>`;
+        return `<div>⭐ ${Utils.escapeHtml(s.name)} <button class="remove-role-btn" data-id="${s.role_id}">Kaldır</button></div>`;
     }).join('');
     // Event delegation is handled in DOMContentLoaded - no need to add listeners here
 }
@@ -581,7 +580,8 @@ document.addEventListener('DOMContentLoaded', () => {
             deleteStudent(id);
         } else if (e.target && e.target.classList.contains('upload-photo-btn')) {
             const id = e.target.getAttribute('data-id');
-            const name = e.target.getAttribute('data-name');
+            const student = allStudents.find(s => s.id == id);
+            const name = student ? student.name : 'Bilinmeyen';
             showPhotoUploadModal(id, name);
         }
     });
@@ -1721,7 +1721,7 @@ function renderAttendanceList(students, attendanceMap) {
         return `
         <div class="student-item" style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; margin-bottom: 8px;">
             <img src="../${avatarPath}" class="student-thumb" onerror="this.src='../assets/default_boy.png'" style="width: 50px; height: 50px; border-radius: 50%;">
-            <span style="flex: 1;">${s.name} (${s.gender === 'M' ? 'Erkek' : 'Kız'})</span>
+            <span style="flex: 1;">${Utils.escapeHtml(s.name)} (${s.gender === 'M' ? 'Erkek' : 'Kız'})</span>
             <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
                 <input type="radio" name="attendance_${s.id}" value="present" ${currentStatus === 'present' ? 'checked' : ''} data-student-id="${s.id}">
                 <span>Var</span>

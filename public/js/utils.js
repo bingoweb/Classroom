@@ -141,6 +141,23 @@ function getWeatherInfo(weatherCode, temperature) {
     return { icon, tip };
 }
 
+/**
+ * Escape HTML special characters to prevent XSS
+ * @param {string} text - Text to escape
+ * @returns {string} Escaped text
+ */
+function escapeHtml(text) {
+    if (text == null) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
 // Export for Node.js (server-side)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -151,7 +168,8 @@ if (typeof module !== 'undefined' && module.exports) {
         showError,
         showSuccess,
         fetchWithErrorHandling,
-        getWeatherInfo
+        getWeatherInfo,
+        escapeHtml
     };
 }
 
@@ -165,6 +183,7 @@ if (typeof window !== 'undefined') {
         showError,
         showSuccess,
         fetchWithErrorHandling,
-        getWeatherInfo
+        getWeatherInfo,
+        escapeHtml
     };
 }
