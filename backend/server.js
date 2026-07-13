@@ -1050,43 +1050,75 @@ app.post('/api/attendance', (req, res) => {
         });
     }
 
-    // Delete existing attendance for this date
-    db.run("DELETE FROM attendance WHERE date = ?", [date], (err) => {
+    // Begin transaction
+    db.run("BEGIN IMMEDIATE TRANSACTION", (err) => {
         if (err) {
-            logger.error(COMPONENTS.API, 'Error deleting existing attendance', err, {
-                date: date
-            });
+            logger.error(COMPONENTS.API, 'Error beginning transaction for attendance', err, { date });
             return res.status(500).json({ error: 'Yoklama kaydedilirken hata oluştu' });
         }
 
-        if (normalizedList.length === 0) {
-            return res.json({ message: "Yoklama kaydedildi", count: 0 });
-        }
+        // Delete existing attendance for this date
+        db.run("DELETE FROM attendance WHERE date = ?", [date], (err) => {
+            if (err) {
+                logger.error(COMPONENTS.API, 'Error deleting existing attendance', err, { date });
+                return db.run("ROLLBACK", (rollbackErr) => {
+                    if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after delete failure', rollbackErr, { date });
+                    return res.status(500).json({ error: 'Yoklama kaydedilirken hata oluştu' });
+                });
+            }
 
-        // Insert new attendance records
-        const stmt = db.prepare("INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
-        let completed = 0;
-        let hasError = false;
-
-        normalizedList.forEach((item) => {
-            stmt.run([item.student_id, date, item.status], (err) => {
-                if (err) {
-                    logger.error(COMPONENTS.API, 'Error inserting attendance', err, {
-                        studentId: item.student_id,
-                        date: date,
-                        status: item.status
-                    });
-                    hasError = true;
-                }
-                completed++;
-                if (completed === normalizedList.length) {
-                    stmt.finalize();
-                    if (hasError) {
-                        return res.status(500).json({ error: 'Yoklama kaydedilirken bazı kayıtlarda hata oluştu' });
+            if (normalizedList.length === 0) {
+                return db.run("COMMIT", (commitErr) => {
+                    if (commitErr) {
+                        logger.error(COMPONENTS.API, 'Error committing empty attendance', commitErr, { date });
+                        return db.run("ROLLBACK", (rollbackErr) => {
+                            if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after commit failure', rollbackErr, { date });
+                            return res.status(500).json({ error: 'Yoklama kaydedilirken hata oluştu' });
+                        });
                     }
-                    return res.json({ message: "Yoklama başarıyla kaydedildi", count: normalizedList.length });
+                    return res.json({ message: "Yoklama kaydedildi", count: 0 });
+                });
+            }
+
+            // Insert new attendance records sequentially to avoid partial state and leak of errors
+            const stmt = db.prepare("INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
+            let currentIndex = 0;
+
+            const insertNext = () => {
+                if (currentIndex >= normalizedList.length) {
+                    stmt.finalize();
+                    return db.run("COMMIT", (commitErr) => {
+                        if (commitErr) {
+                            logger.error(COMPONENTS.API, 'Error committing attendance', commitErr, { date });
+                            return db.run("ROLLBACK", (rollbackErr) => {
+                                if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after commit failure', rollbackErr, { date });
+                                return res.status(500).json({ error: 'Yoklama kaydedilirken hata oluştu' });
+                            });
+                        }
+                        return res.json({ message: "Yoklama başarıyla kaydedildi", count: normalizedList.length });
+                    });
                 }
-            });
+
+                const item = normalizedList[currentIndex];
+                stmt.run([item.student_id, date, item.status], (err) => {
+                    if (err) {
+                        logger.error(COMPONENTS.API, 'Error inserting attendance', err, {
+                            studentId: item.student_id,
+                            date: date,
+                            status: item.status
+                        });
+                        stmt.finalize();
+                        return db.run("ROLLBACK", (rollbackErr) => {
+                            if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after insert failure', rollbackErr, { date });
+                            return res.status(500).json({ error: 'Yoklama kaydedilirken bazı kayıtlarda hata oluştu' });
+                        });
+                    }
+                    currentIndex++;
+                    insertNext();
+                });
+            };
+
+            insertNext();
         });
     });
 });
