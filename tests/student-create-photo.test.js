@@ -599,3 +599,183 @@ test('Student Update Photo Web Path Tests', async (t) => {
         handler(req, res);
     });
 });
+
+test('Student Delete Photo Cleanup Tests', async (t) => {
+    const stack = app._router.stack;
+    const routeLayer = stack.find(layer => layer.route && layer.route.path === '/api/students/:id' && layer.route.methods.delete);
+    if (!routeLayer) throw new Error("DELETE /api/students/:id route not found");
+    const middlewares = routeLayer.route.stack;
+    const handler = middlewares[middlewares.length - 1].handle;
+
+    let originalDbGet;
+    let originalDbRun;
+    let deletedFiles = [];
+    let fileCleanupSpy;
+    let existsSyncSpy;
+    const pathObj = require('node:path');
+
+    t.beforeEach(() => {
+        deletedFiles = [];
+        originalDbGet = db.get;
+        originalDbRun = db.run;
+        
+        const fs = require('node:fs');
+        existsSyncSpy = t.mock.method(fs, 'existsSync', () => true);
+        fileCleanupSpy = t.mock.method(fs, 'unlinkSync', (filePath) => {
+            deletedFiles.push(filePath);
+        });
+    });
+
+    t.afterEach(() => {
+        db.get = originalDbGet;
+        db.run = originalDbRun;
+        existsSyncSpy.mock.restore();
+        fileCleanupSpy.mock.restore();
+    });
+
+    function createMockRes(onEnd) {
+        return {
+            status: function(code) { this.statusCode = code; return this; },
+            json: function(data) {
+                if (onEnd) onEnd(this.statusCode || 200, data);
+                return this;
+            }
+        };
+    }
+
+    const defaultReq = (overrides = {}) => ({
+        params: { id: '1' },
+        ...overrides
+    });
+
+    await t.test('1. invalid ID returns 400 and performs no database query or file deletion', (t, done) => {
+        let queried = false;
+        db.get = () => { queried = true; };
+        db.run = () => { queried = true; };
+        const req = defaultReq({ params: { id: 'abc' } });
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 400);
+            assert.equal(queried, false);
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('2. student lookup failure returns 500 and performs no file deletion', (t, done) => {
+        db.get = (sql, params, cb) => cb(new Error('DB Error'));
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 500);
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('3. missing student returns 404 and performs no database delete or file deletion', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, undefined); // row is undefined
+        let deleteCalled = false;
+        db.run = () => { deleteCalled = true; };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 404);
+            assert.equal(deleteCalled, false);
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('4. database delete failure returns 500 and does not delete the photo', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: '/uploads/student-photo.jpg' });
+        db.run = function(sql, params, cb) { cb(new Error('Update Error')); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 500);
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('5. zero-row database delete returns 404 and does not delete the photo', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: '/uploads/student-photo.jpg' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 0 }, null); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 404);
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('6, 7, 8. successful deletion returns existing response, deletes exactly mapped backend path, and happens only after db success', (t, done) => {
+        let dbSucceeded = false;
+        db.get = (sql, params, cb) => cb(null, { photo: '/uploads/student-photo.jpg' });
+        db.run = function(sql, params, cb) {
+            dbSucceeded = true;
+            cb.call({ changes: 1 }, null);
+        };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.equal(data.changes, 1);
+            assert.equal(data.message, 'Öğrenci silindi');
+            assert.equal(dbSucceeded, true);
+            assert.equal(deletedFiles.length, 1);
+            assert.equal(deletedFiles[0], pathObj.join(__dirname, '../backend/uploads/student-photo.jpg'));
+            done();
+        });
+        handler(req, res);
+    });
+
+    const malformedCases = [
+        { desc: '9. null photo causes no file deletion', val: null },
+        { desc: '10. assets/default_boy.png causes no file deletion', val: 'assets/default_boy.png' },
+        { desc: '11. assets/default_girl.png causes no file deletion', val: 'assets/default_girl.png' },
+        { desc: '12. /uploads/folder/photo.jpg causes no file deletion', val: '/uploads/folder/photo.jpg' },
+        { desc: '13. /uploads/../outside.jpg causes no file deletion', val: '/uploads/../outside.jpg' },
+        { desc: '14. /uploads/..\\outside.jpg causes no file deletion', val: '/uploads/..\\outside.jpg' },
+        { desc: '15. /uploads/ causes no file deletion', val: '/uploads/' },
+        { desc: '15. /uploads/. causes no file deletion', val: '/uploads/.' },
+        { desc: '15. /uploads/.. causes no file deletion', val: '/uploads/..' },
+        { desc: '16. backend/uploads/legacy.jpg causes no file deletion', val: 'backend/uploads/legacy.jpg' },
+        { desc: '16. absolute paths cause no file deletion', val: '/var/www/uploads/legacy.jpg' },
+        { desc: '16. external paths cause no file deletion', val: '../../etc/passwd' }
+    ];
+
+    for (const c of malformedCases) {
+        await t.test(c.desc, (t, done) => {
+            db.get = (sql, params, cb) => cb(null, { photo: c.val });
+            db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
+            const req = defaultReq();
+            const res = createMockRes((status, data) => {
+                assert.equal(status, 200);
+                assert.equal(deletedFiles.length, 0);
+                done();
+            });
+            handler(req, res);
+        });
+    }
+
+    await t.test('17. filesystem cleanup failure must not reverse or falsely report database deletion failure', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: '/uploads/student-photo.jpg' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
+        
+        fileCleanupSpy.mock.restore();
+        const fs = require('node:fs');
+        const errSpy = t.mock.method(fs, 'unlinkSync', () => { throw new Error('EACCES'); });
+        
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.equal(data.changes, 1);
+            assert.equal(data.message, 'Öğrenci silindi');
+            errSpy.mock.restore();
+            done();
+        });
+        handler(req, res);
+    });
+});

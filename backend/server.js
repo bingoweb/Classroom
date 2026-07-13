@@ -23,6 +23,36 @@ function safeDeleteFile(filePath, component = COMPONENTS.API) {
     }
 }
 
+function cleanupManagedPhoto(oldPhoto, uploadsDirectory) {
+    const uploadPrefix = '/uploads/';
+    if (
+        typeof oldPhoto === 'string' &&
+        oldPhoto !== 'assets/default_boy.png' &&
+        oldPhoto !== 'assets/default_girl.png' &&
+        oldPhoto.startsWith(uploadPrefix)
+    ) {
+        const oldFilename = oldPhoto.slice(uploadPrefix.length);
+
+        const isSingleSafeFilename =
+            oldFilename.length > 0 &&
+            oldFilename !== '.' &&
+            oldFilename !== '..' &&
+            !oldFilename.includes('/') &&
+            !oldFilename.includes('\\') &&
+            !oldFilename.includes('\0');
+
+        if (isSingleSafeFilename) {
+            const uploadsRoot = path.resolve(uploadsDirectory);
+            const oldFilePath = path.resolve(uploadsRoot, oldFilename);
+            const remainsInsideUploads = oldFilePath.startsWith(uploadsRoot + path.sep);
+
+            if (remainsInsideUploads) {
+                safeDeleteFile(oldFilePath);
+            }
+        }
+    }
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -391,26 +421,46 @@ app.delete('/api/students/:id', (req, res) => {
         return res.status(400).json({ error: 'Geçersiz öğrenci ID' });
     }
 
-    // Foreign keys should handle cascade delete automatically
-    // No need for redundant manual role deletion
-    db.run("DELETE FROM students WHERE id = ?", [studentId], function (err) {
+    db.get("SELECT photo FROM students WHERE id = ?", [studentId], (err, row) => {
         if (err) {
-            logger.error(COMPONENTS.API, 'Error deleting student', err, {
-                studentId: studentId,
-                errorCode: err.code,
-                errorMessage: err.message
-            });
-            // Provide more detailed error message
+            logger.error(COMPONENTS.API, 'Error fetching student for deletion', err);
             let errorMessage = 'Öğrenci silinirken hata oluştu';
             if (err.message) {
                 errorMessage += ': ' + err.message;
             }
             return res.status(500).json({ error: errorMessage });
         }
-        if (this.changes === 0) {
+
+        if (!row) {
             return res.status(404).json({ error: 'Öğrenci bulunamadı' });
         }
-        res.json({ message: "Öğrenci silindi", changes: this.changes });
+
+        const oldPhoto = row.photo;
+
+        // Foreign keys should handle cascade delete automatically
+        // No need for redundant manual role deletion
+        db.run("DELETE FROM students WHERE id = ?", [studentId], function (deleteErr) {
+            if (deleteErr) {
+                logger.error(COMPONENTS.API, 'Error deleting student', deleteErr, {
+                    studentId: studentId,
+                    errorCode: deleteErr.code,
+                    errorMessage: deleteErr.message
+                });
+                // Provide more detailed error message
+                let errorMessage = 'Öğrenci silinirken hata oluştu';
+                if (deleteErr.message) {
+                    errorMessage += ': ' + deleteErr.message;
+                }
+                return res.status(500).json({ error: errorMessage });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Öğrenci bulunamadı' });
+            }
+            
+            cleanupManagedPhoto(oldPhoto, uploadsDir);
+            
+            res.json({ message: "Öğrenci silindi", changes: this.changes });
+        });
     });
 });
 
@@ -482,33 +532,7 @@ app.put('/api/students/:id/photo', upload.single('photo'), (req, res) => {
             }
 
             // Delete old photo file if it exists and is not a default photo
-            const uploadPrefix = '/uploads/';
-            if (
-                typeof oldPhoto === 'string' &&
-                oldPhoto !== 'assets/default_boy.png' &&
-                oldPhoto !== 'assets/default_girl.png' &&
-                oldPhoto.startsWith(uploadPrefix)
-            ) {
-                const oldFilename = oldPhoto.slice(uploadPrefix.length);
-
-                const isSingleSafeFilename =
-                    oldFilename.length > 0 &&
-                    oldFilename !== '.' &&
-                    oldFilename !== '..' &&
-                    !oldFilename.includes('/') &&
-                    !oldFilename.includes('\\') &&
-                    !oldFilename.includes('\0');
-
-                if (isSingleSafeFilename) {
-                    const uploadsRoot = path.resolve(uploadsDir);
-                    const oldFilePath = path.resolve(uploadsRoot, oldFilename);
-                    const remainsInsideUploads = oldFilePath.startsWith(uploadsRoot + path.sep);
-
-                    if (remainsInsideUploads) {
-                        safeDeleteFile(oldFilePath);
-                    }
-                }
-            }
+            cleanupManagedPhoto(oldPhoto, uploadsDir);
 
             res.json({ message: "Resim başarıyla güncellendi", photo: newPhoto });
         });
