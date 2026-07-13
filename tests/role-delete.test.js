@@ -16,18 +16,42 @@ global.setInterval = () => {};
 const app = require('../backend/server.js');
 const db = require('../backend/database.js');
 
+function closeDatabase(database) {
+    return new Promise((resolve, reject) => {
+        database.close((err) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve();
+        });
+    });
+}
+
+function removeFileIfPresent(fsApi, filePath) {
+    try {
+        fsApi.unlinkSync(filePath);
+    } catch (err) {
+        if (err.code !== 'ENOENT') {
+            throw err;
+        }
+    }
+}
+
+function removeDirectoryIfPresent(fsApi, directoryPath) {
+    try {
+        fsApi.rmdirSync(directoryPath);
+    } catch (err) {
+        if (err.code !== 'ENOENT') {
+            throw err;
+        }
+    }
+}
+
 test('Role Delete ID Validation Tests', async (t) => {
     t.after(async () => {
         try {
-            await new Promise((resolve, reject) => {
-                db.close((err) => {
-                    if (err) {
-                        reject(err);
-                        return;
-                    }
-                    resolve();
-                });
-            });
+            await closeDatabase(db);
 
             const filesToRemove = [
                 testDbPath,
@@ -37,22 +61,10 @@ test('Role Delete ID Validation Tests', async (t) => {
             ];
 
             for (const file of filesToRemove) {
-                try {
-                    fs.unlinkSync(file);
-                } catch (e) {
-                    if (e.code !== 'ENOENT') {
-                        throw e;
-                    }
-                }
+                removeFileIfPresent(fs, file);
             }
 
-            try {
-                fs.rmdirSync(tempDir);
-            } catch (e) {
-                if (e.code !== 'ENOENT') {
-                    throw e;
-                }
-            }
+            removeDirectoryIfPresent(fs, tempDir);
         } finally {
             global.setInterval = originalSetInterval;
 
@@ -197,15 +209,7 @@ test('Teardown Failure Verification', async (t) => {
             close: (cb) => { cb(new Error('Simulated close error')); }
         };
         await assert.rejects(
-            new Promise((resolve, reject) => {
-                fakeDb.close((err) => {
-                    if (err) {
-                        reject(err);
-                        return;
-                    }
-                    resolve();
-                });
-            }),
+            closeDatabase(fakeDb),
             /Simulated close error/
         );
     });
@@ -220,17 +224,24 @@ test('Teardown Failure Verification', async (t) => {
         };
 
         assert.throws(
-            () => {
-                try {
-                    fakeFs.unlinkSync('fake/file');
-                } catch (e) {
-                    if (e.code !== 'ENOENT') {
-                        throw e;
-                    }
-                }
-            },
+            () => removeFileIfPresent(fakeFs, 'fake/file'),
             /EACCES/
         );
+        done();
+    });
+
+    await t.test('3. ENOENT filesystem error does not throw', (t, done) => {
+        const fakeMissingFs = {
+            unlinkSync: () => {
+                const err = new Error('ENOENT: no such file or directory');
+                err.code = 'ENOENT';
+                throw err;
+            }
+        };
+
+        assert.doesNotThrow(() => {
+            removeFileIfPresent(fakeMissingFs, 'missing/file');
+        });
         done();
     });
 });
