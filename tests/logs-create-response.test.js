@@ -15,6 +15,7 @@ global.setInterval = () => {};
 
 const app = require('../backend/server.js');
 const db = require('../backend/database.js');
+const { Logger, COMPONENTS } = require('../backend/logger.js');
 
 function closeDatabase(database) {
     return new Promise((resolve, reject) => {
@@ -70,13 +71,14 @@ function createMockRes() {
 }
 
 test('Logs Create Response Tests', async (t) => {
-    let originalDbRun, originalFsExistsSync, originalFsMkdirSync, originalFsAppendFileSync;
+    let originalDbRun, originalFsExistsSync, originalFsMkdirSync, originalFsAppendFileSync, originalLoggerError;
 
     t.beforeEach(() => {
         originalDbRun = db.run;
         originalFsExistsSync = fs.existsSync;
         originalFsMkdirSync = fs.mkdirSync;
         originalFsAppendFileSync = fs.appendFileSync;
+        originalLoggerError = Logger.prototype.error;
     });
 
     t.afterEach(() => {
@@ -84,6 +86,7 @@ test('Logs Create Response Tests', async (t) => {
         if (originalFsExistsSync) fs.existsSync = originalFsExistsSync;
         if (originalFsMkdirSync) fs.mkdirSync = originalFsMkdirSync;
         if (originalFsAppendFileSync) fs.appendFileSync = originalFsAppendFileSync;
+        if (originalLoggerError) Logger.prototype.error = originalLoggerError;
     });
 
     t.after(async () => {
@@ -93,7 +96,7 @@ test('Logs Create Response Tests', async (t) => {
         removeFileIfPresent(fs, testDbPath + '-wal');
         removeFileIfPresent(fs, testDbPath + '-shm');
         removeDirectoryIfPresent(fs, tempDir);
-        
+
         global.setInterval = originalSetInterval;
         if (originalDbPath === undefined) {
             delete process.env.CLASSROOM_DB_PATH;
@@ -126,7 +129,7 @@ test('Logs Create Response Tests', async (t) => {
         let capturedCallback = null;
         let capturedSql = null;
         let capturedParams = null;
-        
+
         let existsSyncCount = 0;
         let mkdirSyncCount = 0;
         let appendFileSyncCount = 0;
@@ -179,7 +182,7 @@ test('Logs Create Response Tests', async (t) => {
         };
 
         const res = createMockRes();
-        
+
         // Execute handler synchronously
         postHandler(validReq, res);
 
@@ -242,7 +245,7 @@ test('Logs Create Response Tests', async (t) => {
         };
 
         const res = createMockRes();
-        
+
         await new Promise(resolve => {
             const origJson = res.json.bind(res);
             res.json = (data) => {
@@ -255,8 +258,69 @@ test('Logs Create Response Tests', async (t) => {
         assert.strictEqual(res.statusCode, 500);
         assert.deepStrictEqual(res.body, { error: 'Failed to save log' });
         assert.strictEqual(res.responseCount, 1);
+        assert.strictEqual(existsSyncCount, 0);
         assert.strictEqual(mkdirSyncCount, 0);
         assert.strictEqual(appendFileSyncCount, 0);
+    });
+
+    await t.test('D1. Absent optional SQL values must remain null', async () => {
+        let capturedSql = null;
+        let capturedParams = null;
+        let capturedCallback = null;
+
+        db.run = function(sql, params, cb) {
+            let actualCb = cb;
+            if (typeof params === 'function') { actualCb = params; }
+            if (sql.includes('error_logs')) {
+                capturedSql = sql;
+                capturedParams = params;
+                if (actualCb) capturedCallback = actualCb.bind(this);
+            } else {
+                if (actualCb) actualCb.call(this, null);
+            }
+        };
+
+        const validReq = {
+            body: {
+                timestamp: '2025-01-01T10:00:00.000Z',
+                level: 'error',
+                component: 'Frontend',
+                message: 'Test message'
+            }
+        };
+
+        const res = createMockRes();
+
+        postHandler(validReq, res);
+
+        const expectedSql = "INSERT INTO error_logs (timestamp, level, component, message, error_details, context, stack_trace, user_agent, url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        assert.strictEqual(capturedSql, expectedSql);
+        assert.deepStrictEqual(capturedParams, [
+            '2025-01-01T10:00:00.000Z',
+            'error',
+            'Frontend',
+            'Test message',
+            null,
+            null,
+            null,
+            null,
+            null
+        ]);
+        assert.strictEqual(res.responseCount, 0);
+
+        fs.existsSync = () => true;
+        fs.appendFileSync = () => {};
+
+        await new Promise(resolve => {
+            const origJson = res.json.bind(res);
+            res.json = (data) => {
+                origJson(data);
+                resolve();
+            };
+            capturedCallback(null);
+        });
+
+        assert.strictEqual(res.responseCount, 1);
     });
 
     await t.test('D. Successful database insert', async () => {
@@ -265,6 +329,9 @@ test('Logs Create Response Tests', async (t) => {
         let appendFileSyncCount = 0;
         let appendedContent = null;
         let appendedPath = null;
+        let mkdirSyncPath = null;
+        let mkdirSyncOpts = null;
+        let appendFileSyncEncoding = null;
 
         db.run = function(sql, params, cb) {
             let actualCb = cb;
@@ -277,11 +344,16 @@ test('Logs Create Response Tests', async (t) => {
         };
 
         fs.existsSync = (path) => { existsSyncCount++; return false; }; // trigger mkdir
-        fs.mkdirSync = (path, opts) => { mkdirSyncCount++; };
+        fs.mkdirSync = (path, opts) => {
+            mkdirSyncCount++;
+            mkdirSyncPath = path;
+            mkdirSyncOpts = opts;
+        };
         fs.appendFileSync = (path, content, encoding) => {
             appendFileSyncCount++;
             appendedPath = path;
             appendedContent = content;
+            appendFileSyncEncoding = encoding;
         };
 
         const validReq = {
@@ -297,7 +369,7 @@ test('Logs Create Response Tests', async (t) => {
         };
 
         const res = createMockRes();
-        
+
         await new Promise(resolve => {
             const origJson = res.json.bind(res);
             res.json = (data) => {
@@ -307,13 +379,17 @@ test('Logs Create Response Tests', async (t) => {
             postHandler(validReq, res);
         });
 
+        assert.strictEqual(existsSyncCount, 1);
         assert.strictEqual(mkdirSyncCount, 1);
+        assert.strictEqual(mkdirSyncPath, 'logs');
+        assert.deepStrictEqual(mkdirSyncOpts, { recursive: true });
         assert.strictEqual(appendFileSyncCount, 1);
         assert.strictEqual(appendedPath, 'logs/slideshow-errors.log');
-        
+        assert.strictEqual(appendFileSyncEncoding, 'utf8');
+
         const expectedLogLine = '[2025-01-01T10:00:00.000Z] [error] [Frontend] Test message | Context: {"route":"/test"} | Error: {"code":123}\nStack: Error\n    at test.js:1:1\n';
         assert.strictEqual(appendedContent, expectedLogLine);
-        
+
         assert.strictEqual(res.statusCode, 200);
         assert.deepStrictEqual(res.body, { success: true });
         assert.strictEqual(res.responseCount, 1);
@@ -321,6 +397,10 @@ test('Logs Create Response Tests', async (t) => {
 
     await t.test('F. Filesystem failure after database success', async () => {
         let appendFileSyncCount = 0;
+        let loggerErrorCount = 0;
+        let loggedComponent = null;
+        let loggedMessage = null;
+        let loggedError = null;
 
         db.run = function(sql, params, cb) {
             let actualCb = cb;
@@ -332,10 +412,19 @@ test('Logs Create Response Tests', async (t) => {
             }
         };
 
+        Logger.prototype.error = function(component, message, err) {
+            loggerErrorCount++;
+            loggedComponent = component;
+            loggedMessage = message;
+            loggedError = err;
+        };
+
+        const testError = new Error('Disk full');
+
         fs.existsSync = (path) => { return true; };
         fs.appendFileSync = (path, content, encoding) => {
             appendFileSyncCount++;
-            throw new Error('Disk full');
+            throw testError;
         };
 
         const validReq = {
@@ -348,7 +437,7 @@ test('Logs Create Response Tests', async (t) => {
         };
 
         const res = createMockRes();
-        
+
         await new Promise(resolve => {
             const origJson = res.json.bind(res);
             res.json = (data) => {
@@ -359,6 +448,10 @@ test('Logs Create Response Tests', async (t) => {
         });
 
         assert.strictEqual(appendFileSyncCount, 1);
+        assert.strictEqual(loggerErrorCount, 1);
+        assert.strictEqual(loggedComponent, COMPONENTS.SYSTEM);
+        assert.strictEqual(loggedMessage, 'Error writing to log file');
+        assert.strictEqual(loggedError, testError);
         assert.strictEqual(res.statusCode, 200);
         assert.deepStrictEqual(res.body, { success: true });
         assert.strictEqual(res.responseCount, 1);
@@ -367,6 +460,8 @@ test('Logs Create Response Tests', async (t) => {
     await t.test('G. Validation preservation', () => {
         let dbRunCount = 0;
         let appendFileSyncCount = 0;
+        let existsSyncCount = 0;
+        let mkdirSyncCount = 0;
 
         db.run = function(sql, params, cb) {
             let actualCb = cb;
@@ -374,6 +469,8 @@ test('Logs Create Response Tests', async (t) => {
             if (sql.includes('error_logs')) { dbRunCount++; }
             if (actualCb) actualCb.call(this, null);
         };
+        fs.existsSync = (path) => { existsSyncCount++; return false; };
+        fs.mkdirSync = (path, opts) => { mkdirSyncCount++; };
         fs.appendFileSync = (path, content, encoding) => { appendFileSyncCount++; };
 
         const invalidReq = { body: {} }; // missing required fields
@@ -385,6 +482,8 @@ test('Logs Create Response Tests', async (t) => {
         assert.deepStrictEqual(res.body, { error: 'Invalid log entry' });
         assert.strictEqual(res.responseCount, 1);
         assert.strictEqual(dbRunCount, 0);
+        assert.strictEqual(existsSyncCount, 0);
+        assert.strictEqual(mkdirSyncCount, 0);
         assert.strictEqual(appendFileSyncCount, 0);
     });
 });
