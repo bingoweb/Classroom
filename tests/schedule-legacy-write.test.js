@@ -93,18 +93,20 @@ test('Legacy Schedule Write Tests', async (t) => {
         try {
             await closeDatabase(db);
         } finally {
-            removeFileIfPresent(fs, testDbPath);
-            removeFileIfPresent(fs, testDbPath + '-journal');
-            removeFileIfPresent(fs, testDbPath + '-wal');
-            removeFileIfPresent(fs, testDbPath + '-shm');
-            removeDirectoryIfPresent(fs, tempDir);
+            try {
+                removeFileIfPresent(fs, testDbPath);
+                removeFileIfPresent(fs, testDbPath + '-journal');
+                removeFileIfPresent(fs, testDbPath + '-wal');
+                removeFileIfPresent(fs, testDbPath + '-shm');
+                removeDirectoryIfPresent(fs, tempDir);
+            } finally {
+                global.setInterval = originalSetInterval;
 
-            global.setInterval = originalSetInterval;
-
-            if (originalDbPath === undefined) {
-                delete process.env.CLASSROOM_DB_PATH;
-            } else {
-                process.env.CLASSROOM_DB_PATH = originalDbPath;
+                if (originalDbPath === undefined) {
+                    delete process.env.CLASSROOM_DB_PATH;
+                } else {
+                    process.env.CLASSROOM_DB_PATH = originalDbPath;
+                }
             }
         }
     });
