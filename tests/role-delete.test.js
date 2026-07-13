@@ -1,5 +1,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const path = require('node:path');
+const os = require('node:os');
+const fs = require('node:fs');
+const crypto = require('node:crypto');
+
+const originalDbPath = process.env.CLASSROOM_DB_PATH;
+const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'classroom-role-test-'));
+const testDbPath = path.join(tempDir, `test-${crypto.randomBytes(4).toString('hex')}.db`);
+process.env.CLASSROOM_DB_PATH = testDbPath;
 
 const originalSetInterval = global.setInterval;
 global.setInterval = () => {};
@@ -8,6 +17,47 @@ const app = require('../backend/server.js');
 const db = require('../backend/database.js');
 
 test('Role Delete ID Validation Tests', async (t) => {
+    t.after(async () => {
+        global.setInterval = originalSetInterval;
+
+        if (originalDbPath === undefined) {
+            delete process.env.CLASSROOM_DB_PATH;
+        } else {
+            process.env.CLASSROOM_DB_PATH = originalDbPath;
+        }
+
+        await new Promise(resolve => {
+            db.close((err) => {
+                resolve();
+            });
+        });
+
+        const filesToRemove = [
+            testDbPath,
+            testDbPath + '-journal',
+            testDbPath + '-wal',
+            testDbPath + '-shm'
+        ];
+
+        for (const file of filesToRemove) {
+            try {
+                if (fs.existsSync(file)) {
+                    fs.unlinkSync(file);
+                }
+            } catch (e) {
+                // Ignore missing files or unlinking errors during cleanup
+            }
+        }
+
+        try {
+            if (fs.existsSync(tempDir)) {
+                fs.rmdirSync(tempDir);
+            }
+        } catch (e) {
+            // Ignore
+        }
+    });
+
     const stack = app._router.stack;
     const routeLayer = stack.find(layer => layer.route && layer.route.path === '/api/roles/:id' && layer.route.methods.delete);
     if (!routeLayer) throw new Error("DELETE /api/roles/:id route not found");
