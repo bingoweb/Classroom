@@ -1541,16 +1541,19 @@ app.delete('/api/slides/:id', (req, res, next) => {
         return res.status(400).json({ error: 'Geçersiz slayt ID' });
     }
 
-    // Get slide to delete media file
-    db.get("SELECT media_path FROM slides WHERE id = ?", [slideId], (err, row) => {
+    // Get slide to delete media file and capture its display_order
+    db.get("SELECT media_path, display_order FROM slides WHERE id = ?", [slideId], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row) return res.status(404).json({ error: 'Slayt bulunamadı' });
 
         const mediaPath = row.media_path;
+        const displayOrder = row.display_order;
 
         // Delete slide
         db.run("DELETE FROM slides WHERE id = ?", [slideId], function (err) {
             if (err) return res.status(500).json({ error: err.message });
+
+            const deleteChanges = this.changes;
 
             // Delete media file
             if (mediaPath) {
@@ -1569,21 +1572,21 @@ app.delete('/api/slides/:id', (req, res, next) => {
             }
 
             // Reorder remaining slides
-            db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > (SELECT display_order FROM (SELECT display_order FROM slides WHERE id = ?))", [slideId], (reorderErr) => {
+            db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?", [displayOrder], (reorderErr) => {
                 if (reorderErr) {
                     logger.error(COMPONENTS.DATABASE, 'Error reordering slides after deletion', reorderErr, {
                         deletedSlideId: slideId,
                         requestId: req.requestId
                     });
                 }
-            });
 
-            logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
-                slideId: slideId,
-                changes: this.changes,
-                requestId: req.requestId
+                logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
+                    slideId: slideId,
+                    changes: deleteChanges,
+                    requestId: req.requestId
+                });
+                res.json({ message: 'Slayt başarıyla silindi', changes: deleteChanges });
             });
-            res.json({ message: 'Slayt başarıyla silindi', changes: this.changes });
         });
     });
 });
