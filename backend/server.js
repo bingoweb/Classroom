@@ -1081,12 +1081,10 @@ app.post('/api/attendance', (req, res) => {
             }
 
             // Insert new attendance records sequentially to avoid partial state and leak of errors
-            const stmt = db.prepare("INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
             let currentIndex = 0;
 
             const insertNext = () => {
                 if (currentIndex >= normalizedList.length) {
-                    stmt.finalize();
                     return db.run("COMMIT", (commitErr) => {
                         if (commitErr) {
                             logger.error(COMPONENTS.API, 'Error committing attendance', commitErr, { date });
@@ -1100,14 +1098,13 @@ app.post('/api/attendance', (req, res) => {
                 }
 
                 const item = normalizedList[currentIndex];
-                stmt.run([item.student_id, date, item.status], (err) => {
+                db.run("INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)", [item.student_id, date, item.status], (err) => {
                     if (err) {
                         logger.error(COMPONENTS.API, 'Error inserting attendance', err, {
                             studentId: item.student_id,
                             date: date,
                             status: item.status
                         });
-                        stmt.finalize();
                         return db.run("ROLLBACK", (rollbackErr) => {
                             if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after insert failure', rollbackErr, { date });
                             return res.status(500).json({ error: 'Yoklama kaydedilirken bazı kayıtlarda hata oluştu' });

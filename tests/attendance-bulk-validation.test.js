@@ -62,9 +62,14 @@ test('Attendance Bulk Validation Tests', async (t) => {
 
     await db.scheduleMigrationPromise;
 
-    const stack = app._router.stack;
-    const routeLayer = stack.find(layer => layer.route && layer.route.path === '/api/attendance' && layer.route.methods.post);
-    assert.ok(routeLayer, "Exactly one matching POST /api/attendance route must exist");
+    const matchingRoutes = app._router.stack.filter(
+        layer =>
+            layer.route &&
+            layer.route.path === '/api/attendance' &&
+            layer.route.methods.post
+    );
+    assert.strictEqual(matchingRoutes.length, 1, 'Exactly one matching POST /api/attendance route must exist');
+    const routeLayer = matchingRoutes[0];
     const middlewares = routeLayer.route.stack;
     const handler = middlewares[middlewares.length - 1].handle;
 
@@ -309,8 +314,7 @@ test('Attendance Bulk Validation Tests', async (t) => {
     // G. Mandatory mocked successful-transaction regression
     await t.test('G. Mocked successful-transaction regression', async () => {
         let runCalls = [];
-        let stmtRunCalls = [];
-        let stmtFinalizeCalls = 0;
+        let commitCallbackCompleted = false;
 
         db.run = (sql, params, cb) => {
             if (typeof params === 'function') {
@@ -318,19 +322,14 @@ test('Attendance Bulk Validation Tests', async (t) => {
                 params = [];
             }
             runCalls.push({ sql, params });
-            cb(null);
-        };
-
-        db.prepare = (sql) => {
-            return {
-                run: (params, cb) => {
-                    stmtRunCalls.push({ sql, params });
+            if (sql === "COMMIT") {
+                setTimeout(() => {
+                    commitCallbackCompleted = true;
                     cb(null);
-                },
-                finalize: () => {
-                    stmtFinalizeCalls++;
-                }
-            };
+                }, 5);
+            } else {
+                cb(null);
+            }
         };
 
         const reqBody = {
@@ -344,30 +343,28 @@ test('Attendance Bulk Validation Tests', async (t) => {
 
         const resObj = await invokeHandler({ body: reqBody });
 
+        assert.strictEqual(commitCallbackCompleted, true, 'Response must wait for asynchronous commit callback');
         assert.strictEqual(resObj.statusCode, 200);
         assert.deepEqual(resObj.body, { message: 'Yoklama başarıyla kaydedildi', count: 3 });
 
-        assert.strictEqual(runCalls.length, 3);
+        assert.strictEqual(runCalls.length, 6);
         assert.strictEqual(runCalls[0].sql, "BEGIN IMMEDIATE TRANSACTION");
         assert.strictEqual(runCalls[1].sql, "DELETE FROM attendance WHERE date = ?");
         assert.deepEqual(runCalls[1].params, ['2026-07-13']);
-        assert.strictEqual(runCalls[2].sql, "COMMIT");
-
-        assert.strictEqual(stmtRunCalls.length, 3);
-        assert.deepEqual(stmtRunCalls[0].params, [1, '2026-07-13', 'present']);
-        assert.strictEqual(typeof stmtRunCalls[0].params[0], 'number');
-        assert.deepEqual(stmtRunCalls[1].params, [47, '2026-07-13', 'absent']);
-        assert.strictEqual(typeof stmtRunCalls[1].params[0], 'number');
-        assert.deepEqual(stmtRunCalls[2].params, [9007199254740991, '2026-07-13', 'present']);
-        assert.strictEqual(typeof stmtRunCalls[2].params[0], 'number');
-
-        assert.strictEqual(stmtFinalizeCalls, 1);
+        assert.strictEqual(runCalls[2].sql, "INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
+        assert.deepEqual(runCalls[2].params, [1, '2026-07-13', 'present']);
+        assert.strictEqual(runCalls[3].sql, "INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
+        assert.deepEqual(runCalls[3].params, [47, '2026-07-13', 'absent']);
+        assert.strictEqual(runCalls[4].sql, "INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
+        assert.deepEqual(runCalls[4].params, [9007199254740991, '2026-07-13', 'present']);
+        assert.strictEqual(runCalls[5].sql, "COMMIT");
     });
 
     // H. Mandatory mocked empty-list transaction regression
     await t.test('H. Mocked empty-list transaction regression', async () => {
         let runCalls = [];
         let prepareCalls = 0;
+        let commitCallbackCompleted = false;
 
         db.run = (sql, params, cb) => {
             if (typeof params === 'function') {
@@ -375,7 +372,14 @@ test('Attendance Bulk Validation Tests', async (t) => {
                 params = [];
             }
             runCalls.push({ sql, params });
-            cb(null);
+            if (sql === "COMMIT") {
+                setTimeout(() => {
+                    commitCallbackCompleted = true;
+                    cb(null);
+                }, 5);
+            } else {
+                cb(null);
+            }
         };
 
         db.prepare = () => {
@@ -385,6 +389,7 @@ test('Attendance Bulk Validation Tests', async (t) => {
 
         const resObj = await invokeHandler({ body: { date: '2026-07-13', attendanceList: [] } });
 
+        assert.strictEqual(commitCallbackCompleted, true, 'Response must wait for asynchronous commit callback');
         assert.strictEqual(resObj.statusCode, 200);
         assert.deepEqual(resObj.body, { message: 'Yoklama kaydedildi', count: 0 });
 
@@ -426,6 +431,7 @@ test('Attendance Bulk Validation Tests', async (t) => {
     await t.test('J. Mocked delete-failure regression', async () => {
         let runCalls = [];
         let prepareCalls = 0;
+        let rollbackCallbackCompleted = false;
 
         db.run = (sql, params, cb) => {
             if (typeof params === 'function') {
@@ -435,8 +441,13 @@ test('Attendance Bulk Validation Tests', async (t) => {
             runCalls.push(sql);
             if (sql.startsWith("DELETE")) {
                 cb(new Error("delete failed"));
+            } else if (sql === "ROLLBACK") {
+                setTimeout(() => {
+                    rollbackCallbackCompleted = true;
+                    cb(null);
+                }, 5);
             } else {
-                setTimeout(() => cb(null), 5);
+                cb(null);
             }
         };
 
@@ -444,6 +455,7 @@ test('Attendance Bulk Validation Tests', async (t) => {
 
         const resObj = await invokeHandler({ body: { date: '2026-07-13', attendanceList: [{ student_id: 1, status: 'present' }] } });
 
+        assert.strictEqual(rollbackCallbackCompleted, true, 'Response must wait for asynchronous rollback callback');
         assert.strictEqual(resObj.statusCode, 500);
         assert.strictEqual(runCalls.length, 3);
         assert.strictEqual(runCalls[0], "BEGIN IMMEDIATE TRANSACTION");
@@ -455,8 +467,8 @@ test('Attendance Bulk Validation Tests', async (t) => {
     // K. Mocked insertion-failure regression
     await t.test('K. Mocked insertion-failure regression', async () => {
         let runCalls = [];
-        let stmtRunCalls = 0;
-        let stmtFinalizeCalls = 0;
+        let insertRunCalls = 0;
+        let rollbackCallbackCompleted = false;
 
         db.run = (sql, params, cb) => {
             if (typeof params === 'function') {
@@ -464,23 +476,21 @@ test('Attendance Bulk Validation Tests', async (t) => {
                 params = [];
             }
             runCalls.push(sql);
-            setTimeout(() => cb(null), 5);
-        };
-
-        db.prepare = () => {
-            return {
-                run: (params, cb) => {
-                    stmtRunCalls++;
-                    if (stmtRunCalls === 2) {
-                        cb(new Error("insertion failed"));
-                    } else {
-                        cb(null);
-                    }
-                },
-                finalize: () => {
-                    stmtFinalizeCalls++;
+            if (sql.startsWith("INSERT")) {
+                insertRunCalls++;
+                if (insertRunCalls === 2) {
+                    cb(new Error("insertion failed"));
+                } else {
+                    cb(null);
                 }
-            };
+            } else if (sql === "ROLLBACK") {
+                setTimeout(() => {
+                    rollbackCallbackCompleted = true;
+                    cb(null);
+                }, 5);
+            } else {
+                cb(null);
+            }
         };
 
         const resObj = await invokeHandler({
@@ -494,48 +504,51 @@ test('Attendance Bulk Validation Tests', async (t) => {
             }
         });
 
+        assert.strictEqual(rollbackCallbackCompleted, true, 'Response must wait for asynchronous rollback callback');
         assert.strictEqual(resObj.statusCode, 500);
         assert.strictEqual(resObj.body.error, 'Yoklama kaydedilirken bazı kayıtlarda hata oluştu');
-        assert.strictEqual(runCalls.length, 3);
+        assert.strictEqual(runCalls.length, 5);
         assert.strictEqual(runCalls[0], "BEGIN IMMEDIATE TRANSACTION");
         assert.strictEqual(runCalls[1], "DELETE FROM attendance WHERE date = ?");
-        assert.strictEqual(runCalls[2], "ROLLBACK");
-        assert.strictEqual(stmtRunCalls, 2);
-        assert.strictEqual(stmtFinalizeCalls, 1);
+        assert.strictEqual(runCalls[2], "INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
+        assert.strictEqual(runCalls[3], "INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
+        assert.strictEqual(runCalls[4], "ROLLBACK");
+        assert.strictEqual(insertRunCalls, 2);
     });
 
     // L. Mocked commit-failure regression
     await t.test('L. Mocked commit-failure regression', async () => {
         let runCalls = [];
+        let rollbackCallbackCompleted = false;
 
         db.run = (sql, params, cb) => {
             if (typeof params === 'function') {
                 cb = params;
                 params = [];
             }
-            runCalls.push(sql);
+            runCalls.push({ sql, params });
             if (sql === "COMMIT") {
                 cb(new Error("commit failed"));
+            } else if (sql === "ROLLBACK") {
+                setTimeout(() => {
+                    rollbackCallbackCompleted = true;
+                    cb(null);
+                }, 5);
             } else {
-                setTimeout(() => cb(null), 5);
+                cb(null);
             }
-        };
-
-        db.prepare = () => {
-            return {
-                run: (params, cb) => cb(null),
-                finalize: () => {}
-            };
         };
 
         const resObj = await invokeHandler({ body: { date: '2026-07-13', attendanceList: [{ student_id: 1, status: 'present' }] } });
 
+        assert.strictEqual(rollbackCallbackCompleted, true, 'Response must wait for asynchronous rollback callback');
         assert.strictEqual(resObj.statusCode, 500);
-        assert.strictEqual(runCalls.length, 4);
-        assert.strictEqual(runCalls[0], "BEGIN IMMEDIATE TRANSACTION");
-        assert.strictEqual(runCalls[1], "DELETE FROM attendance WHERE date = ?");
-        assert.strictEqual(runCalls[2], "COMMIT");
-        assert.strictEqual(runCalls[3], "ROLLBACK");
+        assert.strictEqual(runCalls.length, 5);
+        assert.strictEqual(runCalls[0].sql, "BEGIN IMMEDIATE TRANSACTION");
+        assert.strictEqual(runCalls[1].sql, "DELETE FROM attendance WHERE date = ?");
+        assert.strictEqual(runCalls[2].sql, "INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
+        assert.strictEqual(runCalls[3].sql, "COMMIT");
+        assert.strictEqual(runCalls[4].sql, "ROLLBACK");
     });
 
     // Real database test helpers
