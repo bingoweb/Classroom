@@ -691,6 +691,7 @@ function nextSlide() {
             slidesDataLength: slidesData.length
         });
         currentSlideIndex = 0;
+        isTransitioning = false;
         scheduleNextSlide();
         return;
     }
@@ -707,6 +708,7 @@ function nextSlide() {
             slidesDataLength: slidesData.length
         });
         currentSlideIndex = 0;
+        isTransitioning = false;
         scheduleNextSlide();
         return;
     }
@@ -724,6 +726,7 @@ function nextSlide() {
             nextElementFound: !!nextSlideElement
         });
         currentSlideIndex = nextIndex;
+        isTransitioning = false;
         scheduleNextSlide();
         return;
     }
