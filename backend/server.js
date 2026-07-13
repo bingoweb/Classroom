@@ -1085,6 +1085,24 @@ app.post('/api/attendance', (req, res) => {
         return res.status(400).json({ error: 'Tarih ve yoklama listesi gereklidir' });
     }
 
+    if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res.status(400).json({ error: 'Geçerli bir tarih gereklidir (YYYY-MM-DD)' });
+    }
+
+    const year = parseInt(date.substring(0, 4), 10);
+    const month = parseInt(date.substring(5, 7), 10);
+    const day = parseInt(date.substring(8, 10), 10);
+
+    if (year < 1 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31) {
+        return res.status(400).json({ error: 'Geçerli bir tarih gereklidir (YYYY-MM-DD)' });
+    }
+
+    const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    const daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    if (day > daysInMonth[month - 1]) {
+        return res.status(400).json({ error: 'Geçerli bir tarih gereklidir (YYYY-MM-DD)' });
+    }
+
     const normalizedList = [];
     const seenIds = new Set();
 

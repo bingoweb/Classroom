@@ -730,4 +730,75 @@ test('Attendance Bulk Validation Tests', async (t) => {
         assert.strictEqual(otherDateRows.length, 1);
     });
 
+    // P. Strict Date Validation
+    await t.test('P. Strict Date Validation', async (subT) => {
+        const invalidDates = [
+            '2026-7-14',
+            '14-07-2026',
+            '2026/07/14',
+            '2026-07-14T00:00:00Z',
+            ' 2026-07-14',
+            '2026-07-14 ',
+            '2026-02-29',
+            '1900-02-29',
+            '2026-04-31',
+            '2026-00-10',
+            '2026-13-10',
+            '2026-01-00',
+            '0000-01-01',
+            12345,
+            true,
+            {},
+            []
+        ];
+
+        for (const badDate of invalidDates) {
+            await subT.test(`rejects invalid date: ${JSON.stringify(badDate)}`, async () => {
+                let dbCalls = 0;
+                db.run = () => { dbCalls++; };
+                db.prepare = () => { dbCalls++; };
+
+                const resObj = await invokeHandler({ body: { date: badDate, attendanceList: [] } });
+                assert.strictEqual(resObj.statusCode, 400);
+                assert.deepEqual(resObj.body, { error: 'Geçerli bir tarih gereklidir (YYYY-MM-DD)' });
+                assert.strictEqual(resObj.count, 1);
+                assert.strictEqual(dbCalls, 0);
+            });
+        }
+
+        const validDates = [
+            '2026-07-14',
+            '2024-02-29',
+            '2000-02-29'
+        ];
+
+        for (const goodDate of validDates) {
+            await subT.test(`accepts valid date: ${goodDate}`, async () => {
+                let runCalls = [];
+                db.run = (sql, params, cb) => {
+                    if (typeof params === 'function') {
+                        cb = params;
+                        params = [];
+                    }
+                    runCalls.push({ sql, params });
+                    if (sql === "COMMIT") {
+                        setTimeout(() => cb(null), 1);
+                    } else {
+                        cb(null);
+                    }
+                };
+
+                const resObj = await invokeHandler({ body: { date: goodDate, attendanceList: [{ student_id: '1', status: 'present' }] } });
+                assert.strictEqual(resObj.statusCode, 200);
+                assert.deepEqual(resObj.body, { message: 'Yoklama başarıyla kaydedildi', count: 1 });
+                
+                assert.strictEqual(runCalls.length, 4);
+                assert.strictEqual(runCalls[1].sql, "DELETE FROM attendance WHERE date = ?");
+                assert.deepEqual(runCalls[1].params, [goodDate]);
+                assert.strictEqual(runCalls[2].sql, "INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
+                assert.deepEqual(runCalls[2].params, [1, goodDate, 'present']);
+            });
+        }
+    });
+
 });
