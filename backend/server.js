@@ -1081,7 +1081,11 @@ app.post('/api/attendance', (req, res) => {
     }
     const { date, attendanceList } = req.body;
 
-    if (!date || !attendanceList || !Array.isArray(attendanceList)) {
+    if (date === undefined || date === null || date === '') {
+        return res.status(400).json({ error: 'Tarih ve yoklama listesi gereklidir' });
+    }
+
+    if (!attendanceList || !Array.isArray(attendanceList)) {
         return res.status(400).json({ error: 'Tarih ve yoklama listesi gereklidir' });
     }
 

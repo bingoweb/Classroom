@@ -746,6 +746,8 @@ test('Attendance Bulk Validation Tests', async (t) => {
             '2026-13-10',
             '2026-01-00',
             '0000-01-01',
+            0,
+            false,
             12345,
             true,
             {},
