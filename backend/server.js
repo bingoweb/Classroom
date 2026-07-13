@@ -1505,20 +1505,30 @@ app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
 
 // Delete slide
 app.delete('/api/slides/:id', (req, res, next) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
+    const rawSlideId = req.params.id;
+
+    if (
+        typeof rawSlideId !== 'string' ||
+        !/^[1-9]\d*$/.test(rawSlideId)
+    ) {
+        return res.status(400).json({ error: 'Geçersiz slayt ID' });
+    }
+
+    const slideId = Number(rawSlideId);
+
+    if (!Number.isSafeInteger(slideId)) {
         return res.status(400).json({ error: 'Geçersiz slayt ID' });
     }
 
     // Get slide to delete media file
-    db.get("SELECT media_path FROM slides WHERE id = ?", [id], (err, row) => {
+    db.get("SELECT media_path FROM slides WHERE id = ?", [slideId], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row) return res.status(404).json({ error: 'Slayt bulunamadı' });
 
         const mediaPath = row.media_path;
 
         // Delete slide
-        db.run("DELETE FROM slides WHERE id = ?", [id], function (err) {
+        db.run("DELETE FROM slides WHERE id = ?", [slideId], function (err) {
             if (err) return res.status(500).json({ error: err.message });
 
             // Delete media file
@@ -1531,24 +1541,24 @@ app.delete('/api/slides/:id', (req, res, next) => {
                 } catch (unlinkErr) {
                     logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
                         mediaPath: mediaPath,
-                        slideId: id
+                        slideId: slideId
                     });
                     // Don't fail the request if file deletion fails
                 }
             }
 
             // Reorder remaining slides
-            db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > (SELECT display_order FROM (SELECT display_order FROM slides WHERE id = ?))", [id], (reorderErr) => {
+            db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > (SELECT display_order FROM (SELECT display_order FROM slides WHERE id = ?))", [slideId], (reorderErr) => {
                 if (reorderErr) {
                     logger.error(COMPONENTS.DATABASE, 'Error reordering slides after deletion', reorderErr, {
-                        deletedSlideId: id,
+                        deletedSlideId: slideId,
                         requestId: req.requestId
                     });
                 }
             });
 
             logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
-                slideId: id,
+                slideId: slideId,
                 changes: this.changes,
                 requestId: req.requestId
             });
