@@ -1,0 +1,76 @@
+name: One-time repository cleanup
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Keep only main and remove old versions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const openPulls = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100
+            });
+            for (const pull of openPulls) {
+              await github.rest.pulls.update({ owner, repo, pull_number: pull.number, state: 'closed' });
+              core.info(`Closed pull request #${pull.number}`);
+            }
+
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner,
+              repo,
+              per_page: 100
+            });
+            for (const release of releases) {
+              await github.rest.repos.deleteRelease({ owner, repo, release_id: release.id });
+              core.info(`Deleted release ${release.name || release.tag_name}`);
+            }
+
+            const tags = await github.paginate(github.rest.repos.listTags, {
+              owner,
+              repo,
+              per_page: 100
+            });
+            for (const tag of tags) {
+              await github.rest.git.deleteRef({ owner, repo, ref: `tags/${tag.name}` });
+              core.info(`Deleted tag ${tag.name}`);
+            }
+
+            const branches = await github.paginate(github.rest.repos.listBranches, {
+              owner,
+              repo,
+              per_page: 100
+            });
+            for (const branch of branches) {
+              if (branch.name === 'main') continue;
+              await github.rest.git.deleteRef({ owner, repo, ref: `heads/${branch.name}` });
+              core.info(`Deleted branch ${branch.name}`);
+            }
+
+            const workflowPath = '.github/workflows/one-time-repository-cleanup.yml';
+            const workflowFile = await github.rest.repos.getContent({ owner, repo, path: workflowPath, ref: 'main' });
+            await github.rest.repos.deleteFile({
+              owner,
+              repo,
+              path: workflowPath,
+              message: 'chore: remove completed repository cleanup workflow',
+              sha: workflowFile.data.sha,
+              branch: 'main'
+            });
+            core.info('Removed the one-time cleanup workflow');
