@@ -14,7 +14,7 @@
     "test:admin-schedule-draft": "node --test tests/admin-schedule-draft-editor.test.js",
     "test:admin-schedule-review": "node --test tests/admin-schedule-review-panel.test.js",
     "test:api-base": "node --test tests/frontend-api-base.test.js",
-    "test:core": "node --test tests/schedule-manager.test.js tests/dev-time-simulator.test.js tests/backend-date-utils.test.js tests/backend-schedule.test.js tests/dashboard-schedule-loader.test.js tests/admin-schedule-diagnostics.test.js tests/admin-schedule-draft-editor.test.js tests/admin-schedule-review-panel.test.js tests/frontend-api-base.test.js tests/student-create-photo.test.js tests/role-delete.test.js tests/role-create.test.js tests/attendance-bulk-validation.test.js tests/attendance-update.test.js tests/slides-reorder-route.test.js tests/slides-delete-id.test.js tests/slides-update-id.test.js tests/logs-cleanup-validation.test.js",
+    "test:core": "node --test tests/schedule-manager.test.js tests/dev-time-simulator.test.js tests/backend-date-utils.test.js tests/backend-schedule.test.js tests/dashboard-schedule-loader.test.js tests/admin-schedule-diagnostics.test.js tests/admin-schedule-draft-editor.test.js tests/admin-schedule-review-panel.test.js tests/frontend-api-base.test.js tests/student-create-photo.test.js tests/role-delete.test.js tests/role-create.test.js tests/attendance-bulk-validation.test.js tests/attendance-update.test.js tests/slides-reorder-route.test.js tests/slides-delete-id.test.js tests/slides-update-id.test.js tests/logs-cleanup-validation.test.js tests/settings-update.test.js",
     "test:student-create-photo": "node --test tests/student-create-photo.test.js",
     "test:role-delete": "node --test tests/role-delete.test.js",
     "test:role-create": "node --test tests/role-create.test.js",
@@ -23,7 +23,8 @@
     "test:slides-reorder-route": "node --test tests/slides-reorder-route.test.js",
     "test:slides-delete-id": "node --test tests/slides-delete-id.test.js",
     "test:slides-update-id": "node --test tests/slides-update-id.test.js",
-    "test:logs-cleanup-validation": "node --test tests/logs-cleanup-validation.test.js"
+    "test:logs-cleanup-validation": "node --test tests/logs-cleanup-validation.test.js",
+    "test:settings-update": "node --test tests/settings-update.test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

@@ -775,17 +775,23 @@ app.get('/api/settings', (req, res) => {
 
 // Update Settings
 app.post('/api/settings', (req, res) => {
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        return res.status(400).json({ error: 'Ayar anahtarı gereklidir' });
+    }
+
     const { key, value } = req.body;
 
     // Input validation
-    if (!key || !key.trim()) {
+    if (typeof key !== 'string' || !key.trim()) {
         return res.status(400).json({ error: 'Ayar anahtarı gereklidir' });
     }
     if (value === undefined || value === null) {
         return res.status(400).json({ error: 'Ayar değeri gereklidir' });
     }
 
-    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [key.trim(), value], function (err) {
+    const normalizedKey = key.trim();
+
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [normalizedKey, value], function (err) {
         if (err) {
             logger.error(COMPONENTS.API, 'Error updating settings', err, {
                 key: key,
