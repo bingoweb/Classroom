@@ -1297,11 +1297,22 @@ app.get('/api/slides', (req, res, next) => {
 
 // Get single slide
 app.get('/api/slides/:id', (req, res) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
+    const rawSlideId = req.params.id;
+
+    if (
+        typeof rawSlideId !== 'string' ||
+        !/^[1-9]\d*$/.test(rawSlideId)
+    ) {
         return res.status(400).json({ error: 'Geçersiz slayt ID' });
     }
-    db.get("SELECT * FROM slides WHERE id = ?", [id], (err, row) => {
+
+    const slideId = Number(rawSlideId);
+
+    if (!Number.isSafeInteger(slideId)) {
+        return res.status(400).json({ error: 'Geçersiz slayt ID' });
+    }
+
+    db.get("SELECT * FROM slides WHERE id = ?", [slideId], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row) return res.status(404).json({ error: 'Slayt bulunamadı' });
         // Normalize media_path for web (convert Windows paths to web paths)
