@@ -108,9 +108,32 @@ test('Settings Update Tests', async (t) => {
         db.prepare = originalDbPrepare;
     });
 
+    const DEFAULT_TIMEOUT_MS = 100;
+    const DEFAULT_OBSERVATION_MS = 10;
+    const MAX_HELPER_DELAY_MS = 1000;
+
     function createPromiseHelper(testHandler, options = {}) {
-        const timeoutMs = typeof options.timeoutMs === 'number' && options.timeoutMs > 0 ? options.timeoutMs : 100;
-        const observationMs = typeof options.observationMs === 'number' && options.observationMs >= 0 ? options.observationMs : 10;
+        let timeoutMs = DEFAULT_TIMEOUT_MS;
+        let observationMs = DEFAULT_OBSERVATION_MS;
+
+        if (options.timeoutMs !== undefined) {
+            if (!Number.isSafeInteger(options.timeoutMs) || options.timeoutMs <= 0 || options.timeoutMs > MAX_HELPER_DELAY_MS) {
+                throw new Error('Invalid timeoutMs option');
+            }
+            timeoutMs = options.timeoutMs;
+        }
+
+        if (options.observationMs !== undefined) {
+            if (!Number.isSafeInteger(options.observationMs) || options.observationMs <= 0 || options.observationMs > MAX_HELPER_DELAY_MS) {
+                throw new Error('Invalid observationMs option');
+            }
+            observationMs = options.observationMs;
+        }
+
+        if (observationMs >= timeoutMs) {
+            throw new Error('observationMs must be less than timeoutMs');
+        }
+
         return function invokeTestHandler(req) {
             return new Promise((resolve, reject) => {
                 let responseCount = 0;
@@ -163,9 +186,7 @@ test('Settings Update Tests', async (t) => {
                 };
 
                 globalTimeoutId = setTimeout(() => {
-                    if (responseCount === 0) {
-                        settle(new Error('Response timeout exceeded'), null);
-                    }
+                    settle(new Error('Response timeout exceeded'), null);
                 }, timeoutMs);
 
                 try {
@@ -212,6 +233,43 @@ test('Settings Update Tests', async (t) => {
             body: { ok: true },
             responseCount: 1
         });
+    });
+
+    await t.test('Helper: invalid options are rejected synchronously', async () => {
+        const dummyHandler = (req, res) => res.json({ ok: true });
+
+        const invalidTimeouts = [
+            Infinity, 1.5, 0, Number.MAX_SAFE_INTEGER + 1, MAX_HELPER_DELAY_MS + 1
+        ];
+        for (const t of invalidTimeouts) {
+            assert.throws(() => createPromiseHelper(dummyHandler, { timeoutMs: t }));
+        }
+
+        const invalidObservations = [
+            Infinity, 1.5, 0, -1, MAX_HELPER_DELAY_MS + 1
+        ];
+        for (const o of invalidObservations) {
+            assert.throws(() => createPromiseHelper(dummyHandler, { observationMs: o }));
+        }
+
+        assert.throws(() => createPromiseHelper(dummyHandler, { timeoutMs: 20, observationMs: 20 }));
+        assert.throws(() => createPromiseHelper(dummyHandler, { timeoutMs: 20, observationMs: 25 }));
+    });
+
+    await t.test('Helper: global timeout enforces maximum total time despite pending observation', async () => {
+        const invokeDeadline = createPromiseHelper((req, res) => {
+            setTimeout(() => {
+                res.json({ first: true });
+            }, 10);
+        }, {
+            timeoutMs: 30,
+            observationMs: 25
+        });
+
+        await assert.rejects(
+            invokeDeadline({}),
+            /Response timeout exceeded/
+        );
     });
 
     const runDb = (sql, params) => new Promise((resolve, reject) => {
