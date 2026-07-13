@@ -647,13 +647,24 @@ test('Role Create ID Validation Tests', async (t) => {
 
     // L. Mandatory real SQLite successful replacement regression
     await t.test('L. Mandatory real SQLite successful replacement regression', async () => {
+        await runDb("DELETE FROM roles", []);
+        await runDb("DELETE FROM students", []);
+
         const student1Res = await runDb("INSERT INTO students (name) VALUES (?)", ['Old President Student L']);
         const oldStudentId = student1Res.lastID;
 
         const student2Res = await runDb("INSERT INTO students (name) VALUES (?)", ['Target Student L']);
         const targetStudentId = student2Res.lastID;
 
+        const student3Res = await runDb("INSERT INTO students (name) VALUES (?)", ['Unrelated Student L']);
+        const unrelatedStudentId = student3Res.lastID;
+
         await runDb("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [oldStudentId, 'president']);
+        await runDb("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [unrelatedStudentId, 'vice_president']);
+        await runDb("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [unrelatedStudentId, 'duty']);
+        await runDb("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [unrelatedStudentId, 'star']);
+
+        const unrelatedRolesBefore = await allDb("SELECT id, student_id, role_type FROM roles WHERE role_type <> 'president' ORDER BY id", []);
 
         const resObj = await invokeHandler({ body: { student_id: targetStudentId.toString(), role_type: 'president' } });
 
@@ -666,6 +677,37 @@ test('Role Create ID Validation Tests', async (t) => {
         assert.strictEqual(presidentsAfter.length, 1);
         assert.strictEqual(presidentsAfter[0].student_id, targetStudentId);
         assert.strictEqual(presidentsAfter[0].id, newRoleId);
+
+        const unrelatedRolesAfter = await allDb("SELECT id, student_id, role_type FROM roles WHERE role_type <> 'president' ORDER BY id", []);
+        assert.deepEqual(unrelatedRolesAfter, unrelatedRolesBefore);
+    });
+
+    // M. Mandatory real SQLite successful new president regression (no-existing-president)
+    await t.test('M. Mandatory real SQLite successful new president regression (no-existing-president)', async () => {
+        await runDb("DELETE FROM roles WHERE role_type = 'president'", []);
+
+        const initialPresidents = await allDb("SELECT COUNT(*) as count FROM roles WHERE role_type = 'president'", []);
+        assert.strictEqual(initialPresidents[0].count, 0);
+
+        const studentRes = await runDb("INSERT INTO students (name) VALUES (?)", ['Target Student M']);
+        const targetStudentId = studentRes.lastID;
+
+        const unrelatedRolesBefore = await allDb("SELECT id, student_id, role_type FROM roles WHERE role_type <> 'president' ORDER BY id", []);
+
+        const resObj = await invokeHandler({ body: { student_id: targetStudentId.toString(), role_type: 'president' } });
+
+        assert.strictEqual(resObj.statusCode, 200);
+        assert.strictEqual(resObj.body.message, 'Rol başarıyla atandı');
+        const newRoleId = resObj.body.id;
+        assert.ok(newRoleId > 0);
+
+        const presidentsAfter = await allDb("SELECT id, student_id, role_type FROM roles WHERE role_type = ? ORDER BY id", ['president']);
+        assert.strictEqual(presidentsAfter.length, 1);
+        assert.strictEqual(presidentsAfter[0].student_id, targetStudentId);
+        assert.strictEqual(presidentsAfter[0].id, newRoleId);
+
+        const unrelatedRolesAfter = await allDb("SELECT id, student_id, role_type FROM roles WHERE role_type <> 'president' ORDER BY id", []);
+        assert.deepEqual(unrelatedRolesAfter, unrelatedRolesBefore);
     });
 
 });
