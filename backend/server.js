@@ -1405,16 +1405,37 @@ app.put('/api/slides/reorder', (req, res) => {
 
 // Update slide
 app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-        if (req.file) fs.unlinkSync(req.file.path);
-        return res.status(400).json({ error: 'Geçersiz slayt ID' });
+    const rawSlideId = req.params.id;
+
+    if (
+        typeof rawSlideId !== 'string' ||
+        !/^[1-9]\d*$/.test(rawSlideId)
+    ) {
+        if (req.file) {
+            fs.unlinkSync(req.file.path);
+        }
+
+        return res.status(400).json({
+            error: 'Geçersiz slayt ID'
+        });
+    }
+
+    const slideId = Number(rawSlideId);
+
+    if (!Number.isSafeInteger(slideId)) {
+        if (req.file) {
+            fs.unlinkSync(req.file.path);
+        }
+
+        return res.status(400).json({
+            error: 'Geçersiz slayt ID'
+        });
     }
 
     const { title, content_type, media_type, text_content, display_duration, video_auto_advance, transition_type, transition_duration, transition_mode } = req.body;
 
     // Get existing slide
-    db.get("SELECT media_path FROM slides WHERE id = ?", [id], (err, row) => {
+    db.get("SELECT media_path FROM slides WHERE id = ?", [slideId], (err, row) => {
         if (err) {
             if (req.file) fs.unlinkSync(req.file.path);
             return res.status(500).json({ error: err.message });
@@ -1455,7 +1476,7 @@ app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
             return res.status(400).json({ error: 'Güncellenecek alan belirtilmedi' });
         }
 
-        values.push(id);
+        values.push(slideId);
 
         db.run(
             `UPDATE slides SET ${updates.join(', ')} WHERE id = ?`,
@@ -1463,7 +1484,7 @@ app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
             function (err) {
                 if (err) {
                     logger.error(COMPONENTS.API, 'Error updating slide', err, {
-                        slideId: id,
+                        slideId: slideId,
                         requestId: req.requestId
                     });
                     if (req.file) {
@@ -1493,7 +1514,7 @@ app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
                 }
 
                 logger.info(COMPONENTS.API, 'Slide updated successfully', null, {
-                    slideId: id,
+                    slideId: slideId,
                     changes: this.changes,
                     requestId: req.requestId
                 });
