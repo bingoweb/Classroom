@@ -102,6 +102,63 @@ test('Attendance Update Tests', async (t) => {
         };
     }
 
+    // 0. Structural body validation
+    const structuralBodies = [
+        undefined, null, [], 'status', 42, true, false
+    ];
+
+    await t.test('0. Structural body validation', async (t) => {
+        for (let i = 0; i < structuralBodies.length; i++) {
+            const body = structuralBodies[i];
+            const typeName = Object.prototype.toString.call(body);
+            await t.test(`structurally invalid body ${typeName} at index ${i} returns 400 and performs no db operations`, (t, done) => {
+                let dbCalls = 0;
+                db.run = () => { dbCalls++; };
+
+                let responseCount = 0;
+                const req = { params: { id: '47' }, body };
+                const res = createMockRes((resObj) => {
+                    responseCount++;
+                    assert.strictEqual(resObj.statusCode, 400);
+                    assert.deepEqual(resObj.body, { error: 'Geçerli bir durum gereklidir (present/absent)' });
+                    assert.strictEqual(dbCalls, 0);
+                    done();
+                });
+
+                assert.doesNotThrow(() => {
+                    handler(req, res);
+                });
+
+                assert.strictEqual(responseCount, 1);
+                assert.strictEqual(res.statusCode, 400);
+                assert.deepEqual(res.body, { error: 'Geçerli bir durum gereklidir (present/absent)' });
+            });
+        }
+    });
+
+    await t.test('0. Missing field validation', (t, done) => {
+        let dbCalls = 0;
+        db.run = () => { dbCalls++; };
+
+        let responseCount = 0;
+        const req = { params: { id: '47' }, body: {} };
+        const res = createMockRes((resObj) => {
+            responseCount++;
+            assert.strictEqual(resObj.statusCode, 400);
+            assert.deepEqual(resObj.body, { error: 'Geçerli bir durum gereklidir (present/absent)' });
+            assert.strictEqual(dbCalls, 0);
+            done();
+        });
+
+        assert.doesNotThrow(() => {
+            handler(req, res);
+        });
+
+        assert.strictEqual(responseCount, 1);
+        assert.strictEqual(res.statusCode, 400);
+        assert.deepEqual(res.body, { error: 'Geçerli bir durum gereklidir (present/absent)' });
+    });
+
     // A. Malformed string IDs
     const malformedStrings = [
         "abc", "1abc", "abc1", "1.5", "1e2", "+1", "-1", "0", "00", "01",

@@ -1171,6 +1171,11 @@ app.post('/api/attendance', (req, res) => {
 // Update Single Attendance Record
 app.put('/api/attendance/:id', (req, res) => {
     const rawAttendanceId = req.params.id;
+
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        return res.status(400).json({ error: 'Geçerli bir durum gereklidir (present/absent)' });
+    }
+
     const { status } = req.body;
 
     if (typeof rawAttendanceId !== 'string' || !/^[1-9]\d*$/.test(rawAttendanceId)) {
