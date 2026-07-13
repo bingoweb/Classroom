@@ -89,7 +89,7 @@ test('Slides Reorder Route Tests', async (t) => {
         removeFileIfPresent(fs, testDbPath + '-wal');
         removeFileIfPresent(fs, testDbPath + '-shm');
         removeDirectoryIfPresent(fs, tempDir);
-        
+
         global.setInterval = originalSetInterval;
         if (originalDbPath === undefined) {
             delete process.env.CLASSROOM_DB_PATH;
@@ -124,19 +124,19 @@ test('Slides Reorder Route Tests', async (t) => {
         const routes = app._router.stack
             .filter(r => r.route && r.route.methods.put)
             .map(r => r.route.path);
-        
+
         const reorderIndex = routes.findIndex(path => path === '/api/slides/reorder');
         const updateIndex = routes.findIndex(path => path === '/api/slides/:id');
-        
+
         assert.ok(reorderIndex !== -1, 'reorder route must exist');
         assert.ok(updateIndex !== -1, '/:id route must exist');
-        
+
         const reorderCount = routes.filter(path => path === '/api/slides/reorder').length;
         const updateCount = routes.filter(path => path === '/api/slides/:id').length;
-        
+
         assert.strictEqual(reorderCount, 1, 'there must be exactly one reorder route');
         assert.strictEqual(updateCount, 1, 'there must be exactly one /:id update route');
-        
+
         assert.ok(reorderIndex < updateIndex, 'reorder route must be registered before /:id route');
     });
 
@@ -180,10 +180,10 @@ test('Slides Reorder Route Tests', async (t) => {
         };
 
         const response = await makeRequest('PUT', '/api/slides/reorder', payload);
-        
+
         assert.strictEqual(response.statusCode, 200);
         assert.deepEqual(response.body, { message: 'Sıralama başarıyla güncellendi' });
-        
+
         assert.strictEqual(getCalled, false);
         assert.strictEqual(serializeCalled, 1);
         assert.strictEqual(prepareCalled, 1);
@@ -207,10 +207,10 @@ test('Slides Reorder Route Tests', async (t) => {
 
         const payload = { slideOrders: [] };
         const response = await makeRequest('PUT', '/api/slides/reorder', payload);
-        
+
         assert.strictEqual(response.statusCode, 400);
         assert.deepEqual(response.body, { error: 'Geçersiz sıralama verisi' });
-        
+
         assert.strictEqual(serializeCalled, false);
         assert.strictEqual(prepareCalled, false);
         assert.strictEqual(getCalled, false);
@@ -232,7 +232,53 @@ test('Slides Reorder Route Tests', async (t) => {
         };
 
         const response = await makeRequest('PUT', '/api/slides/reorder', payload);
-        
+
+        assert.strictEqual(response.statusCode, 400);
+        assert.deepEqual(response.body, { error: 'Geçersiz sıralama verisi: tüm öğeler id ve display_order içermelidir' });
+        assert.strictEqual(dbCalled, false);
+    });
+
+
+    await t.test('Real HTTP: A. Null item', async () => {
+        let dbCalled = false;
+        const markDbCalled = () => { dbCalled = true; };
+
+        db.get = markDbCalled;
+        db.serialize = markDbCalled;
+        db.prepare = markDbCalled;
+        db.run = markDbCalled;
+
+        const payload = {
+            slideOrders: [null]
+        };
+
+        const response = await makeRequest('PUT', '/api/slides/reorder', payload);
+
+        assert.strictEqual(response.statusCode, 400);
+        assert.deepEqual(response.body, { error: 'Geçersiz sıralama verisi: tüm öğeler id ve display_order içermelidir' });
+        assert.strictEqual(dbCalled, false);
+    });
+
+    await t.test('Real HTTP: B. Numeric-string fields', async () => {
+        let dbCalled = false;
+        const markDbCalled = () => { dbCalled = true; };
+
+        db.get = markDbCalled;
+        db.serialize = markDbCalled;
+        db.prepare = markDbCalled;
+        db.run = markDbCalled;
+
+        const payload = {
+            slideOrders: [
+                {
+                    id: '2',
+                    display_order: '1'
+                }
+            ]
+        };
+
+        const response = await makeRequest('PUT', '/api/slides/reorder', payload);
+
         assert.strictEqual(response.statusCode, 400);
         assert.deepEqual(response.body, { error: 'Geçersiz sıralama verisi: tüm öğeler id ve display_order içermelidir' });
         assert.strictEqual(dbCalled, false);
@@ -258,14 +304,14 @@ test('Slides Reorder Route Tests', async (t) => {
 
         const payload = { title: 'Yeni başlık' };
         const response = await makeRequest('PUT', '/api/slides/47', payload);
-        
+
         // Assert we actually reached the update handler
         assert.strictEqual(response.statusCode, 200);
         assert.deepEqual(response.body, {
             message: 'Slayt başarıyla güncellendi',
             changes: 1
         });
-        
+
         assert.ok(getSql.includes('SELECT media_path FROM slides WHERE id = ?'));
         assert.deepEqual(getParams, [47]);
         assert.strictEqual(typeof getParams[0], 'number');
@@ -369,6 +415,188 @@ test('Slides Reorder Route Tests', async (t) => {
             assert.strictEqual(prepareCalled, false);
             assert.strictEqual(getCalled, false);
             assert.strictEqual(runCalled, false);
+        });
+
+
+        const structuralInvalidItems = [
+            undefined, null, [], 'reorder', 42, true, false, {}
+        ];
+
+        for (let i = 0; i < structuralInvalidItems.length; i++) {
+            const testedItem = structuralInvalidItems[i];
+            const testName = typeof testedItem === 'object' && testedItem ? JSON.stringify(testedItem) : String(testedItem);
+
+            await t2.test(`Direct handler: Structural invalid item ${testName} is rejected with 400`, () => {
+                let serializeCalled = false;
+                let prepareCalled = false;
+                let getCalled = false;
+                let runCalled = false;
+
+                db.serialize = () => { serializeCalled = true; };
+                db.prepare = () => { prepareCalled = true; };
+                db.get = () => { getCalled = true; };
+                db.run = () => { runCalled = true; };
+
+                const req = {
+                    body: { slideOrders: [testedItem] },
+                    requestId: 'reorder-item-validation'
+                };
+                const res = createMockRes();
+
+                assert.doesNotThrow(() => { handler(req, res); });
+
+                assert.strictEqual(res.statusCode, 400);
+                assert.deepStrictEqual(res.body, { error: 'Geçersiz sıralama verisi: tüm öğeler id ve display_order içermelidir' });
+                assert.strictEqual(res.responseCount, 1);
+                assert.strictEqual(serializeCalled, false);
+                assert.strictEqual(prepareCalled, false);
+                assert.strictEqual(getCalled, false);
+                assert.strictEqual(runCalled, false);
+            });
+        }
+
+        const invalidIdMatrix = [
+            { id: undefined, display_order: 1 },
+            { id: null, display_order: 1 },
+            { id: '1', display_order: 1 },
+            { id: '', display_order: 1 },
+            { id: true, display_order: 1 },
+            { id: [], display_order: 1 },
+            { id: 0, display_order: 1 },
+            { id: -1, display_order: 1 },
+            { id: 1.5, display_order: 1 },
+            { id: NaN, display_order: 1 },
+            { id: Infinity, display_order: 1 },
+            { id: Number.MAX_SAFE_INTEGER + 1, display_order: 1 }
+        ];
+
+        for (const testedItem of invalidIdMatrix) {
+            await t2.test(`Direct handler: Invalid id ${String(testedItem.id)} is rejected`, () => {
+                let serializeCalled = false;
+                let prepareCalled = false;
+                let getCalled = false;
+                let runCalled = false;
+
+                db.serialize = () => { serializeCalled = true; };
+                db.prepare = () => { prepareCalled = true; };
+                db.get = () => { getCalled = true; };
+                db.run = () => { runCalled = true; };
+
+                const req = {
+                    body: { slideOrders: [testedItem] },
+                    requestId: 'reorder-item-validation'
+                };
+                const res = createMockRes();
+
+                assert.doesNotThrow(() => { handler(req, res); });
+
+                assert.strictEqual(res.statusCode, 400);
+                assert.deepStrictEqual(res.body, { error: 'Geçersiz sıralama verisi: tüm öğeler id ve display_order içermelidir' });
+                assert.strictEqual(res.responseCount, 1);
+                assert.strictEqual(serializeCalled, false);
+                assert.strictEqual(prepareCalled, false);
+                assert.strictEqual(getCalled, false);
+                assert.strictEqual(runCalled, false);
+            });
+        }
+
+        const invalidOrderMatrix = [
+            { id: 1 },
+            { id: 1, display_order: undefined },
+            { id: 1, display_order: null },
+            { id: 1, display_order: '1' },
+            { id: 1, display_order: '' },
+            { id: 1, display_order: true },
+            { id: 1, display_order: false },
+            { id: 1, display_order: [] },
+            { id: 1, display_order: 0 },
+            { id: 1, display_order: -1 },
+            { id: 1, display_order: 1.5 },
+            { id: 1, display_order: NaN },
+            { id: 1, display_order: Infinity },
+            { id: 1, display_order: Number.MAX_SAFE_INTEGER + 1 }
+        ];
+
+        for (const testedItem of invalidOrderMatrix) {
+            await t2.test(`Direct handler: Invalid display_order ${String(testedItem.display_order)} is rejected`, () => {
+                let serializeCalled = false;
+                let prepareCalled = false;
+                let getCalled = false;
+                let runCalled = false;
+
+                db.serialize = () => { serializeCalled = true; };
+                db.prepare = () => { prepareCalled = true; };
+                db.get = () => { getCalled = true; };
+                db.run = () => { runCalled = true; };
+
+                const req = {
+                    body: { slideOrders: [testedItem] },
+                    requestId: 'reorder-item-validation'
+                };
+                const res = createMockRes();
+
+                assert.doesNotThrow(() => { handler(req, res); });
+
+                assert.strictEqual(res.statusCode, 400);
+                assert.deepStrictEqual(res.body, { error: 'Geçersiz sıralama verisi: tüm öğeler id ve display_order içermelidir' });
+                assert.strictEqual(res.responseCount, 1);
+                assert.strictEqual(serializeCalled, false);
+                assert.strictEqual(prepareCalled, false);
+                assert.strictEqual(getCalled, false);
+                assert.strictEqual(runCalled, false);
+            });
+        }
+
+        await t2.test('Direct handler: Valid boundary preservation (1, MAX_SAFE_INTEGER)', () => {
+            let serializeCalled = 0;
+            let prepareCalled = 0;
+            let preparedSql = null;
+            let runCalls = [];
+            let finalizeCalled = 0;
+
+            db.serialize = (cb) => { serializeCalled++; cb(); };
+            db.prepare = (sql) => {
+                prepareCalled++;
+                preparedSql = sql;
+                return {
+                    run: (params, cb) => {
+                        runCalls.push(params);
+                        if (cb) cb(null);
+                    },
+                    finalize: () => {
+                        finalizeCalled++;
+                    }
+                };
+            };
+            db.get = () => { throw new Error('db.get must not be called'); };
+            db.run = () => { throw new Error('db.run must not be called'); };
+
+            const req = {
+                body: {
+                    slideOrders: [
+                        { id: 1, display_order: 1 },
+                        { id: Number.MAX_SAFE_INTEGER, display_order: Number.MAX_SAFE_INTEGER }
+                    ]
+                },
+                requestId: 'reorder-valid-boundary'
+            };
+            const res = createMockRes();
+
+            assert.doesNotThrow(() => { handler(req, res); });
+
+            assert.strictEqual(res.statusCode, 200);
+            assert.deepStrictEqual(res.body, { message: 'Sıralama başarıyla güncellendi' });
+            assert.strictEqual(res.responseCount, 1);
+
+            assert.strictEqual(serializeCalled, 1);
+            assert.strictEqual(prepareCalled, 1);
+            assert.strictEqual(preparedSql, 'UPDATE slides SET display_order = ? WHERE id = ?');
+            assert.strictEqual(runCalls.length, 2);
+            assert.deepStrictEqual(runCalls, [
+                [1, 1],
+                [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]
+            ]);
+            assert.strictEqual(finalizeCalled, 1);
         });
     });
 });

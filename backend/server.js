@@ -1467,7 +1467,15 @@ app.put('/api/slides/reorder', (req, res) => {
 
     // Validate all items
     for (const item of slideOrders) {
-        if (!item.id || item.display_order === undefined || isNaN(item.display_order)) {
+        if (
+            !item ||
+            typeof item !== 'object' ||
+            Array.isArray(item) ||
+            !Number.isSafeInteger(item.id) ||
+            item.id <= 0 ||
+            !Number.isSafeInteger(item.display_order) ||
+            item.display_order <= 0
+        ) {
             return res.status(400).json({ error: 'Geçersiz sıralama verisi: tüm öğeler id ve display_order içermelidir' });
         }
     }
