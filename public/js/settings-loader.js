@@ -19,7 +19,7 @@ class SettingsLoader {
             slideshowProgress: 'true'
         };
 
-        this.apiBase = window.location.origin + '/api';
+        this.apiBase = typeof CONFIG !== 'undefined' ? CONFIG.API_URL : '/api';
         this.refreshTimer = null;
 
         this.init();

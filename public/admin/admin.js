@@ -403,18 +403,33 @@ window.saveSetting = async function (key) {
 };
 
 // QR Code - Simple URL display for offline operation
-window.showQRCode = function () {
+window.showQRCode = async function () {
     document.getElementById('qrModal').style.display = 'flex';
-    const url = window.location.href.replace('/admin/index.html', '/index.html');
-    document.getElementById('qrcode').innerHTML = `
-        <div style="text-align: center; padding: 20px;">
-            <p style="font-size: 1.2rem; margin-bottom: 15px; font-weight: bold;">Ana Ekran Adresi:</p>
-            <div style="background: white; padding: 15px; border-radius: 10px; border: 2px solid var(--primary); word-break: break-all; font-family: monospace; font-size: 1rem;">
-                ${url}
+    try {
+        const res = await fetch(`${typeof CONFIG !== 'undefined' ? CONFIG.API_URL : '/api'}/network-info`);
+        const data = await res.json();
+        const url = `http://${data.ip}:${data.port}/index.html`;
+        document.getElementById('qrcode').innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+                <p style="font-size: 1.2rem; margin-bottom: 15px; font-weight: bold;">Ana Ekran Adresi:</p>
+                <div style="background: white; padding: 15px; border-radius: 10px; border: 2px solid var(--primary); word-break: break-all; font-family: monospace; font-size: 1rem;">
+                    ${url}
+                </div>
+                <p style="margin-top: 15px; font-size: 0.9rem; color: #666;">Bu adresi tarayıcınızda açarak ana ekrana erişebilirsiniz.</p>
             </div>
-            <p style="margin-top: 15px; font-size: 0.9rem; color: #666;">Bu adresi tarayıcınızda açarak ana ekrana erişebilirsiniz.</p>
-        </div>
-    `;
+        `;
+    } catch(e) {
+        const url = window.location.href.replace('/admin/index.html', '/index.html');
+        document.getElementById('qrcode').innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+                <p style="font-size: 1.2rem; margin-bottom: 15px; font-weight: bold;">Ana Ekran Adresi:</p>
+                <div style="background: white; padding: 15px; border-radius: 10px; border: 2px solid var(--primary); word-break: break-all; font-family: monospace; font-size: 1rem;">
+                    ${url}
+                </div>
+                <p style="margin-top: 15px; font-size: 0.9rem; color: #666;">Bu adresi tarayıcınızda açarak ana ekrana erişebilirsiniz.</p>
+            </div>
+        `;
+    }
 };
 
 window.closeQRCode = function () {

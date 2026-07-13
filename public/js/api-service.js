@@ -13,7 +13,9 @@ class APIService {
      * @returns {Promise} Response data
      */
     async request(endpoint, options = {}) {
-        const url = `${this.baseURL}${endpoint}`;
+        const base = this.baseURL.replace(/\/+$/, '');
+        const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+        const url = `${base}${path}`;
 
         try {
             const response = await fetch(url, {
