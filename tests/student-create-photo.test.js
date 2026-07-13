@@ -775,19 +775,56 @@ test('Student Delete Photo Cleanup Tests', async (t) => {
         ...overrides
     });
 
-    await t.test('1. invalid ID returns 400 and performs no database query or file deletion', (t, done) => {
-        let queried = false;
-        db.get = () => { queried = true; };
-        db.run = () => { queried = true; };
-        const req = defaultReq({ params: { id: 'abc' } });
-        const res = createMockRes((status, data) => {
-            assert.equal(status, 400);
-            assert.equal(queried, false);
-            assert.equal(deletedFiles.length, 0);
-            done();
+    const invalidIds = [
+        'abc', '1abc', 'abc1', '1.5', '1e2', '+1', '-1', '0', '00', '01', '1 ', ' 1', '', '   ', '9007199254740992'
+    ];
+
+    for (const invalidId of invalidIds) {
+        await t.test(`1. invalid ID "${invalidId}" returns 400 and performs no db query or file deletion`, (t, done) => {
+            let queried = false;
+            db.get = () => { queried = true; };
+            db.run = () => { queried = true; };
+            const req = defaultReq({ params: { id: invalidId } });
+            const res = createMockRes((status, data) => {
+                assert.equal(status, 400);
+                assert.equal(data.error, 'Geçersiz öğrenci ID');
+                assert.equal(queried, false);
+                assert.equal(deletedFiles.length, 0);
+                done();
+            });
+            handler(req, res);
         });
-        handler(req, res);
-    });
+    }
+
+    const validIds = [
+        { raw: '1', numeric: 1 },
+        { raw: '47', numeric: 47 }
+    ];
+
+    for (const validId of validIds) {
+        await t.test(`1a. valid ID "${validId.raw}" is converted to numeric ${validId.numeric} and queried`, (t, done) => {
+            let getQueryParam = null;
+            let runQueryParam = null;
+            
+            db.get = (sql, params, cb) => {
+                getQueryParam = params[0];
+                cb(null, { photo: '/uploads/student-photo.jpg' });
+            };
+            db.run = function(sql, params, cb) {
+                runQueryParam = params[0];
+                cb.call({ changes: 1 }, null);
+            };
+
+            const req = defaultReq({ params: { id: validId.raw } });
+            const res = createMockRes((status, data) => {
+                assert.equal(status, 200);
+                assert.strictEqual(getQueryParam, validId.numeric);
+                assert.strictEqual(runQueryParam, validId.numeric);
+                done();
+            });
+            handler(req, res);
+        });
+    }
 
     await t.test('2. student lookup failure returns 500 and performs no file deletion', (t, done) => {
         db.get = (sql, params, cb) => cb(new Error('DB Error'));

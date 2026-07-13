@@ -429,9 +429,18 @@ app.post('/api/students/import', upload.single('excel'), (req, res) => {
 
 // Delete student
 app.delete('/api/students/:id', (req, res) => {
-    const studentId = parseInt(req.params.id);
+    const rawStudentId = req.params.id;
 
-    if (isNaN(studentId)) {
+    if (
+        typeof rawStudentId !== 'string' ||
+        !/^[1-9]\d*$/.test(rawStudentId)
+    ) {
+        return res.status(400).json({ error: 'Geçersiz öğrenci ID' });
+    }
+
+    const studentId = Number(rawStudentId);
+
+    if (!Number.isSafeInteger(studentId)) {
         return res.status(400).json({ error: 'Geçersiz öğrenci ID' });
     }
 
