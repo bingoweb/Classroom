@@ -108,11 +108,30 @@ test('Settings Update Tests', async (t) => {
         db.prepare = originalDbPrepare;
     });
 
-    function createPromiseHelper(testHandler) {
+    function createPromiseHelper(testHandler, options = {}) {
+        const timeoutMs = typeof options.timeoutMs === 'number' && options.timeoutMs > 0 ? options.timeoutMs : 100;
+        const observationMs = typeof options.observationMs === 'number' && options.observationMs >= 0 ? options.observationMs : 10;
         return function invokeTestHandler(req) {
             return new Promise((resolve, reject) => {
-                let responded = false;
-                let timeoutId;
+                let responseCount = 0;
+                let settled = false;
+                let globalTimeoutId;
+                let observationTimeoutId;
+
+                const settle = (err, result) => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(globalTimeoutId);
+                    clearTimeout(observationTimeoutId);
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(result);
+                    }
+                };
+
+                let capturedStatusCode = 200;
+                let capturedBody;
 
                 const res = {
                     statusCode: 200,
@@ -121,41 +140,38 @@ test('Settings Update Tests', async (t) => {
                         return this;
                     },
                     json: function(data) {
-                        if (responded) {
-                            clearTimeout(timeoutId);
-                            throw new Error('Multiple responses detected');
+                        responseCount++;
+                        if (responseCount === 1) {
+                            capturedStatusCode = this.statusCode;
+                            capturedBody = data;
+                            observationTimeoutId = setTimeout(() => {
+                                settle(null, {
+                                    statusCode: capturedStatusCode,
+                                    body: capturedBody,
+                                    responseCount: responseCount
+                                });
+                            }, observationMs);
+                        } else {
+                            settle(new Error('Multiple responses detected'), null);
                         }
-                        responded = true;
-                        clearTimeout(timeoutId);
-                        this.body = data;
-                        setImmediate(() => {
-                            resolve({ statusCode: this.statusCode, body: this.body });
-                        });
                         return this;
                     }
                 };
 
                 const next = (err) => {
-                    if (responded) return;
-                    responded = true;
-                    clearTimeout(timeoutId);
-                    setImmediate(() => {
-                        reject(err || new Error('next() called without error'));
-                    });
+                    settle(err || new Error('next() called without error'), null);
                 };
 
-                timeoutId = setTimeout(() => {
-                    if (!responded) {
-                        responded = true;
-                        reject(new Error('Response timeout exceeded'));
+                globalTimeoutId = setTimeout(() => {
+                    if (responseCount === 0) {
+                        settle(new Error('Response timeout exceeded'), null);
                     }
-                }, 100);
+                }, timeoutMs);
 
                 try {
                     testHandler(req, res, next);
                 } catch (err) {
-                    clearTimeout(timeoutId);
-                    reject(err);
+                    settle(err, null);
                 }
             });
         };
@@ -174,6 +190,28 @@ test('Settings Update Tests', async (t) => {
             res.json({ second: true });
         });
         await assert.rejects(invokeDouble({}), /Multiple responses detected/);
+    });
+
+    await t.test('Helper: asynchronous double response is detected', async () => {
+        const invokeAsyncDouble = createPromiseHelper((req, res) => {
+            res.json({ first: true });
+            setTimeout(() => {
+                res.json({ second: true });
+            }, 5);
+        }, { timeoutMs: 100, observationMs: 20 });
+        await assert.rejects(invokeAsyncDouble({}), /Multiple responses detected/);
+    });
+
+    await t.test('Helper: single response is correctly returned', async () => {
+        const invokeSingle = createPromiseHelper((req, res) => {
+            res.status(201).json({ ok: true });
+        });
+        const resObj = await invokeSingle({});
+        assert.deepEqual(resObj, {
+            statusCode: 201,
+            body: { ok: true },
+            responseCount: 1
+        });
     });
 
     const runDb = (sql, params) => new Promise((resolve, reject) => {
@@ -215,6 +253,7 @@ test('Settings Update Tests', async (t) => {
 
                 assert.strictEqual(resObj.statusCode, 400);
                 assert.deepEqual(resObj.body, { error: 'Ayar anahtarı gereklidir' });
+                assert.strictEqual(resObj.responseCount, 1);
                 assert.strictEqual(dbCalls, 0);
             });
         }
@@ -250,6 +289,7 @@ test('Settings Update Tests', async (t) => {
 
                 assert.strictEqual(resObj.statusCode, 400);
                 assert.deepEqual(resObj.body, { error: 'Ayar anahtarı gereklidir' });
+                assert.strictEqual(resObj.responseCount, 1);
                 assert.strictEqual(dbCalls, 0);
             });
         }
@@ -275,6 +315,7 @@ test('Settings Update Tests', async (t) => {
 
                 assert.strictEqual(resObj.statusCode, 400);
                 assert.deepEqual(resObj.body, { error: 'Ayar değeri gereklidir' });
+                assert.strictEqual(resObj.responseCount, 1);
                 assert.strictEqual(dbCalls, 0);
             });
         }
@@ -301,6 +342,7 @@ test('Settings Update Tests', async (t) => {
         assert.strictEqual(callbackCompleted, true);
         assert.strictEqual(resObj.statusCode, 200);
         assert.deepEqual(resObj.body, { message: 'Ayarlar güncellendi' });
+        assert.strictEqual(resObj.responseCount, 1);
         assert.strictEqual(runCalls, 1);
         assert.strictEqual(receivedSql, "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)");
         assert.deepEqual(receivedParams, ['message', 'Merhaba sınıf']);
@@ -334,6 +376,7 @@ test('Settings Update Tests', async (t) => {
                 assert.strictEqual(callbackCompleted, true);
                 assert.strictEqual(resObj.statusCode, 200);
                 assert.deepEqual(resObj.body, { message: 'Ayarlar güncellendi' });
+                assert.strictEqual(resObj.responseCount, 1);
                 assert.strictEqual(runCalls, 1);
                 assert.strictEqual(receivedParams[1], item.value);
             });
@@ -368,6 +411,7 @@ test('Settings Update Tests', async (t) => {
             assert.strictEqual(callbackCompleted, true);
             assert.strictEqual(resObj.statusCode, 500);
             assert.deepEqual(resObj.body, { error: 'Ayarlar güncellenirken hata oluştu' });
+            assert.strictEqual(resObj.responseCount, 1);
             assert.strictEqual(runCalls, 1);
             assert.strictEqual(receivedParams[0], 'err_key');
 
@@ -388,6 +432,7 @@ test('Settings Update Tests', async (t) => {
 
         assert.strictEqual(resObj.statusCode, 200);
         assert.deepEqual(resObj.body, { message: 'Ayarlar güncellendi' });
+        assert.strictEqual(resObj.responseCount, 1);
 
         try {
             const rowPadded = await getDb("SELECT * FROM settings WHERE key = ?", ['  settings_test_key  ']);
