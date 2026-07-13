@@ -15,6 +15,7 @@ global.setInterval = () => {};
 
 const app = require('../backend/server.js');
 const db = require('../backend/database.js');
+const { Logger, COMPONENTS } = require('../backend/logger.js');
 
 function closeDatabase(database) {
     return new Promise((resolve, reject) => {
@@ -84,18 +85,31 @@ test('Slides Delete Route ID Validation', async (t) => {
         }
     });
 
-    function invokeHandler(req, handlerToUse = deleteHandler) {
+    function invokeHandler(req, handlerToUse = deleteHandler, timeoutMs = 500) {
         return new Promise((resolve, reject) => {
             let responseCount = 0;
             let responseSnapshot = null;
             let settled = false;
             let completionScheduled = false;
+            let timeoutId = null;
+
+            const cleanup = () => {
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                    timeoutId = null;
+                }
+            };
 
             const fail = (err) => {
                 if (settled) return;
                 settled = true;
+                cleanup();
                 reject(err);
             };
+
+            timeoutId = setTimeout(() => {
+                fail(new Error(`Expected exactly one response, received ${responseCount}`));
+            }, timeoutMs);
 
             const scheduleCompletion = () => {
                 if (completionScheduled) return;
@@ -107,6 +121,7 @@ test('Slides Delete Route ID Validation', async (t) => {
                         return;
                     }
                     settled = true;
+                    cleanup();
                     resolve({
                         ...responseSnapshot,
                         count: responseCount
@@ -137,6 +152,7 @@ test('Slides Delete Route ID Validation', async (t) => {
 
             const next = (err) => {
                 if (err) fail(err);
+                else fail(new Error('next() called without error'));
             };
 
             try {
@@ -158,6 +174,16 @@ test('Slides Delete Route ID Validation', async (t) => {
             assert.fail('Should have rejected due to double response');
         } catch (err) {
             assert.match(err.message, /Response sent more than once/);
+        }
+    });
+
+    await t.test('0.1. Helper self-regression zero response', async () => {
+        const noResponseHandler = () => {};
+        try {
+            await invokeHandler({}, noResponseHandler, 20);
+            assert.fail('Should have rejected due to zero responses');
+        } catch (err) {
+            assert.match(err.message, /Expected exactly one response, received 0/);
         }
     });
 
@@ -405,28 +431,52 @@ test('Slides Delete Route ID Validation', async (t) => {
 
     await t.test('8. Compaction-error mock regression', async () => {
         let runCallsCount = 0;
+        let compactionCallbackCompleted = false;
 
-        db.get = (sql, params, cb) => {
-            cb(null, { media_path: null, display_order: 2 });
-        };
+        let errorLogArgs = null;
+        let errorLogCalls = 0;
+        const originalLoggerError = Logger.prototype.error;
 
-        db.run = function(sql, params, cb) {
-            runCallsCount++;
-            if (runCallsCount === 1) {
-                this.changes = 1;
-                cb.call(this, null);
-            } else {
-                cb.call(this, new Error('compaction failed'));
-            }
-        };
+        try {
+            Logger.prototype.error = function(...args) {
+                errorLogCalls++;
+                errorLogArgs = args;
+            };
 
-        const req = { params: { id: '47' }, requestId: 'test-req-id' };
-        const resObj = await invokeHandler(req);
+            db.get = (sql, params, cb) => {
+                cb(null, { media_path: null, display_order: 2 });
+            };
 
-        // It should log the error but still send 200 since deletion succeeded
-        assert.strictEqual(resObj.statusCode, 200);
-        assert.deepEqual(resObj.body, { message: 'Slayt başarıyla silindi', changes: 1 });
-        assert.strictEqual(runCallsCount, 2);
+            db.run = function(sql, params, cb) {
+                runCallsCount++;
+                if (runCallsCount === 1) {
+                    this.changes = 1;
+                    cb.call(this, null);
+                } else {
+                    setTimeout(() => {
+                        compactionCallbackCompleted = true;
+                        cb.call(this, new Error('compaction failed'));
+                    }, 10);
+                }
+            };
+
+            const req = { params: { id: '47' }, requestId: 'test-req-id' };
+            const resObj = await invokeHandler(req);
+
+            // It should log the error but still send 200 since deletion succeeded
+            assert.strictEqual(resObj.statusCode, 200);
+            assert.deepEqual(resObj.body, { message: 'Slayt başarıyla silindi', changes: 1 });
+            assert.strictEqual(runCallsCount, 2);
+            assert.strictEqual(compactionCallbackCompleted, true, 'Response must wait for the asynchronous compaction-error callback');
+            assert.strictEqual(errorLogCalls, 1, 'Logger.error must be called exactly once');
+
+            assert.strictEqual(errorLogArgs[0], COMPONENTS.DATABASE);
+            assert.strictEqual(errorLogArgs[1], 'Error reordering slides after deletion');
+            assert.strictEqual(errorLogArgs[2].message, 'compaction failed');
+            assert.deepEqual(errorLogArgs[3], { deletedSlideId: 47, requestId: 'test-req-id' });
+        } finally {
+            Logger.prototype.error = originalLoggerError;
+        }
     });
 
     await t.test('9. Mandatory real-database compaction regression', async () => {
