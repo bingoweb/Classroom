@@ -1355,6 +1355,54 @@ app.post('/api/slides', uploadSlide.single('slide'), (req, res, next) => {
     });
 });
 
+// Reorder slides (bulk update)
+app.put('/api/slides/reorder', (req, res) => {
+    const { slideOrders } = req.body; // Array of {id, display_order}
+
+    if (!slideOrders || !Array.isArray(slideOrders) || slideOrders.length === 0) {
+        return res.status(400).json({ error: 'Geçersiz sıralama verisi' });
+    }
+
+    // Validate all items
+    for (const item of slideOrders) {
+        if (!item.id || item.display_order === undefined || isNaN(item.display_order)) {
+            return res.status(400).json({ error: 'Geçersiz sıralama verisi: tüm öğeler id ve display_order içermelidir' });
+        }
+    }
+
+    db.serialize(() => {
+        const stmt = db.prepare("UPDATE slides SET display_order = ? WHERE id = ?");
+        let completed = 0;
+        let hasError = false;
+        const totalItems = slideOrders.length;
+
+        slideOrders.forEach((item) => {
+            stmt.run([item.display_order, item.id], (err) => {
+                if (err) {
+                    logger.error(COMPONENTS.API, 'Error updating slide order', err, {
+                        slideId: item.id,
+                        displayOrder: item.display_order,
+                        requestId: req.requestId
+                    });
+                    hasError = true;
+                }
+                completed++;
+                if (completed === totalItems) {
+                    stmt.finalize();
+                    if (hasError) {
+                        return res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                    }
+                    logger.info(COMPONENTS.API, 'Slides reordered successfully', null, {
+                        totalItems,
+                        requestId: req.requestId
+                    });
+                    res.json({ message: 'Sıralama başarıyla güncellendi' });
+                }
+            });
+        });
+    });
+});
+
 // Update slide
 app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
     const id = parseInt(req.params.id);
@@ -1509,53 +1557,6 @@ app.delete('/api/slides/:id', (req, res, next) => {
     });
 });
 
-// Reorder slides (bulk update)
-app.put('/api/slides/reorder', (req, res) => {
-    const { slideOrders } = req.body; // Array of {id, display_order}
-
-    if (!slideOrders || !Array.isArray(slideOrders) || slideOrders.length === 0) {
-        return res.status(400).json({ error: 'Geçersiz sıralama verisi' });
-    }
-
-    // Validate all items
-    for (const item of slideOrders) {
-        if (!item.id || item.display_order === undefined || isNaN(item.display_order)) {
-            return res.status(400).json({ error: 'Geçersiz sıralama verisi: tüm öğeler id ve display_order içermelidir' });
-        }
-    }
-
-    db.serialize(() => {
-        const stmt = db.prepare("UPDATE slides SET display_order = ? WHERE id = ?");
-        let completed = 0;
-        let hasError = false;
-        const totalItems = slideOrders.length;
-
-        slideOrders.forEach((item) => {
-            stmt.run([item.display_order, item.id], (err) => {
-                if (err) {
-                    logger.error(COMPONENTS.API, 'Error updating slide order', err, {
-                        slideId: item.id,
-                        displayOrder: item.display_order,
-                        requestId: req.requestId
-                    });
-                    hasError = true;
-                }
-                completed++;
-                if (completed === totalItems) {
-                    stmt.finalize();
-                    if (hasError) {
-                        return res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
-                    }
-                    logger.info(COMPONENTS.API, 'Slides reordered successfully', null, {
-                        totalItems,
-                        requestId: req.requestId
-                    });
-                    res.json({ message: 'Sıralama başarıyla güncellendi' });
-                }
-            });
-        });
-    });
-});
 
 // Detect poster from filename
 function detectPosterFromFilename(filename) {
