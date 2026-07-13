@@ -994,10 +994,51 @@ app.get('/api/attendance/:date', (req, res) => {
 
 // Save Attendance (Bulk - multiple students at once)
 app.post('/api/attendance', (req, res) => {
-    const { date, attendanceList } = req.body; // attendanceList: [{student_id, status}]
+    const { date, attendanceList } = req.body;
 
     if (!date || !attendanceList || !Array.isArray(attendanceList)) {
         return res.status(400).json({ error: 'Tarih ve yoklama listesi gereklidir' });
+    }
+
+    const normalizedList = [];
+    const seenIds = new Set();
+
+    for (const item of attendanceList) {
+        if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+            return res.status(400).json({ error: 'Yoklama listesinde geçersiz kayıt var' });
+        }
+
+        const { student_id, status } = item;
+        let normalizedStudentId;
+
+        if (typeof student_id === 'string') {
+            if (!/^[1-9]\d*$/.test(student_id)) {
+                return res.status(400).json({ error: 'Yoklama listesinde geçersiz kayıt var' });
+            }
+            normalizedStudentId = Number(student_id);
+        } else if (typeof student_id === 'number') {
+            normalizedStudentId = student_id;
+        } else {
+            return res.status(400).json({ error: 'Yoklama listesinde geçersiz kayıt var' });
+        }
+
+        if (!Number.isSafeInteger(normalizedStudentId) || normalizedStudentId <= 0) {
+            return res.status(400).json({ error: 'Yoklama listesinde geçersiz kayıt var' });
+        }
+
+        if (status !== 'present' && status !== 'absent') {
+            return res.status(400).json({ error: 'Yoklama listesinde geçersiz kayıt var' });
+        }
+
+        if (seenIds.has(normalizedStudentId)) {
+            return res.status(400).json({ error: 'Yoklama listesinde geçersiz kayıt var' });
+        }
+        seenIds.add(normalizedStudentId);
+
+        normalizedList.push({
+            student_id: normalizedStudentId,
+            status: status
+        });
     }
 
     // Delete existing attendance for this date
@@ -1009,29 +1050,16 @@ app.post('/api/attendance', (req, res) => {
             return res.status(500).json({ error: 'Yoklama kaydedilirken hata oluştu' });
         }
 
+        if (normalizedList.length === 0) {
+            return res.json({ message: "Yoklama kaydedildi", count: 0 });
+        }
+
         // Insert new attendance records
         const stmt = db.prepare("INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
         let completed = 0;
         let hasError = false;
 
-        if (attendanceList.length === 0) {
-            return res.json({ message: "Yoklama kaydedildi", count: 0 });
-        }
-
-        attendanceList.forEach((item) => {
-            if (!item.student_id || !item.status || !['present', 'absent'].includes(item.status)) {
-                hasError = true;
-                completed++;
-                if (completed === attendanceList.length) {
-                    stmt.finalize();
-                    if (hasError) {
-                        return res.status(500).json({ error: 'Yoklama kaydedilirken bazı kayıtlarda hata oluştu' });
-                    }
-                    return res.json({ message: "Yoklama başarıyla kaydedildi", count: attendanceList.length });
-                }
-                return;
-            }
-
+        normalizedList.forEach((item) => {
             stmt.run([item.student_id, date, item.status], (err) => {
                 if (err) {
                     logger.error(COMPONENTS.API, 'Error inserting attendance', err, {
@@ -1042,12 +1070,12 @@ app.post('/api/attendance', (req, res) => {
                     hasError = true;
                 }
                 completed++;
-                if (completed === attendanceList.length) {
+                if (completed === normalizedList.length) {
                     stmt.finalize();
                     if (hasError) {
                         return res.status(500).json({ error: 'Yoklama kaydedilirken bazı kayıtlarda hata oluştu' });
                     }
-                    return res.json({ message: "Yoklama başarıyla kaydedildi", count: attendanceList.length });
+                    return res.json({ message: "Yoklama başarıyla kaydedildi", count: normalizedList.length });
                 }
             });
         });
