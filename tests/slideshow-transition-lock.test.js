@@ -9,19 +9,34 @@ const scriptSource = fs.readFileSync(scriptPath, 'utf8');
 
 function createVmHarness() {
     const logs = [];
-    let scheduledTimeouts = [];
+    const scheduledTimeouts = [];
     let nextTimeoutId = 1;
-    let appliedTransitions = [];
+    const appliedTransitions = [];
+    const querySelectorCalls = [];
 
-    const mockClassList = {
-        add: () => {},
-        remove: () => {}
-    };
+    function createTrackedClassList(initialClasses = []) {
+        const classes = new Set(initialClasses);
 
-    function createMockElement(id) {
+        return {
+            add(...names) {
+                names.forEach(name => classes.add(name));
+            },
+            remove(...names) {
+                names.forEach(name => classes.delete(name));
+            },
+            contains(name) {
+                return classes.has(name);
+            },
+            values() {
+                return [...classes];
+            }
+        };
+    }
+
+    function createMockElement(id, initialClasses = []) {
         return {
             id,
-            classList: mockClassList,
+            classList: createTrackedClassList(initialClasses),
             querySelector: () => null,
             querySelectorAll: () => [],
             style: {}
@@ -33,6 +48,7 @@ function createVmHarness() {
     const documentMock = {
         addEventListener: (event, cb) => {},
         querySelector: (selector) => {
+            querySelectorCalls.push(selector);
             const match = selector.match(/data-slide-id="([^"]+)"/);
             if (match && mockElements[match[1]]) {
                 return mockElements[match[1]];
@@ -54,7 +70,10 @@ function createVmHarness() {
         },
         clearInterval: () => {},
         clearTimeout: (id) => {
-            scheduledTimeouts = scheduledTimeouts.filter(t => t.id !== id);
+            const idx = scheduledTimeouts.findIndex(t => t.id === id);
+            if (idx !== -1) {
+                scheduledTimeouts.splice(idx, 1);
+            }
         }
     };
 
@@ -72,7 +91,9 @@ function createVmHarness() {
     };
 
     const COMPONENTS_MOCK = {
-        SLIDESHOW: 'SLIDESHOW'
+        SLIDESHOW: 'SLIDESHOW',
+        TRANSITIONS: 'TRANSITIONS',
+        MEDIA: 'MEDIA'
     };
 
     const UtilsMock = {
@@ -138,7 +159,9 @@ globalThis.__slideshowTestApi = {
         scheduledTimeouts,
         appliedTransitions,
         setMockElements: (elements) => { mockElements = elements; },
-        createMockElement
+        createMockElement,
+        getQuerySelectorCalls: () => querySelectorCalls,
+        clearQuerySelectorCalls: () => { querySelectorCalls.length = 0; }
     };
 }
 
@@ -147,14 +170,23 @@ test('Slideshow Transition Lock', async (t) => {
         assert.ok(scriptSource.includes('function nextSlide()'), 'function nextSlide() still exists');
         assert.ok(scriptSource.includes('function scheduleNextSlide()'), 'function scheduleNextSlide() still exists');
         assert.ok(scriptSource.includes('Skipping nextSlide: transition already in progress'), 'concurrent guard message still exists');
-        assert.ok(scriptSource.includes('isTransitioning = false;'), 'the normal success-path statement that clears transition flag still exists');
+
+        const regex = /\/\/\s*Clear transition flag after transition completes\s*isTransitioning\s*=\s*false;\s*\/\/\s*Schedule next slide\s*scheduleNextSlide\(\);/m;
+        assert.match(scriptSource, regex, 'normal success sequence remains');
+
         assert.ok(!scriptSource.includes('module.exports'), 'no module.exports was added');
         assert.ok(!scriptSource.includes('__slideshowTestApi'), 'no production __slideshowTestApi symbol was added');
     });
 
+    await t.test('Explicit function exposure', () => {
+        const harness = createVmHarness();
+        assert.strictEqual(typeof harness.api.nextSlide, 'function', 'nextSlide is explicitly exposed as a function');
+        assert.strictEqual(typeof harness.api.scheduleNextSlide, 'function', 'scheduleNextSlide is explicitly exposed as a function');
+    });
+
     await t.test('A. Initial concurrent-transition guard remains locked', () => {
         const harness = createVmHarness();
-        const { api, logs, scheduledTimeouts, appliedTransitions } = harness;
+        const { api, logs, scheduledTimeouts, appliedTransitions, getQuerySelectorCalls } = harness;
         
         api.setSlidesData([{ id: 1 }]);
         harness.setMockElements({ 1: harness.createMockElement(1) });
@@ -164,10 +196,11 @@ test('Slideshow Transition Lock', async (t) => {
         api.nextSlide();
 
         const state = api.getState();
-        assert.strictEqual(scheduledTimeouts.length, 0);
-        assert.strictEqual(state.isTransitioning, true);
+        assert.strictEqual(getQuerySelectorCalls().length, 0, 'document-level querySelector() call count is exactly zero');
+        assert.strictEqual(scheduledTimeouts.length, 0, 'no timeout is captured');
+        assert.strictEqual(state.isTransitioning, true, 'the lock remains true');
         assert.strictEqual(state.currentSlideIndex, 0);
-        assert.strictEqual(appliedTransitions.length, 0);
+        assert.strictEqual(appliedTransitions.length, 0, 'no transition is applied');
         
         const debugLog = logs.find(l => l.msg === 'Skipping nextSlide: transition already in progress');
         assert.ok(debugLog, 'logger receives the existing debug message');
@@ -175,7 +208,7 @@ test('Slideshow Transition Lock', async (t) => {
 
     await t.test('B. Empty slide data remains an unlocked no-op', () => {
         const harness = createVmHarness();
-        const { api, logs, scheduledTimeouts, appliedTransitions } = harness;
+        const { api, logs, scheduledTimeouts, appliedTransitions, getQuerySelectorCalls } = harness;
 
         api.setSlidesData([]);
         api.setIsTransitioning(false);
@@ -184,12 +217,13 @@ test('Slideshow Transition Lock', async (t) => {
         api.nextSlide();
 
         const state = api.getState();
-        assert.strictEqual(scheduledTimeouts.length, 0);
-        assert.strictEqual(state.isTransitioning, false);
-        assert.strictEqual(appliedTransitions.length, 0);
+        assert.strictEqual(getQuerySelectorCalls().length, 0, 'document-level querySelector() call count is exactly zero');
+        assert.strictEqual(scheduledTimeouts.length, 0, 'no timeout is captured');
+        assert.strictEqual(state.isTransitioning, false, 'the lock remains false');
+        assert.strictEqual(appliedTransitions.length, 0, 'no transition is applied');
 
         const warnLog = logs.find(l => l.msg === 'Cannot advance: no slides');
-        assert.ok(warnLog, 'the existing warning message is preserved');
+        assert.ok(warnLog, 'the exact warning message is preserved');
     });
 
     await t.test('C. Invalid current slide releases the lock and permits recovery', () => {
@@ -324,20 +358,8 @@ test('Slideshow Transition Lock', async (t) => {
         const harness = createVmHarness();
         const { api, scheduledTimeouts, appliedTransitions } = harness;
 
-        let currentActiveRemoved = false;
-        let nextActiveAdded = false;
-
-        const currentEl = harness.createMockElement(1);
-        currentEl.classList = {
-            add: () => {},
-            remove: (cls) => { if(cls === 'active') currentActiveRemoved = true; }
-        };
-
-        const nextEl = harness.createMockElement(2);
-        nextEl.classList = {
-            add: (cls) => { if(cls === 'active') nextActiveAdded = true; },
-            remove: () => {}
-        };
+        const currentElement = harness.createMockElement(1, ['slide', 'active']);
+        const nextElement = harness.createMockElement(2, ['slide']);
 
         api.setSlidesData([
             { id: 1, display_duration: 1200, transition_duration: 800 },
@@ -345,35 +367,41 @@ test('Slideshow Transition Lock', async (t) => {
         ]);
         api.setCurrentSlideIndex(0);
         api.setIsTransitioning(false);
-        harness.setMockElements({ 1: currentEl, 2: nextEl });
+        harness.setMockElements({ 1: currentElement, 2: nextElement });
+
+        assert.strictEqual(currentElement.classList.contains('active'), true);
+        assert.strictEqual(nextElement.classList.contains('active'), false);
 
         api.nextSlide();
 
         let state = api.getState();
         assert.strictEqual(state.isTransitioning, true, 'isTransitioning is true before callback');
         assert.strictEqual(state.currentSlideIndex, 0, 'currentSlideIndex is still 0 before callback');
-        assert.strictEqual(scheduledTimeouts.length, 1, 'exactly one timeout exists');
+        assert.strictEqual(currentElement.classList.contains('active'), true, 'current element still has active');
+        assert.strictEqual(nextElement.classList.contains('active'), false, 'next element still does not have active');
         assert.strictEqual(appliedTransitions.length, 0, 'applyTransition has not yet been called');
 
-        // Execute the captured timeout
-        const timeoutCb = scheduledTimeouts[0].cb;
-        scheduledTimeouts.length = 0; // clear to see what scheduleNextSlide does
-        timeoutCb();
+        const transitionTimeout = scheduledTimeouts.find(t => t.delay === 400);
+        assert.ok(transitionTimeout, 'exactly one transition-start timeout with delay 400 exists');
+
+        // Execute only the captured 400ms callback
+        scheduledTimeouts.length = 0; // Clear to only track the new ones
+        transitionTimeout.cb();
 
         assert.strictEqual(appliedTransitions.length, 1, 'applyTransition is called exactly once');
-        assert.strictEqual(appliedTransitions[0].currEl.id, 1, 'receives current fake slide element');
-        assert.strictEqual(appliedTransitions[0].nextEl.id, 2, 'receives next fake slide element');
-        assert.strictEqual(appliedTransitions[0].type, 'fade', 'transition type is preserved');
-        assert.strictEqual(appliedTransitions[0].duration, 800, 'transition duration is preserved');
+        assert.strictEqual(appliedTransitions[0].currEl, currentElement, 'the first argument is exactly currentElement');
+        assert.strictEqual(appliedTransitions[0].nextEl, nextElement, 'the second argument is exactly nextElement');
+        assert.strictEqual(appliedTransitions[0].type, 'fade', 'transition type is exactly the controlled expected type');
+        assert.strictEqual(appliedTransitions[0].duration, 800, 'transition duration is exactly the configured slide transition duration');
         
-        assert.strictEqual(currentActiveRemoved, true, 'the current slide loses active');
-        assert.strictEqual(nextActiveAdded, true, 'the next slide gains active');
+        assert.strictEqual(currentElement.classList.contains('active'), false, 'currentElement loses active');
+        assert.strictEqual(nextElement.classList.contains('active'), true, 'nextElement gains active');
 
         state = api.getState();
         assert.strictEqual(state.currentSlideIndex, 1, 'currentSlideIndex becomes 1');
         assert.strictEqual(state.isTransitioning, false, 'isTransitioning becomes false');
         
         const nextSlideTimeout = scheduledTimeouts.find(t => t.delay === 2200);
-        assert.ok(nextSlideTimeout, 'scheduleNextSlide captures a future timeout using the second slide duration');
+        assert.ok(nextSlideTimeout, 'a future slideshow timeout is captured using the second slide’s display_duration');
     });
 });
