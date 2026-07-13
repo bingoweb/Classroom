@@ -46,19 +46,43 @@ function removeDirectoryIfPresent(fsApi, directoryPath) {
     }
 }
 
-function createMockRes() {
+function createTrackedResponse() {
+    let resolvePromise;
+    let rejectPromise;
+
+    const promise = new Promise((resolve, reject) => {
+        resolvePromise = resolve;
+        rejectPromise = reject;
+    });
+
+    const timeout = setTimeout(() => {
+        rejectPromise(new Error('Expected exactly one response, received 0'));
+    }, 50);
+
     const res = {
         statusCode: 200,
         responseCount: 0,
         body: null,
+        promise,
+        resolveTimeout: null,
         status(code) {
             this.statusCode = code;
             return this;
         },
         json(data) {
             this.responseCount++;
-            if (this.responseCount > 1) throw new Error('Multiple responses sent');
+            if (this.responseCount > 1) {
+                clearTimeout(timeout);
+                if (this.resolveTimeout) clearTimeout(this.resolveTimeout);
+                rejectPromise(new Error('Multiple responses sent'));
+                return this;
+            }
             this.body = data;
+            clearTimeout(timeout);
+            // Delay resolution slightly to catch immediate double-responses
+            this.resolveTimeout = setTimeout(() => {
+                resolvePromise({ statusCode: this.statusCode, body: this.body, responseCount: this.responseCount });
+            }, 5);
             return this;
         }
     };
@@ -93,7 +117,7 @@ test('Slides Delete Cache Tests', async (t) => {
         removeFileIfPresent(fs, testDbPath + '-wal');
         removeFileIfPresent(fs, testDbPath + '-shm');
         removeDirectoryIfPresent(fs, tempDir);
-        
+
         global.setInterval = originalSetInterval;
         Date.now = originalDateNow;
         if (originalDbPath === undefined) {
@@ -111,26 +135,38 @@ test('Slides Delete Cache Tests', async (t) => {
         layer => layer.route && layer.route.path === '/api/slides/:id' && layer.route.methods.delete
     );
 
-    await t.test('A. Actual route discovery', () => {
-        assert.strictEqual(getActiveRoutes.length, 1, 'Exactly one GET /api/slides/active route must exist');
-        assert.strictEqual(deleteSlidesRoutes.length, 1, 'Exactly one DELETE /api/slides/:id route must exist');
-    });
-
     const activeHandler = getActiveRoutes[0].route.stack[getActiveRoutes[0].route.stack.length - 1].handle;
     const deleteHandler = deleteSlidesRoutes[0].route.stack[deleteSlidesRoutes[0].route.stack.length - 1].handle;
 
-    await t.test('B. Exactly-one-response helper', () => {
-        const res = createMockRes();
-        assert.strictEqual(res.responseCount, 0);
+    await t.test('A. Actual route discovery', () => {
+        assert.strictEqual(getActiveRoutes.length, 1, 'Exactly one GET /api/slides/active route must exist');
+        assert.strictEqual(deleteSlidesRoutes.length, 1, 'Exactly one DELETE /api/slides/:id route must exist');
+        assert.strictEqual(typeof activeHandler, 'function', 'Active handler must be a function');
+        assert.strictEqual(typeof deleteHandler, 'function', 'Delete handler must be a function');
+    });
 
-        res.status(200).json({ success: true });
-        assert.strictEqual(res.responseCount, 1);
-        assert.throws(() => res.json({ success: false }), /Multiple responses sent/);
+    await t.test('Double-response self-regression', async () => {
+        const handler = (req, res) => {
+            res.status(200).json({ first: true });
+            res.json({ second: true });
+        };
+        const res = createTrackedResponse();
+        handler({}, res);
+        await assert.rejects(res.promise, /Multiple responses sent/);
+    });
+
+    await t.test('Zero-response self-regression', async () => {
+        const handler = (req, res) => {
+            // Sends no response
+        };
+        const res = createTrackedResponse();
+        handler({}, res);
+        await assert.rejects(res.promise, /Expected exactly one response, received 0/);
     });
 
     await t.test('C. Successful deletion invalidates a populated cache', async () => {
         mockTime += 5 * 60 * 1000 + 1000;
-        
+
         let dbAllCount = 0;
         let activeSlidesRow = [
             { id: 47, title: 'Silinecek slayt', media_path: '/uploads/slides/delete-me.png', display_order: 1 },
@@ -147,11 +183,12 @@ test('Slides Delete Cache Tests', async (t) => {
             }
         };
 
-        const getRes1 = createMockRes();
+        const getRes1 = createTrackedResponse();
         activeHandler({ requestId: 'req-1' }, getRes1);
-        assert.strictEqual(getRes1.statusCode, 200);
-        assert.deepStrictEqual(getRes1.body, activeSlidesRow);
-        assert.strictEqual(getRes1.responseCount, 1);
+        const getResult1 = await getRes1.promise;
+        assert.strictEqual(getResult1.statusCode, 200);
+        assert.deepStrictEqual(getResult1.body, activeSlidesRow);
+        assert.strictEqual(getResult1.responseCount, 1);
         assert.strictEqual(dbAllCount, 1);
 
         let capturedLookupSql = null;
@@ -160,6 +197,7 @@ test('Slides Delete Cache Tests', async (t) => {
         let capturedDeleteParams = null;
         let capturedCompactionSql = null;
         let capturedCompactionParams = null;
+        let capturedCompactionCb = null;
         let fsUnlinkSyncCount = 0;
         let fsExistsSyncCount = 0;
 
@@ -178,7 +216,7 @@ test('Slides Delete Cache Tests', async (t) => {
             } else if (sql.includes('UPDATE')) {
                 capturedCompactionSql = sql;
                 capturedCompactionParams = params;
-                cb.call(this, null);
+                capturedCompactionCb = cb;
             } else {
                 cb.call(this, null);
             }
@@ -192,37 +230,45 @@ test('Slides Delete Cache Tests', async (t) => {
             requestId: 'delete-cache-success'
         };
 
-        const delRes = createMockRes();
+        const delRes = createTrackedResponse();
         deleteHandler(delReq, delRes);
+
+        assert.strictEqual(delRes.responseCount, 0, 'No response should be sent before compaction completes');
+        assert.strictEqual(capturedCompactionSql, 'UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?');
+        assert.deepStrictEqual(capturedCompactionParams, [1]);
+
+        capturedCompactionCb.call({ changes: 0 }, null);
+
+        const result = await delRes.promise;
 
         assert.strictEqual(capturedLookupSql, 'SELECT media_path, display_order FROM slides WHERE id = ?');
         assert.deepStrictEqual(capturedLookupParams, [47]);
         assert.strictEqual(capturedDeleteSql, 'DELETE FROM slides WHERE id = ?');
         assert.deepStrictEqual(capturedDeleteParams, [47]);
-        assert.strictEqual(capturedCompactionSql, 'UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?');
-        assert.deepStrictEqual(capturedCompactionParams, [1]);
-        
-        assert.strictEqual(delRes.statusCode, 200);
-        assert.deepStrictEqual(delRes.body, { message: 'Slayt başarıyla silindi', changes: 1 });
-        assert.strictEqual(delRes.responseCount, 1);
-        assert.strictEqual(fsUnlinkSyncCount, 0); // No media deletion because media_path is null
+
+        assert.strictEqual(result.statusCode, 200);
+        assert.deepStrictEqual(result.body, { message: 'Slayt başarıyla silindi', changes: 1 });
+        assert.strictEqual(result.responseCount, 1);
+        assert.strictEqual(fsUnlinkSyncCount, 0);
+        assert.strictEqual(fsExistsSyncCount, 0);
 
         activeSlidesRow = [
             { id: 48, title: 'Kalacak slayt', media_path: '/uploads/slides/keep.png', display_order: 1 }
         ];
 
-        const getRes2 = createMockRes();
+        const getRes2 = createTrackedResponse();
         activeHandler({ requestId: 'req-3' }, getRes2);
-        
+        const getResult2 = await getRes2.promise;
+
         assert.strictEqual(dbAllCount, 2);
-        assert.strictEqual(getRes2.statusCode, 200);
-        assert.deepStrictEqual(getRes2.body, [{ id: 48, title: 'Kalacak slayt', media_path: '/uploads/slides/keep.png', display_order: 1 }]);
-        assert.strictEqual(getRes2.responseCount, 1);
+        assert.strictEqual(getResult2.statusCode, 200);
+        assert.deepStrictEqual(getResult2.body, [{ id: 48, title: 'Kalacak slayt', media_path: '/uploads/slides/keep.png', display_order: 1 }]);
+        assert.strictEqual(getResult2.responseCount, 1);
     });
 
     await t.test('D. Primary DELETE failure must preserve the populated cache', async () => {
         mockTime += 5 * 60 * 1000 + 1000;
-        
+
         let dbAllCount = 0;
         const activeSlidesRow = [
             { id: 47, title: 'Slide 1', media_path: '/uploads/slides/1.png', display_order: 1 }
@@ -234,8 +280,9 @@ test('Slides Delete Cache Tests', async (t) => {
             actualCb(null, activeSlidesRow);
         };
 
-        const getRes1 = createMockRes();
+        const getRes1 = createTrackedResponse();
         activeHandler({ requestId: 'req-4' }, getRes1);
+        const getResult1 = await getRes1.promise;
         assert.strictEqual(dbAllCount, 1);
 
         db.get = function(sql, params, cb) {
@@ -244,6 +291,7 @@ test('Slides Delete Cache Tests', async (t) => {
 
         let dbRunCount = 0;
         let fsUnlinkSyncCount = 0;
+        let fsExistsSyncCount = 0;
 
         db.run = function(sql, params, cb) {
             dbRunCount++;
@@ -255,31 +303,35 @@ test('Slides Delete Cache Tests', async (t) => {
         };
 
         fs.unlinkSync = () => { fsUnlinkSyncCount++; };
+        fs.existsSync = () => { fsExistsSyncCount++; return true; };
 
         const delReq = {
             params: { id: '47' },
             requestId: 'req-5'
         };
 
-        const delRes = createMockRes();
+        const delRes = createTrackedResponse();
         deleteHandler(delReq, delRes);
+        const result = await delRes.promise;
 
-        assert.strictEqual(delRes.statusCode, 500);
-        assert.deepStrictEqual(delRes.body, { error: 'slide delete failed' });
-        assert.strictEqual(delRes.responseCount, 1);
+        assert.strictEqual(result.statusCode, 500);
+        assert.deepStrictEqual(result.body, { error: 'slide delete failed' });
+        assert.strictEqual(result.responseCount, 1);
         assert.strictEqual(dbRunCount, 1); // Only DELETE ran, no compaction
-        assert.strictEqual(fsUnlinkSyncCount, 0); // No file cleanup on failure
+        assert.strictEqual(fsUnlinkSyncCount, 0);
+        assert.strictEqual(fsExistsSyncCount, 0);
 
-        const getRes2 = createMockRes();
+        const getRes2 = createTrackedResponse();
         activeHandler({ requestId: 'req-6' }, getRes2);
-        
+        const getResult2 = await getRes2.promise;
+
         assert.strictEqual(dbAllCount, 1);
-        assert.deepStrictEqual(getRes2.body, activeSlidesRow);
+        assert.deepStrictEqual(getResult2.body, activeSlidesRow);
     });
 
     await t.test('E. Missing-slide path must preserve the populated cache', async () => {
         mockTime += 5 * 60 * 1000 + 1000;
-        
+
         let dbAllCount = 0;
         const activeSlidesRow = [
             { id: 47, title: 'Slide 1', media_path: '/uploads/slides/1.png', display_order: 1 }
@@ -291,8 +343,9 @@ test('Slides Delete Cache Tests', async (t) => {
             actualCb(null, activeSlidesRow);
         };
 
-        const getRes1 = createMockRes();
+        const getRes1 = createTrackedResponse();
         activeHandler({ requestId: 'req-7' }, getRes1);
+        const getResult1 = await getRes1.promise;
         assert.strictEqual(dbAllCount, 1);
 
         db.get = function(sql, params, cb) {
@@ -305,29 +358,38 @@ test('Slides Delete Cache Tests', async (t) => {
             cb.call(this, null);
         };
 
+        let fsUnlinkSyncCount = 0;
+        let fsExistsSyncCount = 0;
+        fs.unlinkSync = () => { fsUnlinkSyncCount++; };
+        fs.existsSync = () => { fsExistsSyncCount++; return true; };
+
         const delReq = {
             params: { id: '47' },
             requestId: 'req-8'
         };
 
-        const delRes = createMockRes();
+        const delRes = createTrackedResponse();
         deleteHandler(delReq, delRes);
+        const result = await delRes.promise;
 
-        assert.strictEqual(delRes.statusCode, 404);
-        assert.deepStrictEqual(delRes.body, { error: 'Slayt bulunamadı' });
-        assert.strictEqual(delRes.responseCount, 1);
+        assert.strictEqual(result.statusCode, 404);
+        assert.deepStrictEqual(result.body, { error: 'Slayt bulunamadı' });
+        assert.strictEqual(result.responseCount, 1);
         assert.strictEqual(dbRunCount, 0);
+        assert.strictEqual(fsUnlinkSyncCount, 0);
+        assert.strictEqual(fsExistsSyncCount, 0);
 
-        const getRes2 = createMockRes();
+        const getRes2 = createTrackedResponse();
         activeHandler({ requestId: 'req-9' }, getRes2);
-        
+        const getResult2 = await getRes2.promise;
+
         assert.strictEqual(dbAllCount, 1);
-        assert.deepStrictEqual(getRes2.body, activeSlidesRow);
+        assert.deepStrictEqual(getResult2.body, activeSlidesRow);
     });
 
     await t.test('F. Compaction error after successful deletion must still invalidate cache', async () => {
         mockTime += 5 * 60 * 1000 + 1000;
-        
+
         let dbAllCount = 0;
         let activeSlidesRow = [
             { id: 47, title: 'Silinecek slayt', media_path: '/uploads/slides/delete-me.png', display_order: 1 }
@@ -339,11 +401,20 @@ test('Slides Delete Cache Tests', async (t) => {
             actualCb(null, activeSlidesRow);
         };
 
-        const getRes1 = createMockRes();
+        const getRes1 = createTrackedResponse();
         activeHandler({ requestId: 'req-10' }, getRes1);
+        const getResult1 = await getRes1.promise;
         assert.strictEqual(dbAllCount, 1);
 
-        Logger.prototype.error = function() {}; // Silence the error for this test
+        let loggedComponent, loggedMessage, loggedError, loggedContext;
+        Logger.prototype.error = function(component, message, err, context) {
+            loggedComponent = component;
+            loggedMessage = message;
+            loggedError = err;
+            loggedContext = context;
+        };
+
+        let capturedCompactionCb = null;
 
         db.get = function(sql, params, cb) {
             cb(null, { media_path: null, display_order: 1 });
@@ -354,7 +425,7 @@ test('Slides Delete Cache Tests', async (t) => {
                 this.changes = 1;
                 cb.call(this, null);
             } else if (sql.includes('UPDATE')) {
-                cb.call(this, new Error('Compaction error'));
+                capturedCompactionCb = cb;
             } else {
                 cb.call(this, null);
             }
@@ -365,20 +436,36 @@ test('Slides Delete Cache Tests', async (t) => {
             requestId: 'req-11'
         };
 
-        const delRes = createMockRes();
+        const delRes = createTrackedResponse();
         deleteHandler(delReq, delRes);
 
-        assert.strictEqual(delRes.statusCode, 200);
-        assert.deepStrictEqual(delRes.body, { message: 'Slayt başarıyla silindi', changes: 1 });
-        assert.strictEqual(delRes.responseCount, 1);
+        assert.strictEqual(delRes.responseCount, 0, 'No response should be sent before compaction callback completes');
+
+        const compactionErr = new Error('Compaction error');
+        capturedCompactionCb.call(this, compactionErr);
+
+        const result = await delRes.promise;
+
+        assert.strictEqual(result.statusCode, 200);
+        assert.deepStrictEqual(result.body, { message: 'Slayt başarıyla silindi', changes: 1 });
+        assert.strictEqual(result.responseCount, 1);
+
+        assert.strictEqual(loggedComponent, COMPONENTS.DATABASE);
+        assert.strictEqual(loggedMessage, 'Error reordering slides after deletion');
+        assert.strictEqual(loggedError, compactionErr);
+        assert.deepStrictEqual(loggedContext, {
+            deletedSlideId: 47,
+            requestId: 'req-11'
+        });
 
         // Active cache should be invalidated
         activeSlidesRow = [];
-        const getRes2 = createMockRes();
+        const getRes2 = createTrackedResponse();
         activeHandler({ requestId: 'req-12' }, getRes2);
-        
+        const getResult2 = await getRes2.promise;
+
         assert.strictEqual(dbAllCount, 2);
-        assert.deepStrictEqual(getRes2.body, []);
-        assert.strictEqual(getRes2.responseCount, 1);
+        assert.deepStrictEqual(getResult2.body, []);
+        assert.strictEqual(getResult2.responseCount, 1);
     });
 });
