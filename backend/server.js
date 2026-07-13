@@ -939,6 +939,9 @@ app.get('/api/schedule', (req, res) => {
 
 // Update Schedule Item
 app.post('/api/schedule', (req, res) => {
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        return res.status(400).json({ error: 'Ders programı isteği geçersiz.' });
+    }
     const { day, period, course } = req.body;
     // Check if exists
     db.get("SELECT id FROM schedule WHERE day = ? AND period = ?", [day, period], (err, row) => {
