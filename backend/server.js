@@ -482,15 +482,32 @@ app.put('/api/students/:id/photo', upload.single('photo'), (req, res) => {
             }
 
             // Delete old photo file if it exists and is not a default photo
+            const uploadPrefix = '/uploads/';
             if (
                 typeof oldPhoto === 'string' &&
                 oldPhoto !== 'assets/default_boy.png' &&
                 oldPhoto !== 'assets/default_girl.png' &&
-                oldPhoto.startsWith('/uploads/')
+                oldPhoto.startsWith(uploadPrefix)
             ) {
-                const oldFilename = path.posix.basename(String(oldPhoto).replace(/\\/g, '/'));
-                const oldFilePath = path.join(uploadsDir, oldFilename);
-                safeDeleteFile(oldFilePath);
+                const oldFilename = oldPhoto.slice(uploadPrefix.length);
+
+                const isSingleSafeFilename =
+                    oldFilename.length > 0 &&
+                    oldFilename !== '.' &&
+                    oldFilename !== '..' &&
+                    !oldFilename.includes('/') &&
+                    !oldFilename.includes('\\') &&
+                    !oldFilename.includes('\0');
+
+                if (isSingleSafeFilename) {
+                    const uploadsRoot = path.resolve(uploadsDir);
+                    const oldFilePath = path.resolve(uploadsRoot, oldFilename);
+                    const remainsInsideUploads = oldFilePath.startsWith(uploadsRoot + path.sep);
+
+                    if (remainsInsideUploads) {
+                        safeDeleteFile(oldFilePath);
+                    }
+                }
             }
 
             res.json({ message: "Resim başarıyla güncellendi", photo: newPhoto });

@@ -531,12 +531,69 @@ test('Student Update Photo Web Path Tests', async (t) => {
         db.get = (sql, params, cb) => cb(null, { photo: '/uploads/folder/old.jpg' });
         db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
         const req = defaultReq();
-        const pathObj = require('node:path');
         const res = createMockRes((status, data) => {
             assert.equal(status, 200);
-            assert.equal(deletedFiles.length, 1);
-            // Must delete EXACTLY backend/uploads/old.jpg (not inside folder)
-            assert.equal(deletedFiles[0], pathObj.join(__dirname, '../backend/uploads/old.jpg'));
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('23. /uploads/ performs no deletion', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: '/uploads/' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('24. /uploads/../outside.jpg performs no deletion', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: '/uploads/../outside.jpg' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('25. /uploads/..\\outside.jpg performs no deletion', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: '/uploads/..\\outside.jpg' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('26. /uploads/. performs no deletion', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: '/uploads/.' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+        handler(req, res);
+    });
+
+    await t.test('27. /uploads/.. performs no deletion', (t, done) => {
+        db.get = (sql, params, cb) => cb(null, { photo: '/uploads/..' });
+        db.run = function(sql, params, cb) { cb.call({ changes: 1 }, null); };
+        const req = defaultReq();
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.equal(deletedFiles.length, 0);
             done();
         });
         handler(req, res);
