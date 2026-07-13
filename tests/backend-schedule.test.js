@@ -137,12 +137,12 @@ test('Schedule API and Migration Tests', async (t) => {
     });
 
     await t.test('Validation Tests', async (t) => {
-        t.test('10. Valid canonical schedule is accepted', () => {
+        await t.test('10. Valid canonical schedule is accepted', () => {
             const result = validateNormalizedSchedule([{ name: 'Math', type: 'class', start: '09:00', end: '09:40' }]);
             assert.equal(result.valid, true);
         });
 
-        t.test('11. Alias-based schedule is accepted', () => {
+        await t.test('11. Alias-based schedule is accepted', () => {
             const result = validateNormalizedSchedule([{ course: 'Math', period_type: 'lesson', start_time: '09:00', end_time: '09:40' }]);
             assert.equal(result.valid, true);
             assert.equal(result.periods[0].name, 'Math');
@@ -150,7 +150,7 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(result.periods[0].start, '09:00');
         });
 
-        t.test('12. Unsorted schedule is returned in chronological order', () => {
+        await t.test('12. Unsorted schedule is returned in chronological order', () => {
             const result = validateNormalizedSchedule([
                 { name: 'Break', type: 'break', start: '09:40', end: '09:50' },
                 { name: 'Math', type: 'class', start: '09:00', end: '09:40' }
@@ -160,13 +160,13 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(result.periods[1].name, 'Break');
         });
 
-        t.test('13. At least one class is required', () => {
+        await t.test('13. At least one class is required', () => {
             const result = validateNormalizedSchedule([{ name: 'Break', type: 'break', start: '09:40', end: '09:50' }]);
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'NO_CLASS'), true);
         });
 
-        t.test('14. Overlap is rejected', () => {
+        await t.test('14. Overlap is rejected', () => {
             const result = validateNormalizedSchedule([
                 { name: 'Math', type: 'class', start: '09:00', end: '09:40' },
                 { name: 'Break', type: 'break', start: '09:30', end: '09:50' }
@@ -175,7 +175,7 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(result.errors.some(e => e.code === 'OVERLAP' || e.code === 'PARTIAL_SCHEDULE_REJECTED' || e.code === 'SCHEDULE_GAP'), true);
         });
 
-        t.test('15. Gap is rejected', () => {
+        await t.test('15. Gap is rejected', () => {
             const result = validateNormalizedSchedule([
                 { name: 'Math', type: 'class', start: '09:00', end: '09:40' },
                 { name: 'Science', type: 'class', start: '09:50', end: '10:30' }
@@ -184,49 +184,49 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(result.errors.some(e => e.code === 'SCHEDULE_GAP'), true);
         });
 
-        t.test('16. Empty input is rejected', () => {
+        await t.test('16. Empty input is rejected', () => {
             const result = validateNormalizedSchedule([]);
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'EMPTY_SCHEDULE'), true);
         });
 
-        t.test('17. Non-array input is rejected', () => {
+        await t.test('17. Non-array input is rejected', () => {
             const result = validateNormalizedSchedule({});
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'INVALID_INPUT'), true);
         });
 
-        t.test('18. Zero-duration period is rejected, 19. partial schedule rejected', () => {
+        await t.test('18. Zero-duration period is rejected, 19. partial schedule rejected', () => {
             const result = validateNormalizedSchedule([{ name: 'Math', type: 'class', start: '09:00', end: '09:00' }]);
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'PARTIAL_SCHEDULE_REJECTED'), true);
         });
 
-        t.test('20. End-before-start period is rejected', () => {
+        await t.test('20. End-before-start period is rejected', () => {
             const result = validateNormalizedSchedule([{ name: 'Math', type: 'class', start: '09:40', end: '09:00' }]);
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'PARTIAL_SCHEDULE_REJECTED'), true);
         });
 
-        t.test('21. Unknown type is rejected', () => {
+        await t.test('21. Unknown type is rejected', () => {
             const result = validateNormalizedSchedule([{ name: 'Math', type: 'unknown', start: '09:00', end: '09:40' }]);
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'PARTIAL_SCHEDULE_REJECTED'), true);
         });
 
-        t.test('22. Missing name is rejected', () => {
+        await t.test('22. Missing name is rejected', () => {
             const result = validateNormalizedSchedule([{ name: '', type: 'class', start: '09:00', end: '09:40' }]);
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'PARTIAL_SCHEDULE_REJECTED'), true);
         });
 
-        t.test('23. Invalid time is rejected', () => {
+        await t.test('23. Invalid time is rejected', () => {
             const result = validateNormalizedSchedule([{ name: 'Math', type: 'class', start: '09:99', end: '09:40' }]);
             assert.equal(result.valid, false);
             assert.equal(result.errors.some(e => e.code === 'PARTIAL_SCHEDULE_REJECTED'), true);
         });
 
-        t.test('24. Exact duplicate may remain a nonfatal warning', () => {
+        await t.test('24. Exact duplicate may remain a nonfatal warning', () => {
             const result = validateNormalizedSchedule([
                 { name: 'Math', type: 'class', start: '09:00', end: '09:40' },
                 { name: 'Math', type: 'class', start: '09:00', end: '09:40' }
@@ -305,31 +305,31 @@ test('Schedule API and Migration Tests', async (t) => {
     });
 
     await t.test('Day-key Canonicalization Tests', async (t) => {
-        t.test('28. Omitted GET day resolves to weekday', () => {
+        await t.test('28. Omitted GET day resolves to weekday', () => {
             assert.equal(resolveScheduleDayKey(undefined).day, 'weekday');
         });
-        t.test('29. Omitted PUT day resolves to weekday', () => {
+        await t.test('29. Omitted PUT day resolves to weekday', () => {
             assert.equal(resolveScheduleDayKey(undefined).day, 'weekday');
         });
-        t.test('30. A padded day such as " weekday " is queried and stored as weekday', () => {
+        await t.test('30. A padded day such as " weekday " is queried and stored as weekday', () => {
             assert.equal(resolveScheduleDayKey(" weekday ").day, 'weekday');
         });
-        t.test('31. An empty day is rejected', () => {
+        await t.test('31. An empty day is rejected', () => {
             assert.equal(resolveScheduleDayKey("").valid, false);
         });
-        t.test('32. A whitespace-only day is rejected', () => {
+        await t.test('32. A whitespace-only day is rejected', () => {
             assert.equal(resolveScheduleDayKey("   ").valid, false);
         });
-        t.test('33. Control characters are rejected', () => {
+        await t.test('33. Control characters are rejected', () => {
             assert.equal(resolveScheduleDayKey("da\ny").valid, false);
         });
-        t.test('34. Invalid characters are rejected', () => {
+        await t.test('34. Invalid characters are rejected', () => {
             assert.equal(resolveScheduleDayKey("bad key").valid, false);
         });
     });
 
     await t.test('Real Normalizer Validation Tests', async (t) => {
-        t.test('35. A deeply frozen or proxied normalizer result is not mutated', () => {
+        await t.test('35. A deeply frozen or proxied normalizer result is not mutated', () => {
             const stubNormalizer = {
                 normalizeSchedule: () => Object.freeze({
                     valid: true,
@@ -343,7 +343,7 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(res.valid, true);
         });
 
-        t.test('36. A normalizer returning null returns INVALID_NORMALIZER_RESULT', () => {
+        await t.test('36. A normalizer returning null returns INVALID_NORMALIZER_RESULT', () => {
             const stubNormalizer = { normalizeSchedule: () => null };
             const validator = createScheduleValidator(stubNormalizer);
             const res = validator([]);
@@ -351,7 +351,7 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(res.errors[0].code, 'INVALID_NORMALIZER_RESULT');
         });
 
-        t.test('37. A normalizer returning {} returns INVALID_NORMALIZER_RESULT', () => {
+        await t.test('37. A normalizer returning {} returns INVALID_NORMALIZER_RESULT', () => {
             const stubNormalizer = { normalizeSchedule: () => ({}) };
             const validator = createScheduleValidator(stubNormalizer);
             const res = validator([]);
@@ -359,7 +359,7 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(res.errors[0].code, 'INVALID_NORMALIZER_RESULT');
         });
 
-        t.test('38. A normalizer returning missing diagnostic arrays returns INVALID_NORMALIZER_RESULT', () => {
+        await t.test('38. A normalizer returning missing diagnostic arrays returns INVALID_NORMALIZER_RESULT', () => {
             const stubNormalizer = { normalizeSchedule: () => ({ valid: true, periods: [] }) };
             const validator = createScheduleValidator(stubNormalizer);
             const res = validator([]);
@@ -367,7 +367,7 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(res.errors[0].code, 'INVALID_NORMALIZER_RESULT');
         });
 
-        t.test('39. A throwing normalizer returns a stable exception code', () => {
+        await t.test('39. A throwing normalizer returns a stable exception code', () => {
             const stubNormalizer = { normalizeSchedule: () => { throw new Error('Boom'); } };
             const validator = createScheduleValidator(stubNormalizer);
             const res = validator([]);
@@ -375,7 +375,7 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(res.errors[0].code, 'NORMALIZER_ERROR');
         });
 
-        t.test('40. Input rows and nested objects remain unchanged', () => {
+        await t.test('40. Input rows and nested objects remain unchanged', () => {
             let received;
             const stubNormalizer = { 
                 normalizeSchedule: (rows) => { 
@@ -390,7 +390,7 @@ test('Schedule API and Migration Tests', async (t) => {
             assert.equal(input[0].mutated, undefined);
         });
 
-        t.test('41. Normalizer warnings and errors returned by the service are defensive copies', () => {
+        await t.test('41. Normalizer warnings and errors returned by the service are defensive copies', () => {
             const warningObj = { code: 'W1', message: 'Warn' };
             const errorObj = { code: 'E1', message: 'Err' };
             const stubNormalizer = { 
