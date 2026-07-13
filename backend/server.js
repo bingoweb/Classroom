@@ -1661,6 +1661,9 @@ app.delete('/api/slides/:id', (req, res, next) => {
 
             const deleteChanges = this.changes;
 
+            slidesCache = null;
+            cacheTimestamp = null;
+
             // Delete media file
             if (mediaPath) {
                 try {
