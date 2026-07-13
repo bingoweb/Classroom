@@ -624,12 +624,51 @@ app.post('/api/roles', (req, res) => {
             if (!row) {
                 return res.status(400).json({ error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
             }
-            db.run("DELETE FROM roles WHERE role_type = ?", [role_type], (err) => {
+            db.run("BEGIN IMMEDIATE TRANSACTION", (err) => {
                 if (err) {
-                    logger.error(COMPONENTS.API, 'Error clearing president role', err);
+                    logger.error(COMPONENTS.API, 'Error beginning transaction for president role', err);
                     return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
                 }
-                insertRole();
+                db.run("DELETE FROM roles WHERE role_type = ?", [role_type], (err) => {
+                    if (err) {
+                        logger.error(COMPONENTS.API, 'Error clearing president role', err);
+                        return db.run("ROLLBACK", (rollbackErr) => {
+                            if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after delete failure', rollbackErr);
+                            return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
+                        });
+                    }
+                    db.run("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [studentId, role_type], function (err) {
+                        if (err) {
+                            logger.error(COMPONENTS.API, 'Error inserting role', err, {
+                                studentId: studentId,
+                                roleType: role_type,
+                                errorMessage: err.message,
+                                errorCode: err.code
+                            });
+                            return db.run("ROLLBACK", (rollbackErr) => {
+                                if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after insert failure', rollbackErr);
+                                if (err.message && err.message.includes('FOREIGN KEY constraint failed')) {
+                                    return res.status(400).json({ error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
+                                }
+                                return res.status(500).json({ error: 'Rol atanırken hata oluştu: ' + (err.message || 'Bilinmeyen hata') });
+                            });
+                        }
+                        const insertedRoleId = this.lastID;
+                        db.run("COMMIT", (commitErr) => {
+                            if (commitErr) {
+                                logger.error(COMPONENTS.API, 'Error committing president role', commitErr);
+                                return db.run("ROLLBACK", (rollbackErr) => {
+                                    if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after commit failure', rollbackErr);
+                                    return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
+                                });
+                            }
+                            return res.json({
+                                id: insertedRoleId,
+                                message: 'Rol başarıyla atandı'
+                            });
+                        });
+                    });
+                });
             });
         });
     } else if (role_type === 'vice_president') {

@@ -15,6 +15,7 @@ global.setInterval = () => {};
 
 const app = require('../backend/server.js');
 const db = require('../backend/database.js');
+const { Logger, COMPONENTS } = require('../backend/logger.js');
 
 function closeDatabase(database) {
     return new Promise((resolve, reject) => {
@@ -75,8 +76,19 @@ test('Role Create ID Validation Tests', async (t) => {
     await db.scheduleMigrationPromise;
 
     const stack = app._router.stack;
-    const routeLayer = stack.find(layer => layer.route && layer.route.path === '/api/roles' && layer.route.methods.post);
-    if (!routeLayer) throw new Error("POST /api/roles route not found");
+    const matchingRoutes = stack.filter(
+        layer =>
+            layer.route &&
+            layer.route.path === '/api/roles' &&
+            layer.route.methods.post
+    );
+
+    assert.strictEqual(
+        matchingRoutes.length,
+        1,
+        'Exactly one matching POST /api/roles route must exist'
+    );
+    const routeLayer = matchingRoutes[0];
     const middlewares = routeLayer.route.stack;
     const handler = middlewares[middlewares.length - 1].handle;
 
@@ -94,17 +106,73 @@ test('Role Create ID Validation Tests', async (t) => {
         db.get = originalDbGet;
     });
 
-    function createMockRes(onEnd) {
-        return {
-            statusCode: 200,
-            status: function(code) { this.statusCode = code; return this; },
-            json: function(data) {
-                this.body = data;
-                if (onEnd) onEnd(this);
-                return this;
-            }
+    function createPromiseHelper(testHandler) {
+        return function invokeTestHandler(req) {
+            return new Promise((resolve, reject) => {
+                let responded = false;
+                let timeoutId;
+
+                const res = {
+                    statusCode: 200,
+                    status: function(code) {
+                        this.statusCode = code;
+                        return this;
+                    },
+                    json: function(data) {
+                        if (responded) {
+                            clearTimeout(timeoutId);
+                            throw new Error('Multiple responses detected');
+                        }
+                        responded = true;
+                        clearTimeout(timeoutId);
+                        this.body = data;
+                        setImmediate(() => {
+                            resolve({ statusCode: this.statusCode, body: this.body });
+                        });
+                        return this;
+                    }
+                };
+
+                const next = (err) => {
+                    if (responded) return;
+                    responded = true;
+                    clearTimeout(timeoutId);
+                    setImmediate(() => {
+                        reject(err || new Error('next() called without error'));
+                    });
+                };
+
+                timeoutId = setTimeout(() => {
+                    if (!responded) {
+                        responded = true;
+                        reject(new Error('Response timeout exceeded'));
+                    }
+                }, 100);
+
+                try {
+                    testHandler(req, res, next);
+                } catch (err) {
+                    clearTimeout(timeoutId);
+                    reject(err);
+                }
+            });
         };
     }
+
+    const invokeHandler = createPromiseHelper(handler);
+
+    await t.test('Helper: zero responses are detected', async () => {
+        const invokeZero = createPromiseHelper(() => {});
+        await assert.rejects(invokeZero({}), /Response timeout exceeded/);
+    });
+
+    await t.test('Helper: two synchronous responses are detected', async () => {
+        const invokeDouble = createPromiseHelper((req, res) => {
+            res.json({ first: true });
+            res.json({ second: true });
+        });
+        await assert.rejects(invokeDouble({}), /Multiple responses detected/);
+    });
 
     // A. Malformed string IDs
     const malformedStrings = [
@@ -114,20 +182,16 @@ test('Role Create ID Validation Tests', async (t) => {
 
     await t.test('A. Malformed string IDs', async (t) => {
         for (const invalidValue of malformedStrings) {
-            await t.test(`invalid ID "${invalidValue}" returns 400 and performs no db operations`, (t, done) => {
+            await t.test(`invalid ID "${invalidValue}" returns 400 and performs no db operations`, async () => {
                 let dbCalls = 0;
                 db.run = () => { dbCalls++; };
                 db.all = () => { dbCalls++; };
                 db.get = () => { dbCalls++; };
 
-                const req = { body: { student_id: invalidValue, role_type: 'president' } };
-                const res = createMockRes((resObj) => {
-                    assert.strictEqual(resObj.statusCode, 400);
-                    assert.deepEqual(resObj.body, { error: 'Geçerli bir öğrenci seçilmelidir' });
-                    assert.strictEqual(dbCalls, 0);
-                    done();
-                });
-                handler(req, res);
+                const resObj = await invokeHandler({ body: { student_id: invalidValue, role_type: 'president' } });
+                assert.strictEqual(resObj.statusCode, 400);
+                assert.deepEqual(resObj.body, { error: 'Geçerli bir öğrenci seçilmelidir' });
+                assert.strictEqual(dbCalls, 0);
             });
         }
     });
@@ -139,20 +203,16 @@ test('Role Create ID Validation Tests', async (t) => {
 
     await t.test('B. Invalid numeric IDs', async (t) => {
         for (const invalidValue of invalidNumbers) {
-            await t.test(`invalid ID ${invalidValue} returns 400 and performs no db operations`, (t, done) => {
+            await t.test(`invalid ID ${invalidValue} returns 400 and performs no db operations`, async () => {
                 let dbCalls = 0;
                 db.run = () => { dbCalls++; };
                 db.all = () => { dbCalls++; };
                 db.get = () => { dbCalls++; };
 
-                const req = { body: { student_id: invalidValue, role_type: 'president' } };
-                const res = createMockRes((resObj) => {
-                    assert.strictEqual(resObj.statusCode, 400);
-                    assert.deepEqual(resObj.body, { error: 'Geçerli bir öğrenci seçilmelidir' });
-                    assert.strictEqual(dbCalls, 0);
-                    done();
-                });
-                handler(req, res);
+                const resObj = await invokeHandler({ body: { student_id: invalidValue, role_type: 'president' } });
+                assert.strictEqual(resObj.statusCode, 400);
+                assert.deepEqual(resObj.body, { error: 'Geçerli bir öğrenci seçilmelidir' });
+                assert.strictEqual(dbCalls, 0);
             });
         }
     });
@@ -166,20 +226,16 @@ test('Role Create ID Validation Tests', async (t) => {
         for (let i = 0; i < invalidTypes.length; i++) {
             const invalidValue = invalidTypes[i];
             const typeName = Object.prototype.toString.call(invalidValue);
-            await t.test(`invalid type ${typeName} at index ${i} returns 400 and performs no db operations`, (t, done) => {
+            await t.test(`invalid type ${typeName} at index ${i} returns 400 and performs no db operations`, async () => {
                 let dbCalls = 0;
                 db.run = () => { dbCalls++; };
                 db.all = () => { dbCalls++; };
                 db.get = () => { dbCalls++; };
 
-                const req = { body: { student_id: invalidValue, role_type: 'president' } };
-                const res = createMockRes((resObj) => {
-                    assert.strictEqual(resObj.statusCode, 400);
-                    assert.deepEqual(resObj.body, { error: 'Geçerli bir öğrenci seçilmelidir' });
-                    assert.strictEqual(dbCalls, 0);
-                    done();
-                });
-                handler(req, res);
+                const resObj = await invokeHandler({ body: { student_id: invalidValue, role_type: 'president' } });
+                assert.strictEqual(resObj.statusCode, 400);
+                assert.deepEqual(resObj.body, { error: 'Geçerli bir öğrenci seçilmelidir' });
+                assert.strictEqual(dbCalls, 0);
             });
         }
     });
@@ -193,7 +249,7 @@ test('Role Create ID Validation Tests', async (t) => {
 
     await t.test('D. Canonical string IDs', async (t) => {
         for (const item of canonicalStrings) {
-            await t.test(`canonical ID "${item.val}" is passed as numeric ${item.num}`, (t, done) => {
+            await t.test(`canonical ID "${item.val}" is passed as numeric ${item.num}`, async () => {
                 let runCallParams = null;
                 db.run = function(sql, params, cb) {
                     runCallParams = params;
@@ -201,16 +257,12 @@ test('Role Create ID Validation Tests', async (t) => {
                     cb.call(this, null);
                 };
 
-                const req = { body: { student_id: item.val, role_type: 'star' } };
-                const res = createMockRes((resObj) => {
-                    assert.strictEqual(resObj.statusCode, 200);
-                    assert.deepEqual(resObj.body, { id: 100, message: 'Rol başarıyla atandı' });
-                    assert.strictEqual(typeof runCallParams[0], 'number');
-                    assert.strictEqual(runCallParams[0], item.num);
-                    assert.strictEqual(runCallParams[1], 'star');
-                    done();
-                });
-                handler(req, res);
+                const resObj = await invokeHandler({ body: { student_id: item.val, role_type: 'star' } });
+                assert.strictEqual(resObj.statusCode, 200);
+                assert.deepEqual(resObj.body, { id: 100, message: 'Rol başarıyla atandı' });
+                assert.strictEqual(typeof runCallParams[0], 'number');
+                assert.strictEqual(runCallParams[0], item.num);
+                assert.strictEqual(runCallParams[1], 'star');
             });
         }
     });
@@ -224,7 +276,7 @@ test('Role Create ID Validation Tests', async (t) => {
 
     await t.test('E. Positive numeric IDs', async (t) => {
         for (const item of validNumbers) {
-            await t.test(`positive numeric ID ${item.val} is passed exactly as numeric ${item.num}`, (t, done) => {
+            await t.test(`positive numeric ID ${item.val} is passed exactly as numeric ${item.num}`, async () => {
                 let runCallParams = null;
                 db.run = function(sql, params, cb) {
                     runCallParams = params;
@@ -232,88 +284,97 @@ test('Role Create ID Validation Tests', async (t) => {
                     cb.call(this, null);
                 };
 
-                const req = { body: { student_id: item.val, role_type: 'star' } };
-                const res = createMockRes((resObj) => {
-                    assert.strictEqual(resObj.statusCode, 200);
-                    assert.deepEqual(resObj.body, { id: 200, message: 'Rol başarıyla atandı' });
-                    assert.strictEqual(typeof runCallParams[0], 'number');
-                    assert.strictEqual(runCallParams[0], item.num);
-                    assert.strictEqual(runCallParams[1], 'star');
-                    done();
-                });
-                handler(req, res);
+                const resObj = await invokeHandler({ body: { student_id: item.val, role_type: 'star' } });
+                assert.strictEqual(resObj.statusCode, 200);
+                assert.deepEqual(resObj.body, { id: 200, message: 'Rol başarıyla atandı' });
+                assert.strictEqual(typeof runCallParams[0], 'number');
+                assert.strictEqual(runCallParams[0], item.num);
+                assert.strictEqual(runCallParams[1], 'star');
             });
         }
     });
 
     // F. President database ordering with valid ID
-    await t.test('F. President database ordering with valid ID', (t, done) => {
+    await t.test('F. President database ordering with valid ID', async () => {
         const operations = [];
+        let commitCallbackCompleted = false;
+
         db.get = function(sql, params, cb) {
             operations.push({ sql, params });
             cb(null, { id: 47 });
         };
         db.run = function(sql, params, cb) {
+            if (typeof params === 'function') {
+                cb = params;
+                params = [];
+            }
             operations.push({ sql, params });
             this.lastID = 300;
-            cb.call(this, null);
+            if (sql === 'COMMIT') {
+                setTimeout(() => {
+                    commitCallbackCompleted = true;
+                    cb.call(this, null);
+                }, 5);
+            } else {
+                cb.call(this, null);
+            }
         };
 
-        const req = { body: { student_id: '47', role_type: 'president' } };
-        const res = createMockRes((resObj) => {
-            assert.strictEqual(resObj.statusCode, 200);
-            assert.deepEqual(resObj.body, { id: 300, message: 'Rol başarıyla atandı' });
-            assert.strictEqual(operations.length, 3);
-            assert.strictEqual(operations[0].sql, 'SELECT id FROM students WHERE id = ?');
-            assert.deepEqual(operations[0].params, [47]);
-            assert.strictEqual(typeof operations[0].params[0], 'number');
-            assert.ok(operations[1].sql.includes('DELETE FROM roles'));
-            assert.deepEqual(operations[1].params, ['president']);
-            assert.ok(operations[2].sql.includes('INSERT INTO roles'));
-            assert.deepEqual(operations[2].params, [47, 'president']);
-            assert.strictEqual(typeof operations[2].params[0], 'number');
-            done();
-        });
-        handler(req, res);
+        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'president' } });
+
+        assert.strictEqual(commitCallbackCompleted, true, 'Response must wait for asynchronous commit callback');
+        assert.strictEqual(resObj.statusCode, 200);
+        assert.deepEqual(resObj.body, { id: 300, message: 'Rol başarıyla atandı' });
+
+        assert.strictEqual(operations.length, 5);
+        assert.strictEqual(operations[0].sql, 'SELECT id FROM students WHERE id = ?');
+        assert.deepEqual(operations[0].params, [47]);
+        assert.strictEqual(typeof operations[0].params[0], 'number');
+
+        assert.strictEqual(operations[1].sql, 'BEGIN IMMEDIATE TRANSACTION');
+
+        assert.strictEqual(operations[2].sql, 'DELETE FROM roles WHERE role_type = ?');
+        assert.deepEqual(operations[2].params, ['president']);
+
+        assert.strictEqual(operations[3].sql, 'INSERT INTO roles (student_id, role_type) VALUES (?, ?)');
+        assert.deepEqual(operations[3].params, [47, 'president']);
+        assert.strictEqual(typeof operations[3].params[0], 'number');
+
+        assert.strictEqual(operations[4].sql, 'COMMIT');
+
+        const rollbacks = operations.filter(o => o.sql === 'ROLLBACK');
+        assert.strictEqual(rollbacks.length, 0);
     });
 
     // G. Vice-president duplicate comparison
-    await t.test('G. Vice-president duplicate comparison', (t, done) => {
+    await t.test('G. Vice-president duplicate comparison', async () => {
         db.all = function(sql, params, cb) {
             cb(null, [{ student_id: 47 }]);
         };
         let runCalls = 0;
         db.run = function() { runCalls++; };
 
-        const req = { body: { student_id: '47', role_type: 'vice_president' } };
-        const res = createMockRes((resObj) => {
-            assert.strictEqual(resObj.statusCode, 400);
-            assert.deepEqual(resObj.body, { error: 'Bu öğrenci zaten başkan yardımcısı' });
-            assert.strictEqual(runCalls, 0);
-            done();
-        });
-        handler(req, res);
+        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'vice_president' } });
+        assert.strictEqual(resObj.statusCode, 400);
+        assert.deepEqual(resObj.body, { error: 'Bu öğrenci zaten başkan yardımcısı' });
+        assert.strictEqual(runCalls, 0);
     });
 
     // H. Invalid role type preservation
-    await t.test('H. Invalid role type preservation', (t, done) => {
+    await t.test('H. Invalid role type preservation', async () => {
         let dbCalls = 0;
         db.run = () => { dbCalls++; };
         db.all = () => { dbCalls++; };
         db.get = () => { dbCalls++; };
 
-        const req = { body: { student_id: '47', role_type: 'invalid_role' } };
-        const res = createMockRes((resObj) => {
-            assert.strictEqual(resObj.statusCode, 400);
-            assert.deepEqual(resObj.body, { error: 'Geçersiz rol tipi' });
-            assert.strictEqual(dbCalls, 0);
-            done();
-        });
-        handler(req, res);
+        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'invalid_role' } });
+        assert.strictEqual(resObj.statusCode, 400);
+        assert.deepEqual(resObj.body, { error: 'Geçersiz rol tipi' });
+        assert.strictEqual(dbCalls, 0);
     });
 
     // I. Missing student preserves president
-    await t.test('I. Missing student preserves president', (t, done) => {
+    await t.test('I. Missing student preserves president', async () => {
         let getSql, getParams;
         db.get = function(sql, params, cb) {
             getSql = sql;
@@ -323,83 +384,288 @@ test('Role Create ID Validation Tests', async (t) => {
         let dbCalls = 0;
         db.run = () => { dbCalls++; };
 
-        const req = { body: { student_id: '999999', role_type: 'president' } };
-        const res = createMockRes((resObj) => {
-            assert.strictEqual(resObj.statusCode, 400);
-            assert.deepEqual(resObj.body, { error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
-            assert.strictEqual(getSql, 'SELECT id FROM students WHERE id = ?');
-            assert.deepEqual(getParams, [999999]);
-            assert.strictEqual(typeof getParams[0], 'number');
-            assert.strictEqual(dbCalls, 0);
-            done();
-        });
-        handler(req, res);
+        const resObj = await invokeHandler({ body: { student_id: '999999', role_type: 'president' } });
+        assert.strictEqual(resObj.statusCode, 400);
+        assert.deepEqual(resObj.body, { error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
+        assert.strictEqual(getSql, 'SELECT id FROM students WHERE id = ?');
+        assert.deepEqual(getParams, [999999]);
+        assert.strictEqual(typeof getParams[0], 'number');
+        assert.strictEqual(dbCalls, 0);
     });
 
     // J. Student lookup failure preserves president
-    await t.test('J. Student lookup failure preserves president', (t, done) => {
+    await t.test('J. Student lookup failure preserves president', async () => {
         db.get = function(sql, params, cb) {
             cb(new Error('DB Get failed'));
         };
         let dbCalls = 0;
         db.run = () => { dbCalls++; };
 
-        const req = { body: { student_id: '47', role_type: 'president' } };
-        const res = createMockRes((resObj) => {
-            assert.strictEqual(resObj.statusCode, 500);
-            assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu' });
-            assert.strictEqual(dbCalls, 0);
-            done();
-        });
-        handler(req, res);
+        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'president' } });
+        assert.strictEqual(resObj.statusCode, 500);
+        assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu' });
+        assert.strictEqual(dbCalls, 0);
     });
 
-    // K. Real database regression test
-    await t.test('K. Real database regression test', async (t) => {
-        const runDb = (sql, params) => new Promise((resolve, reject) => {
-            originalDbRun.call(db, sql, params, function(err) {
-                if (err) reject(err);
-                else resolve(this);
-            });
-        });
-        const allDb = (sql, params = []) => new Promise((resolve, reject) => {
-            originalDbAll.call(db, sql, params, (err, rows) => {
-                if (err) {
-                    reject(err);
-                    return;
+    // Mocked failure regressions
+
+    // A. Begin failure
+    await t.test('Mocked Begin failure', async () => {
+        let runCalls = [];
+        db.get = function(sql, params, cb) {
+            cb(null, { id: 47 });
+        };
+        db.run = function(sql, params, cb) {
+            if (typeof params === 'function') {
+                cb = params;
+                params = [];
+            }
+            runCalls.push(sql);
+            if (sql === 'BEGIN IMMEDIATE TRANSACTION') {
+                cb(new Error('begin failed'));
+            } else {
+                cb(null);
+            }
+        };
+
+        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'president' } });
+        assert.strictEqual(resObj.statusCode, 500);
+        assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu' });
+
+        assert.strictEqual(runCalls.length, 1);
+        assert.strictEqual(runCalls[0], 'BEGIN IMMEDIATE TRANSACTION');
+    });
+
+    // B. Delete failure
+    await t.test('Mocked Delete failure', async () => {
+        let runCalls = [];
+        let rollbackCallbackCompleted = false;
+
+        db.get = function(sql, params, cb) {
+            cb(null, { id: 47 });
+        };
+        db.run = function(sql, params, cb) {
+            if (typeof params === 'function') {
+                cb = params;
+                params = [];
+            }
+            runCalls.push(sql);
+            if (sql.startsWith('DELETE')) {
+                cb(new Error('delete failed'));
+            } else if (sql === 'ROLLBACK') {
+                setTimeout(() => {
+                    rollbackCallbackCompleted = true;
+                    cb(null);
+                }, 5);
+            } else {
+                cb(null);
+            }
+        };
+
+        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'president' } });
+        assert.strictEqual(rollbackCallbackCompleted, true, 'Response must wait for asynchronous rollback callback');
+        assert.strictEqual(resObj.statusCode, 500);
+        assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu' });
+
+        assert.strictEqual(runCalls.length, 3);
+        assert.strictEqual(runCalls[0], 'BEGIN IMMEDIATE TRANSACTION');
+        assert.ok(runCalls[1].startsWith('DELETE FROM roles'));
+        assert.strictEqual(runCalls[2], 'ROLLBACK');
+    });
+
+    // C. Insert failure
+    await t.test('Mocked Insert failure', async () => {
+        let runCalls = [];
+        let rollbackCallbackCompleted = false;
+
+        const originalLogError = Logger.prototype.error;
+        const errorLogCalls = [];
+
+        try {
+            Logger.prototype.error = function (...args) {
+                errorLogCalls.push(args);
+            };
+
+            const insertionError = new Error('insert failed');
+            insertionError.code = 'SQLITE_CONSTRAINT';
+
+            db.get = function(sql, params, cb) {
+                cb(null, { id: 47 });
+            };
+            db.run = function(sql, params, cb) {
+                if (typeof params === 'function') {
+                    cb = params;
+                    params = [];
                 }
-                resolve(rows);
+                runCalls.push(sql);
+                if (sql.startsWith('INSERT')) {
+                    cb(insertionError);
+                } else if (sql === 'ROLLBACK') {
+                    setTimeout(() => {
+                        rollbackCallbackCompleted = true;
+                        cb(null);
+                    }, 5);
+                } else {
+                    cb(null);
+                }
+            };
+
+            const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'president' } });
+
+            assert.strictEqual(rollbackCallbackCompleted, true, 'Response must wait for asynchronous rollback callback');
+            assert.strictEqual(resObj.statusCode, 500);
+            assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu: insert failed' });
+
+            assert.strictEqual(runCalls.length, 4);
+            assert.strictEqual(runCalls[0], 'BEGIN IMMEDIATE TRANSACTION');
+            assert.ok(runCalls[1].startsWith('DELETE FROM roles'));
+            assert.ok(runCalls[2].startsWith('INSERT INTO roles'));
+            assert.strictEqual(runCalls[3], 'ROLLBACK');
+
+            const insertErrorLogs = errorLogCalls.filter(call => call[1] === 'Error inserting role');
+            assert.strictEqual(insertErrorLogs.length, 1, 'Logger.error must be called exactly once for the insertion failure');
+
+            const errorLogArgs = insertErrorLogs[0];
+            assert.strictEqual(errorLogArgs[0], COMPONENTS.API);
+            assert.strictEqual(errorLogArgs[2], insertionError);
+            assert.deepEqual(errorLogArgs[3], {
+                studentId: 47,
+                roleType: 'president',
+                errorMessage: insertionError.message,
+                errorCode: insertionError.code
             });
+
+        } finally {
+            Logger.prototype.error = originalLogError;
+        }
+    });
+
+    // D. Commit failure
+    await t.test('Mocked Commit failure', async () => {
+        let runCalls = [];
+        let commitCallbackCompleted = false;
+        let rollbackCallbackCompleted = false;
+
+        db.get = function(sql, params, cb) {
+            cb(null, { id: 47 });
+        };
+        db.run = function(sql, params, cb) {
+            if (typeof params === 'function') {
+                cb = params;
+                params = [];
+            }
+            runCalls.push(sql);
+            if (sql === 'COMMIT') {
+                setTimeout(() => {
+                    commitCallbackCompleted = true;
+                    cb(new Error('commit failed'));
+                }, 5);
+            } else if (sql === 'ROLLBACK') {
+                setTimeout(() => {
+                    rollbackCallbackCompleted = true;
+                    cb(null);
+                }, 5);
+            } else {
+                cb(null);
+            }
+        };
+
+        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'president' } });
+
+        assert.strictEqual(commitCallbackCompleted, true, 'Response must wait for asynchronous commit callback');
+        assert.strictEqual(rollbackCallbackCompleted, true, 'Response must wait for asynchronous rollback callback');
+        assert.strictEqual(resObj.statusCode, 500);
+        assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu' });
+
+        assert.strictEqual(runCalls.length, 5);
+        assert.strictEqual(runCalls[0], 'BEGIN IMMEDIATE TRANSACTION');
+        assert.ok(runCalls[1].startsWith('DELETE FROM roles'));
+        assert.ok(runCalls[2].startsWith('INSERT INTO roles'));
+        assert.strictEqual(runCalls[3], 'COMMIT');
+        assert.strictEqual(runCalls[4], 'ROLLBACK');
+    });
+
+    const runDb = (sql, params) => new Promise((resolve, reject) => {
+        originalDbRun.call(db, sql, params, function(err) {
+            if (err) reject(err);
+            else resolve(this);
         });
+    });
+    const allDb = (sql, params = []) => new Promise((resolve, reject) => {
+        originalDbAll.call(db, sql, params, (err, rows) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(rows);
+        });
+    });
 
-        const studentRes = await runDb("INSERT INTO students (name) VALUES (?)", ['Existing President']);
-        const realStudentId = studentRes.lastID;
+    // K. Mandatory real SQLite rollback regression
+    await t.test('K. Mandatory real SQLite rollback regression', async () => {
+        const student1Res = await runDb("INSERT INTO students (name) VALUES (?)", ['Old President Student']);
+        const oldStudentId = student1Res.lastID;
 
-        await runDb("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [realStudentId, 'president']);
+        const student2Res = await runDb("INSERT INTO students (name) VALUES (?)", ['Target Student']);
+        const targetStudentId = student2Res.lastID;
+
+        await runDb("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [oldStudentId, 'president']);
 
         const presidentsBefore = await allDb("SELECT id, student_id, role_type FROM roles WHERE role_type = ? ORDER BY id", ['president']);
         assert.strictEqual(presidentsBefore.length, 1);
 
         const originalPresident = presidentsBefore[0];
-        assert.strictEqual(originalPresident.student_id, realStudentId);
+        assert.strictEqual(originalPresident.student_id, oldStudentId);
         assert.strictEqual(originalPresident.role_type, 'president');
 
-        const fakeStudentId = realStudentId + 1000;
+        // Create temporary trigger to force insert failure for the target student
+        await runDb(`
+            CREATE TEMP TRIGGER fail_target_president_insert
+            BEFORE INSERT ON roles
+            WHEN NEW.role_type = 'president'
+             AND NEW.student_id = ${targetStudentId}
+            BEGIN
+                SELECT RAISE(ABORT, 'forced president insert failure');
+            END;
+        `);
 
-        await new Promise((resolve) => {
-            const req = { body: { student_id: fakeStudentId.toString(), role_type: 'president' } };
-            const res = createMockRes((resObj) => {
-                assert.strictEqual(resObj.statusCode, 400);
-                assert.deepEqual(resObj.body, { error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
-                resolve();
-            });
-            handler(req, res);
-        });
+        try {
+            const resObj = await invokeHandler({ body: { student_id: targetStudentId.toString(), role_type: 'president' } });
+
+            assert.strictEqual(resObj.statusCode, 500);
+            assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu: SQLITE_CONSTRAINT: forced president insert failure' });
+
+            const presidentsAfter = await allDb("SELECT id, student_id, role_type FROM roles WHERE role_type = ? ORDER BY id", ['president']);
+            assert.strictEqual(presidentsAfter.length, 1, 'after rollback there is exactly one president');
+            assert.strictEqual(presidentsAfter[0].id, originalPresident.id, 'original role ID is preserved');
+            assert.strictEqual(presidentsAfter[0].student_id, originalPresident.student_id, 'original student ID is preserved');
+            assert.strictEqual(presidentsAfter[0].role_type, 'president', 'complete old row is preserved');
+        } finally {
+            await runDb(`DROP TRIGGER fail_target_president_insert`);
+        }
+    });
+
+    // L. Mandatory real SQLite successful replacement regression
+    await t.test('L. Mandatory real SQLite successful replacement regression', async () => {
+        const student1Res = await runDb("INSERT INTO students (name) VALUES (?)", ['Old President Student L']);
+        const oldStudentId = student1Res.lastID;
+
+        const student2Res = await runDb("INSERT INTO students (name) VALUES (?)", ['Target Student L']);
+        const targetStudentId = student2Res.lastID;
+
+        await runDb("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [oldStudentId, 'president']);
+
+        const resObj = await invokeHandler({ body: { student_id: targetStudentId.toString(), role_type: 'president' } });
+
+        assert.strictEqual(resObj.statusCode, 200);
+        assert.strictEqual(resObj.body.message, 'Rol başarıyla atandı');
+        const newRoleId = resObj.body.id;
+        assert.ok(newRoleId > 0);
 
         const presidentsAfter = await allDb("SELECT id, student_id, role_type FROM roles WHERE role_type = ? ORDER BY id", ['president']);
         assert.strictEqual(presidentsAfter.length, 1);
-        assert.strictEqual(presidentsAfter[0].id, originalPresident.id);
-        assert.strictEqual(presidentsAfter[0].student_id, originalPresident.student_id);
-        assert.strictEqual(presidentsAfter[0].role_type, 'president');
+        assert.strictEqual(presidentsAfter[0].student_id, targetStudentId);
+        assert.strictEqual(presidentsAfter[0].id, newRoleId);
     });
+
 });
