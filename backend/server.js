@@ -587,6 +587,9 @@ app.get('/api/roles', (req, res) => {
 
 // Assign Role
 app.post('/api/roles', (req, res) => {
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        return res.status(400).json({ error: 'Geçerli bir öğrenci seçilmelidir' });
+    }
     const { student_id, role_type } = req.body;
 
     let studentId;

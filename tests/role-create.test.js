@@ -174,6 +174,41 @@ test('Role Create ID Validation Tests', async (t) => {
         await assert.rejects(invokeDouble({}), /Multiple responses detected/);
     });
 
+    // 0. Structural body validation
+    const structuralBodies = [
+        undefined, null, [], 'role', 42, true, false
+    ];
+
+    await t.test('0. Structural body validation', async (t) => {
+        for (let i = 0; i < structuralBodies.length; i++) {
+            const body = structuralBodies[i];
+            const typeName = Object.prototype.toString.call(body);
+            await t.test(`structurally invalid body ${typeName} at index ${i} returns 400 and performs no db operations`, async () => {
+                let dbCalls = 0;
+                db.run = () => { dbCalls++; };
+                db.all = () => { dbCalls++; };
+                db.get = () => { dbCalls++; };
+
+                const resObj = await invokeHandler({ body });
+                assert.strictEqual(resObj.statusCode, 400);
+                assert.deepEqual(resObj.body, { error: 'Geçerli bir öğrenci seçilmelidir' });
+                assert.strictEqual(dbCalls, 0);
+            });
+        }
+    });
+
+    await t.test('0. Missing field validation', async () => {
+        let dbCalls = 0;
+        db.run = () => { dbCalls++; };
+        db.all = () => { dbCalls++; };
+        db.get = () => { dbCalls++; };
+
+        const resObj = await invokeHandler({ body: {} });
+        assert.strictEqual(resObj.statusCode, 400);
+        assert.deepEqual(resObj.body, { error: 'Geçerli bir öğrenci seçilmelidir' });
+        assert.strictEqual(dbCalls, 0);
+    });
+
     // A. Malformed string IDs
     const malformedStrings = [
         "abc", "1abc", "abc1", "1.5", "1e2", "+1", "-1", "0", "00", "01",
