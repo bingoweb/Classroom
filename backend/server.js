@@ -589,14 +589,26 @@ app.get('/api/roles', (req, res) => {
 app.post('/api/roles', (req, res) => {
     const { student_id, role_type } = req.body;
 
-    // Input validation
-    if (!student_id || isNaN(parseInt(student_id))) {
+    let studentId;
+
+    if (typeof student_id === 'string') {
+        if (!/^[1-9]\d*$/.test(student_id)) {
+            return res.status(400).json({ error: 'Geçerli bir öğrenci seçilmelidir' });
+        }
+        studentId = Number(student_id);
+    } else if (typeof student_id === 'number') {
+        studentId = student_id;
+    } else {
         return res.status(400).json({ error: 'Geçerli bir öğrenci seçilmelidir' });
     }
+
+    if (!Number.isSafeInteger(studentId) || studentId <= 0) {
+        return res.status(400).json({ error: 'Geçerli bir öğrenci seçilmelidir' });
+    }
+
     if (!role_type || !['president', 'vice_president', 'duty', 'star'].includes(role_type)) {
         return res.status(400).json({ error: 'Geçersiz rol tipi' });
     }
-
     // Role limits:
     // president: only 1 allowed (replace existing)
     // vice_president: max 2 allowed
@@ -622,7 +634,7 @@ app.post('/api/roles', (req, res) => {
                 return res.status(400).json({ error: 'En fazla 2 başkan yardımcısı olabilir' });
             }
             // Check if student already has this role
-            if (rows.some(r => r.student_id === parseInt(student_id))) {
+            if (rows.some(r => r.student_id === studentId)) {
                 return res.status(400).json({ error: 'Bu öğrenci zaten başkan yardımcısı' });
             }
             insertRole();
@@ -644,16 +656,16 @@ app.post('/api/roles', (req, res) => {
     }
 
     function insertRole() {
-        db.run("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [student_id, role_type], function (err) {
+        db.run("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [studentId, role_type], function (err) {
             if (err) {
                 console.error('DATABASE ERROR inserting role:', err.message, {
-                    studentId: student_id,
+                    studentId: studentId,
                     roleType: role_type,
                     errorCode: err.code,
                     errorErrno: err.errno
                 });
                 logger.error(COMPONENTS.API, 'Error inserting role', err, {
-                    studentId: student_id,
+                    studentId: studentId,
                     roleType: role_type,
                     errorMessage: err.message,
                     errorCode: err.code
@@ -666,7 +678,7 @@ app.post('/api/roles', (req, res) => {
 
                 return res.status(500).json({ error: 'Rol atanırken hata oluştu: ' + (err.message || 'Bilinmeyen hata') });
             }
-            console.log('Role inserted successfully:', { id: this.lastID, student_id, role_type });
+            console.log('Role inserted successfully:', { id: this.lastID, student_id: studentId, role_type });
             res.json({ id: this.lastID, message: 'Rol başarıyla atandı' });
         });
     }
