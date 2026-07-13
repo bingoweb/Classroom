@@ -1780,9 +1780,28 @@ app.get('/api/logs', (req, res) => {
 
 // Delete old logs (cleanup)
 app.delete('/api/logs/cleanup', (req, res) => {
-    const { days = 30 } = req.query;
+    let numericDays = 30;
+
+    if (req.query.days !== undefined) {
+        const rawDays = req.query.days;
+
+        if (typeof rawDays !== 'string' || !/^[1-9]\d*$/.test(rawDays)) {
+            return res.status(400).json({ error: 'Geçersiz gün sayısı' });
+        }
+
+        numericDays = Number(rawDays);
+
+        if (!Number.isSafeInteger(numericDays)) {
+            return res.status(400).json({ error: 'Geçersiz gün sayısı' });
+        }
+    }
+
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - parseInt(days));
+    cutoffDate.setDate(cutoffDate.getDate() - numericDays);
+
+    if (Number.isNaN(cutoffDate.getTime())) {
+        return res.status(400).json({ error: 'Geçersiz gün sayısı' });
+    }
 
     db.run(
         "DELETE FROM error_logs WHERE timestamp < ?",
