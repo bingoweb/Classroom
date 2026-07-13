@@ -168,6 +168,20 @@ app.post('/api/students', upload.single('photo'), (req, res) => {
         return res.status(400).json({ error: validation.error });
     }
 
+    if (req.file) {
+        const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedMimeTypes.includes(req.file.mimetype)) {
+            safeDeleteFile(req.file.path);
+            return res.status(400).json({ error: 'Sadece resim dosyaları yüklenebilir (JPG, PNG, GIF, WEBP)' });
+        }
+
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (req.file.size > maxSize) {
+            safeDeleteFile(req.file.path);
+            return res.status(400).json({ error: 'Resim dosyası çok büyük. Maksimum 5MB olmalıdır.' });
+        }
+    }
+
     const photo = req.file ? `/uploads/${path.posix.basename(String(req.file.filename).replace(/\\/g, '/'))}` : null;
     db.run("INSERT INTO students (name, photo, gender) VALUES (?, ?, ?)", [name.trim(), photo, gender], function (err) {
         if (err) {

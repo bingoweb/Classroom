@@ -60,7 +60,7 @@ test('Student Create Photo Web Path Tests', async (t) => {
 
         const req = {
             body: { name: 'Test Student', gender: 'M' },
-            file: { filename: '1720000000000-example.jpg', path: 'backend/uploads/1720000000000-example.jpg' }
+            file: { filename: '1720000000000-example.jpg', path: 'backend/uploads/1720000000000-example.jpg', mimetype: 'image/jpeg', size: 1000 }
         };
 
         const res = createMockRes((status, data) => {
@@ -82,7 +82,7 @@ test('Student Create Photo Web Path Tests', async (t) => {
 
         const req = {
             body: { name: 'Test Student', gender: 'M' },
-            file: { filename: 'somefile.jpg', path: '/absolute/path/to/backend/uploads/somefile.jpg' }
+            file: { filename: 'somefile.jpg', path: '/absolute/path/to/backend/uploads/somefile.jpg', mimetype: 'image/jpeg', size: 1000 }
         };
 
         const res = createMockRes((status, data) => {
@@ -103,7 +103,7 @@ test('Student Create Photo Web Path Tests', async (t) => {
 
         const req = {
             body: { name: 'Test Student', gender: 'M' },
-            file: { filename: 'file.jpg', path: '/var/www/uploads/file.jpg' }
+            file: { filename: 'file.jpg', path: '/var/www/uploads/file.jpg', mimetype: 'image/jpeg', size: 1000 }
         };
 
         const res = createMockRes((status, data) => {
@@ -124,7 +124,7 @@ test('Student Create Photo Web Path Tests', async (t) => {
 
         const req = {
             body: { name: 'Test Student', gender: 'M' },
-            file: { filename: '..\\config.json', path: 'C:\\backend\\uploads\\..\\config.json' }
+            file: { filename: '..\\config.json', path: 'C:\\backend\\uploads\\..\\config.json', mimetype: 'image/jpeg', size: 1000 }
         };
 
         const res = createMockRes((status, data) => {
@@ -145,7 +145,7 @@ test('Student Create Photo Web Path Tests', async (t) => {
 
         const req = {
             body: { name: 'Test Student', gender: 'M' },
-            file: { filename: '../config.json', path: 'backend/uploads/../config.json' }
+            file: { filename: '../config.json', path: 'backend/uploads/../config.json', mimetype: 'image/jpeg', size: 1000 }
         };
 
         const res = createMockRes((status, data) => {
@@ -186,7 +186,7 @@ test('Student Create Photo Web Path Tests', async (t) => {
 
         const req = {
             body: { name: 'Test Student', gender: 'M' },
-            file: { filename: 'xyz.jpg', path: 'backend/uploads/xyz.jpg' }
+            file: { filename: 'xyz.jpg', path: 'backend/uploads/xyz.jpg', mimetype: 'image/jpeg', size: 1000 }
         };
 
         const res = createMockRes((status, data) => {
@@ -207,7 +207,7 @@ test('Student Create Photo Web Path Tests', async (t) => {
 
         const req = {
             body: { name: '', gender: 'M' },
-            file: { filename: 'fail.jpg', path: '/absolute/path/to/backend/uploads/fail.jpg' }
+            file: { filename: 'fail.jpg', path: '/absolute/path/to/backend/uploads/fail.jpg', mimetype: 'image/jpeg', size: 1000 }
         };
 
         const res = createMockRes((status, data) => {
@@ -228,7 +228,7 @@ test('Student Create Photo Web Path Tests', async (t) => {
 
         const req = {
             body: { name: 'Test Student', gender: 'M' },
-            file: { filename: 'fail2.jpg', path: '/absolute/path/to/backend/uploads/fail2.jpg' }
+            file: { filename: 'fail2.jpg', path: '/absolute/path/to/backend/uploads/fail2.jpg', mimetype: 'image/jpeg', size: 1000 }
         };
 
         const res = createMockRes((status, data) => {
@@ -250,12 +250,139 @@ test('Student Create Photo Web Path Tests', async (t) => {
 
         const req = {
             body: { name: 'Test Student', gender: 'M' },
-            file: { filename: 'folder\\subfolder\\photo.jpg', path: 'backend/uploads/folder\\subfolder\\photo.jpg' }
+            file: { filename: 'folder\\subfolder\\photo.jpg', path: 'backend/uploads/folder\\subfolder\\photo.jpg', mimetype: 'image/jpeg', size: 1000 }
         };
 
         const res = createMockRes((status, data) => {
             assert.ok(!dbStoredPhoto.includes('\\'));
             assert.equal(dbStoredPhoto, '/uploads/photo.jpg');
+            done();
+        });
+
+        handler(req, res);
+    });
+
+    const validMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/jpg'];
+    validMimes.forEach((mime, idx) => {
+        t.test(`11.${idx + 1} valid ${mime} is accepted and stores /uploads/<filename> and does not delete uploaded file`, (t, done) => {
+            let dbStoredPhoto;
+            db.run = function(sql, params, cb) {
+                dbStoredPhoto = params[1];
+                cb.call({ lastID: 1 }, null);
+            };
+
+            const req = {
+                body: { name: 'Test', gender: 'M' },
+                file: { filename: 'file.ext', path: '/abs/path/file.ext', mimetype: mime, size: 1000 }
+            };
+
+            const res = createMockRes((status, data) => {
+                assert.equal(status, 200);
+                assert.equal(dbStoredPhoto, '/uploads/file.ext');
+                assert.equal(data.photo, '/uploads/file.ext');
+                assert.equal(deletedFiles.length, 0, 'successful persistence does not delete the uploaded file');
+                done();
+            });
+
+            handler(req, res);
+        });
+    });
+
+    const invalidMimes = [
+        { desc: '12. a PDF MIME type returns 400', mime: 'application/pdf' },
+        { desc: '13. a text MIME type returns 400', mime: 'text/plain' }
+    ];
+
+    invalidMimes.forEach((c) => {
+        t.test(c.desc + ' and performs no database insert and deletes exactly req.file.path', (t, done) => {
+            let dbCalled = false;
+            db.run = function(sql, params, cb) {
+                dbCalled = true;
+                cb.call({ lastID: 1 }, null);
+            };
+
+            const req = {
+                body: { name: 'Test', gender: 'M' },
+                file: { filename: 'bad.ext', path: '/abs/path/bad.ext', mimetype: c.mime, size: 1000 }
+            };
+
+            const res = createMockRes((status, data) => {
+                assert.equal(status, 400);
+                assert.equal(data.error, 'Sadece resim dosyaları yüklenebilir (JPG, PNG, GIF, WEBP)');
+                assert.equal(dbCalled, false);
+                assert.equal(deletedFiles.length, 1);
+                assert.equal(deletedFiles[0], '/abs/path/bad.ext');
+                done();
+            });
+
+            handler(req, res);
+        });
+    });
+
+    await t.test('14. a file exactly 5 MB is accepted', (t, done) => {
+        let dbCalled = false;
+        db.run = function(sql, params, cb) {
+            dbCalled = true;
+            cb.call({ lastID: 1 }, null);
+        };
+
+        const req = {
+            body: { name: 'Test', gender: 'M' },
+            file: { filename: 'file.jpg', path: '/abs/path/file.jpg', mimetype: 'image/jpeg', size: 5 * 1024 * 1024 }
+        };
+
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 200);
+            assert.equal(dbCalled, true);
+            assert.equal(deletedFiles.length, 0);
+            done();
+        });
+
+        handler(req, res);
+    });
+
+    await t.test('15. a file one byte larger than 5 MB returns 400, no db insert, deletes req.file.path', (t, done) => {
+        let dbCalled = false;
+        db.run = function(sql, params, cb) {
+            dbCalled = true;
+            cb.call({ lastID: 1 }, null);
+        };
+
+        const req = {
+            body: { name: 'Test', gender: 'M' },
+            file: { filename: 'file.jpg', path: '/abs/path/file.jpg', mimetype: 'image/jpeg', size: 5 * 1024 * 1024 + 1 }
+        };
+
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 400);
+            assert.equal(data.error, 'Resim dosyası çok büyük. Maksimum 5MB olmalıdır.');
+            assert.equal(dbCalled, false);
+            assert.equal(deletedFiles.length, 1);
+            assert.equal(deletedFiles[0], '/abs/path/file.jpg');
+            done();
+        });
+
+        handler(req, res);
+    });
+
+    await t.test('16. invalid student input still takes precedence over invalid MIME and deletes the upload', (t, done) => {
+        let dbCalled = false;
+        db.run = function(sql, params, cb) {
+            dbCalled = true;
+            cb.call({ lastID: 1 }, null);
+        };
+
+        const req = {
+            body: { name: '', gender: 'M' }, // Invalid input
+            file: { filename: 'file.pdf', path: '/abs/path/file.pdf', mimetype: 'application/pdf', size: 10 * 1024 * 1024 } // Invalid mime AND size
+        };
+
+        const res = createMockRes((status, data) => {
+            assert.equal(status, 400);
+            assert.equal(data.error, 'Öğrenci adı gereklidir'); // Original student input validation error
+            assert.equal(dbCalled, false);
+            assert.equal(deletedFiles.length, 1);
+            assert.equal(deletedFiles[0], '/abs/path/file.pdf');
             done();
         });
 
