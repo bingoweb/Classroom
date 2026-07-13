@@ -674,9 +674,18 @@ app.post('/api/roles', (req, res) => {
 
 // Remove Role by ID
 app.delete('/api/roles/:id', (req, res) => {
-    const roleId = parseInt(req.params.id);
+    const rawRoleId = req.params.id;
 
-    if (isNaN(roleId)) {
+    if (
+        typeof rawRoleId !== 'string' ||
+        !/^[1-9]\d*$/.test(rawRoleId)
+    ) {
+        return res.status(400).json({ error: 'Geçersiz rol ID' });
+    }
+
+    const roleId = Number(rawRoleId);
+
+    if (!Number.isSafeInteger(roleId)) {
         return res.status(400).json({ error: 'Geçersiz rol ID' });
     }
 
