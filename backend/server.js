@@ -1620,6 +1620,10 @@ app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
                     changes: this.changes,
                     requestId: req.requestId
                 });
+
+                slidesCache = null;
+                cacheTimestamp = null;
+
                 res.json({ message: 'Slayt başarıyla güncellendi', changes: this.changes });
             }
         );
