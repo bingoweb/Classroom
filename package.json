@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Classroom Panel with Admin Interface",
   "main": "backend/server.js",
+  "engines": {
+    "node": ">=22 <25"
+  },
   "scripts": {
     "start": "node backend/server.js",
     "test:schedule": "node --test tests/schedule-manager.test.js",
