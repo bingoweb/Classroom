@@ -25,8 +25,8 @@ Modern, interaktif ve internet bağlantısı ile çalışan bir sınıf yönetim
 
 1. **Projeyi klonlayın:**
 ```bash
-git clone https://github.com/KULLANICI_ADI/sinif-paneli.git
-cd sinif-paneli
+git clone https://github.com/bingoweb/Classroom.git
+cd Classroom
 ```
 
 2. **Bağımlılıkları yükleyin:**
