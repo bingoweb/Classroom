@@ -101,10 +101,14 @@ test('JSON middleware is registered exactly once and handles requests', async ()
         assert.deepStrictEqual(JSON.parse(resData.body), { message: 'Ayarlar güncellendi' });
         assert.strictEqual(dbRunCallCount, 1);
         
-        // Check normalization
-        const expectedKey = 'middleware_test_key';
-        assert.strictEqual(capturedParams[0], expectedKey);
-        assert.strictEqual(capturedParams[1], 'middleware-test-value');
+        assert.strictEqual(
+            capturedSql,
+            'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)'
+        );
+        assert.deepStrictEqual(
+            capturedParams,
+            ['middleware_test_key', 'middleware-test-value']
+        );
 
     } finally {
         let firstError = null;
