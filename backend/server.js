@@ -1997,11 +1997,21 @@ app.get('/api/logs', (req, res) => {
             return res.status(500).json({ error: err.message });
         }
 
+        const safeParseJSON = (val) => {
+            if (val === null || val === undefined || val === '') return null;
+            if (typeof val !== 'string') return val;
+            try {
+                return JSON.parse(val);
+            } catch (e) {
+                return val;
+            }
+        };
+
         // Parse JSON fields
         const parsedRows = rows.map(row => ({
             ...row,
-            error_details: row.error_details ? JSON.parse(row.error_details) : null,
-            context: row.context ? JSON.parse(row.context) : null
+            error_details: safeParseJSON(row.error_details),
+            context: safeParseJSON(row.context)
         }));
 
         res.json(parsedRows);
