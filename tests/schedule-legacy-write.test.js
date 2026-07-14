@@ -298,7 +298,7 @@ test('Legacy Schedule Write Tests', async (t) => {
         res.json = function(data) {
             originalJson.call(this, data);
             assert.strictEqual(this.statusCode, 200);
-            assert.deepEqual(this.body, { message: 'Updated' });
+            assert.deepEqual(this.body, { message: 'Ders programı güncellendi' });
             assert.strictEqual(this.responseCount, 1);
             assert.strictEqual(getCalls, 1);
             assert.strictEqual(runCalls, 1);

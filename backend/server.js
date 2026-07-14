@@ -1038,7 +1038,7 @@ app.post('/api/schedule', (req, res) => {
             // Update
             db.run("UPDATE schedule SET course = ? WHERE id = ?", [trimmedCourse, row.id], function (err) {
                 if (err) return res.status(500).json({ error: err.message });
-                res.json({ message: "Updated" });
+                res.json({ message: "Ders programı güncellendi" });
             });
         } else {
             // Insert
