@@ -768,8 +768,7 @@ test('Role Create ID Validation Tests', async (t) => {
         assert.deepEqual(runCalls[0].params, [47, 'star', 47, 'star']);
     });
 
-
-    const boundedRoles = [
+        const boundedRoles = [
         { role: 'vice_president', max: 2, msgLimit: 'En fazla 2 başkan yardımcısı olabilir', msgDup: 'Bu öğrenci zaten başkan yardımcısı' },
         { role: 'duty', max: 4, msgLimit: 'En fazla 4 nöbetçi atanabilir', msgDup: 'Bu öğrenci zaten nöbetçi' }
     ];

@@ -485,9 +485,9 @@ app.delete('/api/students/:id', (req, res) => {
             if (this.changes === 0) {
                 return res.status(404).json({ error: 'Öğrenci bulunamadı' });
             }
-
+            
             cleanupManagedPhoto(oldPhoto, uploadsDir);
-
+            
             res.json({ message: "Öğrenci silindi", changes: this.changes });
         });
     });
@@ -582,8 +582,8 @@ app.put('/api/students/:id/photo', upload.single('photo'), (req, res) => {
 
 // Get Roles
 app.get('/api/roles', (req, res) => {
-    const sql = `SELECT roles.id as role_id, roles.role_type, students.*
-                 FROM roles
+    const sql = `SELECT roles.id as role_id, roles.role_type, students.* 
+                 FROM roles 
                  JOIN students ON roles.student_id = students.id`;
     db.all(sql, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -908,21 +908,21 @@ app.get('/api/schedule/normalized', async (req, res) => {
         const day = resolved.day;
 
         const rows = await getNormalizedScheduleRows(db, day);
-
+        
         if (rows.length === 0) {
             return res.json({ day, source: 'empty', valid: false, periods: [], warnings: [], errors: [] });
         }
 
         const validation = validateNormalizedSchedule(rows);
-
+        
         if (!validation.valid || validation.errors.length > 0) {
-            return res.json({
-                day,
-                source: 'legacy-incomplete',
-                valid: false,
-                periods: [],
-                warnings: validation.warnings,
-                errors: validation.errors
+            return res.json({ 
+                day, 
+                source: 'legacy-incomplete', 
+                valid: false, 
+                periods: [], 
+                warnings: validation.warnings, 
+                errors: validation.errors 
             });
         }
 
@@ -991,7 +991,7 @@ app.put('/api/schedule/normalized', async (req, res) => {
         }
 
         const insertedRows = await replaceNormalizedSchedule(db, day, validation.periods);
-
+        
         return res.json({
             day,
             valid: true,
@@ -1123,10 +1123,10 @@ app.get('/api/stats', (req, res) => {
 // Get Today's Attendance
 app.get('/api/attendance/today', (req, res) => {
     const today = getIstanbulDateKey();
-    const sql = `SELECT attendance.*, students.name, students.gender
-                 FROM attendance
-                 JOIN students ON attendance.student_id = students.id
-                 WHERE attendance.date = ?
+    const sql = `SELECT attendance.*, students.name, students.gender 
+                 FROM attendance 
+                 JOIN students ON attendance.student_id = students.id 
+                 WHERE attendance.date = ? 
                  ORDER BY students.name`;
     db.all(sql, [today], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -1137,10 +1137,10 @@ app.get('/api/attendance/today', (req, res) => {
 // Get Attendance by Date
 app.get('/api/attendance/:date', (req, res) => {
     const date = req.params.date;
-    const sql = `SELECT attendance.*, students.name, students.gender
-                 FROM attendance
-                 JOIN students ON attendance.student_id = students.id
-                 WHERE attendance.date = ?
+    const sql = `SELECT attendance.*, students.name, students.gender 
+                 FROM attendance 
+                 JOIN students ON attendance.student_id = students.id 
+                 WHERE attendance.date = ? 
                  ORDER BY students.name`;
     db.all(sql, [date], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -1407,8 +1407,8 @@ app.get('/api/slides/active', async (req, res) => {
 
         // Fetch all active slides
         db.all(`
-            SELECT * FROM slides
-            WHERE is_active = 1
+            SELECT * FROM slides 
+            WHERE is_active = 1 
             AND (expires_at IS NULL OR expires_at > datetime('now'))
             ORDER BY display_order ASC
         `, [], async (err, rows) => {
@@ -1626,7 +1626,7 @@ app.post('/api/slides', uploadSlide.single('slide'), (req, res, next) => {
                     slideId: this.lastID,
                     requestId: req.requestId
                 });
-
+                
                 // Invalidate cache
                 slidesCache = null;
                 cacheTimestamp = null;

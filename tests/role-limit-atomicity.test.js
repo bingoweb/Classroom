@@ -17,7 +17,7 @@ const app = require('../backend/server.js');
 const db = require('../backend/database.js');
 
 function invokeHandler(reqOverrides) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         const stack = app._router.stack;
         const matchingRoutes = stack.filter(
             layer =>
@@ -35,6 +35,16 @@ function invokeHandler(reqOverrides) {
             ...reqOverrides
         };
 
+        let isSettled = false;
+        let resolveTimer = null;
+
+        const timeoutTimer = setTimeout(() => {
+            if (!isSettled) {
+                isSettled = true;
+                reject(new Error('Handler did not respond'));
+            }
+        }, 500);
+
         const res = {
             statusCode: 200,
             responseCount: 0,
@@ -45,16 +55,46 @@ function invokeHandler(reqOverrides) {
             },
             json: function (data) {
                 this.responseCount++;
+                if (isSettled) {
+                    return this;
+                }
                 if (this.responseCount > 1) {
-                    assert.fail('json() called more than once');
+                    isSettled = true;
+                    clearTimeout(timeoutTimer);
+                    if (resolveTimer) clearImmediate(resolveTimer);
+                    reject(new Error('Multiple responses detected'));
+                    return this;
                 }
                 this.body = data;
-                resolve(this);
+
+                resolveTimer = setImmediate(() => {
+                    if (!isSettled) {
+                        isSettled = true;
+                        clearTimeout(timeoutTimer);
+                        resolve(this);
+                    }
+                });
                 return this;
             }
         };
 
-        handler(req, res);
+        try {
+            handler(req, res, (err) => {
+                if (!isSettled) {
+                    isSettled = true;
+                    clearTimeout(timeoutTimer);
+                    if (resolveTimer) clearImmediate(resolveTimer);
+                    reject(err || new Error('next() called'));
+                }
+            });
+        } catch (err) {
+            if (!isSettled) {
+                isSettled = true;
+                clearTimeout(timeoutTimer);
+                if (resolveTimer) clearImmediate(resolveTimer);
+                reject(err);
+            }
+        }
     });
 }
 
@@ -93,6 +133,29 @@ test('Role Limit Atomicity Tests', async (t) => {
 
     await db.scheduleMigrationPromise;
 
+    await t.test('Helper self-regression: no response is rejected', async () => {
+        const originalStack = app._router.stack;
+        app._router.stack = [{ route: { path: '/api/roles', methods: { post: true }, stack: [{ handle: (req, res) => {} }] } }];
+        await assert.rejects(invokeHandler({}), /Handler did not respond/);
+        app._router.stack = originalStack;
+    });
+
+    await t.test('Helper self-regression: two synchronous responses is rejected', async () => {
+        const originalStack = app._router.stack;
+        app._router.stack = [{ route: { path: '/api/roles', methods: { post: true }, stack: [{ handle: (req, res) => { res.json({a:1}); res.json({b:2}); } }] } }];
+        await assert.rejects(invokeHandler({}), /Multiple responses detected/);
+        app._router.stack = originalStack;
+    });
+
+    await t.test('Helper self-regression: one response resolves with responseCount === 1', async () => {
+        const originalStack = app._router.stack;
+        app._router.stack = [{ route: { path: '/api/roles', methods: { post: true }, stack: [{ handle: (req, res) => { res.json({a:1}); } }] } }];
+        const res = await invokeHandler({});
+        assert.strictEqual(res.responseCount, 1);
+        assert.deepEqual(res.body, {a:1});
+        app._router.stack = originalStack;
+    });
+
     await t.test('Required vice-president race', async () => {
         await runDb("DELETE FROM roles", []);
         await runDb("DELETE FROM students", []);
@@ -101,15 +164,20 @@ test('Role Limit Atomicity Tests', async (t) => {
         const st2 = await runDb("INSERT INTO students (name) VALUES (?)", ['B']);
         const st3 = await runDb("INSERT INTO students (name) VALUES (?)", ['C']);
 
-        // Seed exactly one existing vice_president
         await runDb("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [st1.lastID, 'vice_president']);
 
-        // Invoke two concurrent requests
-        const req1 = invokeHandler({ body: { student_id: st2.lastID.toString(), role_type: 'vice_president' } });
-        const req2 = invokeHandler({ body: { student_id: st3.lastID.toString(), role_type: 'vice_president' } });
+        const candidate1 = st2.lastID;
+        const candidate2 = st3.lastID;
+
+        const req1 = invokeHandler({ body: { student_id: candidate1.toString(), role_type: 'vice_president' } });
+        const req2 = invokeHandler({ body: { student_id: candidate2.toString(), role_type: 'vice_president' } });
         
         const results = await Promise.all([req1, req2]);
         
+        for (const res of results) {
+            assert.strictEqual(res.responseCount, 1);
+        }
+
         const successes = results.filter(r => r.statusCode === 200);
         const failures = results.filter(r => r.statusCode === 400);
 
@@ -118,8 +186,20 @@ test('Role Limit Atomicity Tests', async (t) => {
         
         assert.deepEqual(failures[0].body, { error: 'En fazla 2 başkan yardımcısı olabilir' });
 
+        const successfulCandidate = results[0].statusCode === 200 ? candidate1 : candidate2;
+        const failedCandidate = results[0].statusCode === 200 ? candidate2 : candidate1;
+
         const countRow = await getDb("SELECT COUNT(*) as count FROM roles WHERE role_type = 'vice_president'");
         assert.strictEqual(countRow.count, 2);
+
+        const successfulCandidateRows = await getDb("SELECT COUNT(*) as count FROM roles WHERE role_type = 'vice_president' AND student_id = ?", [successfulCandidate]);
+        assert.strictEqual(successfulCandidateRows.count, 1);
+
+        const failedCandidateRows = await getDb("SELECT COUNT(*) as count FROM roles WHERE role_type = 'vice_president' AND student_id = ?", [failedCandidate]);
+        assert.strictEqual(failedCandidateRows.count, 0);
+
+        const seededRow = await getDb("SELECT COUNT(*) as count FROM roles WHERE role_type = 'vice_president' AND student_id = ?", [st1.lastID]);
+        assert.strictEqual(seededRow.count, 1);
     });
 
     await t.test('Required duty race', async () => {
@@ -137,12 +217,18 @@ test('Role Limit Atomicity Tests', async (t) => {
             await runDb("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [students[i], 'duty']);
         }
 
-        // Invoke two concurrent requests for two different eligible students
-        const req1 = invokeHandler({ body: { student_id: students[3].toString(), role_type: 'duty' } });
-        const req2 = invokeHandler({ body: { student_id: students[4].toString(), role_type: 'duty' } });
+        const candidate1 = students[3];
+        const candidate2 = students[4];
+
+        const req1 = invokeHandler({ body: { student_id: candidate1.toString(), role_type: 'duty' } });
+        const req2 = invokeHandler({ body: { student_id: candidate2.toString(), role_type: 'duty' } });
         
         const results = await Promise.all([req1, req2]);
         
+        for (const res of results) {
+            assert.strictEqual(res.responseCount, 1);
+        }
+
         const successes = results.filter(r => r.statusCode === 200);
         const failures = results.filter(r => r.statusCode === 400);
 
@@ -151,8 +237,22 @@ test('Role Limit Atomicity Tests', async (t) => {
         
         assert.deepEqual(failures[0].body, { error: 'En fazla 4 nöbetçi atanabilir' });
 
+        const successfulCandidate = results[0].statusCode === 200 ? candidate1 : candidate2;
+        const failedCandidate = results[0].statusCode === 200 ? candidate2 : candidate1;
+
         const countRow = await getDb("SELECT COUNT(*) as count FROM roles WHERE role_type = 'duty'");
         assert.strictEqual(countRow.count, 4);
+
+        const successfulCandidateRows = await getDb("SELECT COUNT(*) as count FROM roles WHERE role_type = 'duty' AND student_id = ?", [successfulCandidate]);
+        assert.strictEqual(successfulCandidateRows.count, 1);
+
+        const failedCandidateRows = await getDb("SELECT COUNT(*) as count FROM roles WHERE role_type = 'duty' AND student_id = ?", [failedCandidate]);
+        assert.strictEqual(failedCandidateRows.count, 0);
+
+        for (let i = 0; i < 3; i++) {
+            const seededRow = await getDb("SELECT COUNT(*) as count FROM roles WHERE role_type = 'duty' AND student_id = ?", [students[i]]);
+            assert.strictEqual(seededRow.count, 1);
+        }
     });
 
     await t.test('Required duplicate race', async () => {
@@ -166,6 +266,10 @@ test('Role Limit Atomicity Tests', async (t) => {
         
         const results = await Promise.all([req1, req2]);
         
+        for (const res of results) {
+            assert.strictEqual(res.responseCount, 1);
+        }
+
         const successes = results.filter(r => r.statusCode === 200);
         const failures = results.filter(r => r.statusCode === 400);
 
@@ -174,7 +278,13 @@ test('Role Limit Atomicity Tests', async (t) => {
         
         assert.deepEqual(failures[0].body, { error: 'Bu öğrenci zaten nöbetçi' });
 
+        assert.ok(Number.isSafeInteger(successes[0].body.id) && successes[0].body.id > 0);
+        const successRoleId = successes[0].body.id;
+
         const countRow = await getDb("SELECT COUNT(*) as count FROM roles WHERE role_type = 'duty' AND student_id = ?", [st.lastID]);
         assert.strictEqual(countRow.count, 1);
+
+        const actualRow = await getDb("SELECT id FROM roles WHERE role_type = 'duty' AND student_id = ?", [st.lastID]);
+        assert.strictEqual(actualRow.id, successRoleId);
     });
 });
