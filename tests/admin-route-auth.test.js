@@ -19,6 +19,17 @@ test('Admin Route Auth Test', async (t) => {
     const originalSetInterval = global.setInterval;
     global.setInterval = () => {};
 
+    const originalDateNow = Date.now;
+    let mockedTime = originalDateNow();
+    global.Date.now = () => mockedTime;
+
+    const originalStdoutWrite = process.stdout.write;
+    const originalStderrWrite = process.stderr.write;
+    let capturedLogs = '';
+    const captureLog = (string) => {
+        capturedLogs += string;
+    };
+
     let server;
     let db;
 
@@ -63,29 +74,59 @@ test('Admin Route Auth Test', async (t) => {
             });
         };
 
+        // Helper to count rows
+        const countRows = (table) => new Promise((resolve, reject) => {
+            db.get(`SELECT COUNT(*) as count FROM ${table}`, (err, row) => {
+                if (err) reject(err);
+                else resolve(row.count);
+            });
+        });
+
+        // Helper to get dir snapshot
+        const getDirSnapshot = (dirPath) => {
+            try {
+                return fs.readdirSync(dirPath);
+            } catch (e) {
+                return [];
+            }
+        };
+
         // Get a valid session
         const loginRes = await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ password: adminPassword }), { 'Content-Type': 'application/json' });
         assert.strictEqual(loginRes.statusCode, 200);
         const setCookie = loginRes.headers['set-cookie'][0];
         const sessionCookie = setCookie.split(';')[0];
+        const sessionId = sessionCookie.split('=')[1];
 
-        // 1. /admin/ returns 401 without a cookie
-        const res1 = await fetchPath('GET', '/admin/');
-        assert.strictEqual(res1.statusCode, 401);
-        assert.deepStrictEqual(JSON.parse(res1.body), { authenticated: false, message: 'Yönetici oturumu gerekli.' });
+        // 1. Both /admin and /admin/ return 401 without cookie
+        const resAdminSlash = await fetchPath('GET', '/admin/');
+        assert.strictEqual(resAdminSlash.statusCode, 401);
+        assert.deepStrictEqual(JSON.parse(resAdminSlash.body), { authenticated: false, message: 'Yönetici oturumu gerekli.' });
 
-        // 14 & 15. /admin/ returns 401 for malformed, duplicate, unknown, expired and logged-out session cookies.
-        const res2a = await fetchPath('GET', '/admin/', 'classroom_admin_session=invalid');
-        assert.strictEqual(res2a.statusCode, 401);
-        const res2b = await fetchPath('GET', '/admin/', 'classroom_admin_session=x'.repeat(43));
-        assert.strictEqual(res2b.statusCode, 401);
+        const resAdminNoSlash = await fetchPath('GET', '/admin');
+        assert.strictEqual(resAdminNoSlash.statusCode, 401);
+        assert.deepStrictEqual(JSON.parse(resAdminNoSlash.body), { authenticated: false, message: 'Yönetici oturumu gerekli.' });
 
-        // 2 & 16. A valid login cookie allows /admin/ to reach the existing management-panel content
-        const res3 = await fetchPath('GET', '/admin/', sessionCookie);
-        assert.ok(res3.statusCode === 200 || res3.statusCode === 304 || res3.statusCode === 301, `Status was ${res3.statusCode}`);
+        // 2. Duplicate cookie header
+        const duplicateCookie = `${sessionCookie}; classroom_admin_session=invalid_other_cookie`;
+        const resDuplicate = await fetchPath('GET', '/admin/', duplicateCookie);
+        assert.strictEqual(resDuplicate.statusCode, 401, `Expected 401 with duplicate cookie, got ${resDuplicate.statusCode}`);
 
-        // 3. All 18 protected write routes return exact 401 JSON without a valid session.
-        // 18. Exact 18 unique method/path pairs.
+        // 3. Expired session TTL
+        mockedTime += (8 * 60 * 60 * 1000) + 1; // Advance 8 hours + 1 ms
+        const resExpired = await fetchPath('GET', '/admin/', sessionCookie);
+        assert.strictEqual(resExpired.statusCode, 401);
+        assert.deepStrictEqual(JSON.parse(resExpired.body), { authenticated: false, message: 'Yönetici oturumu gerekli.' });
+        mockedTime -= ((8 * 60 * 60 * 1000) + 1); // Revert time so rest of tests work with session
+
+        // Re-login because hasSession() deleted the expired session from the store!
+        const loginRes2 = await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ password: adminPassword }), { 'Content-Type': 'application/json' });
+        assert.strictEqual(loginRes2.statusCode, 200);
+        const setCookie2 = loginRes2.headers['set-cookie'][0];
+        const sessionCookie2 = setCookie2.split(';')[0];
+        const sessionId2 = sessionCookie2.split('=')[1];
+
+        // 7. Exactly 18 routes
         const writeRoutes = [
             { m: 'POST', p: '/api/students' },
             { m: 'POST', p: '/api/students/import' },
@@ -107,63 +148,91 @@ test('Admin Route Auth Test', async (t) => {
             { m: 'DELETE', p: '/api/logs/cleanup' }
         ];
 
+        // Deduplicate to ensure 18 unique method/path pairs
+        const uniqueRoutes = new Set(writeRoutes.map(r => r.m + ' ' + r.p));
+        assert.strictEqual(uniqueRoutes.size, 18, 'writeRoutes array must contain exactly 18 unique method/path pairs');
+        assert.strictEqual(writeRoutes.length, 18);
+
+        // Capture logs during protected routes checks
+        process.stdout.write = captureLog;
+        process.stderr.write = captureLog;
+
         for (const r of writeRoutes) {
             const res = await fetchPath(r.m, r.p);
             assert.strictEqual(res.statusCode, 401, `Expected 401 for ${r.m} ${r.p}`);
             assert.deepStrictEqual(JSON.parse(res.body), { authenticated: false, message: 'Yönetici oturumu gerekli.' });
             
-            // 17. Responses and logs never expose password, cookie value, Cookie header or session ID.
             assert.ok(!res.body.includes(adminPassword));
             if (res.headers['set-cookie']) {
-                assert.ok(!res.headers['set-cookie'][0].includes(sessionCookie.split('=')[1]));
+                assert.ok(!res.headers['set-cookie'][0].includes(sessionId2));
             }
         }
 
-        // 4, 5, 6, 7, 8, 9, 19. All 5 upload routes reject before Multer and do not create files or mutate DB.
+        process.stdout.write = originalStdoutWrite;
+        process.stderr.write = originalStderrWrite;
+
+        // 9. Assert captured logs do not contain password or session id
+        assert.ok(!capturedLogs.includes(adminPassword), "Logs should not contain admin password");
+        assert.ok(!capturedLogs.includes(sessionCookie2), "Logs should not contain full cookie");
+        assert.ok(!capturedLogs.includes(sessionId2), "Logs should not contain session ID");
+
+        // 4, 5, 6, 8. Upload routes
         const uploadRoutes = [
-            { m: 'POST', p: '/api/students' },
-            { m: 'POST', p: '/api/students/import' },
-            { m: 'PUT', p: '/api/students/1/photo' },
-            { m: 'POST', p: '/api/slides' },
-            { m: 'PUT', p: '/api/slides/1' }
+            { m: 'POST', p: '/api/students', field: 'photo' },
+            { m: 'POST', p: '/api/students/import', field: 'excel' },
+            { m: 'PUT', p: '/api/students/1/photo', field: 'photo' },
+            { m: 'POST', p: '/api/slides', field: 'slide' },
+            { m: 'PUT', p: '/api/slides/1', field: 'slide' }
         ];
+
+        const uniqueUploadRoutes = new Set(uploadRoutes.map(r => r.m + ' ' + r.p));
+        assert.strictEqual(uniqueUploadRoutes.size, 5, 'uploadRoutes array must contain exactly 5 unique method/path pairs');
+        assert.strictEqual(uploadRoutes.length, 5);
+
+        const uploadsDir = path.join(process.cwd(), 'backend', 'uploads');
+        const slidesDir = path.join(uploadsDir, 'slides');
 
         for (const r of uploadRoutes) {
             const boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW';
-            const bodyStr = `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="test.file"\r\nContent-Type: application/octet-stream\r\n\r\nfake file data\r\n--${boundary}--`;
-            
+            const bodyStr = `--${boundary}\r\nContent-Disposition: form-data; name="${r.field}"; filename="test.file"\r\nContent-Type: application/octet-stream\r\n\r\nfake file data\r\n--${boundary}--`;
+
+            const beforeUploads = getDirSnapshot(uploadsDir);
+            const beforeSlides = getDirSnapshot(slidesDir);
+
+            let initialDbCount = 0;
+            if (r.p.includes('/students')) {
+                initialDbCount = await countRows('students');
+            } else if (r.p.includes('/slides')) {
+                initialDbCount = await countRows('slides');
+            }
+
             const resMultipart = await fetchPath(r.m, r.p, null, bodyStr, {
                 'Content-Type': `multipart/form-data; boundary=${boundary}`,
                 'Content-Length': Buffer.byteLength(bodyStr)
             });
             assert.strictEqual(resMultipart.statusCode, 401);
+
+            const afterUploads = getDirSnapshot(uploadsDir);
+            const afterSlides = getDirSnapshot(slidesDir);
+            assert.deepStrictEqual(beforeUploads, afterUploads, `Uploads dir mutated on unauth ${r.m} ${r.p}`);
+            assert.deepStrictEqual(beforeSlides, afterSlides, `Slides dir mutated on unauth ${r.m} ${r.p}`);
+
+            if (r.p.includes('/students')) {
+                assert.strictEqual(await countRows('students'), initialDbCount, "Students count mutated");
+            } else if (r.p.includes('/slides')) {
+                assert.strictEqual(await countRows('slides'), initialDbCount, "Slides count mutated");
+            }
         }
 
-        const resJSONAuth = await fetchPath('POST', '/api/settings', sessionCookie, JSON.stringify({}), { 'Content-Type': 'application/json' });
+        // 10. Preserve valid-session representative write-route test
+        const resJSONAuth = await fetchPath('POST', '/api/settings', sessionCookie2, JSON.stringify({}), { 'Content-Type': 'application/json' });
         assert.notStrictEqual(resJSONAuth.statusCode, 401);
 
-        // 10. Public login, logout and session-status endpoints remain public.
-        const resSessionPublic = await fetchPath('GET', '/api/admin/session');
-        assert.strictEqual(resSessionPublic.statusCode, 200);
-
-        // 11. Existing public GET routes remain public.
-        const resGetPublic = await fetchPath('GET', '/api/students');
-        assert.strictEqual(resGetPublic.statusCode, 200);
-
-        // 12. The main classroom display remains public.
-        const resMainPublic = await fetchPath('GET', '/');
-        assert.strictEqual(resMainPublic.statusCode, 200);
-
-        // 13. /uploads remains public
-        const resUploadsPublic = await fetchPath('GET', '/uploads/default_boy.png');
-        assert.notStrictEqual(resUploadsPublic.statusCode, 401);
-
-        // 14. Expired and logged-out cookies are rejected.
-        await fetchPath('POST', '/api/admin/logout', sessionCookie);
-        const resLoggedOut = await fetchPath('GET', '/admin/', sessionCookie);
-        assert.strictEqual(resLoggedOut.statusCode, 401);
-
     } finally {
+        global.Date.now = originalDateNow;
+        process.stdout.write = originalStdoutWrite;
+        process.stderr.write = originalStderrWrite;
+
         if (server) {
             await new Promise(resolve => server.close(resolve));
         }

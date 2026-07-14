@@ -488,14 +488,15 @@ test('Schedule API and Migration Tests', async (t) => {
         let adminCookie = null;
 
         async function request(method, reqPath, body = null) {
-            if (!adminCookie && reqPath !== '/api/admin/login') {
+            const isProtectedWrite = (method === 'POST' || method === 'PUT') && reqPath !== '/api/admin/login';
+            if (isProtectedWrite && !adminCookie) {
                 const loginRes = await request('POST', '/api/admin/login', { password: 'test_password' });
                 adminCookie = loginRes.cookie;
             }
 
             return new Promise((resolve, reject) => {
                 const headers = body ? { 'Content-Type': 'application/json' } : {};
-                if (adminCookie) {
+                if (isProtectedWrite && adminCookie) {
                     headers['Cookie'] = adminCookie;
                 }
                 headers['Connection'] = 'close';
