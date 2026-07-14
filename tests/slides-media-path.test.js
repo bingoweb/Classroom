@@ -75,6 +75,9 @@ test('Slides Media Path Tests', async (t) => {
             status: function(code) { this.statusCode = code; return this; },
             json: function(data) {
                 this.responseCount++;
+                if (this.responseCount > 1) {
+                    assert.fail('json() called more than once');
+                }
                 this.body = data;
                 if (done) done();
                 return this;
@@ -148,10 +151,15 @@ test('Slides Media Path Tests', async (t) => {
 
     await t.test('C. Update storage and old-file cleanup tests', async (subT) => {
         const replacementCases = [
-            { oldMedia: '/uploads/slides/old.png' },
-            { oldMedia: 'uploads/slides/old.png' },
-            { oldMedia: '/home/user/Classroom/backend/uploads/slides/old.png' },
-            { oldMedia: 'C:\\Classroom\\backend\\uploads\\slides\\old.png' }
+            { oldMedia: '/uploads/slides/old.png', deleted: true },
+            { oldMedia: 'uploads/slides/old.png', deleted: true },
+            { oldMedia: '/home/user/Classroom/backend/uploads/slides/old.png', deleted: true },
+            { oldMedia: 'C:\\Classroom\\backend\\uploads\\slides\\old.png', deleted: true },
+            { oldMedia: 'https://cdn.example.com/uploads/slides/remote.png', deleted: false },
+            { oldMedia: 'http://cdn.example.com/uploads/slides/remote.png', deleted: false },
+            { oldMedia: 'HTTPS://cdn.example.com/uploads/slides/remote.png', deleted: false },
+            { oldMedia: '//cdn.example.com/uploads/slides/remote.png', deleted: false },
+            { oldMedia: 'data:image/svg+xml,<svg>uploads/slides/remote.png</svg>', deleted: false }
         ];
 
         for (let i = 0; i < replacementCases.length; i++) {
@@ -165,7 +173,12 @@ test('Slides Media Path Tests', async (t) => {
                 const res = createMockRes(() => {
                     assert.strictEqual(res.statusCode, 200);
                     assert.strictEqual(res.responseCount, 1);
-                    assert.strictEqual(unlinkedPath, path.resolve(slidesDir, 'old.png'));
+                    if (tc.deleted) {
+                        assert.strictEqual(unlinkedPath, path.resolve(slidesDir, 'old.png'));
+                    } else {
+                        assert.strictEqual(unlinkedPath, null);
+                        assert.strictEqual(existsCheckedPath, null);
+                    }
                     done();
                 });
 
@@ -181,7 +194,8 @@ test('Slides Media Path Tests', async (t) => {
                         callback.call({ changes: 1 }, null);
                     }
                 };
-                fs.existsSync = () => true;
+                let existsCheckedPath = null;
+                fs.existsSync = (p) => { existsCheckedPath = p; return true; };
                 fs.unlinkSync = (p) => { unlinkedPath = p; };
 
                 putHandler(req, res);
@@ -225,6 +239,11 @@ test('Slides Media Path Tests', async (t) => {
             { input: null, expected: null },
             { input: 'https://example.com/photo.png', expected: 'https://example.com/photo.png' },
             { input: 'data:image/png;base64,xxx', expected: 'data:image/png;base64,xxx' },
+            { input: 'https://cdn.example.com/uploads/slides/remote.png', expected: 'https://cdn.example.com/uploads/slides/remote.png' },
+            { input: 'http://cdn.example.com/uploads/slides/remote.png', expected: 'http://cdn.example.com/uploads/slides/remote.png' },
+            { input: 'HTTPS://cdn.example.com/uploads/slides/remote.png', expected: 'HTTPS://cdn.example.com/uploads/slides/remote.png' },
+            { input: '//cdn.example.com/uploads/slides/remote.png', expected: '//cdn.example.com/uploads/slides/remote.png' },
+            { input: 'data:image/svg+xml,<svg>uploads/slides/remote.png</svg>', expected: 'data:image/svg+xml,<svg>uploads/slides/remote.png</svg>' }
         ];
 
         for (const route of ['active', 'all', 'single']) {
@@ -274,7 +293,12 @@ test('Slides Media Path Tests', async (t) => {
             { media: 'data:image/png;base64,xxx', deleted: false },
             { media: '/uploads/other/photo.png', deleted: false },
             { media: '/uploads/slides/../secret.png', deleted: false },
-            { media: 'C:\\outside\\secret.png', deleted: false }
+            { media: 'C:\\outside\\secret.png', deleted: false },
+            { media: 'https://cdn.example.com/uploads/slides/remote.png', deleted: false },
+            { media: 'http://cdn.example.com/uploads/slides/remote.png', deleted: false },
+            { media: 'HTTPS://cdn.example.com/uploads/slides/remote.png', deleted: false },
+            { media: '//cdn.example.com/uploads/slides/remote.png', deleted: false },
+            { media: 'data:image/svg+xml,<svg>uploads/slides/remote.png</svg>', deleted: false }
         ];
 
         for (const tc of cleanupCases) {

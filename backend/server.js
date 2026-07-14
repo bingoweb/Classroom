@@ -1287,6 +1287,15 @@ function getCanonicalSlideMediaUrl(filename) {
 
 function resolvePublicSlideMediaUrl(dbPath) {
     if (!dbPath || typeof dbPath !== 'string') return dbPath;
+
+    const lower = dbPath.toLowerCase();
+    if (lower.startsWith('http://') ||
+        lower.startsWith('https://') ||
+        lower.startsWith('data:') ||
+        lower.startsWith('//')) {
+        return dbPath;
+    }
+
     const normalized = dbPath.replace(/\\/g, '/');
     const segment = 'uploads/slides/';
     const idx = normalized.indexOf(segment);
@@ -1300,6 +1309,15 @@ function resolvePublicSlideMediaUrl(dbPath) {
 
 function resolveManagedSlideMediaPath(dbPath) {
     if (!dbPath || typeof dbPath !== 'string') return null;
+
+    const lower = dbPath.toLowerCase();
+    if (lower.startsWith('http://') ||
+        lower.startsWith('https://') ||
+        lower.startsWith('data:') ||
+        lower.startsWith('//')) {
+        return null;
+    }
+
     const normalized = dbPath.replace(/\\/g, '/');
     const segment = 'uploads/slides/';
     const idx = normalized.indexOf(segment);
