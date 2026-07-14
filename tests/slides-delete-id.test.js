@@ -227,7 +227,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
 
         db.get = (sql, params, cb) => {
             sqlLog.push(sql);
-            cb(null, { media_path: 'uploads/test.jpg', display_order: 2 });
+            cb(null, { media_path: 'uploads/slides/test.jpg', display_order: 2 });
         };
 
         db.run = function(sql, params, cb) {
@@ -244,8 +244,9 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         };
 
         let existsCalled = 0, unlinkCalled = 0;
-        fs.existsSync = () => { existsCalled++; return true; };
-        fs.unlinkSync = () => { unlinkCalled++; };
+        let existsPath = null, unlinkPath = null;
+        fs.existsSync = (p) => { existsCalled++; existsPath = p; return true; };
+        fs.unlinkSync = (p) => { unlinkCalled++; unlinkPath = p; };
 
         const req = { params: { id: '47' }, requestId: 'req-1' };
         const resObj = await invokeHandler(req);
@@ -262,6 +263,9 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         assert.ok(commitCompleted);
         assert.strictEqual(existsCalled, 1);
         assert.strictEqual(unlinkCalled, 1);
+        const expectedPath = path.join(path.dirname(require.resolve('../backend/server.js')), 'uploads/slides/test.jpg');
+        assert.strictEqual(existsPath, expectedPath);
+        assert.strictEqual(unlinkPath, expectedPath);
     });
 
     await t.test('4. Primary DELETE failure triggers rollback and 500 response', async () => {
@@ -273,7 +277,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
 
         db.get = (sql, params, cb) => {
             sqlLog.push(sql);
-            cb(null, { media_path: 'uploads/test.jpg', display_order: 2 });
+            cb(null, { media_path: 'uploads/slides/test.jpg', display_order: 2 });
         };
 
         db.run = function(sql, params, cb) {
@@ -312,7 +316,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
 
         db.get = (sql, params, cb) => {
             sqlLog.push(sql);
-            cb(null, { media_path: 'uploads/test.jpg', display_order: 2 });
+            cb(null, { media_path: 'uploads/slides/test.jpg', display_order: 2 });
         };
 
         db.run = function(sql, params, cb) {
@@ -351,7 +355,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
 
         db.get = (sql, params, cb) => {
             sqlLog.push(sql);
-            cb(null, { media_path: 'uploads/test.jpg', display_order: 2 });
+            cb(null, { media_path: 'uploads/slides/test.jpg', display_order: 2 });
         };
 
         db.run = function(sql, params, cb) {
@@ -430,7 +434,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
 
         db.get = (sql, params, cb) => {
             getCalled = true;
-            cb(null, { media_path: 'uploads/test.jpg', display_order: 2 });
+            cb(null, { media_path: 'uploads/slides/test.jpg', display_order: 2 });
         };
 
         db.run = function(sql, params, cb) {
@@ -496,7 +500,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
 
         db.get = (sql, params, cb) => {
             sqlLog.push(sql);
-            cb(null, { media_path: 'uploads/test.jpg', display_order: 2 });
+            cb(null, { media_path: 'uploads/slides/test.jpg', display_order: 2 });
         };
 
         db.run = function(sql, params, cb) {

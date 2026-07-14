@@ -199,6 +199,7 @@ test('Slides Create Cache Invalidation Tests', async (t) => {
             },
             file: {
                 path: '/tmp/classroom-slide-create-cache-test.png',
+                filename: 'duyuru.png',
                 originalname: 'duyuru.png',
                 mimetype: 'image/png'
             }
@@ -247,7 +248,7 @@ test('Slides Create Cache Invalidation Tests', async (t) => {
             'Yeni slayt',
             'announcement',
             'image',
-            '/tmp/classroom-slide-create-cache-test.png',
+            '/uploads/slides/duyuru.png',
             'Yeni duyuru',
             8000,
             1,
@@ -266,7 +267,7 @@ test('Slides Create Cache Invalidation Tests', async (t) => {
         // C. Prove that the cache was invalidated
         currentDbAllRows = [
             { id: 1, title: 'Eski slayt', media_path: '/uploads/slides/old.png' },
-            { id: 55, title: 'Yeni slayt', media_path: '/tmp/classroom-slide-create-cache-test.png' }
+            { id: 55, title: 'Yeni slayt', media_path: '/uploads/slides/duyuru.png' }
         ];
 
         const req3 = { query: {} };
@@ -304,6 +305,7 @@ test('Slides Create Cache Invalidation Tests', async (t) => {
             body: {},
             file: {
                 path: '/tmp/rejected-slide-create.png',
+                filename: 'rejected.png',
                 originalname: 'rejected.png',
                 mimetype: 'image/png'
             }
@@ -399,6 +401,7 @@ test('Slides Create Cache Invalidation Tests', async (t) => {
             },
             file: {
                 path: '/tmp/classroom-slide-create-cache-test-error.png',
+                filename: 'duyuru.png',
                 originalname: 'duyuru.png',
                 mimetype: 'image/png'
             }

@@ -422,7 +422,7 @@ test('Slides Update Route ID Validation', async (t) => {
         fs.existsSync = () => { existsCalled++; };
         fs.unlinkSync = (p) => { unlinkCalled++; unlinkPath = p; };
 
-        const req = { params: { id: '47' }, body: { title: 'Yeni başlık' }, file: { path: '/tmp/failed-slide-update.jpg' }, requestId: 'test-req-id' };
+        const req = { params: { id: '47' }, body: { title: 'Yeni başlık' }, file: { path: '/tmp/failed-slide-update.jpg', filename: 'failed-slide.jpg' }, requestId: 'test-req-id' };
         const resObj = await invokeHandler(req);
 
         assert.strictEqual(resObj.statusCode, 500);
@@ -446,7 +446,7 @@ test('Slides Update Route ID Validation', async (t) => {
 
         db.get = (sql, params, cb) => {
             getParams = params;
-            cb(null, { media_path: 'uploads/old-slide-media.jpg' });
+            cb(null, { media_path: 'uploads/slides/old-slide-media.jpg' });
         };
         db.run = function(sql, params, cb) {
             runSql = sql;
@@ -457,7 +457,7 @@ test('Slides Update Route ID Validation', async (t) => {
         fs.existsSync = (p) => { existsCalled++; existsPath = p; return true; };
         fs.unlinkSync = (p) => { unlinkCalled++; unlinkPath = p; };
 
-        const req = { params: { id: '47' }, body: { title: 'Yeni başlık' }, file: { path: '/tmp/new-slide-media.jpg' }, requestId: 'test-req-id' };
+        const req = { params: { id: '47' }, body: { title: 'Yeni başlık' }, file: { path: '/tmp/new-slide-media.jpg', filename: 'new-slide.jpg' }, requestId: 'test-req-id' };
         const resObj = await invokeHandler(req);
 
         assert.strictEqual(resObj.statusCode, 200);
@@ -468,17 +468,16 @@ test('Slides Update Route ID Validation', async (t) => {
         assert.strictEqual(runParams[runParams.length - 1], 47);
         assert.ok(runSql.includes('media_path = ?'));
 
-        // Normalize path for storage behavior matches what the server.js does.
-        // req.file.path gets normalized, replacing backslashes with forward slashes.
-        const normalizedNewPath = '/tmp/new-slide-media.jpg'; 
-        assert.ok(runParams.includes(normalizedNewPath));
+        // req.file.filename gets normalized to the canonical media URL
+        const canonicalNewPath = '/uploads/slides/new-slide.jpg';
+        assert.ok(runParams.includes(canonicalNewPath));
 
         assert.strictEqual(existsCalled, 1);
         assert.strictEqual(unlinkCalled, 1);
 
         const expectedOldPath = path.join(
             path.dirname(require.resolve('../backend/server.js')),
-            'uploads/old-slide-media.jpg'
+            'uploads/slides/old-slide-media.jpg'
         );
         assert.strictEqual(existsCalled, 1);
         assert.strictEqual(unlinkCalled, 1);

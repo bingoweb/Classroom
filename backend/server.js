@@ -1278,6 +1278,43 @@ app.put('/api/attendance/:id', (req, res) => {
 
 // ===== SLIDES API ENDPOINTS =====
 
+// --- Slide Media Path Helpers ---
+function getCanonicalSlideMediaUrl(filename) {
+    if (typeof filename !== 'string' || !filename.trim()) return null;
+    if (filename.includes('/') || filename.includes('\\') || filename.includes('\0') || filename === '.' || filename === '..') return null;
+    return `/uploads/slides/${filename}`;
+}
+
+function resolvePublicSlideMediaUrl(dbPath) {
+    if (!dbPath || typeof dbPath !== 'string') return dbPath;
+    const normalized = dbPath.replace(/\\/g, '/');
+    const segment = 'uploads/slides/';
+    const idx = normalized.indexOf(segment);
+    if (idx !== -1) {
+        const filename = normalized.slice(idx + segment.length);
+        const canonical = getCanonicalSlideMediaUrl(filename);
+        if (canonical) return canonical;
+    }
+    return normalizePath(dbPath, true);
+}
+
+function resolveManagedSlideMediaPath(dbPath) {
+    if (!dbPath || typeof dbPath !== 'string') return null;
+    const normalized = dbPath.replace(/\\/g, '/');
+    const segment = 'uploads/slides/';
+    const idx = normalized.indexOf(segment);
+    if (idx !== -1) {
+        const filename = normalized.slice(idx + segment.length);
+        if (getCanonicalSlideMediaUrl(filename)) {
+            const absolutePath = path.resolve(slidesDir, filename);
+            if (absolutePath.startsWith(slidesDir + path.sep)) {
+                return absolutePath;
+            }
+        }
+    }
+    return null;
+}
+
 // Get active slides (AI optimized) - MUST be before /api/slides/:id route
 let slidesCache = null;
 let cacheTimestamp = null;
@@ -1310,7 +1347,7 @@ app.get('/api/slides/active', async (req, res) => {
             // Normalize paths
             const normalizedRows = rows.map(row => {
                 if (row.media_path) {
-                    row.media_path = normalizePath(row.media_path, true);
+                    row.media_path = resolvePublicSlideMediaUrl(row.media_path);
                 }
                 return row;
             });
@@ -1344,7 +1381,7 @@ app.get('/api/slides', (req, res, next) => {
         // Normalize media_path for web (convert Windows paths to web paths)
         const normalizedRows = rows.map(row => {
             if (row.media_path) {
-                row.media_path = normalizePath(row.media_path, true);
+                row.media_path = resolvePublicSlideMediaUrl(row.media_path);
             }
             return row;
         });
@@ -1374,7 +1411,7 @@ app.get('/api/slides/:id', (req, res) => {
         if (!row) return res.status(404).json({ error: 'Slayt bulunamadı' });
         // Normalize media_path for web (convert Windows paths to web paths)
         if (row.media_path) {
-            row.media_path = normalizePath(row.media_path, true);
+            row.media_path = resolvePublicSlideMediaUrl(row.media_path);
         }
         res.json(row);
     });
@@ -1455,7 +1492,12 @@ app.post('/api/slides', uploadSlide.single('slide'), (req, res, next) => {
 
     let media_path = null;
     if (req.file) {
-        media_path = normalizePath(req.file.path, false);
+        const canonicalUrl = getCanonicalSlideMediaUrl(req.file.filename);
+        if (!canonicalUrl) {
+            try { fs.unlinkSync(req.file.path); } catch (e) { }
+            return res.status(400).json({ error: 'Geçersiz dosya adı' });
+        }
+        media_path = canonicalUrl;
     }
 
     // Get max display_order
@@ -1680,8 +1722,12 @@ app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
 
         // If new file uploaded, update media_path
         if (req.file) {
-            // Normalize path for storage (use forward slashes for web compatibility)
-            media_path = normalizePath(req.file.path, false);
+            const canonicalUrl = getCanonicalSlideMediaUrl(req.file.filename);
+            if (!canonicalUrl) {
+                try { fs.unlinkSync(req.file.path); } catch (e) { }
+                return res.status(400).json({ error: 'Geçersiz dosya adı' });
+            }
+            media_path = canonicalUrl;
         }
 
         const videoAutoAdvance = video_auto_advance === 'true' || video_auto_advance === true ? 1 : 0;
@@ -1729,17 +1775,18 @@ app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
 
                 // Delete old media file if new one uploaded
                 if (req.file && oldMediaPath && oldMediaPath !== media_path) {
-                    try {
-                        const oldPath = path.join(__dirname, oldMediaPath);
-                        if (fs.existsSync(oldPath)) {
-                            fs.unlinkSync(oldPath);
+                    const resolvedOldPath = resolveManagedSlideMediaPath(oldMediaPath);
+                    if (resolvedOldPath) {
+                        try {
+                            if (fs.existsSync(resolvedOldPath)) {
+                                fs.unlinkSync(resolvedOldPath);
+                            }
+                        } catch (unlinkErr) {
+                            logger.warn(COMPONENTS.API, 'Error deleting old media file', unlinkErr, {
+                                oldPath: resolvedOldPath,
+                                requestId: req.requestId
+                            });
                         }
-                    } catch (unlinkErr) {
-                        logger.warn(COMPONENTS.API, 'Error deleting old media file', unlinkErr, {
-                            oldPath,
-                            requestId: req.requestId
-                        });
-                        // Don't fail the request if old file deletion fails
                     }
                 }
 
@@ -1809,16 +1856,18 @@ app.delete('/api/slides/:id', (req, res, next) => {
                         cacheTimestamp = null;
 
                         if (mediaPath) {
-                            try {
-                                const filePath = path.join(__dirname, mediaPath);
-                                if (fs.existsSync(filePath)) {
-                                    fs.unlinkSync(filePath);
+                            const resolvedMediaPath = resolveManagedSlideMediaPath(mediaPath);
+                            if (resolvedMediaPath) {
+                                try {
+                                    if (fs.existsSync(resolvedMediaPath)) {
+                                        fs.unlinkSync(resolvedMediaPath);
+                                    }
+                                } catch (unlinkErr) {
+                                    logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
+                                        mediaPath: resolvedMediaPath,
+                                        slideId: slideId
+                                    });
                                 }
-                            } catch (unlinkErr) {
-                                logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
-                                    mediaPath: mediaPath,
-                                    slideId: slideId
-                                });
                             }
                         }
 
