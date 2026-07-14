@@ -90,10 +90,15 @@ function createTrackedResponse() {
 }
 
 test('Slides Reorder Cache Tests', async (t) => {
-    let originalDbAll, originalDbSerialize, originalDbPrepare, originalLoggerError;
+    let originalDbAll, originalDbRun, originalDbSerialize, originalDbPrepare, originalLoggerError;
+
+    t.before(async () => {
+        await db.scheduleMigrationPromise;
+    });
 
     t.beforeEach(() => {
         originalDbAll = db.all;
+        originalDbRun = db.run;
         originalDbSerialize = db.serialize;
         originalDbPrepare = db.prepare;
         originalLoggerError = Logger.prototype.error;
@@ -101,6 +106,7 @@ test('Slides Reorder Cache Tests', async (t) => {
 
     t.afterEach(() => {
         if (originalDbAll) db.all = originalDbAll;
+        if (originalDbRun) db.run = originalDbRun;
         if (originalDbSerialize) db.serialize = originalDbSerialize;
         if (originalDbPrepare) db.prepare = originalDbPrepare;
         if (originalLoggerError) Logger.prototype.error = originalLoggerError;
