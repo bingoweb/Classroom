@@ -46,7 +46,7 @@ npm start
 ## 📁 Proje Yapısı
 
 ```
-sonpanel_Anti/
+Classroom/
 ├── backend/
 │   ├── server.js          # Express API sunucusu
 │   ├── database.js         # SQLite veritabanı yapılandırması
