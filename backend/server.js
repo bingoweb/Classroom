@@ -59,7 +59,6 @@ const PORT = process.env.PORT || 3000;
 // Initialize logger
 const logger = new Logger();
 logger.init({ logLevel: LOG_LEVELS.INFO });
-console.log('SERVER REVISION 5 - CHECKING PATHS');
 
 // Ensure logs directory exists
 if (!fs.existsSync('logs')) {
