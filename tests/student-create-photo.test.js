@@ -1023,33 +1023,110 @@ test('Isolation self-check', () => {
     assert.notEqual(path.basename(testDbPath), 'dummy.db');
 });
 
-after(async () => {
+async function closeCleanAndRestore({ closeDatabase, removeFiles, removeDirectory, restoreState }) {
+    let firstError = null;
+
     try {
-        await new Promise((resolve, reject) => {
+        try {
+            await closeDatabase();
+        } catch (err) {
+            firstError = err;
+        }
+
+        try {
+            removeFiles();
+        } catch (err) {
+            if (!firstError) firstError = err;
+        }
+
+        try {
+            removeDirectory();
+        } catch (err) {
+            if (!firstError) firstError = err;
+        }
+    } finally {
+        restoreState();
+    }
+
+    if (firstError) {
+        throw firstError;
+    }
+}
+
+test('Teardown restoration helper behaviors', async (t) => {
+    await t.test('Restoration executes and throws first file cleanup error', async () => {
+        let restored = false;
+        let removedDir = false;
+
+        await assert.rejects(async () => {
+            await closeCleanAndRestore({
+                closeDatabase: async () => {},
+                removeFiles: () => { throw new Error('forced cleanup failure'); },
+                removeDirectory: () => { removedDir = true; },
+                restoreState: () => { restored = true; }
+            });
+        }, /forced cleanup failure/);
+
+        assert.equal(removedDir, true);
+        assert.equal(restored, true);
+    });
+
+    await t.test('Restoration executes and throws first db close error', async () => {
+        let removedFiles = false;
+        let removedDir = false;
+        let restored = false;
+
+        await assert.rejects(async () => {
+            await closeCleanAndRestore({
+                closeDatabase: async () => { throw new Error('forced db failure'); },
+                removeFiles: () => {
+                    removedFiles = true;
+                    throw new Error('secondary file failure');
+                },
+                removeDirectory: () => { removedDir = true; },
+                restoreState: () => { restored = true; }
+            });
+        }, /forced db failure/);
+
+        assert.equal(removedFiles, true);
+        assert.equal(removedDir, true);
+        assert.equal(restored, true);
+    });
+});
+
+after(async () => {
+    await closeCleanAndRestore({
+        closeDatabase: () => new Promise((resolve, reject) => {
             db.close((err) => {
                 if (err) return reject(err);
                 resolve();
             });
-        });
-    } finally {
-        for (const suffix of ['', '-journal', '-wal', '-shm']) {
+        }),
+        removeFiles: () => {
+            let fileError = null;
+            for (const suffix of ['', '-journal', '-wal', '-shm']) {
+                try {
+                    fs.unlinkSync(testDbPath + suffix);
+                } catch (err) {
+                    if (err.code !== 'ENOENT' && !fileError) fileError = err;
+                }
+            }
+            if (fileError) throw fileError;
+        },
+        removeDirectory: () => {
             try {
-                fs.unlinkSync(testDbPath + suffix);
+                fs.rmdirSync(tempDir);
             } catch (err) {
                 if (err.code !== 'ENOENT') throw err;
             }
+        },
+        restoreState: () => {
+            global.setInterval = originalSetInterval;
+            if (originalDbPath === undefined) {
+                delete process.env.CLASSROOM_DB_PATH;
+            } else {
+                process.env.CLASSROOM_DB_PATH = originalDbPath;
+            }
         }
-        try {
-            fs.rmdirSync(tempDir);
-        } catch (err) {
-            if (err.code !== 'ENOENT') throw err;
-        }
-
-        global.setInterval = originalSetInterval;
-        if (originalDbPath === undefined) {
-            delete process.env.CLASSROOM_DB_PATH;
-        } else {
-            process.env.CLASSROOM_DB_PATH = originalDbPath;
-        }
-    }
+    });
 });
