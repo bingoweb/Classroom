@@ -11,6 +11,13 @@ const { normalizePath } = require('./utils');
 const { getIstanbulDateKey } = require('./date-utils');
 const { validateNormalizedSchedule, resolveScheduleDayKey, isValidDayKey } = require('./schedule-service');
 const { getNormalizedScheduleRows, replaceNormalizedSchedule } = require('./schedule-repository');
+const { readAdminPassword, matchesAdminPassword } = require('./admin-auth-config.js');
+const { createAdminSessionStore } = require('./admin-session-store.js');
+const {
+    serializeAdminSessionCookie,
+    serializeClearedAdminSessionCookie,
+    readAdminSessionIdFromCookieHeader
+} = require('./admin-session-cookie.js');
 
 // File deletion utility - prevents code duplication
 function safeDeleteFile(filePath, component = COMPONENTS.API) {
@@ -130,6 +137,78 @@ if (!fs.existsSync(slidesDir)) {
 app.use('/uploads', express.static(uploadsDir));
 
 // --- API Endpoints ---
+
+const adminSessionStore = createAdminSessionStore();
+
+function isAdminCookieSecure() {
+    return process.env.CLASSROOM_ADMIN_COOKIE_SECURE === 'true';
+}
+
+app.post('/api/admin/login', (req, res) => {
+    const configuredPassword = readAdminPassword();
+
+    if (configuredPassword === null) {
+        return res.status(503).json({
+            authenticated: false,
+            message: 'Yönetici parolası yapılandırılmamış.'
+        });
+    }
+
+    if (!req.body || typeof req.body.password !== 'string') {
+        return res.status(400).json({
+            authenticated: false,
+            message: 'Geçersiz parola formatı.'
+        });
+    }
+
+    if (!matchesAdminPassword(req.body.password)) {
+        return res.status(401).json({
+            authenticated: false,
+            message: 'Parola hatalı.'
+        });
+    }
+
+    const session = adminSessionStore.createSession();
+    const cookieString = serializeAdminSessionCookie(session.id, {
+        secure: isAdminCookieSecure()
+    });
+
+    res.setHeader('Set-Cookie', cookieString);
+    res.status(200).json({
+        authenticated: true,
+        message: 'Yönetici oturumu açıldı.'
+    });
+});
+
+app.post('/api/admin/logout', (req, res) => {
+    const cookieHeader = req.headers.cookie;
+    const sessionId = readAdminSessionIdFromCookieHeader(cookieHeader);
+
+    if (sessionId) {
+        adminSessionStore.deleteSession(sessionId);
+    }
+
+    const clearingCookie = serializeClearedAdminSessionCookie({
+        secure: isAdminCookieSecure()
+    });
+
+    res.setHeader('Set-Cookie', clearingCookie);
+    res.status(200).json({
+        authenticated: false,
+        message: 'Yönetici oturumu kapatıldı.'
+    });
+});
+
+app.get('/api/admin/session', (req, res) => {
+    const cookieHeader = req.headers.cookie;
+    const sessionId = readAdminSessionIdFromCookieHeader(cookieHeader);
+
+    if (sessionId && adminSessionStore.hasSession(sessionId)) {
+        return res.status(200).json({ authenticated: true });
+    }
+
+    res.status(200).json({ authenticated: false });
+});
 
 // Get all students
 app.get('/api/students', (req, res) => {
