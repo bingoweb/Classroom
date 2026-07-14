@@ -1054,43 +1054,116 @@ async function closeCleanAndRestore({ closeDatabase, removeFiles, removeDirector
 }
 
 test('Teardown restoration helper behaviors', async (t) => {
-    await t.test('Restoration executes and throws first file cleanup error', async () => {
-        let restored = false;
-        let removedDir = false;
+    await t.test('Executes operations exactly once and in correct order', async () => {
+        const events = [];
+        let closeDbCount = 0;
+        let removeFilesCount = 0;
+        let removeDirectoryCount = 0;
+        let restoreStateCount = 0;
 
-        await assert.rejects(async () => {
-            await closeCleanAndRestore({
-                closeDatabase: async () => {},
-                removeFiles: () => { throw new Error('forced cleanup failure'); },
-                removeDirectory: () => { removedDir = true; },
-                restoreState: () => { restored = true; }
-            });
-        }, /forced cleanup failure/);
+        await closeCleanAndRestore({
+            closeDatabase: async () => {
+                events.push('closeDatabase');
+                closeDbCount++;
+            },
+            removeFiles: () => {
+                events.push('removeFiles');
+                removeFilesCount++;
+            },
+            removeDirectory: () => {
+                events.push('removeDirectory');
+                removeDirectoryCount++;
+            },
+            restoreState: () => {
+                events.push('restoreState');
+                restoreStateCount++;
+            }
+        });
 
-        assert.equal(removedDir, true);
-        assert.equal(restored, true);
+        assert.equal(closeDbCount, 1, 'closeDatabase executes exactly once');
+        assert.equal(removeFilesCount, 1, 'removeFiles executes exactly once');
+        assert.equal(removeDirectoryCount, 1, 'removeDirectory executes exactly once');
+        assert.equal(restoreStateCount, 1, 'restoreState executes exactly once');
+        assert.deepEqual(events, ['closeDatabase', 'removeFiles', 'removeDirectory', 'restoreState'], 'executes exactly in order');
     });
 
-    await t.test('Restoration executes and throws first db close error', async () => {
-        let removedFiles = false;
-        let removedDir = false;
-        let restored = false;
+    await t.test('Restoration executes and throws original file cleanup error', async () => {
+        const events = [];
+        let closeDbCount = 0;
+        let removeDirectoryCount = 0;
+        let restoreStateCount = 0;
 
-        await assert.rejects(async () => {
+        const originalError = new Error('forced cleanup failure');
+        let caughtError = null;
+
+        try {
             await closeCleanAndRestore({
-                closeDatabase: async () => { throw new Error('forced db failure'); },
+                closeDatabase: async () => {
+                    events.push('closeDatabase');
+                    closeDbCount++;
+                },
                 removeFiles: () => {
-                    removedFiles = true;
+                    events.push('removeFilesThrow');
+                    throw originalError;
+                },
+                removeDirectory: () => {
+                    events.push('removeDirectory');
+                    removeDirectoryCount++;
+                },
+                restoreState: () => {
+                    events.push('restoreState');
+                    restoreStateCount++;
+                }
+            });
+        } catch (err) {
+            caughtError = err;
+        }
+
+        assert.strictEqual(caughtError, originalError, 'original error is rethrown');
+        assert.equal(closeDbCount, 1, 'closeDatabase already executed exactly once');
+        assert.equal(removeDirectoryCount, 1, 'removeDirectory still executes exactly once');
+        assert.equal(restoreStateCount, 1, 'restoreState still executes exactly once');
+        assert.deepEqual(events, ['closeDatabase', 'removeFilesThrow', 'removeDirectory', 'restoreState']);
+    });
+
+    await t.test('Restoration executes and throws original db close error', async () => {
+        const events = [];
+        let removeFilesCount = 0;
+        let removeDirectoryCount = 0;
+        let restoreStateCount = 0;
+
+        const originalError = new Error('forced db failure');
+        let caughtError = null;
+
+        try {
+            await closeCleanAndRestore({
+                closeDatabase: async () => {
+                    events.push('closeDatabaseThrow');
+                    throw originalError;
+                },
+                removeFiles: () => {
+                    events.push('removeFilesThrow');
+                    removeFilesCount++;
                     throw new Error('secondary file failure');
                 },
-                removeDirectory: () => { removedDir = true; },
-                restoreState: () => { restored = true; }
+                removeDirectory: () => {
+                    events.push('removeDirectory');
+                    removeDirectoryCount++;
+                },
+                restoreState: () => {
+                    events.push('restoreState');
+                    restoreStateCount++;
+                }
             });
-        }, /forced db failure/);
+        } catch (err) {
+            caughtError = err;
+        }
 
-        assert.equal(removedFiles, true);
-        assert.equal(removedDir, true);
-        assert.equal(restored, true);
+        assert.strictEqual(caughtError, originalError, 'original db error is rethrown');
+        assert.equal(removeFilesCount, 1, 'removeFiles still executes exactly once');
+        assert.equal(removeDirectoryCount, 1, 'removeDirectory still executes exactly once');
+        assert.equal(restoreStateCount, 1, 'restoreState still executes exactly once');
+        assert.deepEqual(events, ['closeDatabaseThrow', 'removeFilesThrow', 'removeDirectory', 'restoreState']);
     });
 });
 
