@@ -73,6 +73,129 @@ Administrators will need to set an environment variable to establish the admin p
 ## Test Strategy
 Focused test files will be added to ensure public routes are unaffected and write routes are securely protected against unauthenticated and CSRF attacks.
 
+## Planned Access Control Test Cases
+
+These cases define the required behavior for a future access-control implementation. They do not claim that authentication, authorization, sessions, or CSRF protection already exist.
+
+### Test Isolation and Fixtures
+
+- Security tests must use isolated temporary databases and upload directories.
+- Tests must never read from or write to `backend/classroom.db`.
+- Environment variables, mocked clocks, session stores, upload paths, and modified module state must be restored after every test.
+- No security test may depend on execution order or state left by another test.
+
+### Public Display Access
+
+- The main classroom display page must remain accessible without an admin session.
+- Static assets required by the classroom display must remain accessible without login.
+- Public display media under the managed uploads path must remain accessible without login.
+- Read-only API endpoints required by the classroom display must remain accessible unless a separate sensitive-GET review classifies them as administrative.
+- Public display access must not create or require an admin session cookie.
+
+### Admin Page Access
+
+- An unauthenticated request to `/admin` must not receive the administration interface and must be redirected to the admin login page.
+- A request to `/admin` with a valid, unexpired admin session must receive the administration interface.
+- Invalid, unknown, logged-out, and expired sessions must be treated as unauthenticated.
+- Login, redirect, denial, expiry, and logout messages visible to users must remain natural Turkish.
+
+### Configuration Failure Behavior
+
+- An absent, empty, or whitespace-only `CLASSROOM_ADMIN_PASSWORD` value must be treated as missing configuration.
+- Missing password configuration must not silently leave `/admin` or any write-capable API route open.
+- Admin login must remain unavailable until valid password configuration is supplied.
+- Public classroom display routes must continue to operate when admin access is disabled because configuration is missing.
+- Configuration failures must return safe messages and must never expose environment values, expected passwords, session identifiers, or CSRF tokens.
+
+### Login and Session Lifecycle
+
+- An incorrect password must not create an authenticated session or set a valid admin cookie.
+- The configured password must create a new server-side admin session.
+- Successful authentication must issue a new unpredictable session identifier rather than reusing a pre-login identifier.
+- The session-status response must distinguish authenticated and unauthenticated clients without exposing the configured password, stored credential material, or raw server-side session data.
+- Logout must invalidate the server-side session and make the previous cookie unusable.
+- Expired sessions must no longer authorize `/admin` or protected API requests.
+- A newly authenticated session must not inherit authentication or CSRF state from a previous session.
+
+### Login Request Hardening
+
+- Same-origin login requests must be accepted when their credentials are valid.
+- Login requests with a conflicting or unapproved origin must be rejected.
+- Login request bodies must be size-limited and malformed bodies must fail safely.
+- Repeated failed login attempts must be throttled without revealing whether the server password is configured or which credential check failed.
+- Authentication failures must use a generic Turkish user-facing error and must not disclose secret-comparison details.
+
+### Write Route Protection
+
+- Every route in the existing `Protected Write Route Inventory` must be covered by table-driven security tests.
+- All 18 inventoried write-capable routes must reject requests without an authenticated admin session.
+- Unauthenticated API write requests must return an authentication failure before reaching the existing route handler.
+- Authenticated write requests without a CSRF token must be rejected.
+- Authenticated write requests with an invalid CSRF token must be rejected.
+- Authenticated write requests using a CSRF token from another session must be rejected.
+- Authenticated write requests with the correct session-bound CSRF token must reach the route's existing validation and business logic.
+- Authentication and CSRF rejection must occur without changing database state, deleting managed files, creating uploads, or invalidating caches.
+
+### Upload Middleware Ordering
+
+The following upload-capable routes require explicit ordering tests:
+
+- `POST /api/students`
+- `POST /api/students/import`
+- `PUT /api/students/:id/photo`
+- `POST /api/slides`
+- `PUT /api/slides/:id`
+
+For each route:
+
+- Authentication must be checked before upload middleware persists a file.
+- CSRF validation must be checked before upload middleware persists a file.
+- Rejected unauthenticated requests must leave no new upload file behind.
+- Rejected CSRF requests must leave no new upload file behind.
+- Valid authenticated and CSRF-protected requests must continue to reach the route's existing file-type, file-size, payload, database, and cleanup behavior.
+
+### CSRF and Session Binding
+
+- CSRF tokens must be bound to one authenticated admin session.
+- A missing CSRF token must be rejected.
+- A malformed or incorrect CSRF token must be rejected.
+- A valid token from one admin session must not authorize a different session.
+- A token associated with a logged-out or expired session must be rejected.
+- Protected writes must require the token in the designated CSRF request header.
+- A successful new login must establish fresh session and CSRF state.
+
+### Session Cookie Behavior
+
+- The admin session cookie must use `HttpOnly`.
+- The admin session cookie must use `SameSite=Strict`.
+- The cookie must be scoped to the application and must not use an unnecessarily broad domain.
+- HTTPS deployment must enable the `Secure` cookie attribute.
+- Explicit local classroom HTTP configuration may disable `Secure` without disabling the other cookie protections.
+- Tests must cover both the local HTTP configuration and the HTTPS configuration.
+- Logout and session expiry must prevent the old cookie from authorizing subsequent requests.
+
+### CORS and Origin Behavior
+
+- Normal same-origin classroom display and admin usage must continue to work.
+- Arbitrary cross-origin write requests must not receive permission to use admin credentials.
+- Unexpected origins must not be allowed through a wildcard credentialed CORS policy.
+- Any future allowed-origin setting must be explicit and must be tested with both allowed and rejected origins.
+- Removing unnecessary CORS support must not break same-origin application behavior.
+
+### Existing Behavior Regression
+
+- Valid authenticated and CSRF-protected requests must preserve the current route-specific validation status codes and response behavior.
+- Existing transaction, cache invalidation, upload cleanup, file deletion, schedule validation, attendance, role-limit, slide, settings, and log behavior must remain unchanged after access control is introduced.
+- Existing public display functionality must remain usable without admin authentication.
+- The complete `test:core` suite must remain successful on the supported Node.js matrix.
+
+### Coverage Acceptance
+
+- The security test suite must identify protected cases by HTTP method and exact route path.
+- The 9 POST, 5 PUT, 0 PATCH, and 4 DELETE routes in the inventory must all be represented.
+- The route-protection matrix must contain exactly 18 distinct write routes.
+- Future implementation work must not be accepted until the planned failing tests exist, their intended failures are understood, and the implementation makes them pass without weakening existing assertions.
+
 ## Rollout Phases
 - Phase 1: plan and tests
 - Phase 2: minimal login/session middleware
