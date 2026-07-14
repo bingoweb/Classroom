@@ -44,7 +44,7 @@ function removeDirectoryIfPresent(fsApi, directoryPath) {
 
 test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
     let deleteHandler;
-    let originalDbGet, originalDbRun, originalFsExistsSync, originalFsUnlinkSync, originalLoggerError;
+    let originalDbGet, originalDbRun, originalFsExistsSync, originalFsUnlinkSync, originalLoggerError, originalLoggerWarn;
 
     t.before(async () => {
         await db.scheduleMigrationPromise;
@@ -61,6 +61,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         originalFsExistsSync = fs.existsSync;
         originalFsUnlinkSync = fs.unlinkSync;
         originalLoggerError = Logger.prototype.error;
+        originalLoggerWarn = Logger.prototype.warn;
     });
 
     t.afterEach(() => {
@@ -69,6 +70,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         if (originalFsExistsSync) fs.existsSync = originalFsExistsSync;
         if (originalFsUnlinkSync) fs.unlinkSync = originalFsUnlinkSync;
         if (originalLoggerError) Logger.prototype.error = originalLoggerError;
+        if (originalLoggerWarn) Logger.prototype.warn = originalLoggerWarn;
     });
 
     t.after(async () => {
@@ -424,6 +426,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         let getCalled = false;
         let sqlLog = [];
         let unlinkCalled = 0;
+        let existsCalled = 0;
 
         db.get = (sql, params, cb) => {
             getCalled = true;
@@ -439,8 +442,8 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
                 actualCb(null);
             }
         };
-
         fs.unlinkSync = () => { unlinkCalled++; };
+        fs.existsSync = () => { existsCalled++; return true; };
 
         const req = { params: { id: '47' } };
         const resObj = await invokeHandler(req);
@@ -451,12 +454,14 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         assert.strictEqual(getCalled, false, 'db.get must not be called');
         assert.deepEqual(sqlLog, ['BEGIN IMMEDIATE']);
         assert.strictEqual(unlinkCalled, 0, 'No media cleanup occurs');
+        assert.strictEqual(existsCalled, 0, 'No media check occurs');
     });
 
     await t.test('9. Slide lookup failure triggers rollback', async () => {
         let sqlLog = [];
         let rollbackCompletedBeforeResponse = false;
         let unlinkCalled = 0;
+        let existsCalled = 0;
 
         db.get = (sql, params, cb) => {
             cb(new Error('select failed'));
@@ -468,8 +473,8 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
             if (sql === 'ROLLBACK') rollbackCompletedBeforeResponse = true;
             actualCb(null);
         };
-
         fs.unlinkSync = () => { unlinkCalled++; };
+        fs.existsSync = () => { existsCalled++; return true; };
 
         const req = { params: { id: '47' } };
         const resObj = await invokeHandler(req);
@@ -480,6 +485,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         assert.deepEqual(sqlLog, ['BEGIN IMMEDIATE', 'ROLLBACK']);
         assert.ok(rollbackCompletedBeforeResponse, 'Error response not sent before rollback completes');
         assert.strictEqual(unlinkCalled, 0, 'No media cleanup occurs');
+        assert.strictEqual(existsCalled, 0, 'No media check occurs');
     });
 
     await t.test('10. Post-commit media cleanup failure logs warning and preserves success response', async () => {

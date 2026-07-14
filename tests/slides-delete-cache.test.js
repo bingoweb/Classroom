@@ -103,7 +103,7 @@ function createTrackedResponse({ timeoutMs = 1000, observationMs = 15 } = {}) {
 }
 
 test('Slides Delete Cache Tests (Atomic)', async (t) => {
-    let originalDbAll, originalDbGet, originalDbRun, originalFsUnlinkSync, originalFsExistsSync, originalLoggerError;
+    let originalDbAll, originalDbGet, originalDbRun, originalFsUnlinkSync, originalFsExistsSync, originalLoggerError, originalLoggerWarn;
 
     t.beforeEach(() => {
         originalDbAll = db.all;
@@ -112,6 +112,7 @@ test('Slides Delete Cache Tests (Atomic)', async (t) => {
         originalFsUnlinkSync = fs.unlinkSync;
         originalFsExistsSync = fs.existsSync;
         originalLoggerError = Logger.prototype.error;
+        originalLoggerWarn = Logger.prototype.warn;
     });
 
     t.afterEach(() => {
@@ -121,6 +122,7 @@ test('Slides Delete Cache Tests (Atomic)', async (t) => {
         if (originalFsUnlinkSync) fs.unlinkSync = originalFsUnlinkSync;
         if (originalFsExistsSync) fs.existsSync = originalFsExistsSync;
         if (originalLoggerError) Logger.prototype.error = originalLoggerError;
+        if (originalLoggerWarn) Logger.prototype.warn = originalLoggerWarn;
     });
 
     t.after(async () => {
@@ -449,5 +451,232 @@ test('Slides Delete Cache Tests (Atomic)', async (t) => {
         assert.strictEqual(dbAllCount, 1, 'Should return cached result, not querying db again');
         assert.deepStrictEqual(getResult2.body, activeSlidesRow);
         assert.strictEqual(getResult2.responseCount, 1);
+    });
+
+    await t.test('G. BEGIN IMMEDIATE failure preserves the cache', async () => {
+        mockTime += 5 * 60 * 1000 + 1000;
+
+        let dbAllCount = 0;
+        const activeSlidesRow = [
+            { id: 47, title: 'Silinecek slayt', media_path: '/uploads/slides/delete-me.png', display_order: 1 }
+        ];
+
+        db.all = function(sql, params, cb) {
+            let actualCb = cb || params;
+            dbAllCount++;
+            actualCb(null, activeSlidesRow);
+        };
+
+        const getRes1 = createTrackedResponse();
+        activeHandler({ requestId: 'req-G1' }, getRes1);
+        const getResult1 = await getRes1.promise;
+        assert.strictEqual(dbAllCount, 1);
+
+        let getCalled = false;
+        db.get = function(sql, params, cb) {
+            getCalled = true;
+            cb(null, { media_path: '/uploads/slides/delete-me.png', display_order: 1 });
+        };
+
+        let sqlLog = [];
+        db.run = function(sql, params, cb) {
+            const actualCb = typeof params === 'function' ? params : cb;
+            sqlLog.push(sql);
+            if (sql === 'BEGIN IMMEDIATE') {
+                actualCb.call(this, new Error('begin transaction failed'));
+            } else {
+                actualCb.call(this, null);
+            }
+        };
+
+        let fsUnlinkSyncCount = 0;
+        let fsExistsSyncCount = 0;
+        fs.unlinkSync = () => { fsUnlinkSyncCount++; };
+        fs.existsSync = () => { fsExistsSyncCount++; return true; };
+
+        const delReq = { params: { id: '47' }, requestId: 'req-G2' };
+        const delRes = createTrackedResponse();
+        deleteHandler(delReq, delRes);
+
+        const result = await delRes.promise;
+
+        assert.strictEqual(result.statusCode, 500);
+        assert.deepStrictEqual(result.body, { error: 'begin transaction failed' });
+        assert.strictEqual(result.responseCount, 1);
+        assert.strictEqual(getCalled, false, 'db.get never runs');
+        assert.deepEqual(sqlLog, ['BEGIN IMMEDIATE']);
+        assert.strictEqual(fsUnlinkSyncCount, 0);
+        assert.strictEqual(fsExistsSyncCount, 0);
+
+        const getRes2 = createTrackedResponse();
+        activeHandler({ requestId: 'req-G3' }, getRes2);
+        const getResult2 = await getRes2.promise;
+
+        assert.strictEqual(dbAllCount, 1, 'db.all remains at exactly one call');
+        assert.deepStrictEqual(getResult2.body, activeSlidesRow);
+        assert.strictEqual(getResult2.responseCount, 1);
+    });
+
+    await t.test('H. Slide lookup failure triggers rollback and preserves the cache', async () => {
+        mockTime += 5 * 60 * 1000 + 1000;
+
+        let dbAllCount = 0;
+        const activeSlidesRow = [
+            { id: 47, title: 'Silinecek slayt', media_path: '/uploads/slides/delete-me.png', display_order: 1 }
+        ];
+
+        db.all = function(sql, params, cb) {
+            let actualCb = cb || params;
+            dbAllCount++;
+            actualCb(null, activeSlidesRow);
+        };
+
+        const getRes1 = createTrackedResponse();
+        activeHandler({ requestId: 'req-H1' }, getRes1);
+        const getResult1 = await getRes1.promise;
+        assert.strictEqual(dbAllCount, 1);
+
+        db.get = function(sql, params, cb) {
+            cb(new Error('select failed'));
+        };
+
+        let sqlLog = [];
+        let rollbackCompletedBeforeResponse = false;
+        db.run = function(sql, params, cb) {
+            const actualCb = typeof params === 'function' ? params : cb;
+            sqlLog.push(sql);
+            if (sql === 'ROLLBACK') rollbackCompletedBeforeResponse = true;
+            actualCb.call(this, null);
+        };
+
+        let fsUnlinkSyncCount = 0;
+        let fsExistsSyncCount = 0;
+        fs.unlinkSync = () => { fsUnlinkSyncCount++; };
+        fs.existsSync = () => { fsExistsSyncCount++; return true; };
+
+        const delReq = { params: { id: '47' }, requestId: 'req-H2' };
+        const delRes = createTrackedResponse();
+        deleteHandler(delReq, delRes);
+
+        const result = await delRes.promise;
+
+        assert.strictEqual(result.statusCode, 500);
+        assert.deepStrictEqual(result.body, { error: 'select failed' });
+        assert.strictEqual(result.responseCount, 1);
+        assert.deepEqual(sqlLog, ['BEGIN IMMEDIATE', 'ROLLBACK']);
+        assert.ok(rollbackCompletedBeforeResponse);
+        assert.strictEqual(fsUnlinkSyncCount, 0);
+        assert.strictEqual(fsExistsSyncCount, 0);
+
+        const getRes2 = createTrackedResponse();
+        activeHandler({ requestId: 'req-H3' }, getRes2);
+        const getResult2 = await getRes2.promise;
+
+        assert.strictEqual(dbAllCount, 1, 'db.all remains at exactly one call');
+        assert.deepStrictEqual(getResult2.body, activeSlidesRow);
+        assert.strictEqual(getResult2.responseCount, 1);
+    });
+
+    await t.test('I. Cache invalidation occurs only after successful COMMIT, even on media cleanup failure', async () => {
+        mockTime += 5 * 60 * 1000 + 1000;
+
+        let dbAllCount = 0;
+        let activeSlidesRow = [
+            { id: 47, title: 'Silinecek slayt', media_path: '/uploads/slides/delete-me.png', display_order: 1 },
+            { id: 48, title: 'Kalacak slayt', media_path: '/uploads/slides/keep.png', display_order: 2 }
+        ];
+
+        db.all = function(sql, params, cb) {
+            let actualCb = cb || params;
+            if (sql.includes('slides')) {
+                dbAllCount++;
+                actualCb(null, activeSlidesRow);
+            } else {
+                actualCb(null, []);
+            }
+        };
+
+        const getRes1 = createTrackedResponse();
+        activeHandler({ requestId: 'req-I1' }, getRes1);
+        const getResult1 = await getRes1.promise;
+        assert.strictEqual(dbAllCount, 1);
+
+        db.get = function(sql, params, cb) {
+            cb(null, { media_path: '/uploads/slides/delete-me.png', display_order: 1 });
+        };
+
+        let sqlLog = [];
+        let commitCallback = null;
+        db.run = function(sql, params, cb) {
+            const actualCb = typeof params === 'function' ? params : cb;
+            sqlLog.push(sql);
+            if (sql.includes('DELETE')) this.changes = 1;
+
+            if (sql === 'COMMIT') {
+                commitCallback = actualCb; // Capture callback without executing
+            } else {
+                actualCb.call(this, null);
+            }
+        };
+
+        let warnLogArgs = null;
+        Logger.prototype.warn = (...args) => { warnLogArgs = args; };
+
+        let fsUnlinkSyncCount = 0;
+        let fsExistsSyncCount = 0;
+        fs.unlinkSync = () => {
+            fsUnlinkSyncCount++;
+            throw new Error('filesystem error');
+        };
+        fs.existsSync = () => { fsExistsSyncCount++; return true; };
+
+        const delReq = { params: { id: '47' }, requestId: 'req-I2' };
+        const delRes = createTrackedResponse({ observationMs: 15 });
+        deleteHandler(delReq, delRes);
+
+        // Wait a small deterministic amount to let handler run up to COMMIT
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        assert.ok(commitCallback !== null, 'Commit callback must be captured');
+        assert.strictEqual(delRes.responseCount, 0, 'No response should be sent yet');
+
+        // Request active slides BEFORE commit completes
+        const getResBeforeCommit = createTrackedResponse();
+        activeHandler({ requestId: 'req-I3' }, getResBeforeCommit);
+        const resultBeforeCommit = await getResBeforeCommit.promise;
+
+        assert.strictEqual(dbAllCount, 1, 'db.all has not run again before commit');
+        assert.deepStrictEqual(resultBeforeCommit.body, activeSlidesRow, 'Cache preserves old state');
+        assert.strictEqual(fsUnlinkSyncCount, 0, 'No fs operation occurred before commit');
+        assert.strictEqual(fsExistsSyncCount, 0, 'No fs operation occurred before commit');
+
+        // Complete COMMIT
+        commitCallback.call({ changes: 0 }, null);
+
+        // Wait for delete handler to finish
+        const result = await delRes.promise;
+
+        assert.ok(!sqlLog.includes('ROLLBACK'), 'No ROLLBACK occurs');
+        assert.strictEqual(result.statusCode, 200);
+        assert.deepStrictEqual(result.body, { message: 'Slayt başarıyla silindi', changes: 1 });
+        assert.strictEqual(result.responseCount, 1);
+
+        assert.ok(warnLogArgs !== null, 'Existing warning logger path receives the filesystem error');
+        assert.strictEqual(warnLogArgs[0], COMPONENTS.API);
+        assert.match(warnLogArgs[1], /Error deleting media file/);
+        assert.strictEqual(warnLogArgs[2].message, 'filesystem error');
+
+        // Change the mocked active-slides database rows to the post-deletion result.
+        activeSlidesRow = [
+            { id: 48, title: 'Kalacak slayt', media_path: '/uploads/slides/keep.png', display_order: 1 }
+        ];
+
+        // Request active slides AGAIN (should invalidate)
+        const getResAfterCommit = createTrackedResponse();
+        activeHandler({ requestId: 'req-I4' }, getResAfterCommit);
+        const resultAfterCommit = await getResAfterCommit.promise;
+
+        assert.strictEqual(dbAllCount, 2, 'db.all runs again after successful commit invalidates cache');
+        assert.deepStrictEqual(resultAfterCommit.body, activeSlidesRow, 'New rows are returned');
     });
 });
