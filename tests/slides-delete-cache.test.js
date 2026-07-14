@@ -634,9 +634,6 @@ test('Slides Delete Cache Tests (Atomic)', async (t) => {
         const delRes = createTrackedResponse({ observationMs: 15 });
         deleteHandler(delReq, delRes);
 
-        // Wait a small deterministic amount to let handler run up to COMMIT
-        await new Promise(resolve => setTimeout(resolve, 10));
-
         assert.ok(commitCallback !== null, 'Commit callback must be captured');
         assert.strictEqual(delRes.responseCount, 0, 'No response should be sent yet');
 
