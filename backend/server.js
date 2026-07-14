@@ -75,6 +75,22 @@ if (!fs.existsSync('logs')) {
 app.use(cors());
 app.use(express.json());
 
+const adminSessionStore = createAdminSessionStore();
+
+function requireAdminSession(req, res, next) {
+    const cookieHeader = req.headers.cookie;
+    if (!cookieHeader) {
+        return res.status(401).json({ authenticated: false, message: 'Yönetici oturumu gerekli.' });
+    }
+    const sessionId = readAdminSessionIdFromCookieHeader(cookieHeader);
+    if (!sessionId || !adminSessionStore.hasSession(sessionId)) {
+        return res.status(401).json({ authenticated: false, message: 'Yönetici oturumu gerekli.' });
+    }
+    next();
+}
+
+app.use('/admin', requireAdminSession);
+
 // Serve static files from PUBLIC directory (Frontend)
 app.use(express.static(path.join(__dirname, '../public'), {
     setHeaders: (res, path) => {
@@ -137,8 +153,6 @@ if (!fs.existsSync(slidesDir)) {
 app.use('/uploads', express.static(uploadsDir));
 
 // --- API Endpoints ---
-
-const adminSessionStore = createAdminSessionStore();
 
 function isAdminCookieSecure() {
     return process.env.CLASSROOM_ADMIN_COOKIE_SECURE === 'true';
@@ -233,7 +247,7 @@ function validateStudentInput(name, gender) {
 }
 
 // Add student
-app.post('/api/students', upload.single('photo'), (req, res) => {
+app.post('/api/students', requireAdminSession, upload.single('photo'), (req, res) => {
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
         if (req.file) {
             safeDeleteFile(req.file.path);
@@ -282,7 +296,7 @@ app.post('/api/students', upload.single('photo'), (req, res) => {
 });
 
 // Import students from Excel
-app.post('/api/students/import', upload.single('excel'), (req, res) => {
+app.post('/api/students/import', requireAdminSession, upload.single('excel'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'Excel dosyası gereklidir' });
     }
@@ -511,7 +525,7 @@ app.post('/api/students/import', upload.single('excel'), (req, res) => {
 });
 
 // Delete student
-app.delete('/api/students/:id', (req, res) => {
+app.delete('/api/students/:id', requireAdminSession, (req, res) => {
     const rawStudentId = req.params.id;
 
     if (
@@ -571,7 +585,7 @@ app.delete('/api/students/:id', (req, res) => {
 });
 
 // Update student photo
-app.put('/api/students/:id/photo', upload.single('photo'), (req, res) => {
+app.put('/api/students/:id/photo', requireAdminSession, upload.single('photo'), (req, res) => {
     const rawStudentId = req.params.id;
 
     if (
@@ -669,7 +683,7 @@ app.get('/api/roles', (req, res) => {
 });
 
 // Assign Role
-app.post('/api/roles', (req, res) => {
+app.post('/api/roles', requireAdminSession, (req, res) => {
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
         return res.status(400).json({ error: 'Geçerli bir öğrenci seçilmelidir' });
     }
@@ -883,7 +897,7 @@ app.post('/api/roles', (req, res) => {
 });
 
 // Remove Role by ID
-app.delete('/api/roles/:id', (req, res) => {
+app.delete('/api/roles/:id', requireAdminSession, (req, res) => {
     const rawRoleId = req.params.id;
 
     if (
@@ -924,7 +938,7 @@ app.get('/api/settings', (req, res) => {
 });
 
 // Update Settings
-app.post('/api/settings', (req, res) => {
+app.post('/api/settings', requireAdminSession, (req, res) => {
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
         return res.status(400).json({ error: 'Ayar anahtarı gereklidir' });
     }
@@ -1011,7 +1025,7 @@ app.get('/api/schedule/normalized', async (req, res) => {
 });
 
 // Update Normalized Schedule
-app.put('/api/schedule/normalized', async (req, res) => {
+app.put('/api/schedule/normalized', requireAdminSession, async (req, res) => {
     try {
         if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
             return res.status(400).json({
@@ -1085,7 +1099,7 @@ app.get('/api/schedule', (req, res) => {
 });
 
 // Update Schedule Item
-app.post('/api/schedule', (req, res) => {
+app.post('/api/schedule', requireAdminSession, (req, res) => {
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
         return res.status(400).json({ error: 'Ders programı isteği geçersiz.' });
     }
@@ -1219,7 +1233,7 @@ app.get('/api/attendance/:date', (req, res) => {
 });
 
 // Save Attendance (Bulk - multiple students at once)
-app.post('/api/attendance', (req, res) => {
+app.post('/api/attendance', requireAdminSession, (req, res) => {
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
         return res.status(400).json({ error: 'Tarih ve yoklama listesi gereklidir' });
     }
@@ -1363,7 +1377,7 @@ app.post('/api/attendance', (req, res) => {
 });
 
 // Update Single Attendance Record
-app.put('/api/attendance/:id', (req, res) => {
+app.put('/api/attendance/:id', requireAdminSession, (req, res) => {
     const rawAttendanceId = req.params.id;
 
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
@@ -1561,7 +1575,7 @@ app.get('/api/slides/:id', (req, res) => {
 });
 
 // Create new slide
-app.post('/api/slides', uploadSlide.single('slide'), (req, res, next) => {
+app.post('/api/slides', requireAdminSession, uploadSlide.single('slide'), (req, res, next) => {
     const { title, content_type, media_type, text_content, display_duration, video_auto_advance, transition_type, transition_duration, transition_mode, expires_at } = req.body;
 
     // Validation
@@ -1708,7 +1722,7 @@ app.post('/api/slides', uploadSlide.single('slide'), (req, res, next) => {
 });
 
 // Reorder slides (bulk update)
-app.put('/api/slides/reorder', (req, res) => {
+app.put('/api/slides/reorder', requireAdminSession, (req, res) => {
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
         return res.status(400).json({ error: 'Geçersiz sıralama verisi' });
     }
@@ -1819,7 +1833,7 @@ app.put('/api/slides/reorder', (req, res) => {
 });
 
 // Update slide
-app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
+app.put('/api/slides/:id', requireAdminSession, uploadSlide.single('slide'), (req, res) => {
     const rawSlideId = req.params.id;
 
     if (
@@ -1949,7 +1963,7 @@ app.put('/api/slides/:id', uploadSlide.single('slide'), (req, res) => {
 });
 
 // Delete slide
-app.delete('/api/slides/:id', (req, res, next) => {
+app.delete('/api/slides/:id', requireAdminSession, (req, res, next) => {
     const rawSlideId = req.params.id;
 
     if (
@@ -2102,7 +2116,7 @@ app.get('/api/slide-settings', (req, res) => {
 });
 
 // Update slide settings
-app.post('/api/slide-settings', (req, res) => {
+app.post('/api/slide-settings', requireAdminSession, (req, res) => {
     const { key, value } = req.body;
     if (!key || value === undefined) {
         return res.status(400).json({ error: 'Key ve value gereklidir' });
@@ -2117,7 +2131,7 @@ app.post('/api/slide-settings', (req, res) => {
 // ===== ERROR LOGGING API ENDPOINTS =====
 
 // Receive log from client
-app.post('/api/logs', (req, res) => {
+app.post('/api/logs', requireAdminSession, (req, res) => {
     const logEntry = req.body;
 
     // Validate log entry
@@ -2237,7 +2251,7 @@ app.get('/api/logs', (req, res) => {
 });
 
 // Delete old logs (cleanup)
-app.delete('/api/logs/cleanup', (req, res) => {
+app.delete('/api/logs/cleanup', requireAdminSession, (req, res) => {
     let numericDays = 30;
 
     if (req.query.days !== undefined) {

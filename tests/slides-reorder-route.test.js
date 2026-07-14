@@ -10,6 +10,8 @@ const originalDbPath = process.env.CLASSROOM_DB_PATH;
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'classroom-slides-reorder-test-'));
 const testDbPath = path.join(tempDir, `test-${crypto.randomBytes(4).toString('hex')}.db`);
 process.env.CLASSROOM_DB_PATH = testDbPath;
+const originalPassword = process.env.CLASSROOM_ADMIN_PASSWORD;
+process.env.CLASSROOM_ADMIN_PASSWORD = 'test_password';
 
 const originalSetInterval = global.setInterval;
 global.setInterval = () => {};
@@ -52,6 +54,7 @@ function removeDirectoryIfPresent(fsApi, directoryPath) {
 test('Slides Reorder Route Tests', async (t) => {
     let server;
     let serverUrl;
+    let adminCookie = null;
     let originalDbSerialize, originalDbPrepare, originalDbGet, originalDbRun;
 
     t.before(async () => {
@@ -62,6 +65,25 @@ test('Slides Reorder Route Tests', async (t) => {
                 serverUrl = `http://127.0.0.1:${server.address().port}`;
                 resolve();
             });
+        });
+        // Initial login to get cookie
+        const loginData = JSON.stringify({ password: 'test_password' });
+        adminCookie = await new Promise((resolve, reject) => {
+            const req = http.request(serverUrl + '/api/admin/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(loginData)
+                }
+            }, (res) => {
+                let setCookieHeader = res.headers['set-cookie'];
+                let cookie = setCookieHeader ? setCookieHeader[0].split(';')[0] : null;
+                res.on('data', () => {});
+                res.on('end', () => resolve(cookie));
+            });
+            req.on('error', reject);
+            req.write(loginData);
+            req.end();
         });
     });
 
@@ -96,15 +118,22 @@ test('Slides Reorder Route Tests', async (t) => {
         } else {
             process.env.CLASSROOM_DB_PATH = originalDbPath;
         }
+        if (originalPassword === undefined) {
+            delete process.env.CLASSROOM_ADMIN_PASSWORD;
+        } else {
+            process.env.CLASSROOM_ADMIN_PASSWORD = originalPassword;
+        }
     });
 
     function makeRequest(method, endpoint, bodyObj) {
         return new Promise((resolve, reject) => {
+            const headers = { 'Content-Type': 'application/json' };
+            if (adminCookie) {
+                headers['Cookie'] = adminCookie;
+            }
             const req = http.request(serverUrl + endpoint, {
                 method: method,
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: headers
             }, (res) => {
                 let data = '';
                 res.on('data', chunk => data += chunk);
@@ -971,7 +1000,7 @@ test('Slides Reorder Route Tests', async (t) => {
                 port,
                 path: '/api/slides/reorder',
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json', 'Cookie': adminCookie }
             }, (res) => {
                 let data = '';
                 res.on('data', chunk => data += chunk);

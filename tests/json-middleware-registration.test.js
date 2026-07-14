@@ -14,6 +14,9 @@ test('JSON middleware is registered exactly once and handles requests', async ()
     const testDbPath = path.join(tmpDir, 'test.db');
     process.env.CLASSROOM_DB_PATH = testDbPath;
     
+    const originalPassword = process.env.CLASSROOM_ADMIN_PASSWORD;
+    process.env.CLASSROOM_ADMIN_PASSWORD = 'test_password';
+
     // Prevent intervals
     global.setInterval = () => { return { unref: () => {} }; };
 
@@ -68,6 +71,34 @@ test('JSON middleware is registered exactly once and handles requests', async ()
         await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
         const port = server.address().port;
 
+        const loginData = JSON.stringify({ password: 'test_password' });
+        const loginOptions = {
+            hostname: '127.0.0.1',
+            port: port,
+            path: '/api/admin/login',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(loginData)
+            }
+        };
+
+        const loginResData = await new Promise((resolve, reject) => {
+            const req = http.request(loginOptions, (res) => {
+                let setCookieHeader = res.headers['set-cookie'];
+                let cookie = setCookieHeader ? setCookieHeader[0].split(';')[0] : null;
+                res.on('data', () => {});
+                res.on('end', () => {
+                    resolve({ status: res.statusCode, cookie });
+                });
+            });
+            req.on('error', reject);
+            req.write(loginData);
+            req.end();
+        });
+
+        assert.strictEqual(loginResData.status, 200, 'Login failed');
+
         const requestData = JSON.stringify({
             key: ' middleware_test_key ',
             value: 'middleware-test-value'
@@ -80,7 +111,8 @@ test('JSON middleware is registered exactly once and handles requests', async ()
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(requestData)
+                'Content-Length': Buffer.byteLength(requestData),
+                'Cookie': loginResData.cookie
             }
         };
 
@@ -176,6 +208,12 @@ test('JSON middleware is registered exactly once and handles requests', async ()
             delete process.env.CLASSROOM_DB_PATH;
         } else {
             process.env.CLASSROOM_DB_PATH = originalDbPath;
+        }
+
+        if (originalPassword === undefined) {
+            delete process.env.CLASSROOM_ADMIN_PASSWORD;
+        } else {
+            process.env.CLASSROOM_ADMIN_PASSWORD = originalPassword;
         }
 
         if (firstError) {

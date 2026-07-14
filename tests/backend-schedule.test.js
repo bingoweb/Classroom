@@ -485,18 +485,35 @@ test('Schedule API and Migration Tests', async (t) => {
         let tmpDir;
         let port;
 
+        let adminCookie = null;
+
         async function request(method, reqPath, body = null) {
+            if (!adminCookie && reqPath !== '/api/admin/login') {
+                const loginRes = await request('POST', '/api/admin/login', { password: 'test_password' });
+                adminCookie = loginRes.cookie;
+            }
+
             return new Promise((resolve, reject) => {
+                const headers = body ? { 'Content-Type': 'application/json' } : {};
+                if (adminCookie) {
+                    headers['Cookie'] = adminCookie;
+                }
+                headers['Connection'] = 'close';
+
                 const req = http.request({
                     hostname: '127.0.0.1',
                     port: port,
                     path: reqPath,
                     method: method,
-                    headers: body ? { 'Content-Type': 'application/json' } : {}
+                    headers: headers
                 }, res => {
                     let data = '';
                     res.on('data', chunk => data += chunk);
-                    res.on('end', () => resolve({ status: res.statusCode, data: JSON.parse(data || '{}'), raw: data }));
+                    res.on('end', () => {
+                        let setCookieHeader = res.headers['set-cookie'];
+                        let cookie = setCookieHeader ? setCookieHeader[0].split(';')[0] : null;
+                        resolve({ status: res.statusCode, data: JSON.parse(data || '{}'), raw: data, cookie });
+                    });
                 });
                 req.on('error', reject);
                 if (body) req.write(JSON.stringify(body));
@@ -520,7 +537,7 @@ test('Schedule API and Migration Tests', async (t) => {
 
             serverProcess = spawn(process.execPath, [scriptPath], {
                 cwd: process.cwd(),
-                env: { ...process.env, CLASSROOM_DB_PATH: dbPath }
+                env: { ...process.env, CLASSROOM_DB_PATH: dbPath, CLASSROOM_ADMIN_PASSWORD: 'test_password' }
             });
 
             // Wait for port
@@ -537,6 +554,7 @@ test('Schedule API and Migration Tests', async (t) => {
         }
 
         async function stopServer() {
+            adminCookie = null;
             if (serverProcess) {
                 serverProcess.kill();
                 await new Promise(resolve => serverProcess.on('close', resolve));
