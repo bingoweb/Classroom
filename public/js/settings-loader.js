@@ -1,6 +1,6 @@
 // Settings Loader for Main Dashboard
 // Loads settings from backend and applies them to the UI
-// Polls for changes every 30 seconds
+// Polls for changes every 10 seconds
 
 class SettingsLoader {
     constructor() {
