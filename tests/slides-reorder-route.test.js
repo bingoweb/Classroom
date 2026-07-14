@@ -639,22 +639,41 @@ test('Slides Reorder Route Tests', async (t) => {
                 let resBody = null;
                 let resCode = 200;
                 let settled = false;
-                const fail = (err) => { if (!settled) { settled = true; reject(err); } };
+                let timeoutId = null;
+                let observationId = null;
+                const cleanupTimers = () => {
+                    if (timeoutId) clearTimeout(timeoutId);
+                    if (observationId) clearTimeout(observationId);
+                };
+                const fail = (err) => {
+                    if (!settled) {
+                        settled = true;
+                        cleanupTimers();
+                        reject(err);
+                    }
+                };
                 const res = {
                     status(code) { resCode = code; return this; },
                     json(data) {
                         resCount++;
-                        resBody = data;
-                        if (resCount > 1) {
+                        if (resCount === 1) {
+                            resBody = data;
+                            observationId = setTimeout(() => {
+                                if (!settled) {
+                                    settled = true;
+                                    cleanupTimers();
+                                    resolve({ statusCode: resCode, body: resBody });
+                                }
+                            }, 10);
+                        } else {
                             fail(new Error('Multiple responses'));
-                            return;
                         }
-                        settled = true;
-                        resolve({ statusCode: resCode, body: resBody });
                         return this;
                     }
                 };
-                setTimeout(() => fail(new Error('Timeout waiting for response')), timeoutMs);
+                timeoutId = setTimeout(() => {
+                    if (!settled && resCount === 0) fail(new Error('Expected exactly one response, received 0'));
+                }, timeoutMs);
 
                 try {
                     handler({ body: reqBody, requestId: 'test' }, res);
@@ -667,6 +686,62 @@ test('Slides Reorder Route Tests', async (t) => {
                 db.prepare = originalPrepare;
             });
         }
+
+        await t2.test('Helper self-regression: zero responses', async () => {
+            const p = invokeHandlerMockDb({ slideOrders: [{id: 1, display_order: 1}] }, {
+                run: function() {},
+                prepare: function() { return { run: () => {}, finalize: () => {} }; }
+            }, 50);
+            await assert.rejects(p, /Expected exactly one response, received 0/);
+        });
+
+        await t2.test('Helper self-regression: two immediate responses', async () => {
+            const p = invokeHandlerMockDb({ slideOrders: [{id: 1, display_order: 1}] }, {
+                run: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
+                    if (cb) { cb(null); cb(null); }
+                },
+                prepare: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
+                    if (cb) setImmediate(() => cb(null));
+                    return { run: (p, c) => { if (c) c(null); }, finalize: (c) => { if (c) c(null); } };
+                }
+            });
+            await assert.rejects(p, /Multiple responses/);
+        });
+
+        await t2.test('Helper self-regression: delayed second response', async () => {
+            const p = invokeHandlerMockDb({ slideOrders: [{id: 1, display_order: 1}] }, {
+                run: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
+                    if (cb) {
+                        cb(null);
+                        setTimeout(() => cb(null), 5);
+                    }
+                },
+                prepare: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
+                    if (cb) setImmediate(() => cb(null));
+                    return { run: (p, c) => { if (c) c(null); }, finalize: (c) => { if (c) c(null); } };
+                }
+            });
+            await assert.rejects(p, /Multiple responses/);
+        });
+
+        await t2.test('Helper self-regression: exactly one response resolves successfully', async () => {
+            const resObj = await invokeHandlerMockDb({ slideOrders: [{id: 1, display_order: 1}] }, {
+                run: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
+                    if (cb) cb(null);
+                },
+                prepare: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
+                    if (cb) setImmediate(() => cb(null));
+                    return { run: (p, c) => { if (c) c(null); }, finalize: (c) => { if (c) c(null); } };
+                }
+            });
+            assert.strictEqual(resObj.statusCode, 200);
+        });
 
         await t2.test('Begin failure causes zero prepare/update calls', async () => {
             let runCalls = [];

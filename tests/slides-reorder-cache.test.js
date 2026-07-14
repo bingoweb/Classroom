@@ -408,6 +408,236 @@ test('Slides Reorder Cache Tests', async (t) => {
         assert.deepStrictEqual(getResult2.body, activeSlidesRow);
     });
 
+    await t.test('C2. Asynchronous prepare failure must preserve the populated cache', async () => {
+        mockTime += 5 * 60 * 1000 + 1000;
+        let dbAllCount = 0;
+        const activeSlidesRow = [{ id: 1, title: 'Birinci slayt', media_path: null, display_order: 1 }];
+        db.all = function(sql, params, cb) {
+            let actualCb = cb || params;
+            dbAllCount++;
+            actualCb(null, activeSlidesRow);
+        };
+        const getRes1 = createTrackedResponse();
+        activeHandler({ requestId: 'req-c2-1' }, getRes1);
+        await getRes1.promise;
+        assert.strictEqual(dbAllCount, 1);
+
+        let runCalls = [];
+        db.run = function(sql, params, cb) {
+            if (typeof params === 'function') cb = params;
+            runCalls.push(sql);
+            if (cb) cb(null);
+        };
+
+        db.serialize = function(cb) { cb(); };
+
+        db.prepare = function(sql, params, cb) {
+            if (typeof params === 'function') cb = params;
+            if (cb) setImmediate(() => cb(new Error('async prepare error')));
+            return {
+                run: function() {},
+                finalize: function(cb) { if (cb) cb(null); }
+            };
+        };
+
+        const reorderReq = {
+            body: { slideOrders: [{ id: 1, display_order: 1 }] },
+            requestId: 'reorder-cache-prepare-failure'
+        };
+
+        const reorderRes = createTrackedResponse();
+        reorderHandler(reorderReq, reorderRes);
+        const result = await reorderRes.promise;
+
+        assert.strictEqual(result.statusCode, 500);
+        assert.strictEqual(result.responseCount, 1);
+        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
+        
+        const getRes2 = createTrackedResponse();
+        activeHandler({ requestId: 'req-c2-2' }, getRes2);
+        await getRes2.promise;
+        assert.strictEqual(dbAllCount, 1);
+    });
+
+    await t.test('C3. Finalize failure after successful updates must preserve the populated cache', async () => {
+        mockTime += 5 * 60 * 1000 + 1000;
+        let dbAllCount = 0;
+        const activeSlidesRow = [{ id: 1, title: 'Birinci slayt', media_path: null, display_order: 1 }];
+        db.all = function(sql, params, cb) {
+            let actualCb = cb || params;
+            dbAllCount++;
+            actualCb(null, activeSlidesRow);
+        };
+        const getRes1 = createTrackedResponse();
+        activeHandler({ requestId: 'req-c3-1' }, getRes1);
+        await getRes1.promise;
+        
+        let runCalls = [];
+        db.run = function(sql, params, cb) {
+            if (typeof params === 'function') cb = params;
+            runCalls.push(sql);
+            if (cb) cb(null);
+        };
+
+        db.serialize = function(cb) { cb(); };
+        
+        let capturedCallbacks = [];
+        db.prepare = function(sql, params, cb) {
+            if (typeof params === 'function') cb = params;
+            if (cb) setImmediate(() => cb(null));
+            return {
+                run: function(params, cb) {
+                    capturedCallbacks.push(cb);
+                },
+                finalize: function(cb) {
+                    if (cb) cb(new Error('finalize failed'));
+                }
+            };
+        };
+
+        const reorderReq = {
+            body: { slideOrders: [{ id: 1, display_order: 1 }] },
+            requestId: 'reorder-cache-finalize-failure'
+        };
+
+        const reorderRes = createTrackedResponse();
+        reorderHandler(reorderReq, reorderRes);
+        await new Promise(resolve => setImmediate(resolve));
+        
+        capturedCallbacks[0](null); // trigger successful update
+        const result = await reorderRes.promise;
+
+        assert.strictEqual(result.statusCode, 500);
+        assert.strictEqual(result.responseCount, 1);
+        assert.ok(!runCalls.includes("COMMIT"));
+        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
+        
+        const getRes2 = createTrackedResponse();
+        activeHandler({ requestId: 'req-c3-2' }, getRes2);
+        await getRes2.promise;
+        assert.strictEqual(dbAllCount, 1);
+    });
+
+    await t.test('C4. Commit failure must preserve the populated cache', async () => {
+        mockTime += 5 * 60 * 1000 + 1000;
+        let dbAllCount = 0;
+        const activeSlidesRow = [{ id: 1, title: 'Birinci slayt', media_path: null, display_order: 1 }];
+        db.all = function(sql, params, cb) {
+            let actualCb = cb || params;
+            dbAllCount++;
+            actualCb(null, activeSlidesRow);
+        };
+        const getRes1 = createTrackedResponse();
+        activeHandler({ requestId: 'req-c4-1' }, getRes1);
+        await getRes1.promise;
+        
+        let runCalls = [];
+        db.run = function(sql, params, cb) {
+            if (typeof params === 'function') cb = params;
+            runCalls.push(sql);
+            if (cb) {
+                if (sql === "COMMIT") cb(new Error('commit failed'));
+                else cb(null);
+            }
+        };
+
+        db.serialize = function(cb) { cb(); };
+        
+        let capturedCallbacks = [];
+        db.prepare = function(sql, params, cb) {
+            if (typeof params === 'function') cb = params;
+            if (cb) setImmediate(() => cb(null));
+            return {
+                run: function(params, cb) {
+                    capturedCallbacks.push(cb);
+                },
+                finalize: function(cb) {
+                    if (cb) cb(null);
+                }
+            };
+        };
+
+        const reorderReq = {
+            body: { slideOrders: [{ id: 1, display_order: 1 }] },
+            requestId: 'reorder-cache-commit-failure'
+        };
+
+        const reorderRes = createTrackedResponse();
+        reorderHandler(reorderReq, reorderRes);
+        await new Promise(resolve => setImmediate(resolve));
+        
+        capturedCallbacks[0](null); // trigger successful update
+        const result = await reorderRes.promise;
+
+        assert.strictEqual(result.statusCode, 500);
+        assert.strictEqual(result.responseCount, 1);
+        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "COMMIT", "ROLLBACK"]);
+        
+        const getRes2 = createTrackedResponse();
+        activeHandler({ requestId: 'req-c4-2' }, getRes2);
+        await getRes2.promise;
+        assert.strictEqual(dbAllCount, 1);
+    });
+
+    await t.test('C5. Update failure plus finalize failure must preserve the populated cache', async () => {
+        mockTime += 5 * 60 * 1000 + 1000;
+        let dbAllCount = 0;
+        const activeSlidesRow = [{ id: 1, title: 'Birinci slayt', media_path: null, display_order: 1 }];
+        db.all = function(sql, params, cb) {
+            let actualCb = cb || params;
+            dbAllCount++;
+            actualCb(null, activeSlidesRow);
+        };
+        const getRes1 = createTrackedResponse();
+        activeHandler({ requestId: 'req-c5-1' }, getRes1);
+        await getRes1.promise;
+        
+        let runCalls = [];
+        db.run = function(sql, params, cb) {
+            if (typeof params === 'function') cb = params;
+            runCalls.push(sql);
+            if (cb) cb(null);
+        };
+
+        db.serialize = function(cb) { cb(); };
+        
+        let capturedCallbacks = [];
+        db.prepare = function(sql, params, cb) {
+            if (typeof params === 'function') cb = params;
+            if (cb) setImmediate(() => cb(null));
+            return {
+                run: function(params, cb) {
+                    capturedCallbacks.push(cb);
+                },
+                finalize: function(cb) {
+                    if (cb) cb(new Error('finalize failed'));
+                }
+            };
+        };
+
+        const reorderReq = {
+            body: { slideOrders: [{ id: 1, display_order: 1 }, { id: 2, display_order: 2 }] },
+            requestId: 'reorder-cache-update-finalize-failure'
+        };
+
+        const reorderRes = createTrackedResponse();
+        reorderHandler(reorderReq, reorderRes);
+        await new Promise(resolve => setImmediate(resolve));
+        
+        capturedCallbacks[0](new Error('update failed')); // trigger update failure
+        const result = await reorderRes.promise;
+
+        assert.strictEqual(result.statusCode, 500);
+        assert.strictEqual(result.responseCount, 1);
+        assert.strictEqual(capturedCallbacks.length, 1); // no later update starts
+        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
+        
+        const getRes2 = createTrackedResponse();
+        activeHandler({ requestId: 'req-c5-2' }, getRes2);
+        await getRes2.promise;
+        assert.strictEqual(dbAllCount, 1);
+    });
+
     await t.test('D. Invalid request must preserve the populated cache', async () => {
         mockTime += 5 * 60 * 1000 + 1000;
 
