@@ -1,6 +1,6 @@
 # 🎓 Sınıf Paneli (Classroom Dashboard)
 
-Modern, interaktif ve offline çalışabilen bir sınıf yönetim paneli. 55" 4K ekranlar için optimize edilmiştir.
+Modern, interaktif ve internet bağlantısı ile çalışan bir sınıf yönetim paneli. 55" 4K ekranlar için optimize edilmiştir.
 
 ## 📸 Özellikler
 
@@ -17,6 +17,7 @@ Modern, interaktif ve offline çalışabilen bir sınıf yönetim paneli. 55" 4K
 ## 🚀 Kurulum
 
 ### Gereksinimler
+- Aktif internet bağlantısı
 - Node.js 18+ 
 - Modern web tarayıcı (Chrome önerilir)
 

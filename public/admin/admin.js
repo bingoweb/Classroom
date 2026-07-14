@@ -50,7 +50,7 @@ async function fetchSettings() {
     try {
         const res = await fetch(`${CONFIG.API_URL}/settings`);
         const settings = await res.json();
-        // Settings loaded (no city needed for offline operation)
+        // Settings loaded
     } catch (e) {
         if (typeof logger !== 'undefined') {
             logger.error(COMPONENTS.ADMIN, 'Error fetching settings', e);
@@ -378,7 +378,7 @@ window.removeRole = async function (roleId) {
 window.saveSetting = async function (key) {
     let value;
     if (key === 'message') value = document.getElementById('messageInput').value;
-    // City setting removed for offline operation
+    // City setting removed
 
     try {
         const response = await fetch(`${CONFIG.API_URL}/settings`, {
@@ -401,7 +401,7 @@ window.saveSetting = async function (key) {
     }
 };
 
-// QR Code - Simple URL display for offline operation
+// QR Code - Simple URL display
 window.showQRCode = async function () {
     document.getElementById('qrModal').style.display = 'flex';
     try {
