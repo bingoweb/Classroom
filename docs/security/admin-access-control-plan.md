@@ -27,6 +27,40 @@ Admin sessions will be tracked server-side and identified via a secure cookie. T
 ## API Protection Strategy
 All write-capable API routes will be placed behind authentication middleware that verifies the admin session.
 
+## Protected Write Route Inventory
+
+| Method | Path | Capability | Admin Session Required | CSRF Protection Required |
+| --- | --- | --- | --- | --- |
+| POST | /api/students | Create student | Yes | Yes |
+| POST | /api/students/import | Import students | Yes | Yes |
+| DELETE | /api/students/:id | Delete student | Yes | Yes |
+| PUT | /api/students/:id/photo | Update student photo | Yes | Yes |
+| POST | /api/roles | Create role | Yes | Yes |
+| DELETE | /api/roles/:id | Delete role | Yes | Yes |
+| POST | /api/settings | Update settings | Yes | Yes |
+| PUT | /api/schedule/normalized | Update normalized schedule | Yes | Yes |
+| POST | /api/schedule | Legacy schedule write | Yes | Yes |
+| POST | /api/attendance | Bulk attendance update | Yes | Yes |
+| PUT | /api/attendance/:id | Single attendance update | Yes | Yes |
+| POST | /api/slides | Create slide | Yes | Yes |
+| PUT | /api/slides/reorder | Reorder slides | Yes | Yes |
+| PUT | /api/slides/:id | Update slide | Yes | Yes |
+| DELETE | /api/slides/:id | Delete slide | Yes | Yes |
+| POST | /api/slide-settings | Update slide settings | Yes | Yes |
+| POST | /api/logs | Create log entry | Yes | Yes |
+| DELETE | /api/logs/cleanup | Clean up logs | Yes | Yes |
+
+* Public display GET routes are not part of this write-route table.
+* The `/admin` page itself must require an authenticated admin session in the implementation phase.
+* Sensitive administrative GET routes may need a separate protection review before implementation.
+
+**Audit Summary:**
+- POST routes: 9
+- PUT routes: 5
+- PATCH routes: 0
+- DELETE routes: 4
+- Total write-capable routes: 18
+
 ## Admin UI Strategy
 The admin panel routes will require a valid session. Unauthenticated users will be challenged to log in.
 
