@@ -965,19 +965,38 @@ app.post('/api/schedule', (req, res) => {
         return res.status(400).json({ error: 'Ders programı isteği geçersiz.' });
     }
     const { day, period, course } = req.body;
+
+    if (typeof day !== 'string' || !day.trim()) {
+        return res.status(400).json({ error: 'Ders programı isteği geçersiz.' });
+    }
+    const normalizedDayResult = resolveScheduleDayKey(day.trim(), { defaultDay: undefined });
+    if (!normalizedDayResult.valid) {
+        return res.status(400).json({ error: 'Ders programı isteği geçersiz.' });
+    }
+    const normalizedDay = normalizedDayResult.day;
+
+    if (typeof period !== 'number' || !Number.isSafeInteger(period) || period <= 0) {
+        return res.status(400).json({ error: 'Ders programı isteği geçersiz.' });
+    }
+
+    if (typeof course !== 'string' || !course.trim()) {
+        return res.status(400).json({ error: 'Ders programı isteği geçersiz.' });
+    }
+    const trimmedCourse = course.trim();
+
     // Check if exists
-    db.get("SELECT id FROM schedule WHERE day = ? AND period = ?", [day, period], (err, row) => {
+    db.get("SELECT id FROM schedule WHERE day = ? AND period = ?", [normalizedDay, period], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
 
         if (row) {
             // Update
-            db.run("UPDATE schedule SET course = ? WHERE id = ?", [course, row.id], function (err) {
+            db.run("UPDATE schedule SET course = ? WHERE id = ?", [trimmedCourse, row.id], function (err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ message: "Updated" });
             });
         } else {
             // Insert
-            db.run("INSERT INTO schedule (day, period, course) VALUES (?, ?, ?)", [day, period, course], function (err) {
+            db.run("INSERT INTO schedule (day, period, course) VALUES (?, ?, ?)", [normalizedDay, period, trimmedCourse], function (err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ id: this.lastID });
             });

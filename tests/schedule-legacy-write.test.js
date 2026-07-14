@@ -166,6 +166,105 @@ test('Legacy Schedule Write Tests', async (t) => {
         }
     });
 
+    const invalidDays = [
+        undefined, null, '', '   ', 42, true, [], {},
+        'invalid/day', 'invalid.day', 'invalid day',
+        'a'.repeat(33)
+    ];
+
+    await t.test('1b. Semantic invalid day validation', async (subT) => {
+        for (let i = 0; i < invalidDays.length; i++) {
+            const invalidDay = invalidDays[i];
+            const typeName = Object.prototype.toString.call(invalidDay);
+            await subT.test(`invalid day ${typeName} value '${invalidDay}' returns 400`, (subsubT, done) => {
+                let dbCalls = 0;
+                db.get = () => { dbCalls++; };
+                db.run = () => { dbCalls++; };
+                db.all = () => { dbCalls++; };
+                db.prepare = () => { dbCalls++; };
+
+                const req = { body: { day: invalidDay, period: 2, course: 'Fen Bilimleri' } };
+                const res = createMockRes();
+
+                assert.doesNotThrow(() => {
+                    handler(req, res);
+                });
+
+                assert.strictEqual(res.statusCode, 400);
+                assert.deepEqual(res.body, { error: 'Ders programı isteği geçersiz.' });
+                assert.strictEqual(res.responseCount, 1);
+                assert.strictEqual(dbCalls, 0);
+
+                done();
+            });
+        }
+    });
+
+    const invalidPeriods = [
+        undefined, null, '', '   ', '2', true, [], {},
+        0, -1, 2.5, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1
+    ];
+
+    await t.test('1c. Semantic invalid period validation', async (subT) => {
+        for (let i = 0; i < invalidPeriods.length; i++) {
+            const invalidPeriod = invalidPeriods[i];
+            const typeName = Object.prototype.toString.call(invalidPeriod);
+            await subT.test(`invalid period ${typeName} value '${invalidPeriod}' returns 400`, (subsubT, done) => {
+                let dbCalls = 0;
+                db.get = () => { dbCalls++; };
+                db.run = () => { dbCalls++; };
+                db.all = () => { dbCalls++; };
+                db.prepare = () => { dbCalls++; };
+
+                const req = { body: { day: 'weekday', period: invalidPeriod, course: 'Fen Bilimleri' } };
+                const res = createMockRes();
+
+                assert.doesNotThrow(() => {
+                    handler(req, res);
+                });
+
+                assert.strictEqual(res.statusCode, 400);
+                assert.deepEqual(res.body, { error: 'Ders programı isteği geçersiz.' });
+                assert.strictEqual(res.responseCount, 1);
+                assert.strictEqual(dbCalls, 0);
+
+                done();
+            });
+        }
+    });
+
+    const invalidCourses = [
+        undefined, null, '', '   ', 42, true, [], {}
+    ];
+
+    await t.test('1d. Semantic invalid course validation', async (subT) => {
+        for (let i = 0; i < invalidCourses.length; i++) {
+            const invalidCourse = invalidCourses[i];
+            const typeName = Object.prototype.toString.call(invalidCourse);
+            await subT.test(`invalid course ${typeName} value '${invalidCourse}' returns 400`, (subsubT, done) => {
+                let dbCalls = 0;
+                db.get = () => { dbCalls++; };
+                db.run = () => { dbCalls++; };
+                db.all = () => { dbCalls++; };
+                db.prepare = () => { dbCalls++; };
+
+                const req = { body: { day: 'weekday', period: 2, course: invalidCourse } };
+                const res = createMockRes();
+
+                assert.doesNotThrow(() => {
+                    handler(req, res);
+                });
+
+                assert.strictEqual(res.statusCode, 400);
+                assert.deepEqual(res.body, { error: 'Ders programı isteği geçersiz.' });
+                assert.strictEqual(res.responseCount, 1);
+                assert.strictEqual(dbCalls, 0);
+
+                done();
+            });
+        }
+    });
+
     await t.test('2. Valid object compatibility: Existing-row update', (subT, done) => {
         let getCalls = 0;
         let runCalls = 0;
@@ -186,9 +285,9 @@ test('Legacy Schedule Write Tests', async (t) => {
 
         const req = {
             body: {
-                day: 'weekday',
+                day: '  weekday  ',
                 period: 2,
-                course: 'Fen Bilimleri'
+                course: '  Fen Bilimleri  '
             }
         };
         
@@ -231,9 +330,9 @@ test('Legacy Schedule Write Tests', async (t) => {
 
         const req = {
             body: {
-                day: 'weekday',
+                day: '  weekday  ',
                 period: 2,
-                course: 'Fen Bilimleri'
+                course: '  Fen Bilimleri  '
             }
         };
         
