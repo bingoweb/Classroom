@@ -1958,7 +1958,17 @@ app.post('/api/logs', (req, res) => {
 
 // Get error logs
 app.get('/api/logs', (req, res) => {
-    const { level, component, since, limit = 100 } = req.query;
+    let rawLimit = req.query.limit;
+    let numericLimit = 100;
+
+    if (rawLimit !== undefined) {
+        if (typeof rawLimit !== 'string' || !/^(?:[1-9][0-9]{0,2}|1000)$/.test(rawLimit)) {
+            return res.status(400).json({ error: 'Geçersiz limit değeri' });
+        }
+        numericLimit = parseInt(rawLimit, 10);
+    }
+
+    const { level, component, since } = req.query;
 
     let query = "SELECT * FROM error_logs WHERE 1=1";
     const params = [];
@@ -1979,7 +1989,7 @@ app.get('/api/logs', (req, res) => {
     }
 
     query += " ORDER BY timestamp DESC LIMIT ?";
-    params.push(parseInt(limit));
+    params.push(numericLimit);
 
     db.all(query, params, (err, rows) => {
         if (err) {
