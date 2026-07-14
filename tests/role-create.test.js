@@ -381,20 +381,6 @@ test('Role Create ID Validation Tests', async (t) => {
         assert.strictEqual(rollbacks.length, 0);
     });
 
-    // G. Vice-president duplicate comparison
-    await t.test('G. Vice-president duplicate comparison', async () => {
-        db.all = function(sql, params, cb) {
-            cb(null, [{ student_id: 47 }]);
-        };
-        let runCalls = 0;
-        db.run = function() { runCalls++; };
-
-        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'vice_president' } });
-        assert.strictEqual(resObj.statusCode, 400);
-        assert.deepEqual(resObj.body, { error: 'Bu öğrenci zaten başkan yardımcısı' });
-        assert.strictEqual(runCalls, 0);
-    });
-
     // H. Invalid role type preservation
     await t.test('H. Invalid role type preservation', async () => {
         let dbCalls = 0;
@@ -775,90 +761,130 @@ test('Role Create ID Validation Tests', async (t) => {
         const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'star' } });
         assert.strictEqual(resObj.statusCode, 400);
         assert.deepEqual(resObj.body, { error: 'Bu öğrenci zaten haftanın yıldızı' });
-        
+
         assert.strictEqual(runCalls.length, 1);
         assert.ok(runCalls[0].sql.includes('INSERT INTO roles'));
         assert.ok(runCalls[0].sql.includes('WHERE NOT EXISTS'));
         assert.deepEqual(runCalls[0].params, [47, 'star', 47, 'star']);
     });
 
-    // O. Duplicate duty assignment
-    await t.test('O. Duplicate duty assignment', async () => {
-        let runCalls = [];
-        db.get = function(sql, params, cb) {
-            // mock duty limit check
-            cb(null, { count: 1 });
-        };
-        db.run = function(sql, params, cb) {
-            runCalls.push({ sql, params });
-            this.changes = 0;
-            cb.call(this, null);
-        };
-        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'duty' } });
-        assert.strictEqual(resObj.statusCode, 400);
-        assert.deepEqual(resObj.body, { error: 'Bu öğrenci zaten nöbetçi' });
-        
-        assert.strictEqual(runCalls.length, 1);
-        assert.ok(runCalls[0].sql.includes('INSERT INTO roles'));
-        assert.ok(runCalls[0].sql.includes('WHERE NOT EXISTS'));
-        assert.deepEqual(runCalls[0].params, [47, 'duty', 47, 'duty']);
-    });
 
-    // P. Valid star assignment
-    await t.test('P. Valid star assignment', async () => {
-        let runCalls = [];
-        db.run = function(sql, params, cb) {
-            runCalls.push({ sql, params });
-            this.changes = 1;
-            this.lastID = 99;
-            cb.call(this, null);
-        };
-        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'star' } });
-        assert.strictEqual(resObj.statusCode, 200);
-        assert.deepEqual(resObj.body, { id: 99, message: 'Rol başarıyla atandı' });
-        
-        assert.strictEqual(runCalls.length, 1);
-        assert.ok(runCalls[0].sql.includes('INSERT INTO roles'));
-        assert.ok(runCalls[0].sql.includes('WHERE NOT EXISTS'));
-        assert.deepEqual(runCalls[0].params, [47, 'star', 47, 'star']);
-    });
+    const boundedRoles = [
+        { role: 'vice_president', max: 2, msgLimit: 'En fazla 2 başkan yardımcısı olabilir', msgDup: 'Bu öğrenci zaten başkan yardımcısı' },
+        { role: 'duty', max: 4, msgLimit: 'En fazla 4 nöbetçi atanabilir', msgDup: 'Bu öğrenci zaten nöbetçi' }
+    ];
 
-    // Q. Valid duty assignment
-    await t.test('Q. Valid duty assignment', async () => {
-        let runCalls = [];
-        db.get = function(sql, params, cb) {
-            cb(null, { count: 1 });
-        };
-        db.run = function(sql, params, cb) {
-            runCalls.push({ sql, params });
-            this.changes = 1;
-            this.lastID = 101;
-            cb.call(this, null);
-        };
-        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'duty' } });
-        assert.strictEqual(resObj.statusCode, 200);
-        assert.deepEqual(resObj.body, { id: 101, message: 'Rol başarıyla atandı' });
-        
-        assert.strictEqual(runCalls.length, 1);
-        assert.ok(runCalls[0].sql.includes('INSERT INTO roles'));
-        assert.ok(runCalls[0].sql.includes('WHERE NOT EXISTS'));
-        assert.deepEqual(runCalls[0].params, [47, 'duty', 47, 'duty']);
-    });
+    for (const br of boundedRoles) {
+        await t.test(`Mocked ${br.role} atomic behaviors`, async (subT) => {
+            await subT.test('1. Successful atomic INSERT', async () => {
+                let runCallParams = null;
+                let getCalls = 0;
+                db.get = () => getCalls++;
+                db.run = function(sql, params, cb) {
+                    runCallParams = { sql, params };
+                    this.changes = 1;
+                    this.lastID = 100;
+                    cb.call(this, null);
+                };
+                const resObj = await invokeHandler({ body: { student_id: '47', role_type: br.role } });
+                assert.strictEqual(getCalls, 0);
+                assert.strictEqual(resObj.statusCode, 200);
+                assert.deepEqual(resObj.body, { id: 100, message: 'Rol başarıyla atandı' });
+                assert.ok(runCallParams.sql.includes('INSERT INTO roles (student_id, role_type)'));
+                assert.ok(runCallParams.sql.includes('SELECT ?, ?'));
+                assert.ok(runCallParams.sql.includes('WHERE EXISTS'));
+                assert.ok(runCallParams.sql.includes('AND NOT EXISTS'));
+                assert.ok(runCallParams.sql.includes('SELECT COUNT(*)'));
+                assert.deepEqual(runCallParams.params, [47, br.role, 47, 47, br.role, br.role, br.max]);
+            });
 
-    // R. Duty count equals 4
-    await t.test('R. Duty count equals 4', async () => {
-        let runCalls = 0;
-        db.get = function(sql, params, cb) {
-            cb(null, { count: 4 });
-        };
-        db.run = function() {
-            runCalls++;
-        };
-        const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'duty' } });
-        assert.strictEqual(resObj.statusCode, 400);
-        assert.deepEqual(resObj.body, { error: 'En fazla 4 nöbetçi atanabilir' });
-        assert.strictEqual(runCalls, 0);
-    });
+            await subT.test('2. Limit rejection', async () => {
+                let runCalls = 0;
+                db.run = function(sql, params, cb) {
+                    runCalls++;
+                    this.changes = 0;
+                    cb.call(this, null);
+                };
+                db.get = function(sql, params, cb) {
+                    if (sql.includes('COUNT(*)')) {
+                        cb(null, { count: br.max });
+                    } else {
+                        assert.fail('Should not reach next classification query');
+                    }
+                };
+                const resObj = await invokeHandler({ body: { student_id: '47', role_type: br.role } });
+                assert.strictEqual(runCalls, 1);
+                assert.strictEqual(resObj.statusCode, 400);
+                assert.deepEqual(resObj.body, { error: br.msgLimit });
+            });
+
+            await subT.test('3. Duplicate rejection below the limit', async () => {
+                db.run = function(sql, params, cb) {
+                    this.changes = 0;
+                    cb.call(this, null);
+                };
+                db.get = function(sql, params, cb) {
+                    if (sql.includes('COUNT(*)')) {
+                        cb(null, { count: br.max - 1 });
+                    } else if (sql.includes('AND role_type = ?')) {
+                        cb(null, { 1: 1 });
+                    } else {
+                        assert.fail('Should not reach next classification query');
+                    }
+                };
+                const resObj = await invokeHandler({ body: { student_id: '47', role_type: br.role } });
+                assert.strictEqual(resObj.statusCode, 400);
+                assert.deepEqual(resObj.body, { error: br.msgDup });
+            });
+
+            await subT.test('4. Missing student below the limit', async () => {
+                db.run = function(sql, params, cb) {
+                    this.changes = 0;
+                    cb.call(this, null);
+                };
+                db.get = function(sql, params, cb) {
+                    if (sql.includes('COUNT(*)')) {
+                        cb(null, { count: br.max - 1 });
+                    } else if (sql.includes('AND role_type = ?')) {
+                        cb(null, undefined);
+                    } else if (sql.includes('FROM students')) {
+                        cb(null, undefined);
+                    }
+                };
+                const resObj = await invokeHandler({ body: { student_id: '47', role_type: br.role } });
+                assert.strictEqual(resObj.statusCode, 400);
+                assert.deepEqual(resObj.body, { error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
+            });
+
+            await subT.test('5. Atomic INSERT database error', async () => {
+                let getCalls = 0;
+                db.run = function(sql, params, cb) {
+                    cb(new Error('Atomic DB Error'));
+                };
+                db.get = function(sql, params, cb) {
+                    getCalls++;
+                    cb(null, {});
+                };
+                const resObj = await invokeHandler({ body: { student_id: '47', role_type: br.role } });
+                assert.strictEqual(getCalls, 0);
+                assert.strictEqual(resObj.statusCode, 500);
+                assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu: Atomic DB Error' });
+            });
+
+            await subT.test('6. Classification query error', async () => {
+                db.run = function(sql, params, cb) {
+                    this.changes = 0;
+                    cb.call(this, null);
+                };
+                db.get = function(sql, params, cb) {
+                    cb(new Error('Classification error'));
+                };
+                const resObj = await invokeHandler({ body: { student_id: '47', role_type: br.role } });
+                assert.strictEqual(resObj.statusCode, 500);
+                assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu: Classification error' });
+            });
+        });
+    }
 
     // S. Guarded non-president insert fails
     await t.test('S. Guarded non-president insert fails', async () => {

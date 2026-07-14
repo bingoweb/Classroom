@@ -485,9 +485,9 @@ app.delete('/api/students/:id', (req, res) => {
             if (this.changes === 0) {
                 return res.status(404).json({ error: 'Öğrenci bulunamadı' });
             }
-            
+
             cleanupManagedPhoto(oldPhoto, uploadsDir);
-            
+
             res.json({ message: "Öğrenci silindi", changes: this.changes });
         });
     });
@@ -582,8 +582,8 @@ app.put('/api/students/:id/photo', upload.single('photo'), (req, res) => {
 
 // Get Roles
 app.get('/api/roles', (req, res) => {
-    const sql = `SELECT roles.id as role_id, roles.role_type, students.* 
-                 FROM roles 
+    const sql = `SELECT roles.id as role_id, roles.role_type, students.*
+                 FROM roles
                  JOIN students ON roles.student_id = students.id`;
     db.all(sql, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -681,35 +681,90 @@ app.post('/api/roles', (req, res) => {
             });
         });
     } else if (role_type === 'vice_president') {
-        // Check if already 2 vice presidents
-        db.all("SELECT * FROM roles WHERE role_type = ?", [role_type], (err, rows) => {
-            if (err) {
-                logger.error(COMPONENTS.API, 'Error checking vice president count', err);
-                return res.status(500).json({ error: 'Rol kontrol edilirken hata oluştu' });
-            }
-            if (rows.length >= 2) {
-                return res.status(400).json({ error: 'En fazla 2 başkan yardımcısı olabilir' });
-            }
-            // Check if student already has this role
-            if (rows.some(r => r.student_id === studentId)) {
-                return res.status(400).json({ error: 'Bu öğrenci zaten başkan yardımcısı' });
-            }
-            insertRole();
-        });
+        insertBoundedRole(studentId, role_type, 2);
     } else if (role_type === 'duty') {
-        // Check if already 4 duty students
-        db.get("SELECT COUNT(*) as count FROM roles WHERE role_type = 'duty'", [], (err, row) => {
-            if (err) {
-                logger.error(COMPONENTS.API, 'Error checking duty count', err);
-                return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
-            }
-            if (row.count >= 4) {
-                return res.status(400).json({ error: 'En fazla 4 nöbetçi atanabilir' });
-            }
-            insertRole();
-        });
+        insertBoundedRole(studentId, role_type, 4);
     } else {
         insertRole();
+    }
+
+    function insertBoundedRole(studentId, roleType, maximum) {
+        const sql = `
+            INSERT INTO roles (student_id, role_type)
+            SELECT ?, ?
+            WHERE EXISTS (
+                SELECT 1
+                FROM students
+                WHERE id = ?
+            )
+            AND NOT EXISTS (
+                SELECT 1
+                FROM roles
+                WHERE student_id = ?
+                  AND role_type = ?
+            )
+            AND (
+                SELECT COUNT(*)
+                FROM roles
+                WHERE role_type = ?
+            ) < ?
+        `;
+        db.run(sql, [studentId, roleType, studentId, studentId, roleType, roleType, maximum], function (err) {
+            if (err) {
+                logger.error(COMPONENTS.API, 'Error inserting bounded role', err, {
+                    studentId: studentId,
+                    roleType: roleType,
+                    errorMessage: err.message,
+                    errorCode: err.code
+                });
+                if (err.message && err.message.includes('FOREIGN KEY constraint failed')) {
+                    return res.status(400).json({ error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
+                }
+                return res.status(500).json({ error: 'Rol atanırken hata oluştu: ' + (err.message || 'Bilinmeyen hata') });
+            }
+
+            if (this.changes === 1) {
+                return res.json({ id: this.lastID, message: 'Rol başarıyla atandı' });
+            }
+
+            // Zero-change classification
+            db.get("SELECT COUNT(*) as count FROM roles WHERE role_type = ?", [roleType], (countErr, countRow) => {
+                if (countErr) {
+                    return res.status(500).json({ error: 'Rol atanırken hata oluştu: ' + (countErr.message || 'Bilinmeyen hata') });
+                }
+                if (countRow.count >= maximum) {
+                    if (roleType === 'vice_president') {
+                        return res.status(400).json({ error: 'En fazla 2 başkan yardımcısı olabilir' });
+                    } else if (roleType === 'duty') {
+                        return res.status(400).json({ error: 'En fazla 4 nöbetçi atanabilir' });
+                    }
+                }
+
+                db.get("SELECT 1 FROM roles WHERE student_id = ? AND role_type = ?", [studentId, roleType], (dupErr, dupRow) => {
+                    if (dupErr) {
+                        return res.status(500).json({ error: 'Rol atanırken hata oluştu: ' + (dupErr.message || 'Bilinmeyen hata') });
+                    }
+                    if (dupRow) {
+                        if (roleType === 'vice_president') {
+                            return res.status(400).json({ error: 'Bu öğrenci zaten başkan yardımcısı' });
+                        } else if (roleType === 'duty') {
+                            return res.status(400).json({ error: 'Bu öğrenci zaten nöbetçi' });
+                        }
+                    }
+
+                    db.get("SELECT 1 FROM students WHERE id = ?", [studentId], (stuErr, stuRow) => {
+                        if (stuErr) {
+                            return res.status(500).json({ error: 'Rol atanırken hata oluştu: ' + (stuErr.message || 'Bilinmeyen hata') });
+                        }
+                        if (!stuRow) {
+                            return res.status(400).json({ error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
+                        }
+
+                        return res.status(500).json({ error: 'Rol atanırken hata oluştu: Bilinmeyen hata' });
+                    });
+                });
+            });
+        });
     }
 
     function insertRole() {
@@ -853,21 +908,21 @@ app.get('/api/schedule/normalized', async (req, res) => {
         const day = resolved.day;
 
         const rows = await getNormalizedScheduleRows(db, day);
-        
+
         if (rows.length === 0) {
             return res.json({ day, source: 'empty', valid: false, periods: [], warnings: [], errors: [] });
         }
 
         const validation = validateNormalizedSchedule(rows);
-        
+
         if (!validation.valid || validation.errors.length > 0) {
-            return res.json({ 
-                day, 
-                source: 'legacy-incomplete', 
-                valid: false, 
-                periods: [], 
-                warnings: validation.warnings, 
-                errors: validation.errors 
+            return res.json({
+                day,
+                source: 'legacy-incomplete',
+                valid: false,
+                periods: [],
+                warnings: validation.warnings,
+                errors: validation.errors
             });
         }
 
@@ -936,7 +991,7 @@ app.put('/api/schedule/normalized', async (req, res) => {
         }
 
         const insertedRows = await replaceNormalizedSchedule(db, day, validation.periods);
-        
+
         return res.json({
             day,
             valid: true,
@@ -1068,10 +1123,10 @@ app.get('/api/stats', (req, res) => {
 // Get Today's Attendance
 app.get('/api/attendance/today', (req, res) => {
     const today = getIstanbulDateKey();
-    const sql = `SELECT attendance.*, students.name, students.gender 
-                 FROM attendance 
-                 JOIN students ON attendance.student_id = students.id 
-                 WHERE attendance.date = ? 
+    const sql = `SELECT attendance.*, students.name, students.gender
+                 FROM attendance
+                 JOIN students ON attendance.student_id = students.id
+                 WHERE attendance.date = ?
                  ORDER BY students.name`;
     db.all(sql, [today], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -1082,10 +1137,10 @@ app.get('/api/attendance/today', (req, res) => {
 // Get Attendance by Date
 app.get('/api/attendance/:date', (req, res) => {
     const date = req.params.date;
-    const sql = `SELECT attendance.*, students.name, students.gender 
-                 FROM attendance 
-                 JOIN students ON attendance.student_id = students.id 
-                 WHERE attendance.date = ? 
+    const sql = `SELECT attendance.*, students.name, students.gender
+                 FROM attendance
+                 JOIN students ON attendance.student_id = students.id
+                 WHERE attendance.date = ?
                  ORDER BY students.name`;
     db.all(sql, [date], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -1352,8 +1407,8 @@ app.get('/api/slides/active', async (req, res) => {
 
         // Fetch all active slides
         db.all(`
-            SELECT * FROM slides 
-            WHERE is_active = 1 
+            SELECT * FROM slides
+            WHERE is_active = 1
             AND (expires_at IS NULL OR expires_at > datetime('now'))
             ORDER BY display_order ASC
         `, [], async (err, rows) => {
@@ -1571,7 +1626,7 @@ app.post('/api/slides', uploadSlide.single('slide'), (req, res, next) => {
                     slideId: this.lastID,
                     requestId: req.requestId
                 });
-                
+
                 // Invalidate cache
                 slidesCache = null;
                 cacheTimestamp = null;
