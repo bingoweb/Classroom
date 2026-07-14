@@ -1,4 +1,4 @@
-# 🎓 Sınıf Paneli (Classroom Dashboard)
+# 🎓 Sınıf Paneli
 
 Modern, interaktif ve internet bağlantısı ile çalışan bir sınıf yönetim paneli. 55" 4K ekranlar için optimize edilmiştir.
 
@@ -7,18 +7,18 @@ Modern, interaktif ve internet bağlantısı ile çalışan bir sınıf yönetim
 - 🎤 **Gerçek Zamanlı Gürültü Ölçer** - Mikrofon ile sınıf gürültüsünü izler ve görselleştirir
 - 👑 **Sınıf Başkanı & Yardımcıları** - Başkan ve 2 yardımcı görüntüleme
 - 🧹 **Nöbetçi Takibi** - 4 nöbetçi öğrenci takibi
-- ⭐ **Haftanın Yıldızları** - Otomatik geçişli yıldız öğrenci slideshow
+- ⭐ **Haftanın Yıldızları** - Otomatik geçişli yıldız öğrenci slayt gösterisi
 - 📊 **Yoklama Sistemi** - Gelen/gelmeyen öğrenci takibi
 - 🖼️ **Slayt Gösterisi** - Resim ve video destekli slayt yönetimi
 - ⏰ **Ders Programı** - Otomatik ders/teneffüs sayacı
-- 🌤️ **Hava Durumu** - Şehir bazlı hava durumu widget'ı
+- 🌤️ **Hava Durumu** - Şehir bazlı hava durumu bileşeni
 - 🎨 **10 Farklı Ekolayzer Teması** - Neon, Fire, Ocean, Forest, Sunset, Love, Royal, Matrix, Ice, Rainbow
 
 ## 🚀 Kurulum
 
 ### Gereksinimler
 - Aktif internet bağlantısı
-- Node.js 18+ 
+- Node.js 18+
 - Modern web tarayıcı (Chrome önerilir)
 
 ### Adımlar
@@ -41,7 +41,7 @@ npm start
 
 4. **Tarayıcıda açın:**
 - Ana Panel: `http://localhost:3000`
-- Admin Paneli: `http://localhost:3000/admin`
+- Yönetim Paneli: `http://localhost:3000/admin`
 
 ## 📁 Proje Yapısı
 
@@ -52,8 +52,8 @@ Classroom/
 │   ├── database.js         # SQLite veritabanı yapılandırması
 │   └── uploads/            # Yüklenen dosyalar
 ├── public/
-│   ├── index.html          # Ana dashboard
-│   ├── admin/              # Admin paneli
+│   ├── index.html          # Ana pano
+│   ├── admin/              # Yönetim paneli
 │   ├── css/                # Stil dosyaları
 │   ├── js/                 # JavaScript modülleri
 │   └── assets/             # Statik görseller
@@ -67,7 +67,7 @@ Classroom/
 - **Veritabanı:** SQLite3
 - **Frontend:** Vanilla JavaScript, CSS3
 - **Ses İşleme:** Web Audio API
-- **Görselleştirme:** Canvas, CSS Animations
+- **Görselleştirme:** Canvas, CSS animasyonları
 
 ## 🎨 Ekolayzer Temaları
 
@@ -84,10 +84,10 @@ Classroom/
 | Ice | 💙🩵🤍 |
 | Rainbow | 🌈 |
 
-## 📱 Admin Paneli
+## 📱 Yönetim Paneli
 
 Admin panelinden yapılabilecekler:
-- Öğrenci ekleme/silme (Excel import destekli)
+- Öğrenci ekleme/silme (Excel içe aktarma destekli)
 - Fotoğraf güncelleme
 - Rol atama (Başkan, Yardımcı, Nöbetçi, Yıldız)
 - Yoklama alma
@@ -104,7 +104,7 @@ PORT=3000
 
 ## 📄 Lisans
 
-MIT License
+MIT Lisansı
 
 ## 👨‍💻 Geliştirici
 
