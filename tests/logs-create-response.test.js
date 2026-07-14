@@ -256,7 +256,7 @@ test('Logs Create Response Tests', async (t) => {
         });
 
         assert.strictEqual(res.statusCode, 500);
-        assert.deepStrictEqual(res.body, { error: 'Failed to save log' });
+        assert.deepStrictEqual(res.body, { error: 'Log kaydedilemedi' });
         assert.strictEqual(res.responseCount, 1);
         assert.strictEqual(existsSyncCount, 0);
         assert.strictEqual(mkdirSyncCount, 0);
@@ -479,7 +479,7 @@ test('Logs Create Response Tests', async (t) => {
         postHandler(invalidReq, res);
 
         assert.strictEqual(res.statusCode, 400);
-        assert.deepStrictEqual(res.body, { error: 'Invalid log entry' });
+        assert.deepStrictEqual(res.body, { error: 'Geçersiz log kaydı' });
         assert.strictEqual(res.responseCount, 1);
         assert.strictEqual(dbRunCount, 0);
         assert.strictEqual(existsSyncCount, 0);

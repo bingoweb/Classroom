@@ -2043,7 +2043,7 @@ app.post('/api/logs', (req, res) => {
 
     // Validate log entry
     if (!logEntry.timestamp || !logEntry.level || !logEntry.component || !logEntry.message) {
-        return res.status(400).json({ error: 'Invalid log entry' });
+        return res.status(400).json({ error: 'Geçersiz log kaydı' });
     }
 
     // Write to database
@@ -2063,7 +2063,7 @@ app.post('/api/logs', (req, res) => {
         function (err) {
             if (err) {
                 logger.error(COMPONENTS.DATABASE, 'Error saving log to database', err);
-                return res.status(500).json({ error: 'Failed to save log' });
+                return res.status(500).json({ error: 'Log kaydedilemedi' });
             }
 
             // Write to file
@@ -2190,7 +2190,7 @@ app.delete('/api/logs/cleanup', (req, res) => {
                 logger.error(COMPONENTS.DATABASE, 'Error cleaning up logs', err);
                 return res.status(500).json({ error: err.message });
             }
-            res.json({ message: `Deleted ${this.changes} old log entries` });
+            res.json({ message: `${this.changes} eski log kaydı silindi` });
         }
     );
 });

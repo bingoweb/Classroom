@@ -219,7 +219,7 @@ test('Logs Cleanup Route Validation', async (t) => {
         const resObj = await invokeHandler(req);
 
         assert.strictEqual(resObj.statusCode, 200);
-        assert.deepEqual(resObj.body, { message: 'Deleted 1 old log entries' });
+        assert.deepEqual(resObj.body, { message: '1 eski log kaydı silindi' });
         assert.strictEqual(resObj.count, 1);
 
         const rows = await new Promise((resolve, reject) => {
@@ -252,7 +252,7 @@ test('Logs Cleanup Route Validation', async (t) => {
         const resObj = await invokeHandler(req);
 
         assert.strictEqual(resObj.statusCode, 200);
-        assert.deepEqual(resObj.body, { message: 'Deleted 1 old log entries' });
+        assert.deepEqual(resObj.body, { message: '1 eski log kaydı silindi' });
         assert.strictEqual(resObj.count, 1);
 
         const rows = await new Promise((resolve, reject) => {
