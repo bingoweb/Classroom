@@ -1756,54 +1756,61 @@ app.delete('/api/slides/:id', (req, res, next) => {
         return res.status(400).json({ error: 'Geçersiz slayt ID' });
     }
 
-    // Get slide to delete media file and capture its display_order
-    db.get("SELECT media_path, display_order FROM slides WHERE id = ?", [slideId], (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (!row) return res.status(404).json({ error: 'Slayt bulunamadı' });
+    db.run("BEGIN IMMEDIATE", function (beginErr) {
+        if (beginErr) return res.status(500).json({ error: beginErr.message });
 
-        const mediaPath = row.media_path;
-        const displayOrder = row.display_order;
-
-        // Delete slide
-        db.run("DELETE FROM slides WHERE id = ?", [slideId], function (err) {
-            if (err) return res.status(500).json({ error: err.message });
-
-            const deleteChanges = this.changes;
-
-            slidesCache = null;
-            cacheTimestamp = null;
-
-            // Delete media file
-            if (mediaPath) {
-                try {
-                    const filePath = path.join(__dirname, mediaPath);
-                    if (fs.existsSync(filePath)) {
-                        fs.unlinkSync(filePath);
-                    }
-                } catch (unlinkErr) {
-                    logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
-                        mediaPath: mediaPath,
-                        slideId: slideId
-                    });
-                    // Don't fail the request if file deletion fails
+        const rollbackAndRespond = (originalErr, statusCode, errorMsg, logContextMsg) => {
+            db.run("ROLLBACK", (rollbackErr) => {
+                if (rollbackErr) {
+                    logger.error(COMPONENTS.DATABASE, 'Rollback failed after ' + logContextMsg, rollbackErr, { originalError: originalErr ? originalErr.message : null });
                 }
-            }
+                res.status(statusCode).json({ error: errorMsg });
+            });
+        };
 
-            // Reorder remaining slides
-            db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?", [displayOrder], (reorderErr) => {
-                if (reorderErr) {
-                    logger.error(COMPONENTS.DATABASE, 'Error reordering slides after deletion', reorderErr, {
-                        deletedSlideId: slideId,
-                        requestId: req.requestId
+        db.get("SELECT media_path, display_order FROM slides WHERE id = ?", [slideId], (lookupErr, row) => {
+            if (lookupErr) return rollbackAndRespond(lookupErr, 500, lookupErr.message, 'lookup error');
+            if (!row) return rollbackAndRespond(null, 404, 'Slayt bulunamadı', 'missing slide');
+
+            const mediaPath = row.media_path;
+            const displayOrder = row.display_order;
+
+            db.run("DELETE FROM slides WHERE id = ?", [slideId], function (deleteErr) {
+                if (deleteErr) return rollbackAndRespond(deleteErr, 500, deleteErr.message, 'delete error');
+
+                const deleteChanges = this.changes;
+
+                db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?", [displayOrder], function(reorderErr) {
+                    if (reorderErr) return rollbackAndRespond(reorderErr, 500, reorderErr.message, 'compaction error');
+
+                    db.run("COMMIT", function (commitErr) {
+                        if (commitErr) return rollbackAndRespond(commitErr, 500, commitErr.message, 'commit error');
+
+                        slidesCache = null;
+                        cacheTimestamp = null;
+
+                        if (mediaPath) {
+                            try {
+                                const filePath = path.join(__dirname, mediaPath);
+                                if (fs.existsSync(filePath)) {
+                                    fs.unlinkSync(filePath);
+                                }
+                            } catch (unlinkErr) {
+                                logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
+                                    mediaPath: mediaPath,
+                                    slideId: slideId
+                                });
+                            }
+                        }
+
+                        logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
+                            slideId: slideId,
+                            changes: deleteChanges,
+                            requestId: req.requestId
+                        });
+                        res.json({ message: 'Slayt başarıyla silindi', changes: deleteChanges });
                     });
-                }
-
-                logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
-                    slideId: slideId,
-                    changes: deleteChanges,
-                    requestId: req.requestId
                 });
-                res.json({ message: 'Slayt başarıyla silindi', changes: deleteChanges });
             });
         });
     });

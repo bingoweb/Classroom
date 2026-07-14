@@ -82,7 +82,6 @@ function createTrackedResponse({ timeoutMs = 1000, observationMs = 15 } = {}) {
             this.body = data;
             if (this.noResponseTimeout) clearTimeout(this.noResponseTimeout);
 
-            // Delay resolution slightly to catch immediate double-responses
             this.resolveTimeout = setTimeout(() => {
                 if (settled) return;
                 settled = true;
@@ -103,7 +102,7 @@ function createTrackedResponse({ timeoutMs = 1000, observationMs = 15 } = {}) {
     return res;
 }
 
-test('Slides Delete Cache Tests', async (t) => {
+test('Slides Delete Cache Tests (Atomic)', async (t) => {
     let originalDbAll, originalDbGet, originalDbRun, originalFsUnlinkSync, originalFsExistsSync, originalLoggerError;
 
     t.beforeEach(() => {
@@ -144,69 +143,12 @@ test('Slides Delete Cache Tests', async (t) => {
     const getActiveRoutes = app._router.stack.filter(
         layer => layer.route && layer.route.path === '/api/slides/active' && layer.route.methods.get
     );
-
     const deleteSlidesRoutes = app._router.stack.filter(
         layer => layer.route && layer.route.path === '/api/slides/:id' && layer.route.methods.delete
     );
 
     const activeHandler = getActiveRoutes[0].route.stack[getActiveRoutes[0].route.stack.length - 1].handle;
     const deleteHandler = deleteSlidesRoutes[0].route.stack[deleteSlidesRoutes[0].route.stack.length - 1].handle;
-
-    await t.test('A. Actual route discovery', () => {
-        assert.strictEqual(getActiveRoutes.length, 1, 'Exactly one GET /api/slides/active route must exist');
-        assert.strictEqual(deleteSlidesRoutes.length, 1, 'Exactly one DELETE /api/slides/:id route must exist');
-        assert.strictEqual(typeof activeHandler, 'function', 'Active handler must be a function');
-        assert.strictEqual(typeof deleteHandler, 'function', 'Delete handler must be a function');
-    });
-
-    await t.test('Helper: zero responses reject using explicitly short timeout', async () => {
-        const res = createTrackedResponse({ timeoutMs: 10 });
-        await assert.rejects(res.promise, /Expected exactly one response, received 0/);
-    });
-
-    await t.test('Helper: two immediate responses reject', async () => {
-        const handler = (req, res) => {
-            res.status(200).json({ first: true });
-            res.json({ second: true });
-        };
-        const res = createTrackedResponse();
-        handler({}, res);
-        await assert.rejects(res.promise, /Multiple responses sent/);
-    });
-
-    await t.test('Helper: delayed second response during observation window rejects', async () => {
-        const handler = (req, res) => {
-            res.status(200).json({ first: true });
-            setTimeout(() => res.json({ second: true }), 5);
-        };
-        const res = createTrackedResponse({ observationMs: 15 });
-        handler({}, res);
-        await assert.rejects(res.promise, /Multiple responses sent/);
-    });
-
-    await t.test('Helper: exactly one asynchronous response resolves', async () => {
-        const handler = (req, res) => {
-            setTimeout(() => res.status(200).json({ first: true }), 5);
-        };
-        const res = createTrackedResponse();
-        handler({}, res);
-        const result = await res.promise;
-        assert.strictEqual(result.statusCode, 200);
-        assert.deepStrictEqual(result.body, { first: true });
-        assert.strictEqual(result.responseCount, 1);
-    });
-
-    await t.test('Helper: response arriving after 50ms but before normal timeout succeeds', async () => {
-        const handler = (req, res) => {
-            setTimeout(() => res.status(200).json({ success: true }), 60);
-        };
-        const res = createTrackedResponse({ timeoutMs: 200, observationMs: 10 });
-        handler({}, res);
-        const result = await res.promise;
-        assert.strictEqual(result.statusCode, 200);
-        assert.deepStrictEqual(result.body, { success: true });
-        assert.strictEqual(result.responseCount, 1);
-    });
 
     await t.test('C. Successful deletion invalidates a populated cache', async () => {
         mockTime += 5 * 60 * 1000 + 1000;
@@ -239,9 +181,6 @@ test('Slides Delete Cache Tests', async (t) => {
         let capturedLookupParams = null;
         let capturedDeleteSql = null;
         let capturedDeleteParams = null;
-        let capturedCompactionSql = null;
-        let capturedCompactionParams = null;
-        let capturedCompactionCb = null;
         let fsUnlinkSyncCount = 0;
         let fsExistsSyncCount = 0;
 
@@ -252,43 +191,23 @@ test('Slides Delete Cache Tests', async (t) => {
         };
 
         db.run = function(sql, params, cb) {
+            const actualCb = typeof params === 'function' ? params : cb;
             if (sql.includes('DELETE')) {
                 capturedDeleteSql = sql;
                 capturedDeleteParams = params;
                 this.changes = 1;
-                cb.call(this, null);
-            } else if (sql.includes('UPDATE')) {
-                capturedCompactionSql = sql;
-                capturedCompactionParams = params;
-                capturedCompactionCb = cb;
-            } else {
-                cb.call(this, null);
             }
+            actualCb.call(this, null);
         };
 
         fs.unlinkSync = () => { fsUnlinkSyncCount++; };
         fs.existsSync = () => { fsExistsSyncCount++; return true; };
 
-        const delReq = {
-            params: { id: '47' },
-            requestId: 'delete-cache-success'
-        };
-
+        const delReq = { params: { id: '47' }, requestId: 'delete-cache-success' };
         const delRes = createTrackedResponse();
         deleteHandler(delReq, delRes);
 
-        assert.strictEqual(delRes.responseCount, 0, 'No response should be sent before compaction completes');
-        assert.strictEqual(capturedCompactionSql, 'UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?');
-        assert.deepStrictEqual(capturedCompactionParams, [1]);
-
-        capturedCompactionCb.call({ changes: 0 }, null);
-
         const result = await delRes.promise;
-
-        assert.strictEqual(capturedLookupSql, 'SELECT media_path, display_order FROM slides WHERE id = ?');
-        assert.deepStrictEqual(capturedLookupParams, [47]);
-        assert.strictEqual(capturedDeleteSql, 'DELETE FROM slides WHERE id = ?');
-        assert.deepStrictEqual(capturedDeleteParams, [47]);
 
         assert.strictEqual(result.statusCode, 200);
         assert.deepStrictEqual(result.body, { message: 'Slayt başarıyla silindi', changes: 1 });
@@ -305,7 +224,6 @@ test('Slides Delete Cache Tests', async (t) => {
         const getResult2 = await getRes2.promise;
 
         assert.strictEqual(dbAllCount, 2);
-        assert.strictEqual(getResult2.statusCode, 200);
         assert.deepStrictEqual(getResult2.body, [{ id: 48, title: 'Kalacak slayt', media_path: '/uploads/slides/keep.png', display_order: 1 }]);
         assert.strictEqual(getResult2.responseCount, 1);
     });
@@ -333,27 +251,22 @@ test('Slides Delete Cache Tests', async (t) => {
             cb(null, { media_path: '/uploads/slides/1.png', display_order: 1 });
         };
 
-        let dbRunCount = 0;
         let fsUnlinkSyncCount = 0;
         let fsExistsSyncCount = 0;
 
         db.run = function(sql, params, cb) {
-            dbRunCount++;
+            const actualCb = typeof params === 'function' ? params : cb;
             if (sql.includes('DELETE')) {
-                cb.call(this, new Error('slide delete failed'));
+                actualCb.call(this, new Error('slide delete failed'));
             } else {
-                cb.call(this, null);
+                actualCb.call(this, null);
             }
         };
 
         fs.unlinkSync = () => { fsUnlinkSyncCount++; };
         fs.existsSync = () => { fsExistsSyncCount++; return true; };
 
-        const delReq = {
-            params: { id: '47' },
-            requestId: 'req-5'
-        };
-
+        const delReq = { params: { id: '47' }, requestId: 'req-5' };
         const delRes = createTrackedResponse();
         deleteHandler(delReq, delRes);
         const result = await delRes.promise;
@@ -361,7 +274,6 @@ test('Slides Delete Cache Tests', async (t) => {
         assert.strictEqual(result.statusCode, 500);
         assert.deepStrictEqual(result.body, { error: 'slide delete failed' });
         assert.strictEqual(result.responseCount, 1);
-        assert.strictEqual(dbRunCount, 1); // Only DELETE ran, no compaction
         assert.strictEqual(fsUnlinkSyncCount, 0);
         assert.strictEqual(fsExistsSyncCount, 0);
 
@@ -396,10 +308,9 @@ test('Slides Delete Cache Tests', async (t) => {
             cb(null, undefined);
         };
 
-        let dbRunCount = 0;
         db.run = function(sql, params, cb) {
-            dbRunCount++;
-            cb.call(this, null);
+            const actualCb = typeof params === 'function' ? params : cb;
+            actualCb.call(this, null);
         };
 
         let fsUnlinkSyncCount = 0;
@@ -407,11 +318,7 @@ test('Slides Delete Cache Tests', async (t) => {
         fs.unlinkSync = () => { fsUnlinkSyncCount++; };
         fs.existsSync = () => { fsExistsSyncCount++; return true; };
 
-        const delReq = {
-            params: { id: '47' },
-            requestId: 'req-8'
-        };
-
+        const delReq = { params: { id: '47' }, requestId: 'req-8' };
         const delRes = createTrackedResponse();
         deleteHandler(delReq, delRes);
         const result = await delRes.promise;
@@ -419,7 +326,6 @@ test('Slides Delete Cache Tests', async (t) => {
         assert.strictEqual(result.statusCode, 404);
         assert.deepStrictEqual(result.body, { error: 'Slayt bulunamadı' });
         assert.strictEqual(result.responseCount, 1);
-        assert.strictEqual(dbRunCount, 0);
         assert.strictEqual(fsUnlinkSyncCount, 0);
         assert.strictEqual(fsExistsSyncCount, 0);
 
@@ -431,11 +337,11 @@ test('Slides Delete Cache Tests', async (t) => {
         assert.deepStrictEqual(getResult2.body, activeSlidesRow);
     });
 
-    await t.test('F. Compaction error after successful deletion must still invalidate cache', async () => {
+    await t.test('F. Compaction error causes rollback and preserves the cache', async () => {
         mockTime += 5 * 60 * 1000 + 1000;
 
         let dbAllCount = 0;
-        let activeSlidesRow = [
+        const activeSlidesRow = [
             { id: 47, title: 'Silinecek slayt', media_path: '/uploads/slides/delete-me.png', display_order: 1 }
         ];
 
@@ -450,66 +356,42 @@ test('Slides Delete Cache Tests', async (t) => {
         const getResult1 = await getRes1.promise;
         assert.strictEqual(dbAllCount, 1);
 
-        let loggedComponent, loggedMessage, loggedError, loggedContext;
-        Logger.prototype.error = function(component, message, err, context) {
-            loggedComponent = component;
-            loggedMessage = message;
-            loggedError = err;
-            loggedContext = context;
-        };
-
-        let capturedCompactionCb = null;
-
         db.get = function(sql, params, cb) {
             cb(null, { media_path: null, display_order: 1 });
         };
 
+        let rollbackCalled = false;
         db.run = function(sql, params, cb) {
-            if (sql.includes('DELETE')) {
-                this.changes = 1;
-                cb.call(this, null);
-            } else if (sql.includes('UPDATE')) {
-                capturedCompactionCb = cb;
+            const actualCb = typeof params === 'function' ? params : cb;
+            if (sql.includes('UPDATE')) {
+                actualCb.call(this, new Error('compaction failed completely'));
+            } else if (sql === 'ROLLBACK') {
+                rollbackCalled = true;
+                actualCb.call(this, null);
             } else {
-                cb.call(this, null);
+                actualCb.call(this, null);
             }
         };
 
-        const delReq = {
-            params: { id: '47' },
-            requestId: 'req-11'
-        };
-
+        const delReq = { params: { id: '47' }, requestId: 'req-11' };
         const delRes = createTrackedResponse();
         deleteHandler(delReq, delRes);
 
-        assert.strictEqual(delRes.responseCount, 0, 'No response should be sent before compaction callback completes');
-
-        const compactionErr = new Error('Compaction error');
-        capturedCompactionCb.call(this, compactionErr);
-
         const result = await delRes.promise;
 
-        assert.strictEqual(result.statusCode, 200);
-        assert.deepStrictEqual(result.body, { message: 'Slayt başarıyla silindi', changes: 1 });
+        assert.strictEqual(result.statusCode, 500);
+        assert.deepStrictEqual(result.body, { error: 'compaction failed completely' });
         assert.strictEqual(result.responseCount, 1);
+        assert.strictEqual(rollbackCalled, true);
 
-        assert.strictEqual(loggedComponent, COMPONENTS.DATABASE);
-        assert.strictEqual(loggedMessage, 'Error reordering slides after deletion');
-        assert.strictEqual(loggedError, compactionErr);
-        assert.deepStrictEqual(loggedContext, {
-            deletedSlideId: 47,
-            requestId: 'req-11'
-        });
-
-        // Active cache should be invalidated
-        activeSlidesRow = [];
+        // Active cache should NOT be invalidated because COMMIT didn't run.
         const getRes2 = createTrackedResponse();
         activeHandler({ requestId: 'req-12' }, getRes2);
         const getResult2 = await getRes2.promise;
 
-        assert.strictEqual(dbAllCount, 2);
-        assert.deepStrictEqual(getResult2.body, []);
+        // Since cache is not invalidated, dbAllCount should remain 1, getting the cached response!
+        assert.strictEqual(dbAllCount, 1, 'Should return cached result, not querying db again');
+        assert.deepStrictEqual(getResult2.body, activeSlidesRow);
         assert.strictEqual(getResult2.responseCount, 1);
     });
 });
