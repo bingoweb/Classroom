@@ -57,7 +57,7 @@
         const params = new URLSearchParams();
         if (level) params.append('level', level);
         if (component) params.append('component', component);
-        
+
         const since = getTimeSince(timeFilter);
         if (since) params.append('since', since);
 
@@ -69,7 +69,7 @@
         try {
             const qs = params.toString() ? `?${params.toString()}` : '';
             const response = await fetch(`${getApiUrl()}/logs${qs}`);
-            
+
             if (currentToken !== fetchToken) return;
 
             if (!response.ok) {
@@ -78,7 +78,7 @@
             }
 
             const data = await response.json();
-            
+
             if (currentToken !== fetchToken) return;
 
             if (!Array.isArray(data)) {
@@ -94,7 +94,7 @@
             }
 
             listDiv.textContent = ''; // clear
-            
+
             data.forEach(log => {
                 const item = document.createElement('div');
                 item.style.borderBottom = '1px solid #ccc';
@@ -104,7 +104,7 @@
                 const header = document.createElement('div');
                 header.style.fontWeight = 'bold';
                 header.style.marginBottom = '5px';
-                
+
                 let timeStr = 'Geçersiz Tarih';
                 if (log.timestamp) {
                     const d = new Date(log.timestamp);
@@ -136,7 +136,7 @@
                     if (dataStr === undefined || dataStr === null) return;
                     let displayStr = typeof dataStr === 'object' ? JSON.stringify(dataStr, null, 2) : String(dataStr);
                     if (!displayStr.trim() || displayStr === '{}') return;
-                    
+
                     const container = document.createElement('div');
                     container.style.marginTop = '5px';
                     const lbl = document.createElement('div');
@@ -178,28 +178,60 @@
             return;
         }
 
-        const jsonStr = JSON.stringify(currentLogs, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const filename = `hata-loglari-${yyyy}-${mm}-${dd}.json`;
+        let objectUrl = null;
+        let anchor = null;
+        let anchorAttached = false;
+        let errorShown = false;
 
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        const showErrorOnce = () => {
+            if (!errorShown) {
+                getUtils().showError('Loglar dışa aktarılırken bir hata oluştu.');
+                errorShown = true;
+            }
+        };
+
+        try {
+            const jsonStr = JSON.stringify(currentLogs, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8;' });
+            objectUrl = URL.createObjectURL(blob);
+
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const filename = `hata-loglari-${yyyy}-${mm}-${dd}.json`;
+
+            anchor = document.createElement('a');
+            anchor.href = objectUrl;
+            anchor.download = filename;
+
+            document.body.appendChild(anchor);
+            anchorAttached = true;
+
+            anchor.click();
+        } catch (err) {
+            showErrorOnce();
+        } finally {
+            if (anchorAttached && anchor) {
+                try {
+                    document.body.removeChild(anchor);
+                } catch (e) {
+                    showErrorOnce();
+                }
+            }
+            if (objectUrl) {
+                try {
+                    URL.revokeObjectURL(objectUrl);
+                } catch (e) {
+                    showErrorOnce();
+                }
+            }
+        }
     }
 
     async function clearOldLogs() {
         if (isCleanupPending) return;
-        
+
         if (typeof confirm !== 'undefined' && !confirm('30 günden eski logları silmek istediğinize emin misiniz?')) {
             return;
         }
@@ -229,9 +261,9 @@
         const toggle = document.getElementById('debugModeToggle');
         if (!toggle) return;
         const enabled = toggle.checked;
-        
+
         getLogger().setDebugMode(enabled);
-        
+
         if (enabled) {
             getUtils().showSuccess('Debug modu açıldı.');
         } else {
