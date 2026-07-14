@@ -2317,8 +2317,7 @@ process.on('uncaughtException', (error) => {
 app.use((err, req, res, next) => {
     logger.error(COMPONENTS.API, 'Unhandled Express error', err, {
         method: req.method,
-        url: req.url,
-        body: req.body
+        url: req.url
     });
 
     if (!res.headersSent) {
