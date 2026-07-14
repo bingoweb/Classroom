@@ -1,8 +1,21 @@
 const test = require('node:test');
+const { after } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
+const os = require('node:os');
+const fs = require('node:fs');
+const crypto = require('node:crypto');
 
-process.env.CLASSROOM_DB_PATH = path.join(__dirname, 'dummy.db');
+const originalDbPath = process.env.CLASSROOM_DB_PATH;
+const tempDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'classroom-student-photo-test-')
+);
+const testDbPath = path.join(
+    tempDir,
+    `test-${crypto.randomBytes(4).toString('hex')}.db`
+);
+
+process.env.CLASSROOM_DB_PATH = testDbPath;
 
 const originalSetInterval = global.setInterval;
 global.setInterval = () => {};
@@ -999,4 +1012,44 @@ test('Student Delete Photo Cleanup Tests', async (t) => {
         });
         handler(req, res);
     });
+});
+
+test('Isolation self-check', () => {
+    assert.ok(testDbPath.startsWith(tempDir));
+    assert.ok(tempDir.startsWith(os.tmpdir()));
+    assert.notEqual(testDbPath, path.join(__dirname, 'dummy.db'));
+    assert.ok(!testDbPath.startsWith(path.join(__dirname, '..', 'tests')));
+    assert.ok(testDbPath.endsWith('.db'));
+    assert.notEqual(path.basename(testDbPath), 'dummy.db');
+});
+
+after(async () => {
+    try {
+        await new Promise((resolve, reject) => {
+            db.close((err) => {
+                if (err) return reject(err);
+                resolve();
+            });
+        });
+    } finally {
+        for (const suffix of ['', '-journal', '-wal', '-shm']) {
+            try {
+                fs.unlinkSync(testDbPath + suffix);
+            } catch (err) {
+                if (err.code !== 'ENOENT') throw err;
+            }
+        }
+        try {
+            fs.rmdirSync(tempDir);
+        } catch (err) {
+            if (err.code !== 'ENOENT') throw err;
+        }
+
+        global.setInterval = originalSetInterval;
+        if (originalDbPath === undefined) {
+            delete process.env.CLASSROOM_DB_PATH;
+        } else {
+            process.env.CLASSROOM_DB_PATH = originalDbPath;
+        }
+    }
 });
