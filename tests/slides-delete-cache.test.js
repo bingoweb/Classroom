@@ -46,18 +46,15 @@ function removeDirectoryIfPresent(fsApi, directoryPath) {
     }
 }
 
-function createTrackedResponse() {
+function createTrackedResponse({ timeoutMs = 1000, observationMs = 15 } = {}) {
     let resolvePromise;
     let rejectPromise;
+    let settled = false;
 
     const promise = new Promise((resolve, reject) => {
         resolvePromise = resolve;
         rejectPromise = reject;
     });
-
-    const timeout = setTimeout(() => {
-        rejectPromise(new Error('Expected exactly one response, received 0'));
-    }, 50);
 
     const res = {
         statusCode: 200,
@@ -65,27 +62,44 @@ function createTrackedResponse() {
         body: null,
         promise,
         resolveTimeout: null,
+        noResponseTimeout: null,
         status(code) {
             this.statusCode = code;
             return this;
         },
         json(data) {
             this.responseCount++;
+            if (settled) return this;
+
             if (this.responseCount > 1) {
-                clearTimeout(timeout);
+                settled = true;
+                if (this.noResponseTimeout) clearTimeout(this.noResponseTimeout);
                 if (this.resolveTimeout) clearTimeout(this.resolveTimeout);
                 rejectPromise(new Error('Multiple responses sent'));
                 return this;
             }
+
             this.body = data;
-            clearTimeout(timeout);
+            if (this.noResponseTimeout) clearTimeout(this.noResponseTimeout);
+
             // Delay resolution slightly to catch immediate double-responses
             this.resolveTimeout = setTimeout(() => {
+                if (settled) return;
+                settled = true;
                 resolvePromise({ statusCode: this.statusCode, body: this.body, responseCount: this.responseCount });
-            }, 5);
+            }, observationMs);
+
             return this;
         }
     };
+
+    res.noResponseTimeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        if (res.resolveTimeout) clearTimeout(res.resolveTimeout);
+        rejectPromise(new Error('Expected exactly one response, received 0'));
+    }, timeoutMs);
+
     return res;
 }
 
@@ -145,7 +159,12 @@ test('Slides Delete Cache Tests', async (t) => {
         assert.strictEqual(typeof deleteHandler, 'function', 'Delete handler must be a function');
     });
 
-    await t.test('Double-response self-regression', async () => {
+    await t.test('Helper: zero responses reject using explicitly short timeout', async () => {
+        const res = createTrackedResponse({ timeoutMs: 10 });
+        await assert.rejects(res.promise, /Expected exactly one response, received 0/);
+    });
+
+    await t.test('Helper: two immediate responses reject', async () => {
         const handler = (req, res) => {
             res.status(200).json({ first: true });
             res.json({ second: true });
@@ -155,13 +174,38 @@ test('Slides Delete Cache Tests', async (t) => {
         await assert.rejects(res.promise, /Multiple responses sent/);
     });
 
-    await t.test('Zero-response self-regression', async () => {
+    await t.test('Helper: delayed second response during observation window rejects', async () => {
         const handler = (req, res) => {
-            // Sends no response
+            res.status(200).json({ first: true });
+            setTimeout(() => res.json({ second: true }), 5);
+        };
+        const res = createTrackedResponse({ observationMs: 15 });
+        handler({}, res);
+        await assert.rejects(res.promise, /Multiple responses sent/);
+    });
+
+    await t.test('Helper: exactly one asynchronous response resolves', async () => {
+        const handler = (req, res) => {
+            setTimeout(() => res.status(200).json({ first: true }), 5);
         };
         const res = createTrackedResponse();
         handler({}, res);
-        await assert.rejects(res.promise, /Expected exactly one response, received 0/);
+        const result = await res.promise;
+        assert.strictEqual(result.statusCode, 200);
+        assert.deepStrictEqual(result.body, { first: true });
+        assert.strictEqual(result.responseCount, 1);
+    });
+
+    await t.test('Helper: response arriving after 50ms but before normal timeout succeeds', async () => {
+        const handler = (req, res) => {
+            setTimeout(() => res.status(200).json({ success: true }), 60);
+        };
+        const res = createTrackedResponse({ timeoutMs: 200, observationMs: 10 });
+        handler({}, res);
+        const result = await res.promise;
+        assert.strictEqual(result.statusCode, 200);
+        assert.deepStrictEqual(result.body, { success: true });
+        assert.strictEqual(result.responseCount, 1);
     });
 
     await t.test('C. Successful deletion invalidates a populated cache', async () => {
