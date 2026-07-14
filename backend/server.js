@@ -68,7 +68,6 @@ if (!fs.existsSync('logs')) {
 
 app.use(cors());
 app.use(express.json());
-app.use(express.json());
 
 // Serve static files from PUBLIC directory (Frontend)
 app.use(express.static(path.join(__dirname, '../public'), {
