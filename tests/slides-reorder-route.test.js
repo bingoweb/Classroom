@@ -158,16 +158,19 @@ test('Slides Reorder Route Tests', async (t) => {
             cb();
         };
 
-        db.prepare = function(sql) {
+        db.prepare = function(sql, params, cb) {
+            if (typeof params === 'function') cb = params;
             prepareCalled++;
             preparedSql = sql;
+            if (cb) setImmediate(() => cb(null));
             return {
                 run: function(params, cb) {
                     runCalls.push(params);
                     if (cb) cb(null);
                 },
-                finalize: function() {
+                finalize: function(cb) {
                     finalizeCalled++;
+                    if (cb) cb(null);
                 }
             };
         };
@@ -203,7 +206,7 @@ test('Slides Reorder Route Tests', async (t) => {
 
         db.get = () => { getCalled = true; };
         db.serialize = () => { serializeCalled = true; };
-        db.prepare = () => { prepareCalled = true; };
+        db.prepare = (s, p, c) => { prepareCalled = true; if (typeof p === 'function') p(null); else if (c) c(null); };
 
         const payload = { slideOrders: [] };
         const response = await makeRequest('PUT', '/api/slides/reorder', payload);
@@ -218,7 +221,7 @@ test('Slides Reorder Route Tests', async (t) => {
 
     await t.test('4. Mandatory item-validation preservation test', async () => {
         let dbCalled = false;
-        const markDbCalled = () => { dbCalled = true; };
+        const markDbCalled = (s, p, c) => { dbCalled = true; if (typeof p === 'function') setImmediate(() => p(null)); else if (c) setImmediate(() => c(null)); };
 
         db.get = markDbCalled;
         db.serialize = markDbCalled;
@@ -241,7 +244,7 @@ test('Slides Reorder Route Tests', async (t) => {
 
     await t.test('Real HTTP: A. Null item', async () => {
         let dbCalled = false;
-        const markDbCalled = () => { dbCalled = true; };
+        const markDbCalled = (s, p, c) => { dbCalled = true; if (typeof p === 'function') setImmediate(() => p(null)); else if (c) setImmediate(() => c(null)); };
 
         db.get = markDbCalled;
         db.serialize = markDbCalled;
@@ -261,7 +264,7 @@ test('Slides Reorder Route Tests', async (t) => {
 
     await t.test('Real HTTP: B. Numeric-string fields', async () => {
         let dbCalled = false;
-        const markDbCalled = () => { dbCalled = true; };
+        const markDbCalled = (s, p, c) => { dbCalled = true; if (typeof p === 'function') p(null); else if (c) c(null); };
 
         db.get = markDbCalled;
         db.serialize = markDbCalled;
@@ -367,7 +370,7 @@ test('Slides Reorder Route Tests', async (t) => {
                 let runCalled = false;
 
                 db.serialize = () => { serializeCalled = true; };
-                db.prepare = () => { prepareCalled = true; };
+                db.prepare = (s, p, c) => { prepareCalled = true; if (typeof p === 'function') setImmediate(() => p(null)); else if (c) setImmediate(() => c(null)); };
                 db.get = () => { getCalled = true; };
                 db.run = () => { runCalled = true; };
 
@@ -396,7 +399,7 @@ test('Slides Reorder Route Tests', async (t) => {
             let runCalled = false;
 
             db.serialize = () => { serializeCalled = true; };
-            db.prepare = () => { prepareCalled = true; };
+            db.prepare = (s, p, c) => { prepareCalled = true; if (typeof p === 'function') p(null); else if (c) c(null); };
             db.get = () => { getCalled = true; };
             db.run = () => { runCalled = true; };
 
@@ -433,7 +436,7 @@ test('Slides Reorder Route Tests', async (t) => {
                 let runCalled = false;
 
                 db.serialize = () => { serializeCalled = true; };
-                db.prepare = () => { prepareCalled = true; };
+                db.prepare = (s, p, c) => { prepareCalled = true; if (typeof p === 'function') setImmediate(() => p(null)); else if (c) setImmediate(() => c(null)); };
                 db.get = () => { getCalled = true; };
                 db.run = () => { runCalled = true; };
 
@@ -478,7 +481,7 @@ test('Slides Reorder Route Tests', async (t) => {
                 let runCalled = false;
 
                 db.serialize = () => { serializeCalled = true; };
-                db.prepare = () => { prepareCalled = true; };
+                db.prepare = (s, p, c) => { prepareCalled = true; if (typeof p === 'function') setImmediate(() => p(null)); else if (c) setImmediate(() => c(null)); };
                 db.get = () => { getCalled = true; };
                 db.run = () => { runCalled = true; };
 
@@ -525,7 +528,7 @@ test('Slides Reorder Route Tests', async (t) => {
                 let runCalled = false;
 
                 db.serialize = () => { serializeCalled = true; };
-                db.prepare = () => { prepareCalled = true; };
+                db.prepare = (s, p, c) => { prepareCalled = true; if (typeof p === 'function') p(null); else if (c) c(null); };
                 db.get = () => { getCalled = true; };
                 db.run = () => { runCalled = true; };
 
@@ -547,7 +550,7 @@ test('Slides Reorder Route Tests', async (t) => {
             });
         }
 
-        await t2.test('Direct handler: Valid boundary preservation (1, MAX_SAFE_INTEGER)', () => {
+        await t2.test('Direct handler: Valid boundary preservation (1, MAX_SAFE_INTEGER)', async () => {
             let serializeCalled = 0;
             let prepareCalled = 0;
             let preparedSql = null;
@@ -556,16 +559,19 @@ test('Slides Reorder Route Tests', async (t) => {
             let dbRunCalls = [];
 
             db.serialize = (cb) => { serializeCalled++; cb(); };
-            db.prepare = (sql) => {
+            db.prepare = (sql, params, cb) => {
+                if (typeof params === 'function') cb = params;
                 prepareCalled++;
                 preparedSql = sql;
+                if (cb) setImmediate(() => cb(null));
                 return {
                     run: (params, cb) => {
                         stmtRunCalls.push(params);
                         if (cb) cb(null);
                     },
-                    finalize: () => {
+                    finalize: (cb) => {
                         finalizeCalled++;
+                        if (cb) cb(null);
                     }
                 };
             };
@@ -576,23 +582,32 @@ test('Slides Reorder Route Tests', async (t) => {
                 if (cb) cb(null);
             };
 
-            const req = {
-                body: {
-                    slideOrders: [
-                        { id: 1, display_order: 1 },
-                        { id: Number.MAX_SAFE_INTEGER, display_order: Number.MAX_SAFE_INTEGER }
-                    ]
-                },
-                requestId: 'reorder-valid-boundary'
-            };
-            const res = createMockRes();
+            const payload = [
+                { id: 1, display_order: 1 },
+                { id: Number.MAX_SAFE_INTEGER, display_order: Number.MAX_SAFE_INTEGER }
+            ];
 
-            assert.doesNotThrow(() => { handler(req, res); });
+            let resCode = 200;
+            let resBody = null;
+            await new Promise((resolve) => {
+                const res = {
+                    status: (code) => { resCode = code; return res; },
+                    json: (data) => {
+                        resBody = data;
+                        resolve();
+                    }
+                };
 
-            assert.strictEqual(res.statusCode, 200);
-            assert.deepStrictEqual(res.body, { message: 'Sıralama başarıyla güncellendi' });
-            assert.strictEqual(res.responseCount, 1);
+                const req = {
+                    body: { slideOrders: payload },
+                    requestId: 'reorder-valid-boundary'
+                };
 
+                assert.doesNotThrow(() => { handler(req, res); });
+            });
+
+            assert.strictEqual(resCode, 200);
+            assert.deepStrictEqual(resBody, { message: 'Sıralama başarıyla güncellendi' });
             assert.strictEqual(serializeCalled, 1);
             assert.strictEqual(prepareCalled, 1);
             assert.strictEqual(preparedSql, 'UPDATE slides SET display_order = ? WHERE id = ?');
@@ -611,6 +626,14 @@ test('Slides Reorder Route Tests', async (t) => {
         const handler = matchingRoutes[0].route.stack[matchingRoutes[0].route.stack.length - 1].handle;
 
         function invokeHandlerMockDb(reqBody, dbMock, timeoutMs = 500) {
+            let originalSerialize = db.serialize;
+            let originalRun = db.run;
+            let originalPrepare = db.prepare;
+
+            db.serialize = dbMock.serialize || ((cb) => cb());
+            db.run = dbMock.run;
+            db.prepare = dbMock.prepare;
+
             return new Promise((resolve, reject) => {
                 let resCount = 0;
                 let resBody = null;
@@ -633,23 +656,15 @@ test('Slides Reorder Route Tests', async (t) => {
                 };
                 setTimeout(() => fail(new Error('Timeout waiting for response')), timeoutMs);
 
-                let originalSerialize = db.serialize;
-                let originalRun = db.run;
-                let originalPrepare = db.prepare;
-
-                db.serialize = dbMock.serialize || ((cb) => cb());
-                db.run = dbMock.run;
-                db.prepare = dbMock.prepare;
-
                 try {
                     handler({ body: reqBody, requestId: 'test' }, res);
                 } catch (err) {
                     fail(err);
-                } finally {
-                    db.serialize = originalSerialize;
-                    db.run = originalRun;
-                    db.prepare = originalPrepare;
                 }
+            }).finally(() => {
+                db.serialize = originalSerialize;
+                db.run = originalRun;
+                db.prepare = originalPrepare;
             });
         }
 
@@ -657,14 +672,19 @@ test('Slides Reorder Route Tests', async (t) => {
             let runCalls = [];
             let prepareCalled = false;
             const resObj = await invokeHandlerMockDb({ slideOrders: [{ id: 1, display_order: 1 }] }, {
-                run: (sql, cb) => {
-                    if (typeof cb !== 'function' && typeof params === 'function') cb = params;
+                run: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
                     runCalls.push(sql);
                     if (sql === "BEGIN IMMEDIATE TRANSACTION") {
                         if (cb) cb(new Error('begin failed'));
-                    }
+                    } else if (cb) cb(null);
                 },
-                prepare: () => { prepareCalled = true; return { run: () => {}, finalize: () => {} }; }
+                prepare: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
+                    prepareCalled = true;
+                    if (cb) setImmediate(() => cb(null));
+                    return { run: function() {}, finalize: function(cb) { if (cb) cb(null); } };
+                }
             });
             assert.strictEqual(resObj.statusCode, 500);
             assert.deepStrictEqual(resObj.body, { error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
@@ -678,23 +698,25 @@ test('Slides Reorder Route Tests', async (t) => {
             let finalizeCalled = false;
             let stmtRunCalls = 0;
             const resObj = await invokeHandlerMockDb({ slideOrders: [{ id: 1, display_order: 1 }, { id: 2, display_order: 2 }] }, {
-                run: (sql, cb) => {
-                    if (typeof cb !== 'function' && typeof params === 'function') cb = params;
+                run: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
                     runCalls.push(sql);
                     if (cb) cb(null);
                 },
-                prepare: (sql) => {
+                prepare: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
                     prepareCalls.push(sql);
+                    if (cb) setImmediate(() => cb(null));
                     return {
-                        run: (params, cb) => {
+                        run: function(p, c) {
                             stmtRunCalls++;
                             if (stmtRunCalls === 1) {
-                                cb(new Error('update failed'));
+                                if (c) c(new Error('update failed'));
                             } else {
-                                cb(null);
+                                if (c) c(null);
                             }
                         },
-                        finalize: () => { finalizeCalled = true; }
+                        finalize: function(c) { finalizeCalled = true; if (c) c(null); }
                     };
                 }
             });
@@ -708,7 +730,8 @@ test('Slides Reorder Route Tests', async (t) => {
             let runCalls = [];
             let finalizeCalled = false;
             const resObj = await invokeHandlerMockDb({ slideOrders: [{ id: 1, display_order: 1 }] }, {
-                run: (sql, cb) => {
+                run: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
                     runCalls.push(sql);
                     if (sql === "COMMIT") {
                         if (cb) cb(new Error('commit failed'));
@@ -716,10 +739,12 @@ test('Slides Reorder Route Tests', async (t) => {
                         if (cb) cb(null);
                     }
                 },
-                prepare: (sql) => {
+                prepare: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
+                    if (cb) setImmediate(() => cb(null));
                     return {
-                        run: (params, cb) => cb(null),
-                        finalize: () => { finalizeCalled = true; }
+                        run: function(p, c) { if (c) c(null); },
+                        finalize: function(c) { finalizeCalled = true; if (c) c(null); }
                     };
                 }
             });
@@ -733,7 +758,8 @@ test('Slides Reorder Route Tests', async (t) => {
             let finalizeCalled = false;
             let commitCallbackCompleted = false;
             const resObj = await invokeHandlerMockDb({ slideOrders: [{ id: 1, display_order: 1 }, { id: 2, display_order: 2 }] }, {
-                run: (sql, cb) => {
+                run: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
                     runCalls.push(sql);
                     if (sql === "COMMIT") {
                         setTimeout(() => {
@@ -744,10 +770,12 @@ test('Slides Reorder Route Tests', async (t) => {
                         if (cb) cb(null);
                     }
                 },
-                prepare: (sql) => {
+                prepare: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
+                    if (cb) setImmediate(() => cb(null));
                     return {
-                        run: (params, cb) => cb(null),
-                        finalize: () => { finalizeCalled = true; }
+                        run: function(p, c) { if (c) c(null); },
+                        finalize: function(c) { finalizeCalled = true; if (c) c(null); }
                     };
                 }
             });
@@ -755,6 +783,71 @@ test('Slides Reorder Route Tests', async (t) => {
             assert.strictEqual(finalizeCalled, true);
             assert.strictEqual(commitCallbackCompleted, true);
             assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "COMMIT"]);
+        });
+
+        await t2.test('Asynchronous prepare failure', async () => {
+            let runCalls = [];
+            const resObj = await invokeHandlerMockDb({ slideOrders: [{ id: 1, display_order: 1 }] }, {
+                run: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
+                    runCalls.push(sql);
+                    if (cb) cb(null);
+                },
+                prepare: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
+                    if (cb) setTimeout(() => cb(new Error('async prepare error')), 5);
+                    return { run: function() {}, finalize: function(c) { if (c) c(null); } };
+                }
+            });
+            assert.strictEqual(resObj.statusCode, 500);
+            assert.deepStrictEqual(resObj.body, { error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
+        });
+
+        await t2.test('Finalize failure after all updates', async () => {
+            let runCalls = [];
+            let finalizeCalled = false;
+            const resObj = await invokeHandlerMockDb({ slideOrders: [{ id: 1, display_order: 1 }] }, {
+                run: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
+                    runCalls.push(sql);
+                    if (cb) cb(null);
+                },
+                prepare: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
+                    if (cb) setImmediate(() => cb(null));
+                    return {
+                        run: function(p, c) { if (c) c(null); },
+                        finalize: function(c) { finalizeCalled = true; if (c) c(new Error('finalize failed')); }
+                    };
+                }
+            });
+            assert.strictEqual(resObj.statusCode, 500);
+            assert.strictEqual(finalizeCalled, true);
+            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
+        });
+
+        await t2.test('Update failure plus finalize failure', async () => {
+            let runCalls = [];
+            let finalizeCalled = false;
+            const resObj = await invokeHandlerMockDb({ slideOrders: [{ id: 1, display_order: 1 }, { id: 2, display_order: 2 }] }, {
+                run: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
+                    runCalls.push(sql);
+                    if (cb) cb(null);
+                },
+                prepare: function(sql, params, cb) {
+                    if (typeof params === 'function') cb = params;
+                    if (cb) setImmediate(() => cb(null));
+                    return {
+                        run: function(p, c) { if (c) c(new Error('update failed')); },
+                        finalize: function(c) { finalizeCalled = true; if (c) c(new Error('finalize failed')); }
+                    };
+                }
+            });
+            assert.strictEqual(resObj.statusCode, 500);
+            assert.strictEqual(finalizeCalled, true);
+            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
         });
     });
 

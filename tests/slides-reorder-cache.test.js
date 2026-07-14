@@ -49,7 +49,7 @@ function removeDirectoryIfPresent(fsApi, directoryPath) {
 function createTrackedResponse() {
     let resolvePromise;
     let rejectPromise;
-    
+
     const promise = new Promise((resolve, reject) => {
         resolvePromise = resolve;
         rejectPromise = reject;
@@ -113,7 +113,7 @@ test('Slides Reorder Cache Tests', async (t) => {
         removeFileIfPresent(fs, testDbPath + '-wal');
         removeFileIfPresent(fs, testDbPath + '-shm');
         removeDirectoryIfPresent(fs, tempDir);
-        
+
         global.setInterval = originalSetInterval;
         Date.now = originalDateNow;
         if (originalDbPath === undefined) {
@@ -168,7 +168,7 @@ test('Slides Reorder Cache Tests', async (t) => {
 
     await t.test('B. Successful reorder invalidates a populated cache', async () => {
         mockTime += 5 * 60 * 1000 + 1000;
-        
+
         let dbAllCount = 0;
         let activeSlidesRow = [
             { id: 1, title: 'Birinci slayt', media_path: null, display_order: 1 },
@@ -215,16 +215,19 @@ test('Slides Reorder Cache Tests', async (t) => {
             cb();
         };
 
-        db.prepare = function(sql) {
+        db.prepare = function(sql, params, cb) {
+            if (typeof params === 'function') cb = params;
             prepareCount++;
             capturedSql = sql;
+            if (cb) setImmediate(() => cb(null));
             return {
                 run: function(params, cb) {
                     capturedParams.push(params);
                     capturedCallbacks.push(cb);
                 },
-                finalize: function() {
+                finalize: function(cb) {
                     finalizeCount++;
+                    if (cb) cb(null);
                 }
             };
         };
@@ -242,6 +245,8 @@ test('Slides Reorder Cache Tests', async (t) => {
         const reorderRes = createTrackedResponse();
         reorderHandler(reorderReq, reorderRes);
 
+        await new Promise(resolve => setImmediate(resolve));
+
         assert.strictEqual(reorderRes.responseCount, 0);
         assert.strictEqual(finalizeCount, 0);
         assert.strictEqual(capturedCallbacks.length, 1);
@@ -256,7 +261,7 @@ test('Slides Reorder Cache Tests', async (t) => {
         const getResInter = createTrackedResponse();
         activeHandler({ requestId: 'req-inter' }, getResInter);
         const getResultInter = await getResInter.promise;
-        
+
         assert.strictEqual(dbAllCount, 1, 'Cache should still be used');
         assert.deepStrictEqual(getResultInter.body, activeSlidesRow);
 
@@ -287,7 +292,7 @@ test('Slides Reorder Cache Tests', async (t) => {
         const getRes2 = createTrackedResponse();
         activeHandler({ requestId: 'req-3' }, getRes2);
         const getResult2 = await getRes2.promise;
-        
+
         assert.strictEqual(dbAllCount, 2);
         assert.deepStrictEqual(getResult2.body, activeSlidesRow);
         assert.strictEqual(getResult2.responseCount, 1);
@@ -295,7 +300,7 @@ test('Slides Reorder Cache Tests', async (t) => {
 
     await t.test('C. One statement error must preserve the populated cache', async () => {
         mockTime += 5 * 60 * 1000 + 1000;
-        
+
         let dbAllCount = 0;
         const activeSlidesRow = [
             { id: 1, title: 'Birinci slayt', media_path: null, display_order: 1 },
@@ -327,15 +332,18 @@ test('Slides Reorder Cache Tests', async (t) => {
 
         db.serialize = function(cb) { cb(); };
 
-        db.prepare = function(sql) {
+        db.prepare = function(sql, params, cb) {
+            if (typeof params === 'function') cb = params;
             capturedSql = sql;
+            if (cb) setImmediate(() => cb(null));
             return {
                 run: function(params, cb) {
                     capturedParams.push(params);
                     capturedCallbacks.push(cb);
                 },
-                finalize: function() {
+                finalize: function(cb) {
                     finalizeCount++;
+                    if (cb) cb(null);
                 }
             };
         };
@@ -361,10 +369,12 @@ test('Slides Reorder Cache Tests', async (t) => {
         const reorderRes = createTrackedResponse();
         reorderHandler(reorderReq, reorderRes);
 
+        await new Promise(resolve => setImmediate(resolve));
+
         const reorderError = new Error('second reorder update failed');
         assert.strictEqual(capturedCallbacks.length, 1);
         capturedCallbacks[0](null);
-        
+
         assert.strictEqual(reorderRes.responseCount, 0);
         assert.strictEqual(capturedCallbacks.length, 2);
 
@@ -393,14 +403,14 @@ test('Slides Reorder Cache Tests', async (t) => {
         const getRes2 = createTrackedResponse();
         activeHandler({ requestId: 'req-6' }, getRes2);
         const getResult2 = await getRes2.promise;
-        
+
         assert.strictEqual(dbAllCount, 1);
         assert.deepStrictEqual(getResult2.body, activeSlidesRow);
     });
 
     await t.test('D. Invalid request must preserve the populated cache', async () => {
         mockTime += 5 * 60 * 1000 + 1000;
-        
+
         let dbAllCount = 0;
         const activeSlidesRow = [
             { id: 1, title: 'Birinci slayt', media_path: null, display_order: 1 }
@@ -421,7 +431,12 @@ test('Slides Reorder Cache Tests', async (t) => {
         let prepareCalled = false;
 
         db.serialize = function(cb) { serializeCalled = true; cb(); };
-        db.prepare = function(sql) { prepareCalled = true; return {}; };
+        db.prepare = function(sql, params, cb) {
+            if (typeof params === 'function') cb = params;
+            prepareCalled = true;
+            if (cb) setImmediate(() => cb(null));
+            return {};
+        };
 
         const reorderReq = {
             body: {
@@ -443,7 +458,7 @@ test('Slides Reorder Cache Tests', async (t) => {
         const getRes2 = createTrackedResponse();
         activeHandler({ requestId: 'req-9' }, getRes2);
         const getResult2 = await getRes2.promise;
-        
+
         assert.strictEqual(dbAllCount, 1);
         assert.deepStrictEqual(getResult2.body, activeSlidesRow);
     });

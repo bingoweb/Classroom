@@ -1538,58 +1538,78 @@ app.put('/api/slides/reorder', (req, res) => {
 
             let stmt;
             try {
-                stmt = db.prepare("UPDATE slides SET display_order = ? WHERE id = ?");
+                stmt = db.prepare("UPDATE slides SET display_order = ? WHERE id = ?", function (prepErr) {
+                    if (prepErr) {
+                        logger.error(COMPONENTS.API, 'Error preparing statement for slides reorder', prepErr, { requestId: req.requestId });
+                        return db.run("ROLLBACK", () => {
+                            res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                        });
+                    }
+
+                    let i = 0;
+                    const totalItems = slideOrders.length;
+
+                    function nextUpdate() {
+                        if (i >= totalItems) {
+                            stmt.finalize((finalizeErr) => {
+                                if (finalizeErr) {
+                                    logger.error(COMPONENTS.API, 'Error finalizing statement after successful updates', finalizeErr, { requestId: req.requestId });
+                                    return db.run("ROLLBACK", () => {
+                                        res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                                    });
+                                }
+
+                                db.run("COMMIT", function (commitErr) {
+                                    if (commitErr) {
+                                        logger.error(COMPONENTS.API, 'Error committing slides reorder', commitErr, { requestId: req.requestId });
+                                        return db.run("ROLLBACK", () => {
+                                            res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                                        });
+                                    }
+
+                                    slidesCache = null;
+                                    cacheTimestamp = null;
+                                    logger.info(COMPONENTS.API, 'Slides reordered successfully', null, {
+                                        totalItems,
+                                        requestId: req.requestId
+                                    });
+                                    res.json({ message: 'Sıralama başarıyla güncellendi' });
+                                });
+                            });
+                            return;
+                        }
+
+                        const item = slideOrders[i];
+                        stmt.run([item.display_order, item.id], function (err) {
+                            if (err) {
+                                logger.error(COMPONENTS.API, 'Error updating slide order', err, {
+                                    slideId: item.id,
+                                    displayOrder: item.display_order,
+                                    requestId: req.requestId
+                                });
+                                stmt.finalize((finalizeErr) => {
+                                    if (finalizeErr) {
+                                        logger.error(COMPONENTS.API, 'Error finalizing statement after update failure', finalizeErr, { requestId: req.requestId });
+                                    }
+                                    return db.run("ROLLBACK", () => {
+                                        res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                                    });
+                                });
+                                return;
+                            }
+                            i++;
+                            nextUpdate();
+                        });
+                    }
+
+                    nextUpdate();
+                });
             } catch (prepErr) {
                 logger.error(COMPONENTS.API, 'Error preparing statement for slides reorder', prepErr, { requestId: req.requestId });
                 return db.run("ROLLBACK", () => {
                     res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
                 });
             }
-
-            let i = 0;
-            const totalItems = slideOrders.length;
-
-            function nextUpdate() {
-                if (i >= totalItems) {
-                    stmt.finalize();
-                    db.run("COMMIT", function (commitErr) {
-                        if (commitErr) {
-                            logger.error(COMPONENTS.API, 'Error committing slides reorder', commitErr, { requestId: req.requestId });
-                            return db.run("ROLLBACK", () => {
-                                res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
-                            });
-                        }
-
-                        slidesCache = null;
-                        cacheTimestamp = null;
-                        logger.info(COMPONENTS.API, 'Slides reordered successfully', null, {
-                            totalItems,
-                            requestId: req.requestId
-                        });
-                        res.json({ message: 'Sıralama başarıyla güncellendi' });
-                    });
-                    return;
-                }
-
-                const item = slideOrders[i];
-                stmt.run([item.display_order, item.id], function (err) {
-                    if (err) {
-                        logger.error(COMPONENTS.API, 'Error updating slide order', err, {
-                            slideId: item.id,
-                            displayOrder: item.display_order,
-                            requestId: req.requestId
-                        });
-                        stmt.finalize();
-                        return db.run("ROLLBACK", () => {
-                            res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
-                        });
-                    }
-                    i++;
-                    nextUpdate();
-                });
-            }
-
-            nextUpdate();
         });
     });
 });
