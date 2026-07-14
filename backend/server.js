@@ -775,12 +775,6 @@ app.post('/api/roles', (req, res) => {
         `;
         db.run(sql, [studentId, role_type, studentId, role_type], function (err) {
             if (err) {
-                console.error('DATABASE ERROR inserting role:', err.message, {
-                    studentId: studentId,
-                    roleType: role_type,
-                    errorCode: err.code,
-                    errorErrno: err.errno
-                });
                 logger.error(COMPONENTS.API, 'Error inserting role', err, {
                     studentId: studentId,
                     roleType: role_type,
