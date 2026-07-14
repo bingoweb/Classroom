@@ -86,7 +86,7 @@ Classroom/
 
 ## 📱 Yönetim Paneli
 
-Admin panelinden yapılabilecekler:
+Yönetim panelinden yapılabilecekler:
 - Öğrenci ekleme/silme (Excel içe aktarma destekli)
 - Fotoğraf güncelleme
 - Rol atama (Başkan, Yardımcı, Nöbetçi, Yıldız)
