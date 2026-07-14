@@ -150,6 +150,62 @@ test('Slides Delete Cache Tests (Atomic)', async (t) => {
     const activeHandler = getActiveRoutes[0].route.stack[getActiveRoutes[0].route.stack.length - 1].handle;
     const deleteHandler = deleteSlidesRoutes[0].route.stack[deleteSlidesRoutes[0].route.stack.length - 1].handle;
 
+    await t.test('A. Actual route discovery', () => {
+        assert.strictEqual(getActiveRoutes.length, 1, 'Exactly one GET /api/slides/active route must exist');
+        assert.strictEqual(deleteSlidesRoutes.length, 1, 'Exactly one DELETE /api/slides/:id route must exist');
+        assert.strictEqual(typeof activeHandler, 'function', 'Active handler must be a function');
+        assert.strictEqual(typeof deleteHandler, 'function', 'Delete handler must be a function');
+    });
+
+    await t.test('Helper: zero responses reject using explicitly short timeout', async () => {
+        const res = createTrackedResponse({ timeoutMs: 10 });
+        await assert.rejects(res.promise, /Expected exactly one response, received 0/);
+    });
+
+    await t.test('Helper: two immediate responses reject', async () => {
+        const handler = (req, res) => {
+            res.status(200).json({ first: true });
+            res.json({ second: true });
+        };
+        const res = createTrackedResponse();
+        handler({}, res);
+        await assert.rejects(res.promise, /Multiple responses sent/);
+    });
+
+    await t.test('Helper: delayed second response during observation window rejects', async () => {
+        const handler = (req, res) => {
+            res.status(200).json({ first: true });
+            setTimeout(() => res.json({ second: true }), 5);
+        };
+        const res = createTrackedResponse({ observationMs: 15 });
+        handler({}, res);
+        await assert.rejects(res.promise, /Multiple responses sent/);
+    });
+
+    await t.test('Helper: exactly one asynchronous response resolves', async () => {
+        const handler = (req, res) => {
+            setTimeout(() => res.status(200).json({ first: true }), 5);
+        };
+        const res = createTrackedResponse();
+        handler({}, res);
+        const result = await res.promise;
+        assert.strictEqual(result.statusCode, 200);
+        assert.deepStrictEqual(result.body, { first: true });
+        assert.strictEqual(result.responseCount, 1);
+    });
+
+    await t.test('Helper: response arriving after 50ms but before normal timeout succeeds', async () => {
+        const handler = (req, res) => {
+            setTimeout(() => res.status(200).json({ success: true }), 60);
+        };
+        const res = createTrackedResponse({ timeoutMs: 200, observationMs: 10 });
+        handler({}, res);
+        const result = await res.promise;
+        assert.strictEqual(result.statusCode, 200);
+        assert.deepStrictEqual(result.body, { success: true });
+        assert.strictEqual(result.responseCount, 1);
+    });
+
     await t.test('C. Successful deletion invalidates a populated cache', async () => {
         mockTime += 5 * 60 * 1000 + 1000;
 

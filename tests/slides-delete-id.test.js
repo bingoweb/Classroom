@@ -419,4 +419,109 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         assert.strictEqual(errorLogArgs[2].message, 'rollback catastrophe');
         assert.deepEqual(errorLogArgs[3], { originalError: 'primary error' });
     });
+
+    await t.test('8. BEGIN IMMEDIATE failure', async () => {
+        let getCalled = false;
+        let sqlLog = [];
+        let unlinkCalled = 0;
+
+        db.get = (sql, params, cb) => {
+            getCalled = true;
+            cb(null, { media_path: 'uploads/test.jpg', display_order: 2 });
+        };
+
+        db.run = function(sql, params, cb) {
+            const actualCb = typeof params === 'function' ? params : cb;
+            sqlLog.push(sql);
+            if (sql === 'BEGIN IMMEDIATE') {
+                actualCb(new Error('begin transaction failed'));
+            } else {
+                actualCb(null);
+            }
+        };
+
+        fs.unlinkSync = () => { unlinkCalled++; };
+
+        const req = { params: { id: '47' } };
+        const resObj = await invokeHandler(req);
+
+        assert.strictEqual(resObj.statusCode, 500);
+        assert.deepEqual(resObj.body, { error: 'begin transaction failed' });
+        assert.strictEqual(resObj.count, 1, 'Exactly one response sent');
+        assert.strictEqual(getCalled, false, 'db.get must not be called');
+        assert.deepEqual(sqlLog, ['BEGIN IMMEDIATE']);
+        assert.strictEqual(unlinkCalled, 0, 'No media cleanup occurs');
+    });
+
+    await t.test('9. Slide lookup failure triggers rollback', async () => {
+        let sqlLog = [];
+        let rollbackCompletedBeforeResponse = false;
+        let unlinkCalled = 0;
+
+        db.get = (sql, params, cb) => {
+            cb(new Error('select failed'));
+        };
+
+        db.run = function(sql, params, cb) {
+            const actualCb = typeof params === 'function' ? params : cb;
+            sqlLog.push(sql);
+            if (sql === 'ROLLBACK') rollbackCompletedBeforeResponse = true;
+            actualCb(null);
+        };
+
+        fs.unlinkSync = () => { unlinkCalled++; };
+
+        const req = { params: { id: '47' } };
+        const resObj = await invokeHandler(req);
+
+        assert.strictEqual(resObj.statusCode, 500);
+        assert.deepEqual(resObj.body, { error: 'select failed' });
+        assert.strictEqual(resObj.count, 1, 'Exactly one response sent');
+        assert.deepEqual(sqlLog, ['BEGIN IMMEDIATE', 'ROLLBACK']);
+        assert.ok(rollbackCompletedBeforeResponse, 'Error response not sent before rollback completes');
+        assert.strictEqual(unlinkCalled, 0, 'No media cleanup occurs');
+    });
+
+    await t.test('10. Post-commit media cleanup failure logs warning and preserves success response', async () => {
+        let sqlLog = [];
+        let warnLogArgs = null;
+
+        Logger.prototype.warn = (...args) => { warnLogArgs = args; };
+
+        db.get = (sql, params, cb) => {
+            sqlLog.push(sql);
+            cb(null, { media_path: 'uploads/test.jpg', display_order: 2 });
+        };
+
+        db.run = function(sql, params, cb) {
+            const actualCb = typeof params === 'function' ? params : cb;
+            sqlLog.push(sql);
+            if (sql.includes('DELETE')) this.changes = 1;
+            actualCb.call(this, null);
+        };
+
+        fs.existsSync = () => true;
+        fs.unlinkSync = () => {
+            throw new Error('filesystem error');
+        };
+
+        const req = { params: { id: '47' } };
+        const resObj = await invokeHandler(req);
+
+        assert.strictEqual(resObj.statusCode, 200);
+        assert.deepEqual(resObj.body, { message: 'Slayt başarıyla silindi', changes: 1 });
+        assert.strictEqual(resObj.count, 1, 'Exactly one response sent');
+        assert.deepEqual(sqlLog, [
+            'BEGIN IMMEDIATE',
+            'SELECT media_path, display_order FROM slides WHERE id = ?',
+            'DELETE FROM slides WHERE id = ?',
+            'UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?',
+            'COMMIT'
+        ]);
+
+        assert.ok(warnLogArgs !== null, 'Filesystem error must be logged as warning');
+        assert.strictEqual(warnLogArgs[0], COMPONENTS.API);
+        assert.match(warnLogArgs[1], /Error deleting media file/);
+        assert.strictEqual(warnLogArgs[2].message, 'filesystem error');
+    });
 });

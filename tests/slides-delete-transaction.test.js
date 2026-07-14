@@ -41,56 +41,103 @@ function removeDirectoryIfPresent(fsApi, directoryPath) {
     }
 }
 
-function invokeHandler(req) {
-    return new Promise((resolve, reject) => {
-        const routes = app._router.stack
-            .filter(r => r.route && r.route.methods.delete && r.route.path === '/api/slides/:id');
-        if (routes.length !== 1) {
-            return reject(new Error('Exactly one matching DELETE route must exist'));
-        }
-        const deleteHandler = routes[0].route.stack[routes[0].route.stack.length - 1].handle;
+function createTrackedResponse({ timeoutMs = 1000, observationMs = 15 } = {}) {
+    let resolvePromise;
+    let rejectPromise;
+    let settled = false;
 
-        let responseCount = 0;
-        let responseSnapshot = null;
-        
-        const res = {
-            statusCode: 200,
-            status(code) {
-                this.statusCode = code;
-                return this;
-            },
-            json(data) {
-                responseCount++;
-                if (responseCount > 1) {
-                    return reject(new Error('Multiple responses sent'));
-                }
-                responseSnapshot = {
-                    statusCode: this.statusCode || 200,
-                    body: data
-                };
-                resolve(responseSnapshot);
+    const promise = new Promise((resolve, reject) => {
+        resolvePromise = resolve;
+        rejectPromise = reject;
+    });
+
+    const res = {
+        statusCode: 200,
+        responseCount: 0,
+        body: null,
+        promise,
+        resolveTimeout: null,
+        noResponseTimeout: null,
+        jsonTime: null,
+        status(code) {
+            this.statusCode = code;
+            return this;
+        },
+        json(data) {
+            this.responseCount++;
+            this.jsonTime = process.hrtime.bigint();
+            if (settled) return this;
+
+            if (this.responseCount > 1) {
+                settled = true;
+                if (this.noResponseTimeout) clearTimeout(this.noResponseTimeout);
+                if (this.resolveTimeout) clearTimeout(this.resolveTimeout);
+                rejectPromise(new Error('Multiple responses sent'));
                 return this;
             }
-        };
 
-        const next = (err) => reject(err || new Error('next called without error'));
+            this.body = data;
+            if (this.noResponseTimeout) clearTimeout(this.noResponseTimeout);
 
-        try {
-            deleteHandler(req, res, next);
-        } catch (err) {
-            reject(err);
+            this.resolveTimeout = setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                resolvePromise({ statusCode: this.statusCode, body: this.body, responseCount: this.responseCount, jsonTime: this.jsonTime });
+            }, observationMs);
+
+            return this;
         }
-    });
+    };
+
+    res.noResponseTimeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        if (res.resolveTimeout) clearTimeout(res.resolveTimeout);
+        rejectPromise(new Error('Expected exactly one response, received 0'));
+    }, timeoutMs);
+
+    return res;
+}
+
+function invokeHandler(req) {
+    const routes = app._router.stack
+        .filter(r => r.route && r.route.methods.delete && r.route.path === '/api/slides/:id');
+    if (routes.length !== 1) {
+        return Promise.reject(new Error('Exactly one matching DELETE route must exist'));
+    }
+    const deleteHandler = routes[0].route.stack[routes[0].route.stack.length - 1].handle;
+
+    const res = createTrackedResponse();
+
+    const next = (err) => {
+        res.promise.catch(() => {});
+        throw err || new Error('next called without error');
+    };
+
+    try {
+        deleteHandler(req, res, next);
+    } catch (err) {
+        res.promise.catch(() => {});
+        return Promise.reject(err);
+    }
+
+    return res.promise;
 }
 
 test('Slides Delete Real SQLite Transaction Verification', async (t) => {
+    let originalDbRun;
+
     t.before(async () => {
         await db.scheduleMigrationPromise;
 
-        // Clear table and insert test slides
         await new Promise((resolve, reject) => {
             db.run("DELETE FROM slides", (err) => err ? reject(err) : resolve());
         });
+        originalDbRun = db.run;
+    });
+
+    t.afterEach(() => {
+        if (originalDbRun) db.run = originalDbRun;
     });
 
     t.after(async () => {
@@ -110,7 +157,7 @@ test('Slides Delete Real SQLite Transaction Verification', async (t) => {
     });
 
     const insertSlide = (order, title) => new Promise((resolve, reject) => {
-        db.run("INSERT INTO slides (title, display_order, content_type, media_type, media_path) VALUES (?, ?, 'text', 'none', '')", [title, order], function(err) {
+        originalDbRun.call(db, "INSERT INTO slides (title, display_order, content_type, media_type, media_path) VALUES (?, ?, 'text', 'none', '')", [title, order], function(err) {
             if (err) reject(err);
             else resolve(this.lastID);
         });
@@ -123,14 +170,13 @@ test('Slides Delete Real SQLite Transaction Verification', async (t) => {
         });
     });
 
-    await t.test('Transaction enforces atomicity when update fails', async () => {
+    await t.test('Transaction enforces atomicity when update fails and proves COMMIT ordering', async () => {
         const id1 = await insertSlide(1, 'A');
         const id2 = await insertSlide(2, 'B');
         const id3 = await insertSlide(3, 'C');
 
-        // Create a trigger that forces UPDATE to fail
         await new Promise((resolve, reject) => {
-            db.run("CREATE TRIGGER fail_update BEFORE UPDATE ON slides BEGIN SELECT RAISE(ABORT, 'forced compaction failure'); END;", (err) => err ? reject(err) : resolve());
+            originalDbRun.call(db, "CREATE TRIGGER fail_update BEFORE UPDATE ON slides BEGIN SELECT RAISE(ABORT, 'forced compaction failure'); END;", (err) => err ? reject(err) : resolve());
         });
 
         const initialSlides = await getSlides();
@@ -139,34 +185,52 @@ test('Slides Delete Real SQLite Transaction Verification', async (t) => {
         const req = { params: { id: id2.toString() } };
         const resObj = await invokeHandler(req);
 
-        // Expect 500 error due to rollback
         assert.strictEqual(resObj.statusCode, 500);
         assert.deepEqual(resObj.body, { error: 'SQLITE_CONSTRAINT: forced compaction failure' });
+        assert.strictEqual(resObj.responseCount, 1);
 
-        // Database should be completely untouched
         const postFailSlides = await getSlides();
         assert.strictEqual(postFailSlides.length, 3);
         assert.deepEqual(postFailSlides, initialSlides);
 
-        // Remove trigger
         await new Promise((resolve, reject) => {
-            db.run("DROP TRIGGER fail_update;", (err) => err ? reject(err) : resolve());
+            originalDbRun.call(db, "DROP TRIGGER fail_update;", (err) => err ? reject(err) : resolve());
         });
 
-        // Retry deletion successfully
+        let commitCallbackTime = null;
+        db.run = function(sql, params, cb) {
+            const actualCb = typeof params === 'function' ? params : cb;
+            const isCommit = sql === 'COMMIT';
+            const hookCb = function(err) {
+                if (isCommit && !err) {
+                    commitCallbackTime = process.hrtime.bigint();
+                }
+                actualCb.call(this, err);
+            };
+
+            if (typeof params === 'function') {
+                originalDbRun.call(this, sql, hookCb);
+            } else {
+                originalDbRun.call(this, sql, params, hookCb);
+            }
+        };
+
         const reqSuccess = { params: { id: id2.toString() } };
         const resObjSuccess = await invokeHandler(reqSuccess);
 
         assert.strictEqual(resObjSuccess.statusCode, 200);
         assert.deepEqual(resObjSuccess.body, { message: 'Slayt başarıyla silindi', changes: 1 });
+        assert.strictEqual(resObjSuccess.responseCount, 1);
 
-        // Verify successful deletion and compaction
+        assert.ok(commitCallbackTime !== null, 'COMMIT must be executed');
+        assert.ok(resObjSuccess.jsonTime > commitCallbackTime, 'Response must be sent after COMMIT callback completes');
+
         const postSuccessSlides = await getSlides();
         assert.strictEqual(postSuccessSlides.length, 2);
-        
+
         assert.strictEqual(postSuccessSlides[0].id, id1);
         assert.strictEqual(postSuccessSlides[0].display_order, 1);
-        
+
         assert.strictEqual(postSuccessSlides[1].id, id3);
         assert.strictEqual(postSuccessSlides[1].display_order, 2);
     });
