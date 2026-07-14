@@ -98,7 +98,11 @@ test('Admin Route Auth Test', async (t) => {
         const sessionCookie = setCookie.split(';')[0];
         const sessionId = sessionCookie.split('=')[1];
 
-        // 1. Both /admin and /admin/ return 401 without cookie
+        // 1. A valid cookie serves the existing /admin/ page.
+        const resValid = await fetchPath('GET', '/admin/', sessionCookie);
+        assert.ok(resValid.statusCode === 200 || resValid.statusCode === 304 || resValid.statusCode === 301, `Status was ${resValid.statusCode}`);
+
+        // 1b. Both /admin and /admin/ return 401 without cookie
         const resAdminSlash = await fetchPath('GET', '/admin/');
         assert.strictEqual(resAdminSlash.statusCode, 401);
         assert.deepStrictEqual(JSON.parse(resAdminSlash.body), { authenticated: false, message: 'Yönetici oturumu gerekli.' });
@@ -107,10 +111,51 @@ test('Admin Route Auth Test', async (t) => {
         assert.strictEqual(resAdminNoSlash.statusCode, 401);
         assert.deepStrictEqual(JSON.parse(resAdminNoSlash.body), { authenticated: false, message: 'Yönetici oturumu gerekli.' });
 
-        // 2. Duplicate cookie header
-        const duplicateCookie = `${sessionCookie}; classroom_admin_session=invalid_other_cookie`;
+        // 2. Malformed cookie returns exact 401 JSON
+        const resMalformed = await fetchPath('GET', '/admin/', 'classroom_admin_session=invalid');
+        assert.strictEqual(resMalformed.statusCode, 401);
+        assert.deepStrictEqual(JSON.parse(resMalformed.body), { authenticated: false, message: 'Yönetici oturumu gerekli.' });
+
+        // 3. A valid-format but unknown 43-character session ID returns exact 401 JSON
+        const resUnknownValidFormat = await fetchPath('GET', '/admin/', 'classroom_admin_session=' + 'x'.repeat(43));
+        assert.strictEqual(resUnknownValidFormat.statusCode, 401);
+        assert.deepStrictEqual(JSON.parse(resUnknownValidFormat.body), { authenticated: false, message: 'Yönetici oturumu gerekli.' });
+
+        // 4. Duplicate-cookie test must use two separately logged-in, active session cookies in the same header.
+        const loginResOther = await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ password: adminPassword }), { 'Content-Type': 'application/json' });
+        const sessionCookieOther = loginResOther.headers['set-cookie'][0].split(';')[0];
+        const duplicateCookie = `${sessionCookie}; ${sessionCookieOther}`;
         const resDuplicate = await fetchPath('GET', '/admin/', duplicateCookie);
         assert.strictEqual(resDuplicate.statusCode, 401, `Expected 401 with duplicate cookie, got ${resDuplicate.statusCode}`);
+
+        // 5. Log out a separate valid session and prove its old cookie returns 401.
+        const loginResTemp = await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ password: adminPassword }), { 'Content-Type': 'application/json' });
+        const sessionCookieTemp = loginResTemp.headers['set-cookie'][0].split(';')[0];
+        await fetchPath('POST', '/api/admin/logout', sessionCookieTemp);
+        const resTempLogOut = await fetchPath('GET', '/admin/', sessionCookieTemp);
+        assert.strictEqual(resTempLogOut.statusCode, 401);
+        assert.deepStrictEqual(JSON.parse(resTempLogOut.body), { authenticated: false, message: 'Yönetici oturumu gerekli.' });
+
+        // 6. Prove these remain public
+        const publicRoutes = [
+            { m: 'POST', p: '/api/admin/login', body: JSON.stringify({ password: 'wrong' }), headers: { 'Content-Type': 'application/json' } },
+            { m: 'POST', p: '/api/admin/logout' },
+            { m: 'GET', p: '/api/admin/session' },
+            { m: 'GET', p: '/api/students' },
+            { m: 'GET', p: '/api/schedule' },
+            { m: 'GET', p: '/api/schedule/normalized' },
+            { m: 'GET', p: '/' },
+            { m: 'GET', p: '/uploads/nonexistent-public-probe' }
+        ];
+        for (const pr of publicRoutes) {
+            const resPub = await fetchPath(pr.m, pr.p, null, pr.body, pr.headers);
+            if (pr.p === '/api/admin/login') {
+                assert.strictEqual(resPub.statusCode, 401, `Expected 401 Invalid Password for ${pr.m} ${pr.p}`);
+                assert.deepStrictEqual(JSON.parse(resPub.body), { authenticated: false, message: 'Parola hatalı.' });
+            } else {
+                assert.notStrictEqual(resPub.statusCode, 401, `Expected public access for ${pr.m} ${pr.p}`);
+            }
+        }
 
         // 3. Expired session TTL
         mockedTime += (8 * 60 * 60 * 1000) + 1; // Advance 8 hours + 1 ms
@@ -157,6 +202,13 @@ test('Admin Route Auth Test', async (t) => {
         process.stdout.write = captureLog;
         process.stderr.write = captureLog;
 
+        const distinctiveBadPassword = 'DISTINCTIVE_BAD_PASSWORD_999';
+        await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ password: distinctiveBadPassword }), { 'Content-Type': 'application/json' });
+
+        const unknownValidId = 'U'.repeat(43);
+        const distinctiveUnknownSession = 'classroom_admin_session=' + unknownValidId;
+        await fetchPath('GET', '/admin/', distinctiveUnknownSession);
+
         for (const r of writeRoutes) {
             const res = await fetchPath(r.m, r.p);
             assert.strictEqual(res.statusCode, 401, `Expected 401 for ${r.m} ${r.p}`);
@@ -175,6 +227,10 @@ test('Admin Route Auth Test', async (t) => {
         assert.ok(!capturedLogs.includes(adminPassword), "Logs should not contain admin password");
         assert.ok(!capturedLogs.includes(sessionCookie2), "Logs should not contain full cookie");
         assert.ok(!capturedLogs.includes(sessionId2), "Logs should not contain session ID");
+
+        assert.ok(!capturedLogs.includes(distinctiveBadPassword), "Logs should not contain distinctive bad password");
+        assert.ok(!capturedLogs.includes(unknownValidId), "Logs should not contain distinctive unknown session ID");
+        assert.ok(!capturedLogs.includes(distinctiveUnknownSession), "Logs should not contain distinctive unknown cookie header");
 
         // 4, 5, 6, 8. Upload routes
         const uploadRoutes = [
