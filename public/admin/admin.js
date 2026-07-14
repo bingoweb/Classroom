@@ -19,6 +19,10 @@ window.showTab = function (tabName) {
         } else if (window.scheduleDiagnosticsController) {
             window.scheduleDiagnosticsController.load();
         }
+    } else if (tabName === 'error-logs') {
+        if (typeof window.refreshErrorLogs === 'function') {
+            window.refreshErrorLogs();
+        }
     }
 }
 
