@@ -804,7 +804,6 @@ app.post('/api/roles', (req, res) => {
                 return res.status(400).json({ error: dupMsg });
             }
 
-            console.log('Role inserted successfully:', { id: this.lastID, student_id: studentId, role_type });
             res.json({ id: this.lastID, message: 'Rol başarıyla atandı' });
         });
     }
