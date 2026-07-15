@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const db = require('./database');
@@ -105,7 +104,6 @@ if (!fs.existsSync('logs')) {
     fs.mkdirSync('logs');
 }
 
-app.use(cors());
 app.use(express.json());
 
 const adminSessionStore = createAdminSessionStore();
