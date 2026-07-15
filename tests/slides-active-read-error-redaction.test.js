@@ -1,98 +1,192 @@
 const test = require('node:test');
-const assert = require('node:assert');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const os = require('node:os');
+const fs = require('node:fs');
 const crypto = require('node:crypto');
 
 // Save globals and environments before anything else
+const originalDbPath = process.env.CLASSROOM_DB_PATH;
+const tempDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'classroom-slides-active-read-error-redaction-')
+);
+const testDbPath = path.join(
+    tempDir,
+    `test-${crypto.randomBytes(4).toString('hex')}.db`
+);
+
+process.env.CLASSROOM_DB_PATH = testDbPath;
+
 const originalSetInterval = global.setInterval;
 global.setInterval = () => {};
-const originalDbPath = process.env.CLASSROOM_DB_PATH;
-const tempDbPath = 'test-slides-active-read-error-redaction-' + crypto.randomBytes(4).toString('hex') + '.sqlite';
-process.env.CLASSROOM_DB_PATH = tempDbPath;
 
 const app = require('../backend/server.js');
 const db = require('../backend/database.js');
 const { Logger, COMPONENTS } = require('../backend/logger.js');
 
-const createTrackedResponse = () => {
-    let responseCount = 0;
-    let statusCode = null;
-    let body = null;
-    let promiseResolve;
-    
-    const promise = new Promise((resolve) => {
-        promiseResolve = resolve;
+function closeDatabase(database) {
+    return new Promise((resolve, reject) => {
+        database.close((err) => {
+            if (err) return reject(err);
+            resolve();
+        });
     });
-    
+}
+
+function removeFileIfPresent(fsApi, filePath) {
+    try {
+        fsApi.unlinkSync(filePath);
+    } catch (err) {
+        if (err.code !== 'ENOENT') throw err;
+    }
+}
+
+function removeDirectoryIfPresent(fsApi, directoryPath) {
+    try {
+        fsApi.rmdirSync(directoryPath);
+    } catch (err) {
+        if (err.code !== 'ENOENT') throw err;
+    }
+}
+
+function createTrackedResponse() {
+    let resolvePromise;
+    let rejectPromise;
+
+    const promise = new Promise((resolve, reject) => {
+        resolvePromise = resolve;
+        rejectPromise = reject;
+    });
+
+    const timeout = setTimeout(() => {
+        rejectPromise(new Error('Expected exactly one response, received 0'));
+    }, 50);
+
     const res = {
-        status: (code) => {
-            statusCode = code;
-            return res;
+        statusCode: 200,
+        responseCount: 0,
+        body: null,
+        promise,
+        resolveTimeout: null,
+
+        status(code) {
+            this.statusCode = code;
+            return this;
         },
-        json: (data) => {
-            responseCount++;
-            body = data;
-            promiseResolve({ statusCode: statusCode || 200, body, responseCount });
+
+        json(data) {
+            this.responseCount++;
+
+            if (this.responseCount > 1) {
+                clearTimeout(timeout);
+                if (this.resolveTimeout) clearTimeout(this.resolveTimeout);
+                rejectPromise(new Error('Multiple responses sent'));
+                return this;
+            }
+
+            this.body = data;
+            clearTimeout(timeout);
+
+            this.resolveTimeout = setTimeout(() => {
+                resolvePromise({
+                    statusCode: this.statusCode,
+                    body: this.body,
+                    responseCount: this.responseCount
+                });
+            }, 5);
+
+            return this;
         }
     };
-    
-    res.promise = promise;
+
     return res;
-};
+}
 
 test('Active Slides Read Error Redaction Tests', async (t) => {
-    if (db.scheduleMigrationPromise) {
+    t.after(async () => {
         try {
-            await db.scheduleMigrationPromise;
-        } catch (e) {
-            // Ignore migration errors during test setup
+            await closeDatabase(db);
+
+            removeFileIfPresent(fs, testDbPath);
+            removeFileIfPresent(fs, testDbPath + '-journal');
+            removeFileIfPresent(fs, testDbPath + '-wal');
+            removeFileIfPresent(fs, testDbPath + '-shm');
+            removeDirectoryIfPresent(fs, tempDir);
+        } finally {
+            global.setInterval = originalSetInterval;
+
+            if (originalDbPath === undefined) {
+                delete process.env.CLASSROOM_DB_PATH;
+            } else {
+                process.env.CLASSROOM_DB_PATH = originalDbPath;
+            }
         }
+    });
+
+    if (db.scheduleMigrationPromise) {
+        await db.scheduleMigrationPromise;
     }
+
+    // Helper regression tests
+    await t.test('Double-response regression', async () => {
+        const res = createTrackedResponse();
+        res.json({ a: 1 });
+        res.json({ b: 2 });
+        await assert.rejects(res.promise, /Multiple responses sent/);
+    });
+
+    await t.test('Zero-response regression', async () => {
+        const res = createTrackedResponse();
+        await assert.rejects(res.promise, /Expected exactly one response, received 0/);
+    });
 
     // Find the handlers
     let activeHandler = null;
-    let listHandler = null;
-    let idHandler = null;
     
+    const activeRoutes = [];
+    const listRoutes = [];
+    const idRoutes = [];
+
     const slideRoutes = [];
     app._router.stack.forEach(layer => {
         if (layer.route && layer.route.path && layer.route.path.startsWith('/api/slides')) {
-            slideRoutes.push({
-                path: layer.route.path,
-                method: Object.keys(layer.route.methods)[0]
-            });
-            if (layer.route.path === '/api/slides/active' && layer.route.methods.get) {
-                activeHandler = layer.route.stack[0].handle;
-            } else if (layer.route.path === '/api/slides' && layer.route.methods.get) {
-                listHandler = layer.route.stack[0].handle;
-            } else if (layer.route.path === '/api/slides/:id' && layer.route.methods.get) {
-                idHandler = layer.route.stack[0].handle;
+            if (layer.route.methods.get) {
+                slideRoutes.push(layer.route.path);
+
+                if (layer.route.path === '/api/slides/active') {
+                    activeRoutes.push(layer);
+                } else if (layer.route.path === '/api/slides') {
+                    listRoutes.push(layer);
+                } else if (layer.route.path === '/api/slides/:id') {
+                    idRoutes.push(layer);
+                }
             }
         }
     });
 
     await t.test('Exactly one GET /api/slides/active route exists', () => {
-        const activeRoutes = slideRoutes.filter(r => r.path === '/api/slides/active' && r.method === 'get');
         assert.strictEqual(activeRoutes.length, 1);
-        assert.ok(activeHandler);
+        assert.strictEqual(activeRoutes[0].route.stack.length, 1);
+        activeHandler = activeRoutes[0].route.stack[0].handle;
+        assert.strictEqual(typeof activeHandler, 'function');
     });
 
     await t.test('Exactly one GET /api/slides route exists', () => {
-        const listRoutes = slideRoutes.filter(r => r.path === '/api/slides' && r.method === 'get');
         assert.strictEqual(listRoutes.length, 1);
-        assert.ok(listHandler);
     });
 
     await t.test('Exactly one GET /api/slides/:id route exists', () => {
-        const idRoutes = slideRoutes.filter(r => r.path === '/api/slides/:id' && r.method === 'get');
         assert.strictEqual(idRoutes.length, 1);
-        assert.ok(idHandler);
     });
 
     await t.test('Route registration order remains exactly: /api/slides/active -> /api/slides -> /api/slides/:id', () => {
-        const activeIndex = slideRoutes.findIndex(r => r.path === '/api/slides/active' && r.method === 'get');
-        const listIndex = slideRoutes.findIndex(r => r.path === '/api/slides' && r.method === 'get');
-        const idIndex = slideRoutes.findIndex(r => r.path === '/api/slides/:id' && r.method === 'get');
+        const activeIndex = slideRoutes.indexOf('/api/slides/active');
+        const listIndex = slideRoutes.indexOf('/api/slides');
+        const idIndex = slideRoutes.indexOf('/api/slides/:id');
         
+        assert.ok(activeIndex !== -1);
+        assert.ok(listIndex !== -1);
+        assert.ok(idIndex !== -1);
         assert.ok(activeIndex < listIndex, 'active route must be registered before list route');
         assert.ok(listIndex < idIndex, 'list route must be registered before id route');
     });
@@ -230,45 +324,4 @@ test('Active Slides Read Error Redaction Tests', async (t) => {
             Date.now = originalDateNow;
         }
     });
-});
-
-test('Teardown database', async () => {
-    const fs = require('node:fs');
-    
-    // 1. Await successful database closure
-    await new Promise((resolve, reject) => {
-        db.close((err) => {
-            if (err) reject(err);
-            else resolve();
-        });
-    });
-
-    // 2. Only after closure succeeds, delete:
-    const files = [
-        tempDbPath,
-        tempDbPath + '-journal',
-        tempDbPath + '-wal',
-        tempDbPath + '-shm'
-    ];
-
-    for (const file of files) {
-        try {
-            fs.unlinkSync(file);
-        } catch (err) {
-            // 3. Ignore only ENOENT. 4. Re-throw every other filesystem error.
-            if (err.code !== 'ENOENT') {
-                throw err;
-            }
-        }
-    }
-
-    // 6. Restore global.setInterval
-    global.setInterval = originalSetInterval;
-    
-    // 7. Restore or delete CLASSROOM_DB_PATH
-    if (originalDbPath === undefined) {
-        delete process.env.CLASSROOM_DB_PATH;
-    } else {
-        process.env.CLASSROOM_DB_PATH = originalDbPath;
-    }
 });
