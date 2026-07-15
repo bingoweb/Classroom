@@ -2188,11 +2188,21 @@ app.put('/api/slides/:id', requireAdminSession, requireCsrfToken, requireAdminWr
 
     const { title, content_type, media_type, text_content, display_duration, video_auto_advance, transition_type, transition_duration, transition_mode } = req.body;
 
+    const lookupSql = 'SELECT media_path FROM slides WHERE id = ?';
+    const lookupParams = [slideId];
+
     // Get existing slide
-    db.get("SELECT media_path FROM slides WHERE id = ?", [slideId], (err, row) => {
+    db.get(lookupSql, lookupParams, (err, row) => {
         if (err) {
             if (req.file) fs.unlinkSync(req.file.path);
-            return res.status(500).json({ error: err.message });
+            logger.error(COMPONENTS.API, 'Error fetching slide for update', err, {
+                endpoint: '/api/slides/:id',
+                requestId: req.requestId,
+                slideId: slideId,
+                query: lookupSql,
+                params: lookupParams
+            });
+            return res.status(500).json({ error: 'Slayt güncellenirken hata oluştu' });
         }
         if (!row) {
             if (req.file) fs.unlinkSync(req.file.path);
