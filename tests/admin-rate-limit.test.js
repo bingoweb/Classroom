@@ -230,10 +230,19 @@ test('Admin Rate Limit Tests', async (t) => {
             const writeRoutes = protectedRoutes.filter(r => 
                 r.path !== '/api/admin/login' && 
                 r.path !== '/api/admin/logout' && 
-                r.path !== '/api/admin/session'
+                r.path !== '/api/admin/session' &&
+                (r.methods.post || r.methods.put || r.methods.delete)
             );
 
             assert.strictEqual(writeRoutes.length, 18);
+
+            const logReadRoute = protectedRoutes.find(r => r.path === '/api/logs' && r.methods.get);
+            assert.ok(logReadRoute, 'GET /api/logs must be a protected read route');
+            const logReadNames = logReadRoute.stack.map(layer => layer.name);
+            assert.strictEqual(logReadNames[0], 'requireAdminSession', 'GET /api/logs must start with requireAdminSession');
+            assert.ok(!logReadNames.includes('requireCsrfToken'), 'GET /api/logs must not have CSRF protection');
+            assert.ok(!logReadNames.includes('middleware'), 'GET /api/logs must not have write rate limiting');
+
             let uploadCount = 0;
 
             for (const r of writeRoutes) {

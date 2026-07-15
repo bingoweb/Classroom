@@ -2255,7 +2255,7 @@ app.post('/api/logs', requireAdminSession, requireCsrfToken, requireAdminWriteRa
 });
 
 // Get error logs
-app.get('/api/logs', requireAdminSession.bind(null), (req, res) => {
+app.get('/api/logs', requireAdminSession, (req, res) => {
     let rawLimit = req.query.limit;
     let numericLimit = 100;
 

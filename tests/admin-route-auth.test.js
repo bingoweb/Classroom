@@ -388,8 +388,9 @@ test('Admin Route Auth Test', async (t) => {
         // 3. With a valid session cookie succeeds
         // 4. Succeeds without a CSRF token
         const resLogsAuth = await fetchPath('GET', '/api/logs', sessionCookie2);
-        assert.notStrictEqual(resLogsAuth.statusCode, 401);
-        assert.notStrictEqual(resLogsAuth.statusCode, 403);
+        assert.strictEqual(resLogsAuth.statusCode, 200, 'Expected exact HTTP 200 status for authenticated GET /api/logs');
+        const parsedLogs = JSON.parse(resLogsAuth.body);
+        assert.ok(Array.isArray(parsedLogs), 'Expected parsed response to be an array matching existing route contract');
 
         // 14. Assert CSRF token is not logged
         assert.ok(!capturedLogs.includes(csrfToken2), "CSRF Token was logged");
