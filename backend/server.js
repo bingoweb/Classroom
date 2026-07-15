@@ -2321,61 +2321,73 @@ app.delete('/api/slides/:id', requireAdminSession, requireCsrfToken, requireAdmi
         return res.status(400).json({ error: 'Geçersiz slayt ID' });
     }
 
-    db.run("BEGIN IMMEDIATE", function (beginErr) {
-        if (beginErr) return res.status(500).json({ error: beginErr.message });
+    db.createIsolatedConnection((connErr, isolatedDb) => {
+        if (connErr) return res.status(500).json({ error: connErr.message });
 
-        const rollbackAndRespond = (originalErr, statusCode, errorMsg, logContextMsg) => {
-            db.run("ROLLBACK", (rollbackErr) => {
-                if (rollbackErr) {
-                    logger.error(COMPONENTS.DATABASE, 'Rollback failed after ' + logContextMsg, rollbackErr, { originalError: originalErr ? originalErr.message : null });
-                }
-                res.status(statusCode).json({ error: errorMsg });
-            });
-        };
+        isolatedDb.run("BEGIN IMMEDIATE", function (beginErr) {
+            if (beginErr) {
+                return isolatedDb.close(() => {
+                    res.status(500).json({ error: beginErr.message });
+                });
+            }
 
-        db.get("SELECT media_path, display_order FROM slides WHERE id = ?", [slideId], (lookupErr, row) => {
-            if (lookupErr) return rollbackAndRespond(lookupErr, 500, lookupErr.message, 'lookup error');
-            if (!row) return rollbackAndRespond(null, 404, 'Slayt bulunamadı', 'missing slide');
+            const rollbackAndRespond = (originalErr, statusCode, errorMsg, logContextMsg) => {
+                isolatedDb.run("ROLLBACK", (rollbackErr) => {
+                    if (rollbackErr) {
+                        logger.error(COMPONENTS.DATABASE, 'Rollback failed after ' + logContextMsg, rollbackErr, { originalError: originalErr ? originalErr.message : null });
+                    }
+                    isolatedDb.close(() => {
+                        res.status(statusCode).json({ error: errorMsg });
+                    });
+                });
+            };
 
-            const mediaPath = row.media_path;
-            const displayOrder = row.display_order;
+            isolatedDb.get("SELECT media_path, display_order FROM slides WHERE id = ?", [slideId], (lookupErr, row) => {
+                if (lookupErr) return rollbackAndRespond(lookupErr, 500, lookupErr.message, 'lookup error');
+                if (!row) return rollbackAndRespond(null, 404, 'Slayt bulunamadı', 'missing slide');
 
-            db.run("DELETE FROM slides WHERE id = ?", [slideId], function (deleteErr) {
-                if (deleteErr) return rollbackAndRespond(deleteErr, 500, deleteErr.message, 'delete error');
+                const mediaPath = row.media_path;
+                const displayOrder = row.display_order;
 
-                const deleteChanges = this.changes;
+                isolatedDb.run("DELETE FROM slides WHERE id = ?", [slideId], function (deleteErr) {
+                    if (deleteErr) return rollbackAndRespond(deleteErr, 500, deleteErr.message, 'delete error');
 
-                db.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?", [displayOrder], function(reorderErr) {
-                    if (reorderErr) return rollbackAndRespond(reorderErr, 500, reorderErr.message, 'compaction error');
+                    const deleteChanges = this.changes;
 
-                    db.run("COMMIT", function (commitErr) {
-                        if (commitErr) return rollbackAndRespond(commitErr, 500, commitErr.message, 'commit error');
+                    isolatedDb.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?", [displayOrder], function(reorderErr) {
+                        if (reorderErr) return rollbackAndRespond(reorderErr, 500, reorderErr.message, 'compaction error');
 
-                        slidesCache = null;
-                        cacheTimestamp = null;
+                        isolatedDb.run("COMMIT", function (commitErr) {
+                            if (commitErr) return rollbackAndRespond(commitErr, 500, commitErr.message, 'commit error');
 
-                        if (mediaPath) {
-                            const resolvedMediaPath = resolveManagedSlideMediaPath(mediaPath);
-                            if (resolvedMediaPath) {
-                                try {
-                                    if (fs.existsSync(resolvedMediaPath)) {
-                                        fs.unlinkSync(resolvedMediaPath);
+                            isolatedDb.close(() => {
+                                slidesCache = null;
+                                cacheTimestamp = null;
+
+                                if (mediaPath) {
+                                    const resolvedMediaPath = resolveManagedSlideMediaPath(mediaPath);
+                                    if (resolvedMediaPath) {
+                                        try {
+                                            if (fs.existsSync(resolvedMediaPath)) {
+                                                fs.unlinkSync(resolvedMediaPath);
+                                            }
+                                        } catch (unlinkErr) {
+                                            logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
+                                                mediaPath: resolvedMediaPath,
+                                                slideId: slideId
+                                            });
+                                        }
                                     }
-                                } catch (unlinkErr) {
-                                    logger.warn(COMPONENTS.API, 'Error deleting media file', unlinkErr, {
-                                        mediaPath: resolvedMediaPath,
-                                        slideId: slideId
-                                    });
                                 }
-                            }
-                        }
 
-                        logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
-                            slideId: slideId,
-                            changes: deleteChanges,
-                            requestId: req.requestId
+                                logger.info(COMPONENTS.API, 'Slide deleted successfully', null, {
+                                    slideId: slideId,
+                                    changes: deleteChanges,
+                                    requestId: req.requestId
+                                });
+                                res.json({ message: 'Slayt başarıyla silindi', changes: deleteChanges });
+                            });
                         });
-                        res.json({ message: 'Slayt başarıyla silindi', changes: deleteChanges });
                     });
                 });
             });

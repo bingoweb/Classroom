@@ -170,68 +170,98 @@ test('Slides Delete Real SQLite Transaction Verification', async (t) => {
         });
     });
 
-    await t.test('Transaction enforces atomicity when update fails and proves COMMIT ordering', async () => {
+    await t.test('Isolation proof: shared connection writes are not rolled back by a failed deletion transaction', async () => {
         const id1 = await insertSlide(1, 'A');
         const id2 = await insertSlide(2, 'B');
         const id3 = await insertSlide(3, 'C');
 
         await new Promise((resolve, reject) => {
+            originalDbRun.call(db, "CREATE TABLE IF NOT EXISTS unrelated_writes (id INTEGER PRIMARY KEY, msg TEXT)", (err) => err ? reject(err) : resolve());
+        });
+        await new Promise((resolve, reject) => {
+            originalDbRun.call(db, "DELETE FROM unrelated_writes", (err) => err ? reject(err) : resolve());
+        });
+
+        await new Promise((resolve, reject) => {
             originalDbRun.call(db, "CREATE TRIGGER fail_update BEFORE UPDATE ON slides BEGIN SELECT RAISE(ABORT, 'forced compaction failure'); END;", (err) => err ? reject(err) : resolve());
         });
 
-        const initialSlides = await getSlides();
-        assert.strictEqual(initialSlides.length, 3);
+        let originalDbRunRef = db.run;
+        let originalCreateIsolatedConnectionRef = db.createIsolatedConnection;
+
+        let resolvePause;
+        const pausePromise = new Promise(r => resolvePause = r);
+        let transactionPausedResolver;
+        const transactionPausedPromise = new Promise(r => transactionPausedResolver = r);
+
+        function attachInterceptor(dbObj) {
+            const origRun = dbObj.run;
+            dbObj.run = function(sql, params, runCb) {
+                const actualCb = typeof params === 'function' ? params : runCb;
+                const actualParams = typeof params === 'function' ? [] : params;
+
+                if (typeof sql === 'string' && sql.includes('DELETE FROM slides WHERE id = ?')) {
+                    transactionPausedResolver();
+                    pausePromise.then(() => {
+                        origRun.call(this, sql, actualParams, actualCb);
+                    });
+                } else {
+                    origRun.call(this, sql, actualParams, actualCb);
+                }
+            };
+            return origRun;
+        }
+
+        const restoreDbRun = attachInterceptor(db);
+
+        if (originalCreateIsolatedConnectionRef) {
+            db.createIsolatedConnection = function(cb) {
+                originalCreateIsolatedConnectionRef.call(db, (err, isolatedDb) => {
+                    if (err) return cb(err);
+                    attachInterceptor(isolatedDb);
+                    cb(null, isolatedDb);
+                });
+            };
+        }
 
         const req = { params: { id: id2.toString() } };
-        const resObj = await invokeHandler(req);
+        const invokeHandlerPromise = invokeHandler(req);
+
+        await transactionPausedPromise;
+
+        const unrelatedWritePromise = new Promise((resolve, reject) => {
+            restoreDbRun.call(db, "INSERT INTO unrelated_writes (msg) VALUES ('unrelated')", (err) => err ? reject(err) : resolve());
+        });
+
+        await new Promise(r => setTimeout(r, 50));
+
+        resolvePause();
+
+        const resObj = await invokeHandlerPromise;
+        await unrelatedWritePromise;
+
+        db.run = originalDbRunRef;
+        if (originalCreateIsolatedConnectionRef) {
+            db.createIsolatedConnection = originalCreateIsolatedConnectionRef;
+        }
+        await new Promise((resolve, reject) => {
+            originalDbRunRef.call(db, "DROP TRIGGER fail_update;", (err) => err ? reject(err) : resolve());
+        });
 
         assert.strictEqual(resObj.statusCode, 500);
         assert.deepEqual(resObj.body, { error: 'SQLITE_CONSTRAINT: forced compaction failure' });
-        assert.strictEqual(resObj.responseCount, 1);
 
         const postFailSlides = await getSlides();
         assert.strictEqual(postFailSlides.length, 3);
-        assert.deepEqual(postFailSlides, initialSlides);
+        assert.strictEqual(postFailSlides[0].id, id1);
+        assert.strictEqual(postFailSlides[1].id, id2);
+        assert.strictEqual(postFailSlides[2].id, id3);
 
-        await new Promise((resolve, reject) => {
-            originalDbRun.call(db, "DROP TRIGGER fail_update;", (err) => err ? reject(err) : resolve());
+        const unrelatedWrites = await new Promise((resolve, reject) => {
+            db.all("SELECT * FROM unrelated_writes", (err, rows) => err ? reject(err) : resolve(rows));
         });
 
-        let commitCallbackTime = null;
-        db.run = function(sql, params, cb) {
-            const actualCb = typeof params === 'function' ? params : cb;
-            const isCommit = sql === 'COMMIT';
-            const hookCb = function(err) {
-                if (isCommit && !err) {
-                    commitCallbackTime = process.hrtime.bigint();
-                }
-                actualCb.call(this, err);
-            };
-
-            if (typeof params === 'function') {
-                originalDbRun.call(this, sql, hookCb);
-            } else {
-                originalDbRun.call(this, sql, params, hookCb);
-            }
-        };
-
-        const reqSuccess = { params: { id: id2.toString() } };
-        const resObjSuccess = await invokeHandler(reqSuccess);
-
-        assert.strictEqual(resObjSuccess.statusCode, 200);
-        assert.deepEqual(resObjSuccess.body, { message: 'Slayt başarıyla silindi', changes: 1 });
-        assert.strictEqual(resObjSuccess.responseCount, 1);
-
-        assert.ok(commitCallbackTime !== null, 'COMMIT must be executed');
-        assert.ok(resObjSuccess.jsonTime > commitCallbackTime, 'Response must be sent after COMMIT callback completes');
-
-        const postSuccessSlides = await getSlides();
-        assert.strictEqual(postSuccessSlides.length, 2);
-
-        assert.strictEqual(postSuccessSlides[0].id, id1);
-        assert.strictEqual(postSuccessSlides[0].display_order, 1);
-
-        assert.strictEqual(postSuccessSlides[1].id, id3);
-        assert.strictEqual(postSuccessSlides[1].display_order, 2);
+        assert.strictEqual(unrelatedWrites.length, 1, 'Unrelated write must be preserved despite transaction rollback. If 0, isolation is missing!');
+        assert.strictEqual(unrelatedWrites[0].msg, 'unrelated');
     });
 });

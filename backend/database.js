@@ -165,4 +165,17 @@ function initDatabase() {
         .catch(err => rejectScheduleMigration(err));
 }
 
+db.createIsolatedConnection = function(cb) {
+    const isolatedDb = new sqlite3.Database(dbPath, (err) => {
+        if (err) return cb(err);
+        isolatedDb.run('PRAGMA foreign_keys = ON', (fkErr) => {
+            if (fkErr) {
+                isolatedDb.close();
+                return cb(fkErr);
+            }
+            cb(null, isolatedDb);
+        });
+    });
+};
+
 module.exports = db;

@@ -37,7 +37,7 @@ test('Slides Media Path Tests', async (t) => {
     const deleteHandler = findHandler('delete', '/api/slides/:id');
 
     let originalDbGet, originalDbRun, originalDbAll;
-    let originalExistsSync, originalUnlinkSync;
+    let originalExistsSync, originalUnlinkSync, originalCreateIsolatedConnection;
     
     t.beforeEach(() => {
         originalDbGet = db.get;
@@ -45,6 +45,19 @@ test('Slides Media Path Tests', async (t) => {
         originalDbAll = db.all;
         originalExistsSync = fs.existsSync;
         originalUnlinkSync = fs.unlinkSync;
+        originalCreateIsolatedConnection = db.createIsolatedConnection;
+        
+        db.createIsolatedConnection = function(cb) {
+            const fakeIsolatedDb = {
+                run: (...args) => db.run(...args),
+                get: (...args) => db.get(...args),
+                all: (...args) => db.all(...args),
+                close: (closeCb) => {
+                    if (closeCb) closeCb();
+                }
+            };
+            cb(null, fakeIsolatedDb);
+        };
     });
 
     t.afterEach(() => {
@@ -53,6 +66,7 @@ test('Slides Media Path Tests', async (t) => {
         db.all = originalDbAll;
         fs.existsSync = originalExistsSync;
         fs.unlinkSync = originalUnlinkSync;
+        if (originalCreateIsolatedConnection) db.createIsolatedConnection = originalCreateIsolatedConnection;
     });
 
     t.after(async () => {

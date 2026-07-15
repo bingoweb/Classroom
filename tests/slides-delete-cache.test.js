@@ -103,7 +103,7 @@ function createTrackedResponse({ timeoutMs = 1000, observationMs = 15 } = {}) {
 }
 
 test('Slides Delete Cache Tests (Atomic)', async (t) => {
-    let originalDbAll, originalDbGet, originalDbRun, originalFsUnlinkSync, originalFsExistsSync, originalLoggerError, originalLoggerWarn;
+    let originalDbAll, originalDbGet, originalDbRun, originalFsUnlinkSync, originalFsExistsSync, originalLoggerError, originalLoggerWarn, originalCreateIsolatedConnection;
 
     t.before(async () => {
         await db.scheduleMigrationPromise;
@@ -117,6 +117,19 @@ test('Slides Delete Cache Tests (Atomic)', async (t) => {
         originalFsExistsSync = fs.existsSync;
         originalLoggerError = Logger.prototype.error;
         originalLoggerWarn = Logger.prototype.warn;
+        originalCreateIsolatedConnection = db.createIsolatedConnection;
+        
+        db.createIsolatedConnection = function(cb) {
+            const fakeIsolatedDb = {
+                run: (...args) => db.run(...args),
+                get: (...args) => db.get(...args),
+                all: (...args) => db.all(...args),
+                close: (closeCb) => {
+                    if (closeCb) closeCb();
+                }
+            };
+            cb(null, fakeIsolatedDb);
+        };
     });
 
     t.afterEach(() => {
@@ -127,6 +140,7 @@ test('Slides Delete Cache Tests (Atomic)', async (t) => {
         if (originalFsExistsSync) fs.existsSync = originalFsExistsSync;
         if (originalLoggerError) Logger.prototype.error = originalLoggerError;
         if (originalLoggerWarn) Logger.prototype.warn = originalLoggerWarn;
+        if (originalCreateIsolatedConnection) db.createIsolatedConnection = originalCreateIsolatedConnection;
     });
 
     t.after(async () => {

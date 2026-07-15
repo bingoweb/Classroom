@@ -44,7 +44,7 @@ function removeDirectoryIfPresent(fsApi, directoryPath) {
 
 test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
     let deleteHandler;
-    let originalDbGet, originalDbRun, originalFsExistsSync, originalFsUnlinkSync, originalLoggerError, originalLoggerWarn;
+    let originalDbGet, originalDbRun, originalFsExistsSync, originalFsUnlinkSync, originalLoggerError, originalLoggerWarn, originalCreateIsolatedConnection;
 
     t.before(async () => {
         await db.scheduleMigrationPromise;
@@ -62,6 +62,19 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         originalFsUnlinkSync = fs.unlinkSync;
         originalLoggerError = Logger.prototype.error;
         originalLoggerWarn = Logger.prototype.warn;
+        originalCreateIsolatedConnection = db.createIsolatedConnection;
+        
+        db.createIsolatedConnection = function(cb) {
+            const fakeIsolatedDb = {
+                run: (...args) => db.run(...args),
+                get: (...args) => db.get(...args),
+                all: (...args) => db.all(...args),
+                close: (closeCb) => {
+                    if (closeCb) closeCb();
+                }
+            };
+            cb(null, fakeIsolatedDb);
+        };
     });
 
     t.afterEach(() => {
@@ -71,6 +84,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         if (originalFsUnlinkSync) fs.unlinkSync = originalFsUnlinkSync;
         if (originalLoggerError) Logger.prototype.error = originalLoggerError;
         if (originalLoggerWarn) Logger.prototype.warn = originalLoggerWarn;
+        if (originalCreateIsolatedConnection) db.createIsolatedConnection = originalCreateIsolatedConnection;
     });
 
     t.after(async () => {
