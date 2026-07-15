@@ -46,7 +46,6 @@ test('Slides Media Path Tests', async (t) => {
         originalExistsSync = fs.existsSync;
         originalUnlinkSync = fs.unlinkSync;
         originalCreateIsolatedConnection = db.createIsolatedConnection;
-        
         db.createIsolatedConnection = function(cb) {
             const fakeIsolatedDb = {
                 run: (...args) => db.run(...args),

@@ -233,8 +233,6 @@ test('Slides Delete Real SQLite Transaction Verification', async (t) => {
             restoreDbRun.call(db, "INSERT INTO unrelated_writes (msg) VALUES ('unrelated')", (err) => err ? reject(err) : resolve());
         });
 
-        await new Promise(r => setTimeout(r, 50));
-
         resolvePause();
 
         const resObj = await invokeHandlerPromise;

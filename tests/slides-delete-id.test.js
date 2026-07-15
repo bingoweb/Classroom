@@ -63,7 +63,6 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         originalLoggerError = Logger.prototype.error;
         originalLoggerWarn = Logger.prototype.warn;
         originalCreateIsolatedConnection = db.createIsolatedConnection;
-        
         db.createIsolatedConnection = function(cb) {
             const fakeIsolatedDb = {
                 run: (...args) => db.run(...args),
