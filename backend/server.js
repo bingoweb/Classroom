@@ -2474,8 +2474,18 @@ app.post('/api/slide-settings', requireAdminSession, requireCsrfToken, requireAd
         return res.status(400).json({ error: 'Key ve value gereklidir' });
     }
 
-    db.run("INSERT OR REPLACE INTO slide_settings (key, value) VALUES (?, ?)", [key, value], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
+    const updateQuery = "INSERT OR REPLACE INTO slide_settings (key, value) VALUES (?, ?)";
+    const updateParams = [key, value];
+
+    db.run(updateQuery, updateParams, function (err) {
+        if (err) {
+            logger.error(COMPONENTS.API, 'Error updating slide settings', err, {
+                requestId: req.requestId,
+                query: updateQuery,
+                params: updateParams
+            });
+            return res.status(500).json({ error: 'Slayt ayarları güncellenirken hata oluştu' });
+        }
         res.json({ message: 'Ayar başarıyla güncellendi' });
     });
 });

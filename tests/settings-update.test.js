@@ -504,4 +504,128 @@ test('Settings Update Tests', async (t) => {
         }
     });
 
+    // 17. Slide Settings Update Route Tests
+    await t.test('Slide Settings Update Route Tests', async (t) => {
+        const slideSettingsRoutes = app._router.stack.filter(
+            layer => layer.route && layer.route.path === '/api/slide-settings' && layer.route.methods.post
+        );
+        assert.strictEqual(slideSettingsRoutes.length, 1, 'Exactly one POST /api/slide-settings route exists');
+
+        const slideSettingsMiddlewares = slideSettingsRoutes[0].route.stack;
+        const slideSettingsHandler = slideSettingsMiddlewares[slideSettingsMiddlewares.length - 1].handle;
+        const invokeSlideSettingsHandler = createPromiseHelper(slideSettingsHandler);
+
+        await t.test('missing key or value validation', async () => {
+            let dbCalls = 0;
+            const originalRun = db.run;
+            db.run = () => { dbCalls++; };
+            try {
+                const resObjMissingKey = await invokeSlideSettingsHandler({ body: { value: 'some value' } });
+                assert.strictEqual(resObjMissingKey.statusCode, 400);
+                assert.deepEqual(resObjMissingKey.body, { error: 'Key ve value gereklidir' });
+                assert.strictEqual(dbCalls, 0);
+
+                const resObjMissingValue = await invokeSlideSettingsHandler({ body: { key: 'some key' } });
+                assert.strictEqual(resObjMissingValue.statusCode, 400);
+                assert.deepEqual(resObjMissingValue.body, { error: 'Key ve value gereklidir' });
+                assert.strictEqual(dbCalls, 0);
+            } finally {
+                db.run = originalRun;
+            }
+        });
+
+        await t.test('Successful path preserves exact SQL and returns existing success response', async () => {
+            let runCalls = 0;
+            let receivedSql, receivedParams;
+            let callbackCompleted = false;
+
+            const originalRun = db.run;
+            db.run = function(sql, params, cb) {
+                runCalls++;
+                receivedSql = sql;
+                receivedParams = params;
+                setTimeout(() => {
+                    callbackCompleted = true;
+                    cb.call(this, null);
+                }, 5);
+            };
+
+            let resObj;
+            try {
+                resObj = await invokeSlideSettingsHandler({ body: { key: 'test_key', value: 'test_val' } });
+            } finally {
+                db.run = originalRun;
+            }
+
+            assert.strictEqual(callbackCompleted, true);
+            assert.strictEqual(resObj.statusCode, 200);
+            assert.deepEqual(resObj.body, { message: 'Ayar başarıyla güncellendi' });
+            assert.strictEqual(resObj.responseCount, 1);
+            assert.strictEqual(runCalls, 1);
+            assert.strictEqual(receivedSql, "INSERT OR REPLACE INTO slide_settings (key, value) VALUES (?, ?)");
+            assert.deepEqual(receivedParams, ['test_key', 'test_val']);
+        });
+
+        await t.test('Database error redaction and logger verification', async () => {
+            const secretMarker = 'SENSITIVE_SLIDE_SETTINGS_UPDATE_DB_DETAIL_' + crypto.randomBytes(4).toString('hex');
+            const fakeError = new Error(secretMarker);
+
+            let runCalls = 0;
+            let receivedSql, receivedParams;
+            let callbackCompleted = false;
+
+            const originalRun = db.run;
+            db.run = function(sql, params, cb) {
+                runCalls++;
+                receivedSql = sql;
+                receivedParams = params;
+                setTimeout(() => {
+                    callbackCompleted = true;
+                    cb.call(this, fakeError);
+                }, 5);
+            };
+
+            const originalLogError = Logger.prototype.error;
+            let loggerErrorCount = 0;
+            let loggedComponent, loggedMessage, loggedErrorObj, loggedMeta;
+
+            Logger.prototype.error = function(component, message, err, meta) {
+                loggerErrorCount++;
+                loggedComponent = component;
+                loggedMessage = message;
+                loggedErrorObj = err;
+                loggedMeta = meta;
+            };
+
+            let resObj;
+            try {
+                resObj = await invokeSlideSettingsHandler({
+                    body: { key: 'err_key', value: 'err_val' },
+                    requestId: 'test-req-123'
+                });
+            } finally {
+                db.run = originalRun;
+                Logger.prototype.error = originalLogError;
+            }
+
+            assert.strictEqual(callbackCompleted, true);
+            assert.strictEqual(resObj.statusCode, 500);
+            assert.deepEqual(resObj.body, { error: 'Slayt ayarları güncellenirken hata oluştu' });
+            assert.strictEqual(resObj.responseCount, 1);
+            assert.strictEqual(runCalls, 1);
+            assert.strictEqual(receivedSql, "INSERT OR REPLACE INTO slide_settings (key, value) VALUES (?, ?)");
+
+            const serializedBody = JSON.stringify(resObj.body);
+            assert.ok(!serializedBody.includes(secretMarker), 'secret marker is absent from client response');
+
+            assert.strictEqual(loggerErrorCount, 1, 'logger is called exactly once');
+            assert.strictEqual(loggedComponent, COMPONENTS.API);
+            assert.strictEqual(loggedMessage, 'Error updating slide settings');
+            assert.strictEqual(loggedErrorObj, fakeError);
+            assert.strictEqual(loggedMeta.requestId, 'test-req-123');
+            assert.strictEqual(loggedMeta.query, receivedSql);
+            assert.strictEqual(loggedMeta.params, receivedParams, 'Logger params and SQLite params have object-identity equality');
+        });
+    });
+
 });
