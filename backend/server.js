@@ -1251,19 +1251,49 @@ app.post('/api/schedule', requireAdminSession, requireCsrfToken, requireAdminWri
     const trimmedCourse = course.trim();
 
     // Check if exists
-    db.get("SELECT id FROM schedule WHERE day = ? AND period = ?", [normalizedDay, period], (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
+    const lookupQuery = "SELECT id FROM schedule WHERE day = ? AND period = ?";
+    const lookupParams = [normalizedDay, period];
+    db.get(lookupQuery, lookupParams, (err, row) => {
+        if (err) {
+            logger.error(
+                COMPONENTS.API,
+                'Error during schedule lookup',
+                err,
+                { query: lookupQuery, params: lookupParams }
+            );
+            return res.status(500).json({ error: 'Ders programı kaydedilirken hata oluştu' });
+        }
 
         if (row) {
             // Update
-            db.run("UPDATE schedule SET course = ? WHERE id = ?", [trimmedCourse, row.id], function (err) {
-                if (err) return res.status(500).json({ error: err.message });
+            const updateQuery = "UPDATE schedule SET course = ? WHERE id = ?";
+            const updateParams = [trimmedCourse, row.id];
+            db.run(updateQuery, updateParams, function (err) {
+                if (err) {
+                    logger.error(
+                        COMPONENTS.API,
+                        'Error during schedule update',
+                        err,
+                        { query: updateQuery, params: updateParams }
+                    );
+                    return res.status(500).json({ error: 'Ders programı kaydedilirken hata oluştu' });
+                }
                 res.json({ message: "Ders programı güncellendi" });
             });
         } else {
             // Insert
-            db.run("INSERT INTO schedule (day, period, course) VALUES (?, ?, ?)", [normalizedDay, period, trimmedCourse], function (err) {
-                if (err) return res.status(500).json({ error: err.message });
+            const insertQuery = "INSERT INTO schedule (day, period, course) VALUES (?, ?, ?)";
+            const insertParams = [normalizedDay, period, trimmedCourse];
+            db.run(insertQuery, insertParams, function (err) {
+                if (err) {
+                    logger.error(
+                        COMPONENTS.API,
+                        'Error during schedule insert',
+                        err,
+                        { query: insertQuery, params: insertParams }
+                    );
+                    return res.status(500).json({ error: 'Ders programı kaydedilirken hata oluştu' });
+                }
                 res.json({ id: this.lastID });
             });
         }

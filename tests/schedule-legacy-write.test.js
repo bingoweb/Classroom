@@ -16,6 +16,7 @@ global.setInterval = () => {};
 
 const app = require('../backend/server');
 const db = require('../backend/database');
+const { Logger, COMPONENTS } = require('../backend/logger');
 
 test('Legacy Schedule Write Tests', async (t) => {
     await db.scheduleMigrationPromise;
@@ -32,9 +33,9 @@ test('Legacy Schedule Write Tests', async (t) => {
         1,
         'Exactly one matching POST /api/schedule route must exist'
     );
-    
+
     const routeLayer = matchingRoutes[0];
-    
+
     const middlewares = routeLayer.route.stack;
     const handler = middlewares[middlewares.length - 1].handle;
 
@@ -42,12 +43,14 @@ test('Legacy Schedule Write Tests', async (t) => {
     let originalDbRun;
     let originalDbAll;
     let originalDbPrepare;
+    let originalLoggerError;
 
     t.beforeEach(() => {
         originalDbGet = db.get;
         originalDbRun = db.run;
         originalDbAll = db.all;
         originalDbPrepare = db.prepare;
+        originalLoggerError = Logger.prototype.error;
     });
 
     t.afterEach(() => {
@@ -55,6 +58,7 @@ test('Legacy Schedule Write Tests', async (t) => {
         db.run = originalDbRun;
         db.all = originalDbAll;
         db.prepare = originalDbPrepare;
+        Logger.prototype.error = originalLoggerError;
     });
 
     function closeDatabase(database) {
@@ -160,7 +164,7 @@ test('Legacy Schedule Write Tests', async (t) => {
                 assert.deepEqual(res.body, { error: 'Ders programı isteği geçersiz.' });
                 assert.strictEqual(res.responseCount, 1);
                 assert.strictEqual(dbCalls, 0);
-                
+
                 done();
             });
         }
@@ -268,14 +272,14 @@ test('Legacy Schedule Write Tests', async (t) => {
     await t.test('2. Valid object compatibility: Existing-row update', (subT, done) => {
         let getCalls = 0;
         let runCalls = 0;
-        
+
         db.get = (sql, params, cb) => {
             getCalls++;
             assert.strictEqual(sql, "SELECT id FROM schedule WHERE day = ? AND period = ?");
             assert.deepEqual(params, ['weekday', 2]);
             cb(null, { id: 17 });
         };
-        
+
         db.run = (sql, params, cb) => {
             runCalls++;
             assert.strictEqual(sql, "UPDATE schedule SET course = ? WHERE id = ?");
@@ -290,9 +294,9 @@ test('Legacy Schedule Write Tests', async (t) => {
                 course: '  Fen Bilimleri  '
             }
         };
-        
+
         const res = createMockRes();
-        
+
         // Mock res.json to track asynchronous completion
         const originalJson = res.json;
         res.json = function(data) {
@@ -313,14 +317,14 @@ test('Legacy Schedule Write Tests', async (t) => {
     await t.test('3. Valid object compatibility: Missing-row insert', (subT, done) => {
         let getCalls = 0;
         let runCalls = 0;
-        
+
         db.get = (sql, params, cb) => {
             getCalls++;
             assert.strictEqual(sql, "SELECT id FROM schedule WHERE day = ? AND period = ?");
             assert.deepEqual(params, ['weekday', 2]);
             cb(null, undefined);
         };
-        
+
         db.run = (sql, params, cb) => {
             runCalls++;
             assert.strictEqual(sql, "INSERT INTO schedule (day, period, course) VALUES (?, ?, ?)");
@@ -335,9 +339,9 @@ test('Legacy Schedule Write Tests', async (t) => {
                 course: '  Fen Bilimleri  '
             }
         };
-        
+
         const res = createMockRes();
-        
+
         const originalJson = res.json;
         res.json = function(data) {
             originalJson.call(this, data);
@@ -357,27 +361,54 @@ test('Legacy Schedule Write Tests', async (t) => {
     await t.test('4. Database-error compatibility: initial db.get failure', (subT, done) => {
         let getCalls = 0;
         let runCalls = 0;
-        
+        let loggerCalls = 0;
+        let loggedComponent, loggedMessage, loggedError, loggedMeta;
+        let capturedSql, capturedParams;
+
+        const secretMarker = 'SENSITIVE_SCHEDULE_LEGACY_WRITE_DB_DETAIL_GET';
+        const databaseError = new Error(secretMarker);
+
         db.get = (sql, params, cb) => {
             getCalls++;
-            cb(new Error('GET_ERROR'), null);
+            capturedSql = sql;
+            capturedParams = params;
+            cb(databaseError, null);
         };
-        
+
         db.run = () => {
             runCalls++;
         };
 
+        Logger.prototype.error = function(component, message, err, meta) {
+            loggerCalls++;
+            loggedComponent = component;
+            loggedMessage = message;
+            loggedError = err;
+            loggedMeta = meta;
+        };
+
         const req = { body: { day: 'weekday', period: 2, course: 'Fen Bilimleri' } };
         const res = createMockRes();
-        
+
         const originalJson = res.json;
         res.json = function(data) {
             originalJson.call(this, data);
             assert.strictEqual(this.statusCode, 500);
-            assert.deepEqual(this.body, { error: 'GET_ERROR' });
+            assert.deepEqual(this.body, { error: 'Ders programı kaydedilirken hata oluştu' });
             assert.strictEqual(this.responseCount, 1);
+
+            const serializedBody = JSON.stringify(this.body);
+            assert.ok(!serializedBody.includes(secretMarker));
+
             assert.strictEqual(getCalls, 1);
             assert.strictEqual(runCalls, 0);
+
+            assert.strictEqual(loggerCalls, 1);
+            assert.strictEqual(loggedComponent, COMPONENTS.API);
+            assert.strictEqual(loggedError, databaseError);
+            assert.strictEqual(loggedMeta.query, capturedSql);
+            assert.strictEqual(loggedMeta.params, capturedParams);
+
             done();
         };
 
@@ -387,28 +418,55 @@ test('Legacy Schedule Write Tests', async (t) => {
     await t.test('5. Database-error compatibility: update db.run failure', (subT, done) => {
         let getCalls = 0;
         let runCalls = 0;
-        
+        let loggerCalls = 0;
+        let loggedComponent, loggedMessage, loggedError, loggedMeta;
+        let capturedSql, capturedParams;
+
+        const secretMarker = 'SENSITIVE_SCHEDULE_LEGACY_WRITE_DB_DETAIL_UPDATE';
+        const databaseError = new Error(secretMarker);
+
         db.get = (sql, params, cb) => {
             getCalls++;
             cb(null, { id: 17 });
         };
-        
+
         db.run = (sql, params, cb) => {
             runCalls++;
-            cb(new Error('UPDATE_ERROR'), null);
+            capturedSql = sql;
+            capturedParams = params;
+            cb(databaseError, null);
+        };
+
+        Logger.prototype.error = function(component, message, err, meta) {
+            loggerCalls++;
+            loggedComponent = component;
+            loggedMessage = message;
+            loggedError = err;
+            loggedMeta = meta;
         };
 
         const req = { body: { day: 'weekday', period: 2, course: 'Fen Bilimleri' } };
         const res = createMockRes();
-        
+
         const originalJson = res.json;
         res.json = function(data) {
             originalJson.call(this, data);
             assert.strictEqual(this.statusCode, 500);
-            assert.deepEqual(this.body, { error: 'UPDATE_ERROR' });
+            assert.deepEqual(this.body, { error: 'Ders programı kaydedilirken hata oluştu' });
             assert.strictEqual(this.responseCount, 1);
+
+            const serializedBody = JSON.stringify(this.body);
+            assert.ok(!serializedBody.includes(secretMarker));
+
             assert.strictEqual(getCalls, 1);
             assert.strictEqual(runCalls, 1);
+
+            assert.strictEqual(loggerCalls, 1);
+            assert.strictEqual(loggedComponent, COMPONENTS.API);
+            assert.strictEqual(loggedError, databaseError);
+            assert.strictEqual(loggedMeta.query, capturedSql);
+            assert.strictEqual(loggedMeta.params, capturedParams);
+
             done();
         };
 
@@ -418,28 +476,55 @@ test('Legacy Schedule Write Tests', async (t) => {
     await t.test('6. Database-error compatibility: insert db.run failure', (subT, done) => {
         let getCalls = 0;
         let runCalls = 0;
-        
+        let loggerCalls = 0;
+        let loggedComponent, loggedMessage, loggedError, loggedMeta;
+        let capturedSql, capturedParams;
+
+        const secretMarker = 'SENSITIVE_SCHEDULE_LEGACY_WRITE_DB_DETAIL_INSERT';
+        const databaseError = new Error(secretMarker);
+
         db.get = (sql, params, cb) => {
             getCalls++;
             cb(null, undefined);
         };
-        
+
         db.run = (sql, params, cb) => {
             runCalls++;
-            cb(new Error('INSERT_ERROR'), null);
+            capturedSql = sql;
+            capturedParams = params;
+            cb(databaseError, null);
+        };
+
+        Logger.prototype.error = function(component, message, err, meta) {
+            loggerCalls++;
+            loggedComponent = component;
+            loggedMessage = message;
+            loggedError = err;
+            loggedMeta = meta;
         };
 
         const req = { body: { day: 'weekday', period: 2, course: 'Fen Bilimleri' } };
         const res = createMockRes();
-        
+
         const originalJson = res.json;
         res.json = function(data) {
             originalJson.call(this, data);
             assert.strictEqual(this.statusCode, 500);
-            assert.deepEqual(this.body, { error: 'INSERT_ERROR' });
+            assert.deepEqual(this.body, { error: 'Ders programı kaydedilirken hata oluştu' });
             assert.strictEqual(this.responseCount, 1);
+
+            const serializedBody = JSON.stringify(this.body);
+            assert.ok(!serializedBody.includes(secretMarker));
+
             assert.strictEqual(getCalls, 1);
             assert.strictEqual(runCalls, 1);
+
+            assert.strictEqual(loggerCalls, 1);
+            assert.strictEqual(loggedComponent, COMPONENTS.API);
+            assert.strictEqual(loggedError, databaseError);
+            assert.strictEqual(loggedMeta.query, capturedSql);
+            assert.strictEqual(loggedMeta.params, capturedParams);
+
             done();
         };
 
