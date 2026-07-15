@@ -206,15 +206,24 @@ test('Logs Read JSON Parsing Tests', async (t) => {
         let dbAllCount = 0;
         let loggerErrorCount = 0;
         let loggedComponent = null;
+        let loggedMessage = null;
+        let loggedErrorObj = null;
+        let loggedMeta = null;
+
+        const secretMarker = 'SENSITIVE_LOG_JSON_DB_DETAIL_4c82e1';
+        const databaseError = new Error(secretMarker);
 
         db.all = function(sql, params, cb) {
             dbAllCount++;
-            if (cb) cb(new Error('DB failure'));
+            if (cb) cb(databaseError);
         };
 
         Logger.prototype.error = function(component, message, err, meta) {
             loggerErrorCount++;
             loggedComponent = component;
+            loggedMessage = message;
+            loggedErrorObj = err;
+            loggedMeta = meta;
         };
 
         const req = { query: {} };
@@ -222,11 +231,20 @@ test('Logs Read JSON Parsing Tests', async (t) => {
 
         getHandler(req, res);
 
-        assert.strictEqual(dbAllCount, 1);
-        assert.strictEqual(res.statusCode, 500);
-        assert.deepStrictEqual(res.body, { error: 'DB failure' });
-        assert.strictEqual(res.responseCount, 1, 'exactly one 500 response, no success response');
-        assert.strictEqual(loggerErrorCount, 1);
-        assert.strictEqual(loggedComponent, COMPONENTS.API);
+        assert.strictEqual(dbAllCount, 1, 'db.all is called exactly once');
+        assert.strictEqual(res.responseCount, 1, 'exactly one response is sent');
+        assert.strictEqual(res.statusCode, 500, 'HTTP status is exactly 500');
+        assert.deepStrictEqual(res.body, { error: 'Hata günlükleri alınırken hata oluştu' });
+
+        const serializedBody = JSON.stringify(res.body);
+        assert.ok(!serializedBody.includes(secretMarker), 'secret marker absent from client response');
+
+        assert.strictEqual(loggerErrorCount, 1, 'logger is called exactly once');
+        assert.strictEqual(loggedComponent, COMPONENTS.API, 'logger component is API');
+        assert.strictEqual(loggedMessage, 'Error fetching logs');
+        assert.strictEqual(loggedErrorObj, databaseError);
+        assert.ok(loggedErrorObj.message.includes(secretMarker));
+        assert.ok(typeof loggedMeta.query === 'string', 'metadata contains a query string');
+        assert.deepStrictEqual(loggedMeta.params, [100], 'metadata parameters equal [100]');
     });
 });
