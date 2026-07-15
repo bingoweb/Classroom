@@ -73,7 +73,7 @@ test('Role Bounded Unknown Classification Redaction Tests', async (t) => {
 
     assert.strictEqual(roleRoutes.length, 1);
     assert.strictEqual(roleRoutes[0].route.stack.length, 4, 'Route must have exactly 4 middleware layers');
-    
+
     assert.strictEqual(roleRoutes[0].route.stack[0].name, 'requireAdminSession', 'Layer 1 must be requireAdminSession');
     assert.strictEqual(roleRoutes[0].route.stack[1].name, 'requireCsrfToken', 'Layer 2 must be requireCsrfToken');
     assert.ok(typeof roleRoutes[0].route.stack[2].handle === 'function', 'Layer 3 must be a function');
@@ -86,7 +86,7 @@ test('Role Bounded Unknown Classification Redaction Tests', async (t) => {
     function createTrackedResponse() {
         let resolvePromise, rejectPromise;
         let isCompleted = false;
-        
+
         const promise = new Promise((resolve, reject) => {
             resolvePromise = resolve;
             rejectPromise = reject;
@@ -103,7 +103,7 @@ test('Role Bounded Unknown Classification Redaction Tests', async (t) => {
             json(data) {
                 this.responseCount++;
                 this.body = JSON.stringify(data);
-                
+
                 if (this.responseCount === 1) {
                     clearTimeout(this.zeroTimer);
                     this.successTimer = setTimeout(() => {
@@ -147,7 +147,7 @@ test('Role Bounded Unknown Classification Redaction Tests', async (t) => {
         const res = createTrackedResponse();
         res.json({ first: true });
         res.json({ second: true });
-        
+
         await assert.rejects(res.promise, /Multiple responses sent/);
         res.cleanup();
     });
@@ -187,13 +187,13 @@ test('Role Bounded Unknown Classification Redaction Tests', async (t) => {
             let dbGetCalled = false;
             db.run = () => { dbRunCalled = true; };
             db.get = () => { dbGetCalled = true; };
-            
+
             let loggerCalled = false;
             Logger.prototype.error = () => { loggerCalled = true; };
 
             const req = { body: tc.body, requestId: 'invalid-input-req' };
             const res = createTrackedResponse();
-            
+
             await finalHandler(req, res, () => {});
             const result = await res.promise;
             res.cleanup();
@@ -253,91 +253,95 @@ test('Role Bounded Unknown Classification Redaction Tests', async (t) => {
         await t.test(`Role ${rType}`, async (subT) => {
 
             // Unknown classification redaction test
-            await subT.test('Unknown classification redaction', async () => {
-                let runSql, runParams;
-                db.run = function (sql, params, cb) {
-                    runSql = sql;
-                    runParams = params;
-                    cb.call({ changes: 0, lastID: 0 }, null);
-                };
+            // Unknown classification redaction test
+            const requestIdsToTest = ['req-unknown', 'req-ordinary'];
+            for (const reqId of requestIdsToTest) {
+                await subT.test(`Unknown classification redaction for requestId ${reqId}`, async () => {
+                    let runSql, runParams;
+                    db.run = function (sql, params, cb) {
+                        runSql = sql;
+                        runParams = params;
+                        cb.call({ changes: 0, lastID: 0 }, null);
+                    };
 
-                let actualCountSql, actualCountParams;
-                let actualDupSql, actualDupParams;
-                let actualStuSql, actualStuParams;
-                let getCount = 0;
-                db.get = function (sql, params, cb) {
-                    getCount++;
-                    if (sql === countSqlPassedToDbGet) {
-                        actualCountSql = sql;
-                        actualCountParams = params;
-                        return cb(null, { count: 0 });
-                    }
-                    if (sql === duplicateSqlPassedToDbGet) {
-                        actualDupSql = sql;
-                        actualDupParams = params;
-                        return cb(null, null);
-                    }
-                    if (sql === studentSqlPassedToDbGet) {
-                        actualStuSql = sql;
-                        actualStuParams = params;
-                        return cb(null, { "1": 1 });
-                    }
-                    throw new Error('Should not reach other queries');
-                };
+                    let actualCountSql, actualCountParams;
+                    let actualDupSql, actualDupParams;
+                    let actualStuSql, actualStuParams;
+                    let getCount = 0;
+                    db.get = function (sql, params, cb) {
+                        getCount++;
+                        if (sql === countSqlPassedToDbGet) {
+                            actualCountSql = sql;
+                            actualCountParams = params;
+                            return cb(null, { count: 0 });
+                        }
+                        if (sql === duplicateSqlPassedToDbGet) {
+                            actualDupSql = sql;
+                            actualDupParams = params;
+                            return cb(null, null);
+                        }
+                        if (sql === studentSqlPassedToDbGet) {
+                            actualStuSql = sql;
+                            actualStuParams = params;
+                            return cb(null, { "1": 1 });
+                        }
+                        throw new Error('Should not reach other queries');
+                    };
 
-                let loggerArgs = null;
-                let loggerCallCount = 0;
-                Logger.prototype.error = (...args) => {
-                    loggerCallCount++;
-                    loggerArgs = args;
-                };
+                    let loggerArgs = null;
+                    let loggerCallCount = 0;
+                    Logger.prototype.error = (...args) => {
+                        loggerCallCount++;
+                        loggerArgs = args;
+                    };
 
-                const req = { body: { student_id: 47, role_type: rType }, requestId: 'req-err1' };
-                const res = createTrackedResponse();
-                
-                await finalHandler(req, res, () => {});
-                const result = await res.promise;
-                res.cleanup();
+                    const req = { body: { student_id: 47, role_type: rType }, requestId: reqId };
+                    const res = createTrackedResponse();
 
-                assert.strictEqual(result.statusCode, 500);
-                assert.deepStrictEqual(JSON.parse(result.body), { error: 'Rol atanırken hata oluştu' });
-                assert.ok(!result.body.includes('Bilinmeyen hata'));
-                assert.ok(!result.body.includes('Bounded role classification reached unknown state'));
+                    await finalHandler(req, res, () => {});
+                    const result = await res.promise;
+                    res.cleanup();
 
-                assert.strictEqual(getCount, 3, 'Count, duplicate, and student queries should run');
-                assert.strictEqual(loggerCallCount, 1, 'Logger must be called exactly once');
-                assert.strictEqual(loggerArgs[0], COMPONENTS.API);
-                assert.strictEqual(loggerArgs[1], 'Bounded role classification reached unknown state');
-                assert.ok(loggerArgs[2] instanceof Error);
-                assert.strictEqual(loggerArgs[2].message, 'Bounded role classification reached unknown state');
-                
-                const metadata = loggerArgs[3];
-                assert.strictEqual(metadata.endpoint, '/api/roles');
-                assert.strictEqual(metadata.requestId, 'req-err1');
-                assert.strictEqual(metadata.studentId, 47);
-                assert.strictEqual(metadata.roleType, rType);
-                assert.strictEqual(metadata.maximum, rType === 'duty' ? 4 : 2);
-                
-                assert.strictEqual(metadata.countQuery, countSqlPassedToDbGet);
-                assert.strictEqual(metadata.countQuery, actualCountSql); // identity
-                assert.strictEqual(metadata.countParams, actualCountParams); // identity
-                assert.deepStrictEqual(metadata.countParams, expectedCountParams[rType]); // content
-                
-                assert.strictEqual(metadata.duplicateQuery, duplicateSqlPassedToDbGet);
-                assert.strictEqual(metadata.duplicateQuery, actualDupSql); // identity
-                assert.strictEqual(metadata.duplicateParams, actualDupParams); // identity
-                assert.deepStrictEqual(metadata.duplicateParams, expectedDuplicateParams[rType]); // content
-                
-                assert.strictEqual(metadata.studentQuery, studentSqlPassedToDbGet);
-                assert.strictEqual(metadata.studentQuery, actualStuSql); // identity
-                assert.strictEqual(metadata.studentParams, actualStuParams); // identity
-                assert.deepStrictEqual(metadata.studentParams, expectedStudentParams); // content
-                
-                assert.strictEqual(metadata.errorMessage, 'Bounded role classification reached unknown state');
-                
-                assert.strictEqual(runSql, expectedSql);
-                assert.deepStrictEqual(runParams, expectedParams[rType]);
-            });
+                    assert.strictEqual(result.statusCode, 500);
+                    assert.deepStrictEqual(JSON.parse(result.body), { error: 'Rol atanırken hata oluştu' });
+                    assert.ok(!result.body.includes('Bilinmeyen hata'));
+                    assert.ok(!result.body.includes('Bounded role classification reached unknown state'));
+
+                    assert.strictEqual(getCount, 3, 'Count, duplicate, and student queries should run');
+                    assert.strictEqual(loggerCallCount, 1, 'Logger must be called exactly once');
+                    assert.strictEqual(loggerArgs[0], COMPONENTS.API);
+                    assert.strictEqual(loggerArgs[1], 'Bounded role classification reached unknown state');
+                    assert.ok(loggerArgs[2] instanceof Error);
+                    assert.strictEqual(loggerArgs[2].message, 'Bounded role classification reached unknown state');
+
+                    const metadata = loggerArgs[3];
+                    assert.strictEqual(metadata.endpoint, '/api/roles');
+                    assert.strictEqual(metadata.requestId, reqId);
+                    assert.strictEqual(metadata.studentId, 47);
+                    assert.strictEqual(metadata.roleType, rType);
+                    assert.strictEqual(metadata.maximum, rType === 'duty' ? 4 : 2);
+
+                    assert.strictEqual(metadata.countQuery, countSqlPassedToDbGet);
+                    assert.strictEqual(metadata.countQuery, actualCountSql); // identity
+                    assert.strictEqual(metadata.countParams, actualCountParams); // identity
+                    assert.deepStrictEqual(metadata.countParams, expectedCountParams[rType]); // content
+
+                    assert.strictEqual(metadata.duplicateQuery, duplicateSqlPassedToDbGet);
+                    assert.strictEqual(metadata.duplicateQuery, actualDupSql); // identity
+                    assert.strictEqual(metadata.duplicateParams, actualDupParams); // identity
+                    assert.deepStrictEqual(metadata.duplicateParams, expectedDuplicateParams[rType]); // content
+
+                    assert.strictEqual(metadata.studentQuery, studentSqlPassedToDbGet);
+                    assert.strictEqual(metadata.studentQuery, actualStuSql); // identity
+                    assert.strictEqual(metadata.studentParams, actualStuParams); // identity
+                    assert.deepStrictEqual(metadata.studentParams, expectedStudentParams); // content
+
+                    assert.strictEqual(metadata.errorMessage, 'Bounded role classification reached unknown state');
+
+                    assert.strictEqual(runSql, expectedSql);
+                    assert.deepStrictEqual(runParams, expectedParams[rType]);
+                });
+            }
 
             // Preserved classification behavior
             await subT.test('Successful atomic insert', async () => {
@@ -359,7 +363,7 @@ test('Role Bounded Unknown Classification Redaction Tests', async (t) => {
 
                 const req = { body: { student_id: 47, role_type: rType }, requestId: 'req-succ' };
                 const res = createTrackedResponse();
-                
+
                 await finalHandler(req, res, () => {});
                 const result = await res.promise;
                 res.cleanup();
@@ -391,7 +395,7 @@ test('Role Bounded Unknown Classification Redaction Tests', async (t) => {
 
                 const req = { body: { student_id: 47, role_type: rType }, requestId: 'req-limit' };
                 const res = createTrackedResponse();
-                
+
                 await finalHandler(req, res, () => {});
                 const result = await res.promise;
                 res.cleanup();
@@ -433,7 +437,7 @@ test('Role Bounded Unknown Classification Redaction Tests', async (t) => {
 
                 const req = { body: { student_id: 47, role_type: rType }, requestId: 'req-dup' };
                 const res = createTrackedResponse();
-                
+
                 await finalHandler(req, res, () => {});
                 const result = await res.promise;
                 res.cleanup();
@@ -480,7 +484,7 @@ test('Role Bounded Unknown Classification Redaction Tests', async (t) => {
 
                 const req = { body: { student_id: 47, role_type: rType }, requestId: 'req-miss' };
                 const res = createTrackedResponse();
-                
+
                 await finalHandler(req, res, () => {});
                 const result = await res.promise;
                 res.cleanup();
@@ -522,7 +526,7 @@ test('Role Bounded Unknown Classification Redaction Tests', async (t) => {
 
                 const req = { body: { student_id: 47, role_type: rType }, requestId: 'req-c-err' };
                 const res = createTrackedResponse();
-                
+
                 await finalHandler(req, res, () => {});
                 const result = await res.promise;
                 res.cleanup();
@@ -565,7 +569,7 @@ test('Role Bounded Unknown Classification Redaction Tests', async (t) => {
 
                 const req = { body: { student_id: 47, role_type: rType }, requestId: 'req-d-err' };
                 const res = createTrackedResponse();
-                
+
                 await finalHandler(req, res, () => {});
                 const result = await res.promise;
                 res.cleanup();
@@ -611,7 +615,7 @@ test('Role Bounded Unknown Classification Redaction Tests', async (t) => {
 
                 const req = { body: { student_id: 47, role_type: rType }, requestId: 'req-s-err' };
                 const res = createTrackedResponse();
-                
+
                 await finalHandler(req, res, () => {});
                 const result = await res.promise;
                 res.cleanup();

@@ -1020,9 +1020,6 @@ app.post('/api/roles', requireAdminSession, requireCsrfToken, requireAdminWriteR
                             return res.status(400).json({ error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
                         }
 
-                        if (req.requestId === 'req-unknown') {
-                            return res.status(500).json({ error: 'Rol atanırken hata oluştu: Bilinmeyen hata' });
-                        }
                         const classificationError = new Error('Bounded role classification reached unknown state');
                         logger.error(COMPONENTS.API, 'Bounded role classification reached unknown state', classificationError, {
                             endpoint: '/api/roles',
