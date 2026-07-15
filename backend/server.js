@@ -759,8 +759,22 @@ app.get('/api/roles', (req, res) => {
     const sql = `SELECT roles.id as role_id, roles.role_type, students.* 
                  FROM roles 
                  JOIN students ON roles.student_id = students.id`;
-    db.all(sql, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+    const params = [];
+
+    db.all(sql, params, (err, rows) => {
+        if (err) {
+            logger.error(
+                COMPONENTS.API,
+                'Error fetching roles',
+                err,
+                { query: sql, params }
+            );
+
+            return res.status(500).json({
+                error: 'Roller alınırken hata oluştu'
+            });
+        }
+
         res.json(rows);
     });
 });
