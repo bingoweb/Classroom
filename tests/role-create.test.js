@@ -881,7 +881,8 @@ test('Role Create ID Validation Tests', async (t) => {
                 };
                 const resObj = await invokeHandler({ body: { student_id: '47', role_type: br.role } });
                 assert.strictEqual(resObj.statusCode, 500);
-                assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu: Classification error' });
+                assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu' });
+                assert.ok(!JSON.stringify(resObj.body).includes('Classification error'));
             });
         });
     }

@@ -949,9 +949,22 @@ app.post('/api/roles', requireAdminSession, requireCsrfToken, requireAdminWriteR
             }
 
             // Zero-change classification
-            db.get("SELECT COUNT(*) as count FROM roles WHERE role_type = ?", [roleType], (countErr, countRow) => {
+            const countSql = "SELECT COUNT(*) as count FROM roles WHERE role_type = ?";
+            const countParams = [roleType];
+            db.get(countSql, countParams, (countErr, countRow) => {
                 if (countErr) {
-                    return res.status(500).json({ error: 'Rol atanırken hata oluştu: ' + (countErr.message || 'Bilinmeyen hata') });
+                    logger.error(COMPONENTS.API, 'Error counting bounded roles', countErr, {
+                        endpoint: '/api/roles',
+                        requestId: req.requestId,
+                        studentId,
+                        roleType,
+                        maximum,
+                        query: countSql,
+                        params: countParams,
+                        errorMessage: countErr.message,
+                        errorCode: countErr.code
+                    });
+                    return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
                 }
                 if (countRow.count >= maximum) {
                     if (roleType === 'vice_president') {
