@@ -1204,8 +1204,23 @@ app.put('/api/schedule/normalized', requireAdminSession, requireCsrfToken, requi
 
 // Get Schedule
 app.get('/api/schedule', (req, res) => {
-    db.all("SELECT * FROM schedule ORDER BY period", [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+    const query = "SELECT * FROM schedule ORDER BY period";
+    const params = [];
+
+    db.all(query, params, (err, rows) => {
+        if (err) {
+            logger.error(
+                COMPONENTS.API,
+                'Error fetching schedule',
+                err,
+                { query, params }
+            );
+
+            return res.status(500).json({
+                error: 'Ders programı alınırken hata oluştu'
+            });
+        }
+
         res.json(rows);
     });
 });
