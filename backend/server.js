@@ -999,9 +999,22 @@ app.post('/api/roles', requireAdminSession, requireCsrfToken, requireAdminWriteR
                         }
                     }
 
-                    db.get("SELECT 1 FROM students WHERE id = ?", [studentId], (stuErr, stuRow) => {
+                    const studentSql = "SELECT 1 FROM students WHERE id = ?";
+                    const studentParams = [studentId];
+                    db.get(studentSql, studentParams, (stuErr, stuRow) => {
                         if (stuErr) {
-                            return res.status(500).json({ error: 'Rol atanırken hata oluştu: ' + (stuErr.message || 'Bilinmeyen hata') });
+                            logger.error(COMPONENTS.API, 'Error checking bounded role student', stuErr, {
+                                endpoint: '/api/roles',
+                                requestId: req.requestId,
+                                studentId,
+                                roleType,
+                                maximum,
+                                query: studentSql,
+                                params: studentParams,
+                                errorMessage: stuErr.message,
+                                errorCode: stuErr.code
+                            });
+                            return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
                         }
                         if (!stuRow) {
                             return res.status(400).json({ error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
