@@ -916,18 +916,32 @@ app.post('/api/roles', requireAdminSession, requireCsrfToken, requireAdminWriteR
                 WHERE role_type = ?
             ) < ?
         `;
-        db.run(sql, [studentId, roleType, studentId, studentId, roleType, roleType, maximum], function (err) {
+        const params = [
+            studentId,
+            roleType,
+            studentId,
+            studentId,
+            roleType,
+            roleType,
+            maximum
+        ];
+        db.run(sql, params, function (err) {
             if (err) {
                 logger.error(COMPONENTS.API, 'Error inserting bounded role', err, {
-                    studentId: studentId,
-                    roleType: roleType,
+                    endpoint: '/api/roles',
+                    requestId: req.requestId,
+                    studentId,
+                    roleType,
+                    maximum,
+                    query: sql,
+                    params,
                     errorMessage: err.message,
                     errorCode: err.code
                 });
                 if (err.message && err.message.includes('FOREIGN KEY constraint failed')) {
                     return res.status(400).json({ error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
                 }
-                return res.status(500).json({ error: 'Rol atanırken hata oluştu: ' + (err.message || 'Bilinmeyen hata') });
+                return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
             }
 
             if (this.changes === 1) {
