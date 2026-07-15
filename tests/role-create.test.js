@@ -923,6 +923,27 @@ test('Role Create ID Validation Tests', async (t) => {
                 assert.ok(!JSON.stringify(resObj.body).includes('Student lookup error'));
                 assert.strictEqual(gets, 3);
             });
+
+            await subT.test('9. Unknown classification response', async () => {
+                db.run = function(sql, params, cb) {
+                    this.changes = 0;
+                    cb.call(this, null);
+                };
+                let gets = 0;
+                db.get = function(sql, params, cb) {
+                    gets++;
+                    if (gets === 1) return cb(null, { count: 0 });
+                    if (gets === 2) return cb(null, null);
+                    if (gets === 3) return cb(null, { "1": 1 });
+                    throw new Error('Should not reach here');
+                };
+                const resObj = await invokeHandler({ body: { student_id: '47', role_type: br.role } });
+                assert.strictEqual(resObj.statusCode, 500);
+                assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu' });
+                assert.ok(!JSON.stringify(resObj.body).includes('Bilinmeyen hata'));
+                assert.ok(!JSON.stringify(resObj.body).includes('Bounded role classification reached unknown state'));
+                assert.strictEqual(gets, 3);
+            });
         });
     }
 
