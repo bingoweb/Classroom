@@ -50,7 +50,7 @@ function removeDirectoryIfPresent(fsApi, directoryPath) {
 }
 
 test('Slides Create Error Redaction Tests', async (t) => {
-    let originalDbGet, originalFsUnlinkSync, originalLoggerError;
+    let originalDbGet, originalDbRun, originalFsUnlinkSync, originalLoggerError;
 
     t.before(async () => {
         await db.scheduleMigrationPromise;
@@ -58,12 +58,14 @@ test('Slides Create Error Redaction Tests', async (t) => {
 
     t.beforeEach(() => {
         originalDbGet = db.get;
+        originalDbRun = db.run;
         originalFsUnlinkSync = fs.unlinkSync;
         originalLoggerError = Logger.prototype.error;
     });
 
     t.afterEach(() => {
         if (originalDbGet) db.get = originalDbGet;
+        if (originalDbRun) db.run = originalDbRun;
         if (originalFsUnlinkSync) fs.unlinkSync = originalFsUnlinkSync;
         if (originalLoggerError) Logger.prototype.error = originalLoggerError;
     });
@@ -179,6 +181,7 @@ test('Slides Create Error Redaction Tests', async (t) => {
 
         const mockError = new Error('SENSITIVE_DB_ERROR_123');
         let dbGetCalled = false;
+        let dbRunCalled = false;
         let loggedError = null;
         let loggedContext = null;
         let unlinkCalled = false;
@@ -193,6 +196,11 @@ test('Slides Create Error Redaction Tests', async (t) => {
                 return cb(mockError);
             }
             return originalDbGet.apply(this, arguments);
+        };
+
+        db.run = function() {
+            dbRunCalled = true;
+            return originalDbRun.apply(this, arguments);
         };
 
         fs.unlinkSync = function(filepath) {
@@ -236,6 +244,7 @@ test('Slides Create Error Redaction Tests', async (t) => {
         assert.strictEqual(loggedContext.params, capturedGetParams, 'Logger and SQLite params must have object identity equality');
         assert.deepEqual(loggedContext.params, [], 'Logger should preserve SQL params structure');
         assert.strictEqual(loggedContext.requestId, 'req-456', 'Logger should preserve requestId');
+        assert.strictEqual(dbRunCalled, false, 'db.run should never be called after lookup failure');
         assert.strictEqual(result.count, 1, 'Should return exactly 1 response');
     });
 });
