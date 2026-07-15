@@ -478,6 +478,8 @@ test('Slides Delete Cache Tests (Atomic)', async (t) => {
             cb(null, { media_path: '/uploads/slides/delete-me.png', display_order: 1 });
         };
 
+        await db.scheduleMigrationPromise;
+
         let sqlLog = [];
         db.run = function(sql, params, cb) {
             const actualCb = typeof params === 'function' ? params : cb;
