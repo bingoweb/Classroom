@@ -4,6 +4,18 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
+function closeDatabase(database) {
+    return new Promise((resolve, reject) => {
+        database.close((err) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve();
+        });
+    });
+}
+
 test('Student Import Error Redaction', async () => {
     const originalDbPath = process.env.CLASSROOM_DB_PATH;
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'classroom-import-test-'));
@@ -99,9 +111,7 @@ test('Student Import Error Redaction', async () => {
             process.env.CLASSROOM_DB_PATH = originalDbPath;
         }
 
-        try {
-            db.close();
-        } catch (err) {}
+        await closeDatabase(db);
 
         const cleanupFiles = [
             'test.db',
