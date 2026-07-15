@@ -297,6 +297,7 @@ test('Slides Read Error Redaction', async (t) => {
         let dbAllCalled = 0;
         let capturedSql = null;
         let capturedParams = null;
+        let loggerErrorCalls = 0;
         let loggerErrorArgs = null;
 
         const secretMarker = 'SENSITIVE_SLIDES_LIST_DB_DETAIL_' + crypto.randomBytes(4).toString('hex');
@@ -310,6 +311,7 @@ test('Slides Read Error Redaction', async (t) => {
         };
 
         Logger.prototype.error = (component, msg, err, meta) => {
+            loggerErrorCalls++;
             loggerErrorArgs = { component, msg, err, meta };
         };
 
@@ -327,7 +329,8 @@ test('Slides Read Error Redaction', async (t) => {
         const serializedBody = JSON.stringify(result.body);
         assert.ok(!serializedBody.includes(secretMarker), 'Response must not expose secret marker');
 
-        assert.ok(loggerErrorArgs, 'Logger error must be called');
+        assert.strictEqual(loggerErrorCalls, 1);
+        assert.ok(loggerErrorArgs, 'Logger error arguments must be captured');
         assert.strictEqual(loggerErrorArgs.component, COMPONENTS.API);
         assert.strictEqual(loggerErrorArgs.msg, 'Error fetching slides');
         assert.strictEqual(loggerErrorArgs.err, dbError);
@@ -341,6 +344,7 @@ test('Slides Read Error Redaction', async (t) => {
         let dbGetCalled = 0;
         let capturedSql = null;
         let capturedParams = null;
+        let loggerErrorCalls = 0;
         let loggerErrorArgs = null;
 
         const secretMarker = 'SENSITIVE_SLIDE_ID_DB_DETAIL_' + crypto.randomBytes(4).toString('hex');
@@ -354,6 +358,7 @@ test('Slides Read Error Redaction', async (t) => {
         };
 
         Logger.prototype.error = (component, msg, err, meta) => {
+            loggerErrorCalls++;
             loggerErrorArgs = { component, msg, err, meta };
         };
 
@@ -371,7 +376,8 @@ test('Slides Read Error Redaction', async (t) => {
         const serializedBody = JSON.stringify(result.body);
         assert.ok(!serializedBody.includes(secretMarker), 'Response must not expose secret marker');
 
-        assert.ok(loggerErrorArgs, 'Logger error must be called');
+        assert.strictEqual(loggerErrorCalls, 1);
+        assert.ok(loggerErrorArgs, 'Logger error arguments must be captured');
         assert.strictEqual(loggerErrorArgs.component, COMPONENTS.API);
         assert.strictEqual(loggerErrorArgs.msg, 'Error fetching slide by id');
         assert.strictEqual(loggerErrorArgs.err, dbError);
