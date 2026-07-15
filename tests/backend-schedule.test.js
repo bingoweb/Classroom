@@ -486,18 +486,24 @@ test('Schedule API and Migration Tests', async (t) => {
         let port;
 
         let adminCookie = null;
+        let adminCsrfToken = null;
 
-        async function request(method, reqPath, body = null) {
+        async function request(method, reqPath, body = null, customHeaders = {}) {
             const isProtectedWrite = (method === 'POST' || method === 'PUT') && reqPath !== '/api/admin/login';
             if (isProtectedWrite && !adminCookie) {
                 const loginRes = await request('POST', '/api/admin/login', { password: 'test_password' });
                 adminCookie = loginRes.cookie;
+                
+                const sessionRes = await request('GET', '/api/admin/session', null, { 'Cookie': adminCookie });
+                adminCsrfToken = sessionRes.headers['x-csrf-token'];
             }
 
             return new Promise((resolve, reject) => {
                 const headers = body ? { 'Content-Type': 'application/json' } : {};
+                Object.assign(headers, customHeaders);
                 if (isProtectedWrite && adminCookie) {
                     headers['Cookie'] = adminCookie;
+                    if (adminCsrfToken) headers['X-CSRF-Token'] = adminCsrfToken;
                 }
                 headers['Connection'] = 'close';
 
@@ -513,7 +519,7 @@ test('Schedule API and Migration Tests', async (t) => {
                     res.on('end', () => {
                         let setCookieHeader = res.headers['set-cookie'];
                         let cookie = setCookieHeader ? setCookieHeader[0].split(';')[0] : null;
-                        resolve({ status: res.statusCode, data: JSON.parse(data || '{}'), raw: data, cookie });
+                        resolve({ status: res.statusCode, data: JSON.parse(data || '{}'), raw: data, cookie, headers: res.headers });
                     });
                 });
                 req.on('error', reject);

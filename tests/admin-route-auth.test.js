@@ -294,9 +294,92 @@ test('Admin Route Auth Test', async (t) => {
             }
         }
 
-        // 10. Preserve valid-session representative write-route test
-        const resJSONAuth = await fetchPath('POST', '/api/settings', sessionCookie2, JSON.stringify({}), { 'Content-Type': 'application/json' });
+        // 10. Fetch CSRF token from /api/admin/session
+        const sessionRes2 = await fetchPath('GET', '/api/admin/session', sessionCookie2);
+        assert.strictEqual(sessionRes2.statusCode, 200);
+        const csrfToken2 = sessionRes2.headers['x-csrf-token'];
+        assert.ok(csrfToken2, "CSRF token must be returned for valid session");
+
+        // 11. Test all 18 routes for 403 when CSRF is missing or invalid
+        const validBoundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW';
+        const validMultipartBodyStr = `--${validBoundary}\r\nContent-Disposition: form-data; name="photo"; filename="test.file"\r\nContent-Type: application/octet-stream\r\n\r\nfake file data\r\n--${validBoundary}--`;
+
+        for (const r of writeRoutes) {
+            const isUpload = uploadRoutes.some(ur => ur.m === r.m && ur.p === r.p);
+            const headers = isUpload ? {
+                'Content-Type': `multipart/form-data; boundary=${validBoundary}`,
+                'Content-Length': Buffer.byteLength(validMultipartBodyStr)
+            } : { 'Content-Type': 'application/json' };
+            const body = isUpload ? validMultipartBodyStr : '{}';
+
+            // Missing token
+            const resMissing = await fetchPath(r.m, r.p, sessionCookie2, body, headers);
+            assert.strictEqual(resMissing.statusCode, 403, `Expected 403 without CSRF for ${r.m} ${r.p}`);
+            assert.deepStrictEqual(JSON.parse(resMissing.body), { error: 'CSRF doğrulaması başarısız.' });
+
+            // Invalid token
+            const headersInvalid = { ...headers, 'X-CSRF-Token': 'invalid-token' };
+            const resInvalid = await fetchPath(r.m, r.p, sessionCookie2, body, headersInvalid);
+            assert.strictEqual(resInvalid.statusCode, 403, `Expected 403 with invalid CSRF for ${r.m} ${r.p}`);
+
+            // CSRF rejection on upload routes must occur before Multer (no file or DB mutation)
+            if (isUpload) {
+                const beforeUploads = getDirSnapshot(uploadsDir);
+                const beforeSlides = getDirSnapshot(slidesDir);
+                let initialDbCount = 0;
+                if (r.p.includes('/students')) initialDbCount = await countRows('students');
+                else if (r.p.includes('/slides')) initialDbCount = await countRows('slides');
+
+                const resCsrfRej = await fetchPath(r.m, r.p, sessionCookie2, validMultipartBodyStr, headersInvalid);
+                assert.strictEqual(resCsrfRej.statusCode, 403);
+
+                const afterUploads = getDirSnapshot(uploadsDir);
+                const afterSlides = getDirSnapshot(slidesDir);
+                assert.deepStrictEqual(beforeUploads, afterUploads, `Uploads dir mutated on CSRF reject ${r.m} ${r.p}`);
+                assert.deepStrictEqual(beforeSlides, afterSlides, `Slides dir mutated on CSRF reject ${r.m} ${r.p}`);
+
+                if (r.p.includes('/students')) {
+                    assert.strictEqual(await countRows('students'), initialDbCount, "Students count mutated");
+                } else if (r.p.includes('/slides')) {
+                    assert.strictEqual(await countRows('slides'), initialDbCount, "Slides count mutated");
+                }
+            }
+        }
+
+        // 12. A token from one session is rejected for another session
+        const loginRes3 = await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ password: adminPassword }), { 'Content-Type': 'application/json' });
+        const sessionCookie3 = loginRes3.headers['set-cookie'][0].split(';')[0];
+        const resCross = await fetchPath('POST', '/api/settings', sessionCookie3, '{}', {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken2
+        });
+        assert.strictEqual(resCross.statusCode, 403, "Token from session 2 must be rejected for session 3");
+
+        // 13. A correct token reaches representative JSON, DELETE, and multipart handlers
+        const resJSONAuth = await fetchPath('POST', '/api/settings', sessionCookie2, JSON.stringify({}), {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken2
+        });
         assert.notStrictEqual(resJSONAuth.statusCode, 401);
+        assert.notStrictEqual(resJSONAuth.statusCode, 403);
+
+        const resDeleteAuthCsrf = await fetchPath('DELETE', '/api/students/999999', sessionCookie2, null, {
+            'X-CSRF-Token': csrfToken2
+        });
+        assert.notStrictEqual(resDeleteAuthCsrf.statusCode, 401);
+        assert.notStrictEqual(resDeleteAuthCsrf.statusCode, 403);
+
+        const uploadBodyTest = `--${validBoundary}\r\nContent-Disposition: form-data; name="photo"; filename="test.file"\r\nContent-Type: application/octet-stream\r\n\r\nfake file data\r\n--${validBoundary}--`;
+        const resMultipartAuthCsrf = await fetchPath('POST', '/api/students', sessionCookie2, uploadBodyTest, {
+            'Content-Type': `multipart/form-data; boundary=${validBoundary}`,
+            'Content-Length': Buffer.byteLength(uploadBodyTest),
+            'X-CSRF-Token': csrfToken2
+        });
+        assert.notStrictEqual(resMultipartAuthCsrf.statusCode, 401);
+        assert.notStrictEqual(resMultipartAuthCsrf.statusCode, 403);
+
+        // 14. Assert CSRF token is not logged
+        assert.ok(!capturedLogs.includes(csrfToken2), "CSRF Token was logged");
 
     } finally {
         global.Date.now = originalDateNow;

@@ -1411,6 +1411,44 @@
     <!-- SheetJS for Excel parsing -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 
+    <script>
+        (function() {
+            let csrfToken = null;
+            let tokenFetchPromise = null;
+            const originalFetch = window.fetch;
+            
+            function getCsrfToken() {
+                if (csrfToken) return Promise.resolve(csrfToken);
+                if (tokenFetchPromise) return tokenFetchPromise;
+                tokenFetchPromise = originalFetch('/api/admin/session')
+                    .then(res => {
+                        const token = res.headers.get('X-CSRF-Token');
+                        if (token) csrfToken = token;
+                        return csrfToken;
+                    })
+                    .catch(() => null)
+                    .finally(() => { tokenFetchPromise = null; });
+                return tokenFetchPromise;
+            }
+
+            window.fetch = async function() {
+                let [resource, config] = arguments;
+                if (typeof resource === 'string' && resource.startsWith('/api/') && config && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method?.toUpperCase())) {
+                    const token = await getCsrfToken();
+                    if (token) {
+                        config.headers = config.headers || {};
+                        if (config.headers instanceof Headers) {
+                            config.headers.set('X-CSRF-Token', token);
+                        } else {
+                            config.headers['X-CSRF-Token'] = token;
+                        }
+                    }
+                }
+                return originalFetch.apply(this, arguments);
+            };
+            window.getAdminCsrfToken = getCsrfToken;
+        })();
+    </script>
     <script src="../js/config.js"></script>
     <script src="../js/schedule-normalizer.js"></script>
     <script src="../js/api-service.js"></script>

@@ -1500,6 +1500,10 @@ async function handleSlideSubmit(e) {
 
         const xhr = new XMLHttpRequest();
         xhr.open(method, url);
+        if (window.getAdminCsrfToken) {
+            const token = await window.getAdminCsrfToken();
+            if (token) xhr.setRequestHeader('X-CSRF-Token', token);
+        }
 
         xhr.upload.onprogress = function (e) {
             if (e.lengthComputable) {

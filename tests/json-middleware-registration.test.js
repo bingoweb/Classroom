@@ -99,6 +99,26 @@ test('JSON middleware is registered exactly once and handles requests', async ()
 
         assert.strictEqual(loginResData.status, 200, 'Login failed');
 
+        const sessionResData = await new Promise((resolve, reject) => {
+            const req = http.request({
+                hostname: '127.0.0.1',
+                port: port,
+                path: '/api/admin/session',
+                method: 'GET',
+                headers: { 'Cookie': loginResData.cookie }
+            }, (res) => {
+                res.on('data', () => {});
+                res.on('end', () => {
+                    resolve({ status: res.statusCode, csrfToken: res.headers['x-csrf-token'] });
+                });
+            });
+            req.on('error', reject);
+            req.end();
+        });
+        
+        assert.strictEqual(sessionResData.status, 200, 'Session fetch failed');
+        assert.ok(sessionResData.csrfToken, 'CSRF token missing');
+
         const requestData = JSON.stringify({
             key: ' middleware_test_key ',
             value: 'middleware-test-value'
@@ -112,7 +132,8 @@ test('JSON middleware is registered exactly once and handles requests', async ()
             headers: {
                 'Content-Type': 'application/json',
                 'Content-Length': Buffer.byteLength(requestData),
-                'Cookie': loginResData.cookie
+                'Cookie': loginResData.cookie,
+                'X-CSRF-Token': sessionResData.csrfToken
             }
         };
 

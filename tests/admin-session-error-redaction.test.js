@@ -40,7 +40,16 @@ test('Admin Session Error Redaction Test', async (t) => {
     console.warn = captureStream;
     console.info = captureStream;
 
+    let randomBytesCalls = 0;
     crypto.randomBytes = function(size, cb) {
+        randomBytesCalls++;
+        // Allow the first call for CSRF secret generation to succeed
+        if (randomBytesCalls === 1) {
+            if (cb) {
+                return originalRandomBytes(size, cb);
+            }
+            return originalRandomBytes(size);
+        }
         if (!cb) {
             throw new Error('Forced crypto.randomBytes error for testing');
         }
