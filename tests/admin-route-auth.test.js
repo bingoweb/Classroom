@@ -111,6 +111,15 @@ test('Admin Route Auth Test', async (t) => {
         assert.strictEqual(resAdminNoSlash.statusCode, 401);
         assert.deepStrictEqual(JSON.parse(resAdminNoSlash.body), { authenticated: false, message: 'Yönetici oturumu gerekli.' });
 
+        // 1c. HTML navigation to /admin and /admin/ redirects to the login page
+        const resAdminSlashHtml = await fetchPath('GET', '/admin/', null, null, { 'Accept': 'text/html' });
+        assert.strictEqual(resAdminSlashHtml.statusCode, 302);
+        assert.strictEqual(resAdminSlashHtml.headers['location'], '/admin-login.html?next=/admin/');
+
+        const resAdminNoSlashHtml = await fetchPath('GET', '/admin', null, null, { 'Accept': 'text/html' });
+        assert.strictEqual(resAdminNoSlashHtml.statusCode, 302);
+        assert.strictEqual(resAdminNoSlashHtml.headers['location'], '/admin-login.html?next=/admin/');
+
         // 2. Malformed cookie returns exact 401 JSON
         const resMalformed = await fetchPath('GET', '/admin/', 'classroom_admin_session=invalid');
         assert.strictEqual(resMalformed.statusCode, 401);
@@ -136,6 +145,10 @@ test('Admin Route Auth Test', async (t) => {
         assert.strictEqual(resTempLogOut.statusCode, 401);
         assert.deepStrictEqual(JSON.parse(resTempLogOut.body), { authenticated: false, message: 'Yönetici oturumu gerekli.' });
 
+        const resTempLogOutHtml = await fetchPath('GET', '/admin/', sessionCookieTemp, null, { 'Accept': 'text/html' });
+        assert.strictEqual(resTempLogOutHtml.statusCode, 302);
+        assert.strictEqual(resTempLogOutHtml.headers['location'], '/admin-login.html?next=/admin/');
+
         // 6. Prove these remain public
         const publicRoutes = [
             { m: 'POST', p: '/api/admin/login', body: JSON.stringify({ password: 'wrong' }), headers: { 'Content-Type': 'application/json' } },
@@ -145,6 +158,7 @@ test('Admin Route Auth Test', async (t) => {
             { m: 'GET', p: '/api/schedule' },
             { m: 'GET', p: '/api/schedule/normalized' },
             { m: 'GET', p: '/' },
+            { m: 'GET', p: '/admin-login.html' },
             { m: 'GET', p: '/uploads/nonexistent-public-probe' }
         ];
         for (const pr of publicRoutes) {

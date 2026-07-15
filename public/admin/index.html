@@ -102,6 +102,9 @@
 <body>
     <div class="container">
         <h1>Admin Panel</h1>
+        <button onclick="logoutAdmin()"
+            style="float: right; margin-top: -60px; margin-right: 170px; padding: 10px 20px; background: #e74c3c; border: none; border-radius: 10px; color: white; cursor: pointer;">🚪
+            Çıkış Yap</button>
         <button onclick="showQRCode()"
             style="float: right; margin-top: -60px; padding: 10px 20px; background: var(--secondary); border: none; border-radius: 10px; color: white; cursor: pointer;">📱
             Mobil Bağlan</button>
@@ -1420,5 +1423,15 @@
     <script src="schedule-draft-editor.js"></script>
     <script src="schedule-review-panel.js"></script>
     <script src="admin.js"></script>
+    <script>
+        async function logoutAdmin() {
+            try {
+                const res = await fetch('/api/admin/logout', { method: 'POST' });
+                if (res.ok) window.location.href = '/admin-login.html';
+            } catch (err) {
+                console.error('Logout error:', err);
+            }
+        }
+    </script>
 </body>
 </html>

@@ -79,11 +79,21 @@ const adminSessionStore = createAdminSessionStore();
 
 function requireAdminSession(req, res, next) {
     const cookieHeader = req.headers.cookie;
-    if (!cookieHeader) {
-        return res.status(401).json({ authenticated: false, message: 'Yönetici oturumu gerekli.' });
+    let hasSession = false;
+    if (cookieHeader) {
+        const sessionId = readAdminSessionIdFromCookieHeader(cookieHeader);
+        if (sessionId && adminSessionStore.hasSession(sessionId)) {
+            hasSession = true;
+        }
     }
-    const sessionId = readAdminSessionIdFromCookieHeader(cookieHeader);
-    if (!sessionId || !adminSessionStore.hasSession(sessionId)) {
+
+    if (!hasSession) {
+        if (req.method === 'GET' && (req.originalUrl === '/admin' || req.originalUrl === '/admin/')) {
+            const accept = req.headers.accept || '';
+            if (accept.includes('text/html')) {
+                return res.redirect(302, '/admin-login.html?next=/admin/');
+            }
+        }
         return res.status(401).json({ authenticated: false, message: 'Yönetici oturumu gerekli.' });
     }
     next();
