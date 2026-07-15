@@ -378,6 +378,19 @@ test('Admin Route Auth Test', async (t) => {
         assert.notStrictEqual(resMultipartAuthCsrf.statusCode, 401);
         assert.notStrictEqual(resMultipartAuthCsrf.statusCode, 403);
 
+        // 15. GET /api/logs protection tests
+        // 1. Without a session cookie returns HTTP 401
+        const resLogsUnauth = await fetchPath('GET', '/api/logs');
+        assert.strictEqual(resLogsUnauth.statusCode, 401);
+        // 2. Response body is exactly:
+        assert.deepStrictEqual(JSON.parse(resLogsUnauth.body), { authenticated: false, message: 'Yönetici oturumu gerekli.' });
+
+        // 3. With a valid session cookie succeeds
+        // 4. Succeeds without a CSRF token
+        const resLogsAuth = await fetchPath('GET', '/api/logs', sessionCookie2);
+        assert.notStrictEqual(resLogsAuth.statusCode, 401);
+        assert.notStrictEqual(resLogsAuth.statusCode, 403);
+
         // 14. Assert CSRF token is not logged
         assert.ok(!capturedLogs.includes(csrfToken2), "CSRF Token was logged");
 
