@@ -55,6 +55,7 @@ test('Slides Reorder Route Tests', async (t) => {
     let server;
     let serverUrl;
     let adminCookie = null;
+    let adminCsrfToken = null;
     let originalDbSerialize, originalDbPrepare, originalDbGet, originalDbRun;
 
     t.before(async () => {
@@ -73,7 +74,8 @@ test('Slides Reorder Route Tests', async (t) => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Content-Length': Buffer.byteLength(loginData)
+                    'Content-Length': Buffer.byteLength(loginData),
+                    'Connection': 'close'
                 }
             }, (res) => {
                 let setCookieHeader = res.headers['set-cookie'];
@@ -83,6 +85,24 @@ test('Slides Reorder Route Tests', async (t) => {
             });
             req.on('error', reject);
             req.write(loginData);
+            req.end();
+        });
+
+        await new Promise((resolve, reject) => {
+            const req = http.request(serverUrl + '/api/admin/session', {
+                method: 'GET',
+                headers: {
+                    'Cookie': adminCookie,
+                    'Connection': 'close'
+                }
+            }, (res) => {
+                assert.strictEqual(res.statusCode, 200);
+                adminCsrfToken = res.headers['x-csrf-token'];
+                assert.ok(typeof adminCsrfToken === 'string' && adminCsrfToken.length > 0, 'CSRF token must be a non-empty string');
+                res.on('data', () => {});
+                res.on('end', resolve);
+            });
+            req.on('error', reject);
             req.end();
         });
     });
@@ -127,9 +147,12 @@ test('Slides Reorder Route Tests', async (t) => {
 
     function makeRequest(method, endpoint, bodyObj) {
         return new Promise((resolve, reject) => {
-            const headers = { 'Content-Type': 'application/json' };
+            const headers = { 'Content-Type': 'application/json', 'Connection': 'close' };
             if (adminCookie) {
                 headers['Cookie'] = adminCookie;
+            }
+            if (adminCsrfToken && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method.toUpperCase())) {
+                headers['X-CSRF-Token'] = adminCsrfToken;
             }
             const req = http.request(serverUrl + endpoint, {
                 method: method,
@@ -990,17 +1013,20 @@ test('Slides Reorder Route Tests', async (t) => {
         `);
 
         const http = require('node:http');
-        const server = http.createServer(app);
-        await new Promise(resolve => server.listen(0, resolve));
-        const port = server.address().port;
+        const atomicityServer = http.createServer(app);
+        await new Promise(resolve => atomicityServer.listen(0, resolve));
+        const port = atomicityServer.address().port;
 
         const makeRequest = (body) => new Promise((resolve, reject) => {
+            const headers = { 'Content-Type': 'application/json', 'Connection': 'close' };
+            if (adminCookie) headers['Cookie'] = adminCookie;
+            if (adminCsrfToken) headers['X-CSRF-Token'] = adminCsrfToken;
             const req = http.request({
                 hostname: 'localhost',
                 port,
                 path: '/api/slides/reorder',
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Cookie': adminCookie }
+                headers: headers
             }, (res) => {
                 let data = '';
                 res.on('data', chunk => data += chunk);
@@ -1011,42 +1037,49 @@ test('Slides Reorder Route Tests', async (t) => {
             req.end();
         });
 
-        const res = await makeRequest({
-            slideOrders: [
+        try {
+            const res = await makeRequest({
+                slideOrders: [
+                    { id: id1, display_order: 10 },
+                    { id: id2, display_order: 20 },
+                    { id: id3, display_order: 30 }
+                ]
+            });
+
+            assert.strictEqual(res.statusCode, 500);
+            assert.deepStrictEqual(res.body, { error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+
+            const rows = await allSql("SELECT id, display_order FROM slides ORDER BY id");
+            assert.deepStrictEqual(rows, [
+                { id: id1, display_order: 1 },
+                { id: id2, display_order: 2 },
+                { id: id3, display_order: 3 }
+            ]);
+
+            await runSql("DROP TRIGGER abort_middle_slide");
+
+            const resSuccess = await makeRequest({
+                slideOrders: [
+                    { id: id1, display_order: 10 },
+                    { id: id2, display_order: 20 },
+                    { id: id3, display_order: 30 }
+                ]
+            });
+
+            assert.strictEqual(resSuccess.statusCode, 200);
+            const newRows = await allSql("SELECT id, display_order FROM slides ORDER BY id");
+            assert.deepStrictEqual(newRows, [
                 { id: id1, display_order: 10 },
                 { id: id2, display_order: 20 },
                 { id: id3, display_order: 30 }
-            ]
-        });
-
-        assert.strictEqual(res.statusCode, 500);
-        assert.deepStrictEqual(res.body, { error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
-
-        const rows = await allSql("SELECT id, display_order FROM slides ORDER BY id");
-        assert.deepStrictEqual(rows, [
-            { id: id1, display_order: 1 },
-            { id: id2, display_order: 2 },
-            { id: id3, display_order: 3 }
-        ]);
-
-        await runSql("DROP TRIGGER abort_middle_slide");
-
-        const resSuccess = await makeRequest({
-            slideOrders: [
-                { id: id1, display_order: 10 },
-                { id: id2, display_order: 20 },
-                { id: id3, display_order: 30 }
-            ]
-        });
-
-        assert.strictEqual(resSuccess.statusCode, 200);
-        const newRows = await allSql("SELECT id, display_order FROM slides ORDER BY id");
-        assert.deepStrictEqual(newRows, [
-            { id: id1, display_order: 10 },
-            { id: id2, display_order: 20 },
-            { id: id3, display_order: 30 }
-        ]);
-
-        server.close();
+            ]);
+        } finally {
+            await new Promise((resolve, reject) => {
+                atomicityServer.close((err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+        }
     });
 });

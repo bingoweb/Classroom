@@ -79,7 +79,8 @@ test('JSON middleware is registered exactly once and handles requests', async ()
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(loginData)
+                'Content-Length': Buffer.byteLength(loginData),
+                'Connection': 'close'
             }
         };
 
@@ -105,7 +106,7 @@ test('JSON middleware is registered exactly once and handles requests', async ()
                 port: port,
                 path: '/api/admin/session',
                 method: 'GET',
-                headers: { 'Cookie': loginResData.cookie }
+                headers: { 'Cookie': loginResData.cookie, 'Connection': 'close' }
             }, (res) => {
                 res.on('data', () => {});
                 res.on('end', () => {
@@ -133,7 +134,8 @@ test('JSON middleware is registered exactly once and handles requests', async ()
                 'Content-Type': 'application/json',
                 'Content-Length': Buffer.byteLength(requestData),
                 'Cookie': loginResData.cookie,
-                'X-CSRF-Token': sessionResData.csrfToken
+                'X-CSRF-Token': sessionResData.csrfToken,
+                'Connection': 'close'
             }
         };
 

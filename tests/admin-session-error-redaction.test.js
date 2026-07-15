@@ -77,7 +77,7 @@ test('Admin Session Error Redaction Test', async (t) => {
         const res = await new Promise((resolve, reject) => {
             const req = http.request(serverUrl + '/api/admin/login', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json', 'Connection': 'close' }
             }, (response) => {
                 let data = '';
                 response.on('data', chunk => data += chunk);
