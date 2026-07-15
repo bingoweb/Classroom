@@ -1394,8 +1394,17 @@ app.get('/api/attendance/today', (req, res) => {
                  JOIN students ON attendance.student_id = students.id 
                  WHERE attendance.date = ? 
                  ORDER BY students.name`;
-    db.all(sql, [today], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+    const params = [today];
+    db.all(sql, params, (err, rows) => {
+        if (err) {
+            logger.error(
+                COMPONENTS.API,
+                "Error fetching today's attendance",
+                err,
+                { query: sql, params }
+            );
+            return res.status(500).json({ error: 'Yoklama bilgileri alınırken hata oluştu' });
+        }
         res.json(rows);
     });
 });
@@ -1408,8 +1417,17 @@ app.get('/api/attendance/:date', (req, res) => {
                  JOIN students ON attendance.student_id = students.id 
                  WHERE attendance.date = ? 
                  ORDER BY students.name`;
-    db.all(sql, [date], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+    const params = [date];
+    db.all(sql, params, (err, rows) => {
+        if (err) {
+            logger.error(
+                COMPONENTS.API,
+                'Error fetching attendance by date',
+                err,
+                { query: sql, params }
+            );
+            return res.status(500).json({ error: 'Yoklama bilgileri alınırken hata oluştu' });
+        }
         res.json(rows);
     });
 });
