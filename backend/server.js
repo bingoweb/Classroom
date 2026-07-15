@@ -101,9 +101,7 @@ const logger = new Logger();
 logger.init({ logLevel: LOG_LEVELS.INFO });
 
 // Ensure logs directory exists
-if (!fs.existsSync('logs')) {
-    fs.mkdirSync('logs');
-}
+fs.mkdirSync('logs', { recursive: true });
 
 app.use(express.json());
 
