@@ -2619,13 +2619,20 @@ app.delete('/api/logs/cleanup', requireAdminSession, requireCsrfToken, requireAd
         return res.status(400).json({ error: 'Geçersiz gün sayısı' });
     }
 
+    const cleanupQuery = "DELETE FROM error_logs WHERE timestamp < ?";
+    const cleanupParams = [cutoffDate.toISOString()];
+
     db.run(
-        "DELETE FROM error_logs WHERE timestamp < ?",
-        [cutoffDate.toISOString()],
+        cleanupQuery,
+        cleanupParams,
         function (err) {
             if (err) {
-                logger.error(COMPONENTS.DATABASE, 'Error cleaning up logs', err);
-                return res.status(500).json({ error: err.message });
+                logger.error(COMPONENTS.DATABASE, 'Error cleaning up logs', err, {
+                    requestId: req.requestId,
+                    query: cleanupQuery,
+                    params: cleanupParams
+                });
+                return res.status(500).json({ error: 'Eski loglar temizlenirken bir hata oluştu.' });
             }
             res.json({ message: `${this.changes} eski log kaydı silindi` });
         }

@@ -263,20 +263,49 @@ test('Logs Cleanup Route Validation', async (t) => {
         assert.strictEqual(rows[0].message, 'Keep');
     });
 
-    await t.test('5. Mandatory database-error regression', async () => {
+const { Logger } = require('../backend/logger.js');
+
+    await t.test('5. Database error redaction and logger preservation', async () => {
         let runCalled = 0;
-        db.run = function(sql, params, cb) {
-            runCalled++;
-            cb.call(this, new Error('Simulated DB error'));
+        let loggedError = null;
+        let loggedContext = null;
+
+        const originalLoggerError = Logger.prototype.error;
+        Logger.prototype.error = function(component, message, err, context) {
+            loggedError = err;
+            loggedContext = context;
         };
 
-        const req = { query: { days: '7' } };
-        const resObj = await invokeHandler(req);
+        const uniqueSensitiveMarker = 'UNIQUE_SENSITIVE_MARKER_' + crypto.randomBytes(8).toString('hex');
+        const dbError = new Error(`Simulated DB error with ${uniqueSensitiveMarker}`);
+
+        let capturedParams;
+        db.run = function(sql, params, cb) {
+            runCalled++;
+            capturedParams = params;
+            cb.call(this, dbError);
+        };
+
+        const req = { query: { days: '7' }, requestId: 'req-12345' };
+
+        let resObj;
+        try {
+            resObj = await invokeHandler(req);
+        } finally {
+            Logger.prototype.error = originalLoggerError;
+        }
 
         assert.strictEqual(resObj.statusCode, 500);
-        assert.deepEqual(resObj.body, { error: 'Simulated DB error' });
+        assert.deepEqual(resObj.body, { error: 'Eski loglar temizlenirken bir hata oluştu.' });
         assert.strictEqual(resObj.count, 1);
         assert.strictEqual(runCalled, 1);
+
+        assert.ok(!JSON.stringify(resObj.body).includes(uniqueSensitiveMarker), 'Sensitive marker must not be present in response');
+
+        assert.strictEqual(loggedError, dbError, 'Logger must receive the exact Error object');
+        assert.strictEqual(loggedContext.requestId, 'req-12345', 'Logger context must preserve requestId');
+        assert.strictEqual(loggedContext.query, 'DELETE FROM error_logs WHERE timestamp < ?', 'Logger context must preserve exact query');
+        assert.strictEqual(loggedContext.params, capturedParams, 'Logger context params must have object identity equality with SQLite params');
     });
 
 });
