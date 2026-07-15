@@ -1688,15 +1688,27 @@ app.get('/api/slides/active', async (req, res) => {
         }
 
         // Fetch all active slides
-        db.all(`
+        const sql = `
             SELECT * FROM slides 
             WHERE is_active = 1 
             AND (expires_at IS NULL OR expires_at > datetime('now'))
             ORDER BY display_order ASC
-        `, [], async (err, rows) => {
+        `;
+        const params = [];
+        db.all(sql, params, async (err, rows) => {
             if (err) {
-                logger.error(COMPONENTS.API, 'Error fetching active slides', err);
-                return res.status(500).json({ error: err.message });
+                logger.error(
+                    COMPONENTS.API,
+                    'Error fetching active slides',
+                    err,
+                    {
+                        endpoint: '/api/slides/active',
+                        requestId: req.requestId,
+                        query: sql,
+                        params
+                    }
+                );
+                return res.status(500).json({ error: 'Slayt bilgileri alınırken hata oluştu' });
             }
 
             // Normalize paths
