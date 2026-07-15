@@ -894,7 +894,8 @@ test('Role Create ID Validation Tests', async (t) => {
         };
         const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'star' } });
         assert.strictEqual(resObj.statusCode, 500);
-        assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu: insert failed' });
+        assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu' });
+        assert.ok(!JSON.stringify(resObj.body).includes('insert failed'));
         assert.strictEqual(runCalls.length, 1);
     });
 

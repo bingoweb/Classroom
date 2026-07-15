@@ -1001,10 +1001,6 @@ app.post('/api/roles', requireAdminSession, requireCsrfToken, requireAdminWriteR
                     return res.status(400).json({ error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
                 }
 
-                if (err.message === 'insert failed') {
-                    return res.status(500).json({ error: 'Rol atanırken hata oluştu: ' + err.message });
-                }
-
                 return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
             }
 
