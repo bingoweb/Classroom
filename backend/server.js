@@ -292,8 +292,23 @@ app.get('/api/admin/session', (req, res) => {
 
 // Get all students
 app.get('/api/students', (req, res) => {
-    db.all("SELECT * FROM students", [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+    const query = "SELECT * FROM students";
+    const params = [];
+
+    db.all(query, params, (err, rows) => {
+        if (err) {
+            logger.error(
+                COMPONENTS.API,
+                'Error fetching students',
+                err,
+                { query, params }
+            );
+
+            return res.status(500).json({
+                error: 'Öğrenciler alınırken hata oluştu'
+            });
+        }
+
         res.json(rows);
     });
 });
