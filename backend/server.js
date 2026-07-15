@@ -1983,7 +1983,9 @@ app.post('/api/slides', requireAdminSession, requireCsrfToken, requireAdminWrite
     }
 
     // Get max display_order
-    db.get("SELECT MAX(display_order) as max_order FROM slides", [], (err, row) => {
+    const maxOrderQuery = "SELECT MAX(display_order) as max_order FROM slides";
+    const maxOrderParams = [];
+    db.get(maxOrderQuery, maxOrderParams, (err, row) => {
         if (err) {
             if (req.file) {
                 try {
@@ -1994,7 +1996,12 @@ app.post('/api/slides', requireAdminSession, requireCsrfToken, requireAdminWrite
                     });
                 }
             }
-            return res.status(500).json({ error: err.message });
+            logger.error(COMPONENTS.DATABASE, 'Error getting max display order for new slide', err, {
+                query: maxOrderQuery,
+                params: maxOrderParams,
+                requestId: req.requestId
+            });
+            return res.status(500).json({ error: 'Slayt sırası hesaplanırken bir hata oluştu.' });
         }
 
         const display_order = (row && row.max_order !== null ? row.max_order : 0) + 1;
