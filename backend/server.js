@@ -1012,8 +1012,23 @@ app.delete('/api/roles/:id', requireAdminSession, requireCsrfToken, requireAdmin
 
 // Get Settings
 app.get('/api/settings', (req, res) => {
-    db.all("SELECT * FROM settings", [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+    const query = "SELECT * FROM settings";
+    const params = [];
+
+    db.all(query, params, (err, rows) => {
+        if (err) {
+            logger.error(
+                COMPONENTS.API,
+                'Error fetching settings',
+                err,
+                { query, params }
+            );
+
+            return res.status(500).json({
+                error: 'Ayarlar alınırken hata oluştu'
+            });
+        }
+
         const settings = {};
         rows.forEach(row => settings[row.key] = row.value);
         res.json(settings);
