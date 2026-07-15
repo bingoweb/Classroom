@@ -974,9 +974,22 @@ app.post('/api/roles', requireAdminSession, requireCsrfToken, requireAdminWriteR
                     }
                 }
 
-                db.get("SELECT 1 FROM roles WHERE student_id = ? AND role_type = ?", [studentId, roleType], (dupErr, dupRow) => {
+                const duplicateSql = "SELECT 1 FROM roles WHERE student_id = ? AND role_type = ?";
+                const duplicateParams = [studentId, roleType];
+                db.get(duplicateSql, duplicateParams, (dupErr, dupRow) => {
                     if (dupErr) {
-                        return res.status(500).json({ error: 'Rol atanırken hata oluştu: ' + (dupErr.message || 'Bilinmeyen hata') });
+                        logger.error(COMPONENTS.API, 'Error checking bounded role duplicate', dupErr, {
+                            endpoint: '/api/roles',
+                            requestId: req.requestId,
+                            studentId,
+                            roleType,
+                            maximum,
+                            query: duplicateSql,
+                            params: duplicateParams,
+                            errorMessage: dupErr.message,
+                            errorCode: dupErr.code
+                        });
+                        return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
                     }
                     if (dupRow) {
                         if (roleType === 'vice_president') {
