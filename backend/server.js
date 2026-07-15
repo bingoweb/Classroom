@@ -2294,7 +2294,9 @@ app.get('/api/logs', requireAdminSession, (req, res) => {
     db.all(query, params, (err, rows) => {
         if (err) {
             logger.error(COMPONENTS.API, 'Error fetching logs', err, { query, params });
-            return res.status(500).json({ error: err.message });
+            return res.status(500).json({
+                error: 'Hata günlükleri alınırken hata oluştu'
+            });
         }
 
         const safeParseJSON = (val) => {

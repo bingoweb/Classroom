@@ -162,7 +162,7 @@ test('Logs Read Limit Validation Tests', async (t) => {
 
     await t.test('Valid boundaries', async (t) => {
         const validBoundaries = [1, 1000];
-        
+
         for (const limitValue of validBoundaries) {
             await t.test(`accepts limit=${limitValue}`, () => {
                 let dbAllCount = 0;
@@ -193,13 +193,13 @@ test('Logs Read Limit Validation Tests', async (t) => {
             if (cb) cb(null, []);
         };
 
-        const req = { 
-            query: { 
+        const req = {
+            query: {
                 level: 'ERROR',
                 component: 'API',
                 since: '2026-07-14T10:00:00.000Z',
                 limit: '25'
-            } 
+            }
         };
         const res = createMockRes();
 
@@ -215,17 +215,30 @@ test('Logs Read Limit Validation Tests', async (t) => {
 
     await t.test('Database error', async () => {
         let dbAllCount = 0;
+        let capturedSql = null;
+        let capturedParams = null;
         let loggerErrorCount = 0;
         let loggedComponent = null;
+        let loggedMessage = null;
+        let loggedErrorObj = null;
+        let loggedMeta = null;
+
+        const secretMarker = 'SENSITIVE_LOG_DATABASE_DETAIL_91d7a4';
+        const databaseError = new Error(secretMarker);
 
         db.all = function(sql, params, cb) {
             dbAllCount++;
-            if (cb) cb(new Error('Test DB Error'));
+            capturedSql = sql;
+            capturedParams = params;
+            if (cb) cb(databaseError);
         };
 
         Logger.prototype.error = function(component, message, err, meta) {
             loggerErrorCount++;
             loggedComponent = component;
+            loggedMessage = message;
+            loggedErrorObj = err;
+            loggedMeta = meta;
         };
 
         const req = { query: {} };
@@ -234,10 +247,20 @@ test('Logs Read Limit Validation Tests', async (t) => {
         getHandler(req, res);
 
         assert.strictEqual(dbAllCount, 1, 'db.all is called exactly once');
-        assert.strictEqual(res.statusCode, 500, 'one 500 response');
-        assert.deepStrictEqual(res.body, { error: 'Test DB Error' }, 'error response body');
-        assert.strictEqual(res.responseCount, 1, 'no success response afterward');
-        assert.strictEqual(loggerErrorCount, 1, 'logger call remains intact');
-        assert.strictEqual(loggedComponent, COMPONENTS.API);
+        assert.strictEqual(res.responseCount, 1, 'exactly one response is sent');
+        assert.strictEqual(res.statusCode, 500, 'exact HTTP 500');
+        assert.deepStrictEqual(res.body, { error: 'Hata günlükleri alınırken hata oluştu' }, 'response body is exactly expected');
+
+        const serializedBody = JSON.stringify(res.body);
+        assert.ok(!serializedBody.includes(secretMarker), 'secretMarker not in client response');
+
+        assert.strictEqual(loggerErrorCount, 1, 'logger is called exactly once');
+        assert.strictEqual(loggedComponent, COMPONENTS.API, 'logger component is exactly COMPONENTS.API');
+        assert.strictEqual(loggedMessage, 'Error fetching logs', 'logger message is exactly expected');
+        assert.strictEqual(loggedErrorObj, databaseError, 'logger receives the exact original databaseError object');
+        assert.ok(loggedErrorObj.message.includes(secretMarker), 'logged error message contains secretMarker');
+        assert.deepStrictEqual(loggedMeta.query, capturedSql, 'metadata contains exact SQL');
+        assert.deepStrictEqual(loggedMeta.params, capturedParams, 'metadata contains exact params');
+        assert.deepStrictEqual(capturedParams, [100], 'default database params remain [100]');
     });
 });
