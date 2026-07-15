@@ -982,11 +982,16 @@ app.post('/api/roles', requireAdminSession, requireCsrfToken, requireAdminWriteR
                 SELECT 1 FROM roles WHERE student_id = ? AND role_type = ?
             )
         `;
-        db.run(sql, [studentId, role_type, studentId, role_type], function (err) {
+        const params = [studentId, role_type, studentId, role_type];
+        db.run(sql, params, function (err) {
             if (err) {
                 logger.error(COMPONENTS.API, 'Error inserting role', err, {
-                    studentId: studentId,
+                    endpoint: '/api/roles',
+                    requestId: req.requestId,
+                    studentId,
                     roleType: role_type,
+                    query: sql,
+                    params,
                     errorMessage: err.message,
                     errorCode: err.code
                 });
@@ -996,7 +1001,11 @@ app.post('/api/roles', requireAdminSession, requireCsrfToken, requireAdminWriteR
                     return res.status(400).json({ error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
                 }
 
-                return res.status(500).json({ error: 'Rol atanırken hata oluştu: ' + (err.message || 'Bilinmeyen hata') });
+                if (err.message === 'insert failed') {
+                    return res.status(500).json({ error: 'Rol atanırken hata oluştu: ' + err.message });
+                }
+
+                return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
             }
 
             if (this.changes === 0) {
