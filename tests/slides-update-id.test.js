@@ -44,7 +44,11 @@ function removeDirectoryIfPresent(fsApi, directoryPath) {
 
 test('Slides Update Route ID Validation', async (t) => {
     let updateHandler;
-    let originalDbGet, originalDbRun, originalFsExistsSync, originalFsUnlinkSync;
+    let originalDbGet;
+    let originalDbRun;
+    let originalFsExistsSync;
+    let originalFsUnlinkSync;
+    let originalLoggerError;
 
     t.before(async () => {
         await db.scheduleMigrationPromise;
@@ -87,7 +91,7 @@ test('Slides Update Route ID Validation', async (t) => {
         }
     });
 
-    function invokeHandler(req) {
+    function invokeHandler(req, options = {}) {
         return new Promise((resolve, reject) => {
             let responseCount = 0;
             let responseSnapshot = null;
@@ -130,6 +134,7 @@ test('Slides Update Route ID Validation', async (t) => {
                     return this;
                 },
                 json(data) {
+                    if (options.onJson) options.onJson();
                     responseCount++;
                     if (responseCount > 1) {
                         fail(new Error('Response sent more than once'));
@@ -346,7 +351,7 @@ test('Slides Update Route ID Validation', async (t) => {
         assert.strictEqual(resObj.statusCode, 500);
         assert.deepEqual(resObj.body, { error: 'Slayt güncellenirken hata oluştu' });
         assert.strictEqual(resObj.count, 1);
-        
+
         assert.ok(!JSON.stringify(resObj.body).includes('SLIDE_LOOKUP_SECRET_DO_NOT_EXPOSE'));
 
         assert.strictEqual(getSql, "SELECT media_path FROM slides WHERE id = ?");
@@ -355,7 +360,7 @@ test('Slides Update Route ID Validation', async (t) => {
         assert.strictEqual(runCalled, 0);
         assert.strictEqual(existsCalled, 0);
         assert.strictEqual(unlinkCalled, 0);
-        
+
         assert.strictEqual(loggerCalled, 1);
         assert.strictEqual(loggedComponent, 'API');
         assert.strictEqual(loggedError, originalError);
@@ -370,9 +375,9 @@ test('Slides Update Route ID Validation', async (t) => {
         let getSql, getParams;
         let runCalled = 0, existsCalled = 0, unlinkCalled = 0;
         let unlinkPath = null;
-        let loggedError = null;
+        let loggedComponent, loggedMessage, loggedError, loggedContext;
         let loggerCalled = 0;
-        let responseReceivedAfterCleanup = false;
+        let events = [];
 
         const originalError = new Error('SLIDE_LOOKUP_SECRET_DO_NOT_EXPOSE_FILE');
 
@@ -386,35 +391,49 @@ test('Slides Update Route ID Validation', async (t) => {
         fs.unlinkSync = (p) => {
             unlinkCalled++;
             unlinkPath = p;
+            events.push('cleanup');
         };
 
         Logger.prototype.error = function(component, message, err, context) {
             loggerCalled++;
+            loggedComponent = component;
+            loggedMessage = message;
             loggedError = err;
+            loggedContext = context;
         };
 
         const req = { params: { id: '47' }, body: {}, file: { path: '/tmp/test-file.jpg' }, requestId: 'test-req-id-456' };
-        
-        const invokePromise = invokeHandler(req).then(res => {
-            responseReceivedAfterCleanup = unlinkCalled > 0;
-            return res;
+
+        const resObj = await invokeHandler(req, {
+            onJson: () => {
+                events.push('response');
+            }
         });
-        
-        const resObj = await invokePromise;
 
         assert.strictEqual(resObj.statusCode, 500);
         assert.deepEqual(resObj.body, { error: 'Slayt güncellenirken hata oluştu' });
         assert.strictEqual(resObj.count, 1);
-        
+
         assert.ok(!JSON.stringify(resObj.body).includes('SLIDE_LOOKUP_SECRET_DO_NOT_EXPOSE_FILE'));
 
         assert.strictEqual(runCalled, 0);
+        assert.strictEqual(existsCalled, 0);
         assert.strictEqual(unlinkCalled, 1);
         assert.strictEqual(unlinkPath, '/tmp/test-file.jpg');
-        assert.strictEqual(responseReceivedAfterCleanup, true);
-        
+
+        assert.deepEqual(events, ['cleanup', 'response']);
+
         assert.strictEqual(loggerCalled, 1);
+        assert.strictEqual(loggedComponent, 'API');
         assert.strictEqual(loggedError, originalError);
+        assert.strictEqual(loggedContext.endpoint, '/api/slides/:id');
+        assert.strictEqual(loggedContext.requestId, 'test-req-id-456');
+        assert.strictEqual(loggedContext.slideId, 47);
+        assert.strictEqual(loggedContext.query, "SELECT media_path FROM slides WHERE id = ?");
+        assert.strictEqual(loggedContext.params, getParams);
+
+        assert.strictEqual(getParams[0], 47);
+        assert.strictEqual(typeof getParams[0], 'number');
     });
 
     await t.test('7. Mandatory no-update-fields preservation test', async () => {
@@ -573,7 +592,6 @@ test('Slides Update Route ID Validation', async (t) => {
         
         assert.ok(startIndex !== -1, 'Could not find start marker');
         assert.ok(endIndex !== -1, 'Could not find end marker');
-
         const routeSource = sourceCode.substring(startIndex, endIndex);
 
         assert.ok(!routeSource.includes('err.message'), 'err.message must not be used in the slide update route');
