@@ -2447,8 +2447,18 @@ function detectPosterFromFilename(filename) {
 
 // Get slide settings
 app.get('/api/slide-settings', (req, res) => {
-    db.all("SELECT key, value FROM slide_settings", [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+    const settingsQuery = "SELECT key, value FROM slide_settings";
+    const settingsParams = [];
+
+    db.all(settingsQuery, settingsParams, (err, rows) => {
+        if (err) {
+            logger.error(COMPONENTS.API, 'Error fetching slide settings', err, {
+                requestId: req.requestId,
+                query: settingsQuery,
+                params: settingsParams
+            });
+            return res.status(500).json({ error: 'Slayt ayarları alınırken hata oluştu' });
+        }
         const settings = {};
         rows.forEach(row => {
             settings[row.key] = row.value;
