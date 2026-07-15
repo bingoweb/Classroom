@@ -46,7 +46,7 @@ function removeDirectoryIfPresent(fsApi, directoryPath) {
 function createTrackedResponse() {
     let resolvePromise;
     let rejectPromise;
-    
+
     const promise = new Promise((resolve, reject) => {
         resolvePromise = resolve;
         rejectPromise = reject;
@@ -119,7 +119,7 @@ test('Slides Get ID Tests', async (t) => {
         removeFileIfPresent(fs, testDbPath + '-wal');
         removeFileIfPresent(fs, testDbPath + '-shm');
         removeDirectoryIfPresent(fs, tempDir);
-        
+
         global.setInterval = originalSetInterval;
         if (originalDbPath === undefined) {
             delete process.env.CLASSROOM_DB_PATH;
@@ -138,7 +138,7 @@ test('Slides Get ID Tests', async (t) => {
     await t.test('Route discovery', () => {
         assert.strictEqual(getIdRoutes.length, 1, 'exactly one GET /api/slides/:id route exists');
         assert.strictEqual(typeof handler, 'function', 'the extracted handler is a function');
-        
+
         const routesPaths = getRoutes.map(l => l.route.path);
         const getAllIndex = routesPaths.indexOf('/api/slides');
         const getIdIndex = routesPaths.indexOf('/api/slides/:id');
@@ -166,7 +166,7 @@ test('Slides Get ID Tests', async (t) => {
         const invalidStrings = [
             'abc', '47abc', 'abc47', '47.5', '47e2', '+47', '-47', '0', '00', '047', '47 ', ' 47', '', '   ', '9007199254740992'
         ];
-        
+
         for (const val of invalidStrings) {
             await t2.test(`Invalid string: "${val}"`, async () => {
                 let dbGetCalled = 0;
@@ -174,7 +174,7 @@ test('Slides Get ID Tests', async (t) => {
 
                 const req = { params: { id: val } };
                 const res = createTrackedResponse();
-                
+
                 assert.doesNotThrow(() => { handler(req, res); });
                 const result = await res.promise;
 
@@ -197,7 +197,7 @@ test('Slides Get ID Tests', async (t) => {
 
                 const req = { params: { id: val } };
                 const res = createTrackedResponse();
-                
+
                 assert.doesNotThrow(() => { handler(req, res); });
                 const result = await res.promise;
 
@@ -227,14 +227,14 @@ test('Slides Get ID Tests', async (t) => {
 
     await t.test('Mandatory real HTTP malformed-ID regressions', async (t2) => {
         const httpInvalid = ['47abc', '47.5', '047', '0', '-47', '9007199254740992'];
-        
+
         for (const val of httpInvalid) {
             await t2.test(`HTTP invalid: /api/slides/${val}`, async () => {
                 let dbGetCalled = 0;
                 db.get = () => { dbGetCalled++; };
 
                 const response = await makeRequest('GET', `/api/slides/${val}`);
-                
+
                 assert.strictEqual(response.statusCode, 400);
                 assert.deepStrictEqual(response.body, { error: 'Geçersiz slayt ID' });
                 assert.strictEqual(dbGetCalled, 0);
@@ -270,7 +270,7 @@ test('Slides Get ID Tests', async (t) => {
                 assert.strictEqual(capturedSql, "SELECT * FROM slides WHERE id = ?");
                 assert.deepStrictEqual(capturedParams, [item.numeric]);
                 assert.strictEqual(typeof capturedParams[0], 'number');
-                
+
                 assert.strictEqual(result.statusCode, 404);
                 assert.deepStrictEqual(result.body, { error: 'Slayt bulunamadı' });
                 assert.strictEqual(result.responseCount, 1);
@@ -283,33 +283,52 @@ test('Slides Get ID Tests', async (t) => {
         let capturedSql = null;
         let capturedParams = null;
         let dbGetCalled = 0;
+        let loggerCalled = 0;
 
-        db.get = (sql, params, cb) => {
-            dbGetCalled++;
-            capturedSql = sql;
-            capturedParams = params;
-            cb(new Error('slide lookup failed'));
-        };
+        const secretMarker = 'SENSITIVE_SLIDE_ID_DB_DETAIL_' + crypto.randomBytes(4).toString('hex');
+        const dbError = new Error(`slide lookup failed ${secretMarker}`);
 
-        const req = { params: { id: '47' } };
-        const res = createTrackedResponse();
-        handler(req, res);
-        const result = await res.promise;
+        const { Logger, COMPONENTS } = require('../backend/logger.js');
+        const originalLoggerError = Logger.prototype.error;
 
-        assert.strictEqual(capturedSql, "SELECT * FROM slides WHERE id = ?");
-        assert.deepStrictEqual(capturedParams, [47]);
-        
-        assert.strictEqual(result.statusCode, 500);
-        assert.deepStrictEqual(result.body, { error: 'slide lookup failed' });
-        assert.strictEqual(result.responseCount, 1);
-        assert.strictEqual(dbGetCalled, 1);
+        try {
+            Logger.prototype.error = function(component, msg, err, meta) {
+                loggerCalled++;
+            };
+
+            db.get = (sql, params, cb) => {
+                dbGetCalled++;
+                capturedSql = sql;
+                capturedParams = params;
+                cb(dbError);
+            };
+
+            const req = { params: { id: '47' }, requestId: 'slide-id-error-request' };
+            const res = createTrackedResponse();
+            handler(req, res);
+            const result = await res.promise;
+
+            assert.strictEqual(capturedSql, "SELECT * FROM slides WHERE id = ?");
+            assert.deepStrictEqual(capturedParams, [47]);
+
+            assert.strictEqual(result.statusCode, 500);
+            assert.deepStrictEqual(result.body, { error: 'Slayt bilgileri alınırken hata oluştu' });
+            assert.strictEqual(result.responseCount, 1);
+            assert.strictEqual(dbGetCalled, 1);
+
+            const serializedBody = JSON.stringify(result.body);
+            assert.ok(!serializedBody.includes(secretMarker), 'The client response must not expose the secret marker');
+            assert.strictEqual(loggerCalled, 1);
+        } finally {
+            Logger.prototype.error = originalLoggerError;
+        }
     });
 
     await t.test('Successful response preservation', async () => {
         let capturedSql = null;
         let capturedParams = null;
         let dbGetCalled = 0;
-        
+
         const mockRow = {
             id: 47,
             title: 'Test slaytı',
@@ -332,7 +351,7 @@ test('Slides Get ID Tests', async (t) => {
 
         assert.strictEqual(capturedSql, "SELECT * FROM slides WHERE id = ?");
         assert.deepStrictEqual(capturedParams, [47]);
-        
+
         assert.strictEqual(result.statusCode, 200);
         assert.deepStrictEqual(result.body, mockRow);
         assert.strictEqual(result.responseCount, 1);
@@ -359,7 +378,7 @@ test('Slides Get ID Tests', async (t) => {
 
         assert.strictEqual(result.statusCode, 200);
         assert.strictEqual(result.responseCount, 1);
-        
+
         assert.strictEqual(result.body.media_path, normalizePath(mockRow.media_path, true));
     });
 });

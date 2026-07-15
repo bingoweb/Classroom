@@ -1721,13 +1721,17 @@ app.get('/api/slides/active', async (req, res) => {
 
 // Get all active slides (ordered by display_order)
 app.get('/api/slides', (req, res, next) => {
-    db.all("SELECT * FROM slides WHERE is_active = 1 ORDER BY display_order ASC", [], (err, rows) => {
+    const sql = "SELECT * FROM slides WHERE is_active = 1 ORDER BY display_order ASC";
+    const params = [];
+    db.all(sql, params, (err, rows) => {
         if (err) {
             logger.error(COMPONENTS.API, 'Error fetching slides', err, {
                 endpoint: '/api/slides',
-                requestId: req.requestId
+                requestId: req.requestId,
+                query: sql,
+                params
             });
-            return res.status(500).json({ error: err.message });
+            return res.status(500).json({ error: 'Slayt bilgileri alınırken hata oluştu' });
         }
         logger.debug(COMPONENTS.API, 'Fetched slides', null, {
             count: rows.length,
@@ -1761,8 +1765,19 @@ app.get('/api/slides/:id', (req, res) => {
         return res.status(400).json({ error: 'Geçersiz slayt ID' });
     }
 
-    db.get("SELECT * FROM slides WHERE id = ?", [slideId], (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
+    const sql = "SELECT * FROM slides WHERE id = ?";
+    const params = [slideId];
+    db.get(sql, params, (err, row) => {
+        if (err) {
+            logger.error(COMPONENTS.API, 'Error fetching slide by id', err, {
+                endpoint: '/api/slides/:id',
+                requestId: req.requestId,
+                slideId,
+                query: sql,
+                params
+            });
+            return res.status(500).json({ error: 'Slayt bilgileri alınırken hata oluştu' });
+        }
         if (!row) return res.status(404).json({ error: 'Slayt bulunamadı' });
         // Normalize media_path for web (convert Windows paths to web paths)
         if (row.media_path) {
