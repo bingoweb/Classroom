@@ -586,7 +586,9 @@ app.post('/api/students/import', requireAdminSession, requireCsrfToken, requireA
         if (req.file && fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
         }
-        res.status(500).json({ error: 'Excel dosyası işlenirken hata oluştu: ' + error.message });
+        return res.status(500).json({
+            error: 'Excel dosyası işlenirken hata oluştu'
+        });
     }
 });
 
