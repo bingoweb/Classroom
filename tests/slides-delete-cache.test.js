@@ -105,6 +105,10 @@ function createTrackedResponse({ timeoutMs = 1000, observationMs = 15 } = {}) {
 test('Slides Delete Cache Tests (Atomic)', async (t) => {
     let originalDbAll, originalDbGet, originalDbRun, originalFsUnlinkSync, originalFsExistsSync, originalLoggerError, originalLoggerWarn;
 
+    t.before(async () => {
+        await db.scheduleMigrationPromise;
+    });
+
     t.beforeEach(() => {
         originalDbAll = db.all;
         originalDbGet = db.get;
