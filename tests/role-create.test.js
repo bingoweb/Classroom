@@ -513,6 +513,10 @@ test('Role Create ID Validation Tests', async (t) => {
             db.get = function(sql, params, cb) {
                 cb(null, { id: 47 });
             };
+
+            let actualInsertSql = null;
+            let actualInsertParams = null;
+
             db.run = function(sql, params, cb) {
                 if (typeof params === 'function') {
                     cb = params;
@@ -520,6 +524,8 @@ test('Role Create ID Validation Tests', async (t) => {
                 }
                 runCalls.push(sql);
                 if (sql.startsWith('INSERT')) {
+                    actualInsertSql = sql;
+                    actualInsertParams = params;
                     cb(insertionError);
                 } else if (sql === 'ROLLBACK') {
                     setTimeout(() => {
@@ -531,11 +537,17 @@ test('Role Create ID Validation Tests', async (t) => {
                 }
             };
 
-            const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'president' } });
+            const reqId = 'req-insert-err';
+            const resObj = await invokeHandler({ body: { student_id: '47', role_type: 'president' }, requestId: reqId });
 
             assert.strictEqual(rollbackCallbackCompleted, true, 'Response must wait for asynchronous rollback callback');
             assert.strictEqual(resObj.statusCode, 500);
-            assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu: insert failed' });
+            assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu' });
+
+            const rawBody = JSON.stringify(resObj.body);
+            assert.ok(!rawBody.includes('insert failed'), 'Response must not contain original error');
+            assert.ok(!rawBody.includes('Bilinmeyen hata'), 'Response must not contain raw Bilinmeyen hata string');
+            assert.ok(!rawBody.includes('Error inserting role'), 'Response must not contain internal logger message');
 
             assert.strictEqual(runCalls.length, 4);
             assert.strictEqual(runCalls[0], 'BEGIN IMMEDIATE TRANSACTION');
@@ -549,12 +561,22 @@ test('Role Create ID Validation Tests', async (t) => {
             const errorLogArgs = insertErrorLogs[0];
             assert.strictEqual(errorLogArgs[0], COMPONENTS.API);
             assert.strictEqual(errorLogArgs[2], insertionError);
-            assert.deepEqual(errorLogArgs[3], {
-                studentId: 47,
-                roleType: 'president',
-                errorMessage: insertionError.message,
-                errorCode: insertionError.code
-            });
+
+            const expectedSql = "INSERT INTO roles (student_id, role_type) VALUES (?, ?)";
+            const expectedParams = [47, 'president'];
+
+            assert.strictEqual(actualInsertSql, expectedSql);
+            assert.deepEqual(actualInsertParams, expectedParams);
+
+            const metadata = errorLogArgs[3];
+            assert.strictEqual(metadata.endpoint, '/api/roles');
+            assert.strictEqual(metadata.requestId, reqId);
+            assert.strictEqual(metadata.studentId, 47);
+            assert.strictEqual(metadata.roleType, 'president');
+            assert.strictEqual(metadata.query, actualInsertSql);
+            assert.strictEqual(metadata.params, actualInsertParams); // strictly identical
+            assert.strictEqual(metadata.errorMessage, insertionError.message);
+            assert.strictEqual(metadata.errorCode, insertionError.code);
 
         } finally {
             Logger.prototype.error = originalLogError;
@@ -654,7 +676,7 @@ test('Role Create ID Validation Tests', async (t) => {
             const resObj = await invokeHandler({ body: { student_id: targetStudentId.toString(), role_type: 'president' } });
 
             assert.strictEqual(resObj.statusCode, 500);
-            assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu: SQLITE_CONSTRAINT: forced president insert failure' });
+            assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu' });
 
             const presidentsAfter = await allDb("SELECT id, student_id, role_type FROM roles WHERE role_type = ? ORDER BY id", ['president']);
             assert.strictEqual(presidentsAfter.length, 1, 'after rollback there is exactly one president');

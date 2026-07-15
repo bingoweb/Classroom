@@ -853,11 +853,17 @@ app.post('/api/roles', requireAdminSession, requireCsrfToken, requireAdminWriteR
                             return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
                         });
                     }
-                    db.run("INSERT INTO roles (student_id, role_type) VALUES (?, ?)", [studentId, role_type], function (err) {
+                    const insertSql = "INSERT INTO roles (student_id, role_type) VALUES (?, ?)";
+                    const insertParams = [studentId, role_type];
+                    db.run(insertSql, insertParams, function (err) {
                         if (err) {
                             logger.error(COMPONENTS.API, 'Error inserting role', err, {
-                                studentId: studentId,
+                                endpoint: '/api/roles',
+                                requestId: req.requestId,
+                                studentId,
                                 roleType: role_type,
+                                query: insertSql,
+                                params: insertParams,
                                 errorMessage: err.message,
                                 errorCode: err.code
                             });
@@ -866,7 +872,7 @@ app.post('/api/roles', requireAdminSession, requireCsrfToken, requireAdminWriteR
                                 if (err.message && err.message.includes('FOREIGN KEY constraint failed')) {
                                     return res.status(400).json({ error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
                                 }
-                                return res.status(500).json({ error: 'Rol atanırken hata oluştu: ' + (err.message || 'Bilinmeyen hata') });
+                                return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
                             });
                         }
                         const insertedRoleId = this.lastID;
