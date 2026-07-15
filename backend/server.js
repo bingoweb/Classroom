@@ -622,14 +622,26 @@ app.delete('/api/students/:id', requireAdminSession, requireCsrfToken, requireAd
         return res.status(400).json({ error: 'Geçersiz öğrenci ID' });
     }
 
-    db.get("SELECT photo FROM students WHERE id = ?", [studentId], (err, row) => {
+    const selectSql = "SELECT photo FROM students WHERE id = ?";
+    const selectParams = [studentId];
+
+    db.get(selectSql, selectParams, (err, row) => {
         if (err) {
-            logger.error(COMPONENTS.API, 'Error fetching student for deletion', err);
-            let errorMessage = 'Öğrenci silinirken hata oluştu';
-            if (err.message) {
-                errorMessage += ': ' + err.message;
-            }
-            return res.status(500).json({ error: errorMessage });
+            logger.error(
+                COMPONENTS.API,
+                'Error fetching student for deletion',
+                err,
+                {
+                    endpoint: '/api/students/:id',
+                    requestId: req.requestId,
+                    studentId,
+                    query: selectSql,
+                    params: selectParams
+                }
+            );
+            return res.status(500).json({
+                error: 'Öğrenci silinirken hata oluştu'
+            });
         }
 
         if (!row) {
@@ -640,19 +652,28 @@ app.delete('/api/students/:id', requireAdminSession, requireCsrfToken, requireAd
 
         // Foreign keys should handle cascade delete automatically
         // No need for redundant manual role deletion
-        db.run("DELETE FROM students WHERE id = ?", [studentId], function (deleteErr) {
+        const deleteSql = "DELETE FROM students WHERE id = ?";
+        const deleteParams = [studentId];
+
+        db.run(deleteSql, deleteParams, function (deleteErr) {
             if (deleteErr) {
-                logger.error(COMPONENTS.API, 'Error deleting student', deleteErr, {
-                    studentId: studentId,
-                    errorCode: deleteErr.code,
-                    errorMessage: deleteErr.message
+                logger.error(
+                    COMPONENTS.API,
+                    'Error deleting student',
+                    deleteErr,
+                    {
+                        endpoint: '/api/students/:id',
+                        requestId: req.requestId,
+                        studentId,
+                        query: deleteSql,
+                        params: deleteParams,
+                        errorCode: deleteErr.code,
+                        errorMessage: deleteErr.message
+                    }
+                );
+                return res.status(500).json({
+                    error: 'Öğrenci silinirken hata oluştu'
                 });
-                // Provide more detailed error message
-                let errorMessage = 'Öğrenci silinirken hata oluştu';
-                if (deleteErr.message) {
-                    errorMessage += ': ' + deleteErr.message;
-                }
-                return res.status(500).json({ error: errorMessage });
             }
             if (this.changes === 0) {
                 return res.status(404).json({ error: 'Öğrenci bulunamadı' });
