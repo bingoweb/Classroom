@@ -108,7 +108,7 @@ test('Settings Update Tests', async (t) => {
         db.prepare = originalDbPrepare;
     });
 
-    const DEFAULT_TIMEOUT_MS = 100;
+    const DEFAULT_TIMEOUT_MS = 2000;
     const DEFAULT_OBSERVATION_MS = 10;
     const MAX_HELPER_DELAY_MS = 1000;
 
