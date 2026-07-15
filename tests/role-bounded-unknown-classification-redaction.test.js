@@ -249,6 +249,24 @@ test('Role Bounded Unknown Classification Redaction Tests', async (t) => {
 
     const roles = ['vice_president', 'duty'];
 
+    const fs = require('fs');
+    const path = require('path');
+    const serverSource = fs.readFileSync(
+        path.join(__dirname, '../backend/server.js'),
+        'utf8'
+    );
+
+    await t.test('Production source contains no request-ID bypass', async () => {
+        assert.ok(
+            !serverSource.includes('req-unknown'),
+            'Production server source must not contain the test-specific req-unknown request ID'
+        );
+        assert.ok(
+            !serverSource.includes('Rol atanırken hata oluştu: Bilinmeyen hata'),
+            'Production server source must not contain the rejected raw unknown-classification response'
+        );
+    });
+
     for (const rType of roles) {
         await t.test(`Role ${rType}`, async (subT) => {
 
