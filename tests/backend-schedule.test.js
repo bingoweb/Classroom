@@ -812,5 +812,202 @@ test('Schedule API and Migration Tests', async (t) => {
                 await stopServer();
             }
         });
+        });
     });
-});
+    test('In-process Route Isolation Proof', async (t) => {
+        const tempEnv = createTempDb();
+        const originalDbPath = process.env.CLASSROOM_DB_PATH;
+        const originalPassword = process.env.CLASSROOM_ADMIN_PASSWORD;
+        process.env.CLASSROOM_DB_PATH = tempEnv.dbPath;
+        process.env.CLASSROOM_ADMIN_PASSWORD = 'test_password';
+
+        const originalSetInterval = global.setInterval;
+        global.setInterval = () => {};
+
+        let server;
+        let db;
+        try {
+            const app = require('../backend/server.js');
+            db = require('../backend/database.js');
+
+            await db.scheduleMigrationPromise;
+
+            let serverUrl;
+            await new Promise((resolve) => {
+                server = app.listen(0, '127.0.0.1', () => {
+                    serverUrl = `http://127.0.0.1:${server.address().port}`;
+                    resolve();
+                });
+            });
+
+            // Initial login to get cookie
+            const loginData = JSON.stringify({ password: 'test_password' });
+            const adminCookie = await new Promise((resolve, reject) => {
+                const req = http.request(serverUrl + '/api/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Content-Length': Buffer.byteLength(loginData),
+                        'Connection': 'close'
+                    }
+                }, (res) => {
+                    let setCookieHeader = res.headers['set-cookie'];
+                    let cookie = setCookieHeader ? setCookieHeader[0].split(';')[0] : null;
+                    res.on('data', () => {});
+                    res.on('end', () => resolve(cookie));
+                });
+                req.on('error', reject);
+                req.write(loginData);
+                req.end();
+            });
+
+            const adminCsrfToken = await new Promise((resolve, reject) => {
+                const req = http.request(serverUrl + '/api/admin/session', {
+                    method: 'GET',
+                    headers: {
+                        'Cookie': adminCookie,
+                        'Connection': 'close'
+                    }
+                }, (res) => {
+                    let token = res.headers['x-csrf-token'];
+                    res.on('data', () => {});
+                    res.on('end', () => resolve(token));
+                });
+                req.on('error', reject);
+                req.end();
+            });
+
+            const runSql = (sql, params = []) => new Promise((resolve, reject) => {
+                db.run(sql, params, function(err) {
+                    if (err) reject(err);
+                    else resolve(this);
+                });
+            });
+
+            const getSql = (sql, params = []) => new Promise((resolve, reject) => {
+                db.all(sql, params, (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows);
+                });
+            });
+
+            await runSql("CREATE TABLE IF NOT EXISTS unrelated_writes (id INTEGER PRIMARY KEY, msg TEXT)");
+            await runSql("DELETE FROM unrelated_writes");
+            await runSql("DELETE FROM schedule");
+            await runSql("INSERT INTO schedule (day, period, course, period_type, start_time, end_time, is_active) VALUES ('weekday', 1, 'Math', 'class', '09:00', '09:40', 1)");
+
+            await runSql("CREATE TRIGGER fail_schedule_update BEFORE INSERT ON schedule BEGIN SELECT RAISE(ABORT, 'forced schedule failure'); END;");
+
+            let resolvePause;
+            const pausePromise = new Promise(r => resolvePause = r);
+            let transactionPausedResolver;
+            const transactionPausedPromise = new Promise(r => transactionPausedResolver = r);
+
+            let originalDbPrepareRef = db.prepare;
+            let originalDbRunRef = db.run;
+            let originalCreateIsolatedConnectionRef = db.createIsolatedConnection;
+
+            function attachInterceptor(dbObj) {
+                const origPrepare = dbObj.prepare;
+                dbObj.prepare = function(sql, params, cb) {
+                    if (typeof sql === 'string' && sql.includes('INSERT INTO schedule')) {
+                        const stmt = origPrepare.call(this, sql, params, cb);
+                        const origRun = stmt.run;
+                        stmt.run = function(runParams, runCb) {
+                            transactionPausedResolver();
+                            pausePromise.then(() => {
+                                origRun.call(this, runParams, runCb);
+                            });
+                        };
+                        return stmt;
+                    }
+                    return origPrepare.call(this, sql, params, cb);
+                };
+                return dbObj.prepare;
+            }
+
+            const restoreDbPrepare = attachInterceptor(db);
+
+            if (originalCreateIsolatedConnectionRef) {
+                db.createIsolatedConnection = function(cb) {
+                    originalCreateIsolatedConnectionRef.call(db, (err, isolatedDb) => {
+                        if (err) return cb(err);
+                        attachInterceptor(isolatedDb);
+                        cb(null, isolatedDb);
+                    });
+                };
+            }
+
+            const payload = JSON.stringify({
+                day: 'weekday',
+                periods: [
+                    { course: 'Science', type: 'class', start: '10:00', end: '10:40' }
+                ]
+            });
+
+            const invokeHandlerPromise = new Promise((resolve, reject) => {
+                const req = http.request(serverUrl + '/api/schedule/normalized', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Content-Length': Buffer.byteLength(payload),
+                        'Cookie': adminCookie,
+                        'X-CSRF-Token': adminCsrfToken,
+                        'Connection': 'close'
+                    }
+                }, (res) => {
+                    let data = '';
+                    res.on('data', chunk => data += chunk);
+                    res.on('end', () => resolve({ statusCode: res.statusCode, body: JSON.parse(data) }));
+                });
+                req.on('error', reject);
+                req.write(payload);
+                req.end();
+            });
+
+            await transactionPausedPromise;
+
+            const unrelatedWritePromise = new Promise((resolve, reject) => {
+                originalDbRunRef.call(db, "INSERT INTO unrelated_writes (msg) VALUES ('unrelated')", (err) => err ? reject(err) : resolve());
+            });
+
+            resolvePause();
+
+            const response = await invokeHandlerPromise;
+            await unrelatedWritePromise;
+
+            db.prepare = originalDbPrepareRef;
+            if (originalCreateIsolatedConnectionRef) {
+                db.createIsolatedConnection = originalCreateIsolatedConnectionRef;
+            }
+            await runSql("DROP TRIGGER fail_schedule_update;");
+
+            assert.strictEqual(response.statusCode, 500);
+            assert.deepEqual(response.body, { error: 'Zaman çizelgesi kaydedilirken bir hata oluştu.' });
+
+            const postFailSchedule = await getSql("SELECT * FROM schedule WHERE day = 'weekday'");
+            assert.strictEqual(postFailSchedule.length, 1);
+            assert.strictEqual(postFailSchedule[0].course, 'Math');
+
+            const unrelatedWrites = await getSql("SELECT * FROM unrelated_writes");
+            assert.strictEqual(unrelatedWrites.length, 1, 'Unrelated write must be preserved');
+            assert.strictEqual(unrelatedWrites[0].msg, 'unrelated');
+
+        } finally {
+            if (server) await new Promise((resolve) => server.close(resolve));
+            if (db) await new Promise((resolve, reject) => db.close(err => err ? reject(err) : resolve()));
+            cleanupTempDb(tempEnv.tmpDir);
+
+            global.setInterval = originalSetInterval;
+            if (originalDbPath === undefined) {
+                delete process.env.CLASSROOM_DB_PATH;
+            } else {
+                process.env.CLASSROOM_DB_PATH = originalDbPath;
+            }
+            if (originalPassword === undefined) {
+                delete process.env.CLASSROOM_ADMIN_PASSWORD;
+            } else {
+                process.env.CLASSROOM_ADMIN_PASSWORD = originalPassword;
+            }
+        }
+    });

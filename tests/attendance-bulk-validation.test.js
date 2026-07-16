@@ -16,6 +16,7 @@ global.setInterval = () => {};
 const app = require('../backend/server.js');
 const db = require('../backend/database.js');
 const { Logger, COMPONENTS } = require('../backend/logger.js');
+const productionCreateIsolatedConnection = db.createIsolatedConnection;
 
 function closeDatabase(database) {
     return new Promise((resolve, reject) => {
@@ -79,11 +80,23 @@ test('Attendance Bulk Validation Tests', async (t) => {
     t.beforeEach(() => {
         originalDbRun = db.run;
         originalDbPrepare = db.prepare;
+        db.createIsolatedConnection = function(cb) {
+            const fakeDb = {
+                serialize: (...args) => db.serialize(...args),
+                prepare: (...args) => db.prepare(...args),
+                run: (...args) => db.run(...args),
+                get: (...args) => db.get(...args),
+                all: (...args) => db.all(...args),
+                close: (closeCb) => { if (closeCb) closeCb(null); }
+            };
+            cb(null, fakeDb);
+        };
     });
 
     t.afterEach(() => {
         db.run = originalDbRun;
         db.prepare = originalDbPrepare;
+        db.createIsolatedConnection = productionCreateIsolatedConnection;
     });
 
     function invokeHandler(req, handlerToUse = handler, timeoutMs = 500) {
@@ -384,7 +397,7 @@ test('Attendance Bulk Validation Tests', async (t) => {
         assert.deepEqual(resObj.body, { message: 'Yoklama başarıyla kaydedildi', count: 3 });
 
         assert.strictEqual(runCalls.length, 6);
-        assert.strictEqual(runCalls[0].sql, "BEGIN IMMEDIATE TRANSACTION");
+        assert.strictEqual(runCalls[0].sql, "BEGIN IMMEDIATE");
         assert.strictEqual(runCalls[1].sql, "DELETE FROM attendance WHERE date = ?");
         assert.deepEqual(runCalls[1].params, ['2026-07-13']);
         assert.strictEqual(runCalls[2].sql, "INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
@@ -430,7 +443,7 @@ test('Attendance Bulk Validation Tests', async (t) => {
         assert.deepEqual(resObj.body, { message: 'Yoklama kaydedildi', count: 0 });
 
         assert.strictEqual(runCalls.length, 3);
-        assert.strictEqual(runCalls[0].sql, "BEGIN IMMEDIATE TRANSACTION");
+        assert.strictEqual(runCalls[0].sql, "BEGIN IMMEDIATE");
         assert.strictEqual(runCalls[1].sql, "DELETE FROM attendance WHERE date = ?");
         assert.strictEqual(runCalls[2].sql, "COMMIT");
         assert.strictEqual(prepareCalls, 0);
@@ -445,7 +458,7 @@ test('Attendance Bulk Validation Tests', async (t) => {
                 params = [];
             }
             runCalls.push(sql);
-            if (sql === "BEGIN IMMEDIATE TRANSACTION") {
+            if (sql === "BEGIN IMMEDIATE") {
                 cb(new Error("begin failed"));
             } else {
                 cb(null);
@@ -459,7 +472,7 @@ test('Attendance Bulk Validation Tests', async (t) => {
 
         assert.strictEqual(resObj.statusCode, 500);
         assert.strictEqual(runCalls.length, 1);
-        assert.strictEqual(runCalls[0], "BEGIN IMMEDIATE TRANSACTION");
+        assert.strictEqual(runCalls[0], "BEGIN IMMEDIATE");
         assert.strictEqual(prepareCalls, 0);
     });
 
@@ -494,7 +507,7 @@ test('Attendance Bulk Validation Tests', async (t) => {
         assert.strictEqual(rollbackCallbackCompleted, true, 'Response must wait for asynchronous rollback callback');
         assert.strictEqual(resObj.statusCode, 500);
         assert.strictEqual(runCalls.length, 3);
-        assert.strictEqual(runCalls[0], "BEGIN IMMEDIATE TRANSACTION");
+        assert.strictEqual(runCalls[0], "BEGIN IMMEDIATE");
         assert.strictEqual(runCalls[1], "DELETE FROM attendance WHERE date = ?");
         assert.strictEqual(runCalls[2], "ROLLBACK");
         assert.strictEqual(prepareCalls, 0);
@@ -554,7 +567,7 @@ test('Attendance Bulk Validation Tests', async (t) => {
             assert.strictEqual(resObj.statusCode, 500);
             assert.strictEqual(resObj.body.error, 'Yoklama kaydedilirken bazı kayıtlarda hata oluştu');
             assert.strictEqual(runCalls.length, 5);
-            assert.strictEqual(runCalls[0], "BEGIN IMMEDIATE TRANSACTION");
+            assert.strictEqual(runCalls[0], "BEGIN IMMEDIATE");
             assert.strictEqual(runCalls[1], "DELETE FROM attendance WHERE date = ?");
             assert.strictEqual(runCalls[2], "INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
             assert.strictEqual(runCalls[3], "INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
@@ -617,7 +630,7 @@ test('Attendance Bulk Validation Tests', async (t) => {
         assert.deepEqual(resObj.body, { error: 'Yoklama kaydedilirken hata oluştu' });
 
         assert.strictEqual(runCalls.length, 5);
-        assert.strictEqual(runCalls[0].sql, "BEGIN IMMEDIATE TRANSACTION");
+        assert.strictEqual(runCalls[0].sql, "BEGIN IMMEDIATE");
         assert.strictEqual(runCalls[1].sql, "DELETE FROM attendance WHERE date = ?");
         assert.strictEqual(runCalls[2].sql, "INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)");
         assert.strictEqual(runCalls[3].sql, "COMMIT");
@@ -803,4 +816,89 @@ test('Attendance Bulk Validation Tests', async (t) => {
         }
     });
 
+    await t.test('Q. Isolation proof: shared connection writes are not rolled back by a failed attendance transaction', async () => {
+        let originalDbRunRef = db.run;
+
+        try {
+            await runSql("DELETE FROM attendance");
+            await runSql("DELETE FROM students");
+            await runSql("CREATE TABLE IF NOT EXISTS unrelated_writes (id INTEGER PRIMARY KEY, msg TEXT)");
+            await runSql("DELETE FROM unrelated_writes");
+            await runSql("INSERT INTO students (id, name, gender) VALUES (1, 'A B', 'M')");
+            await runSql("INSERT INTO attendance (student_id, date, status) VALUES (1, '2026-07-13', 'present')");
+
+            await runSql("CREATE TRIGGER IF NOT EXISTS fail_attendance_update BEFORE INSERT ON attendance BEGIN SELECT RAISE(ABORT, 'forced attendance failure'); END;");
+
+            let resolvePause;
+            const pausePromise = new Promise(r => resolvePause = r);
+            let transactionPausedResolver;
+            const transactionPausedPromise = new Promise(r => transactionPausedResolver = r);
+
+            function attachInterceptor(dbObj) {
+                const origRun = dbObj.run;
+                dbObj.run = function(sql, params, runCb) {
+                    const actualCb = typeof params === 'function' ? params : runCb;
+                    const actualParams = typeof params === 'function' ? [] : params;
+
+                    if (typeof sql === 'string' && sql.includes('DELETE FROM attendance WHERE date = ?')) {
+                        transactionPausedResolver();
+                        pausePromise.then(() => {
+                            origRun.call(this, sql, actualParams, actualCb);
+                        });
+                    } else {
+                        origRun.call(this, sql, actualParams, actualCb);
+                    }
+                };
+                return origRun;
+            }
+
+            const restoreDbRun = attachInterceptor(db);
+
+            db.createIsolatedConnection = function(cb) {
+                productionCreateIsolatedConnection.call(db, (err, isolatedDb) => {
+                    if (err) return cb(err);
+                    attachInterceptor(isolatedDb);
+                    cb(null, isolatedDb);
+                });
+            };
+
+            const req = {
+                body: {
+                    date: '2026-07-13',
+                    attendanceList: [
+                        { student_id: 1, status: 'absent' }
+                    ]
+                }
+            };
+
+            const invokeHandlerPromise = invokeHandler(req);
+
+            await transactionPausedPromise;
+
+            const unrelatedWritePromise = new Promise((resolve, reject) => {
+                originalDbRunRef.call(db, "INSERT INTO unrelated_writes (msg) VALUES ('unrelated')", (err) => err ? reject(err) : resolve());
+            });
+
+            resolvePause();
+
+            const resObj = await invokeHandlerPromise;
+            await unrelatedWritePromise;
+
+            assert.strictEqual(resObj.statusCode, 500);
+            assert.deepEqual(resObj.body, { error: 'Yoklama kaydedilirken bazı kayıtlarda hata oluştu' });
+
+            const postFailAttendance = await getSql("SELECT * FROM attendance");
+            assert.strictEqual(postFailAttendance.length, 1);
+            assert.strictEqual(postFailAttendance[0].student_id, 1);
+            assert.strictEqual(postFailAttendance[0].status, 'present');
+
+            const unrelatedWrites = await getSql("SELECT * FROM unrelated_writes");
+            assert.strictEqual(unrelatedWrites.length, 1, 'Unrelated write must be preserved');
+            assert.strictEqual(unrelatedWrites[0].msg, 'unrelated');
+        } finally {
+            db.run = originalDbRunRef;
+            db.createIsolatedConnection = productionCreateIsolatedConnection;
+            try { await runSql("DROP TRIGGER IF EXISTS fail_attendance_update;"); } catch (err) {}
+        }
+    });
 });

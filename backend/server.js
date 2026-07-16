@@ -840,53 +840,70 @@ app.post('/api/roles', requireAdminSession, requireCsrfToken, requireAdminWriteR
             if (!row) {
                 return res.status(400).json({ error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
             }
-            db.run("BEGIN IMMEDIATE TRANSACTION", (err) => {
-                if (err) {
-                    logger.error(COMPONENTS.API, 'Error beginning transaction for president role', err);
+            db.createIsolatedConnection((connErr, isolatedDb) => {
+                if (connErr) {
+                    logger.error(COMPONENTS.API, 'Error creating isolated connection for president role', connErr);
                     return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
                 }
-                db.run("DELETE FROM roles WHERE role_type = ?", [role_type], (err) => {
+
+                isolatedDb.run("BEGIN IMMEDIATE", (err) => {
                     if (err) {
-                        logger.error(COMPONENTS.API, 'Error clearing president role', err);
-                        return db.run("ROLLBACK", (rollbackErr) => {
-                            if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after delete failure', rollbackErr);
-                            return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
+                        logger.error(COMPONENTS.API, 'Error beginning transaction for president role', err);
+                        return isolatedDb.close(() => {
+                            res.status(500).json({ error: 'Rol atanırken hata oluştu' });
                         });
                     }
-                    const insertSql = "INSERT INTO roles (student_id, role_type) VALUES (?, ?)";
-                    const insertParams = [studentId, role_type];
-                    db.run(insertSql, insertParams, function (err) {
+                    isolatedDb.run("DELETE FROM roles WHERE role_type = ?", [role_type], (err) => {
                         if (err) {
-                            logger.error(COMPONENTS.API, 'Error inserting role', err, {
-                                endpoint: '/api/roles',
-                                requestId: req.requestId,
-                                studentId,
-                                roleType: role_type,
-                                query: insertSql,
-                                params: insertParams,
-                                errorMessage: err.message,
-                                errorCode: err.code
-                            });
-                            return db.run("ROLLBACK", (rollbackErr) => {
-                                if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after insert failure', rollbackErr);
-                                if (err.message && err.message.includes('FOREIGN KEY constraint failed')) {
-                                    return res.status(400).json({ error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
-                                }
-                                return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
+                            logger.error(COMPONENTS.API, 'Error clearing president role', err);
+                            return isolatedDb.run("ROLLBACK", (rollbackErr) => {
+                                if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after delete failure', rollbackErr);
+                                isolatedDb.close(() => {
+                                    res.status(500).json({ error: 'Rol atanırken hata oluştu' });
+                                });
                             });
                         }
-                        const insertedRoleId = this.lastID;
-                        db.run("COMMIT", (commitErr) => {
-                            if (commitErr) {
-                                logger.error(COMPONENTS.API, 'Error committing president role', commitErr);
-                                return db.run("ROLLBACK", (rollbackErr) => {
-                                    if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after commit failure', rollbackErr);
-                                    return res.status(500).json({ error: 'Rol atanırken hata oluştu' });
+                        const insertSql = "INSERT INTO roles (student_id, role_type) VALUES (?, ?)";
+                        const insertParams = [studentId, role_type];
+                        isolatedDb.run(insertSql, insertParams, function (err) {
+                            if (err) {
+                                logger.error(COMPONENTS.API, 'Error inserting role', err, {
+                                    endpoint: '/api/roles',
+                                    requestId: req.requestId,
+                                    studentId,
+                                    roleType: role_type,
+                                    query: insertSql,
+                                    params: insertParams,
+                                    errorMessage: err.message,
+                                    errorCode: err.code
+                                });
+                                return isolatedDb.run("ROLLBACK", (rollbackErr) => {
+                                    if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after insert failure', rollbackErr);
+                                    isolatedDb.close(() => {
+                                        if (err.message && err.message.includes('FOREIGN KEY constraint failed')) {
+                                            return res.status(400).json({ error: 'Seçilen öğrenci bulunamadı. Lütfen önce öğrenci ekleyin.' });
+                                        }
+                                        res.status(500).json({ error: 'Rol atanırken hata oluştu' });
+                                    });
                                 });
                             }
-                            return res.json({
-                                id: insertedRoleId,
-                                message: 'Rol başarıyla atandı'
+                            const insertedRoleId = this.lastID;
+                            isolatedDb.run("COMMIT", (commitErr) => {
+                                if (commitErr) {
+                                    logger.error(COMPONENTS.API, 'Error committing president role', commitErr);
+                                    return isolatedDb.run("ROLLBACK", (rollbackErr) => {
+                                        if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after commit failure', rollbackErr);
+                                        isolatedDb.close(() => {
+                                            res.status(500).json({ error: 'Rol atanırken hata oluştu' });
+                                        });
+                                    });
+                                }
+                                isolatedDb.close(() => {
+                                    res.json({
+                                        id: insertedRoleId,
+                                        message: 'Rol başarıyla atandı'
+                                    });
+                                });
                             });
                         });
                     });
@@ -1284,7 +1301,19 @@ app.put('/api/schedule/normalized', requireAdminSession, requireCsrfToken, requi
             });
         }
 
-        const insertedRows = await replaceNormalizedSchedule(db, day, validation.periods);
+        const isolatedDb = await new Promise((resolve, reject) => {
+            db.createIsolatedConnection((err, conn) => {
+                if (err) reject(err);
+                else resolve(conn);
+            });
+        });
+
+        let insertedRows;
+        try {
+            insertedRows = await replaceNormalizedSchedule(isolatedDb, day, validation.periods);
+        } finally {
+            await new Promise((resolve) => isolatedDb.close(resolve));
+        }
         
         return res.json({
             day,
@@ -1604,72 +1633,90 @@ app.post('/api/attendance', requireAdminSession, requireCsrfToken, requireAdminW
         });
     }
 
-    // Begin transaction
-    db.run("BEGIN IMMEDIATE TRANSACTION", (err) => {
-        if (err) {
-            logger.error(COMPONENTS.API, 'Error beginning transaction for attendance', err, { date });
+    db.createIsolatedConnection((connErr, isolatedDb) => {
+        if (connErr) {
+            logger.error(COMPONENTS.API, 'Error creating isolated connection for attendance', connErr, { date });
             return res.status(500).json({ error: 'Yoklama kaydedilirken hata oluştu' });
         }
 
-        // Delete existing attendance for this date
-        db.run("DELETE FROM attendance WHERE date = ?", [date], (err) => {
+        isolatedDb.run("BEGIN IMMEDIATE", (err) => {
             if (err) {
-                logger.error(COMPONENTS.API, 'Error deleting existing attendance', err, { date });
-                return db.run("ROLLBACK", (rollbackErr) => {
-                    if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after delete failure', rollbackErr, { date });
-                    return res.status(500).json({ error: 'Yoklama kaydedilirken hata oluştu' });
+                logger.error(COMPONENTS.API, 'Error beginning transaction for attendance', err, { date });
+                return isolatedDb.close(() => {
+                    res.status(500).json({ error: 'Yoklama kaydedilirken hata oluştu' });
                 });
             }
 
-            if (normalizedList.length === 0) {
-                return db.run("COMMIT", (commitErr) => {
-                    if (commitErr) {
-                        logger.error(COMPONENTS.API, 'Error committing empty attendance', commitErr, { date });
-                        return db.run("ROLLBACK", (rollbackErr) => {
-                            if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after commit failure', rollbackErr, { date });
-                            return res.status(500).json({ error: 'Yoklama kaydedilirken hata oluştu' });
+            isolatedDb.run("DELETE FROM attendance WHERE date = ?", [date], (err) => {
+                if (err) {
+                    logger.error(COMPONENTS.API, 'Error deleting existing attendance', err, { date });
+                    return isolatedDb.run("ROLLBACK", (rollbackErr) => {
+                        if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after delete failure', rollbackErr, { date });
+                        isolatedDb.close(() => {
+                            res.status(500).json({ error: 'Yoklama kaydedilirken hata oluştu' });
                         });
-                    }
-                    return res.json({ message: "Yoklama kaydedildi", count: 0 });
-                });
-            }
-
-            // Insert new attendance records sequentially to avoid partial state and leak of errors
-            let currentIndex = 0;
-
-            const insertNext = () => {
-                if (currentIndex >= normalizedList.length) {
-                    return db.run("COMMIT", (commitErr) => {
-                        if (commitErr) {
-                            logger.error(COMPONENTS.API, 'Error committing attendance', commitErr, { date });
-                            return db.run("ROLLBACK", (rollbackErr) => {
-                                if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after commit failure', rollbackErr, { date });
-                                return res.status(500).json({ error: 'Yoklama kaydedilirken hata oluştu' });
-                            });
-                        }
-                        return res.json({ message: "Yoklama başarıyla kaydedildi", count: normalizedList.length });
                     });
                 }
 
-                const item = normalizedList[currentIndex];
-                db.run("INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)", [item.student_id, date, item.status], (err) => {
-                    if (err) {
-                        logger.error(COMPONENTS.API, 'Error inserting attendance', err, {
-                            studentId: item.student_id,
-                            date: date,
-                            status: item.status
+                if (normalizedList.length === 0) {
+                    return isolatedDb.run("COMMIT", (commitErr) => {
+                        if (commitErr) {
+                            logger.error(COMPONENTS.API, 'Error committing empty attendance', commitErr, { date });
+                            return isolatedDb.run("ROLLBACK", (rollbackErr) => {
+                                if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after commit failure', rollbackErr, { date });
+                                isolatedDb.close(() => {
+                                    res.status(500).json({ error: 'Yoklama kaydedilirken hata oluştu' });
+                                });
+                            });
+                        }
+                        isolatedDb.close(() => {
+                            res.json({ message: "Yoklama kaydedildi", count: 0 });
                         });
-                        return db.run("ROLLBACK", (rollbackErr) => {
-                            if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after insert failure', rollbackErr, { date });
-                            return res.status(500).json({ error: 'Yoklama kaydedilirken bazı kayıtlarda hata oluştu' });
+                    });
+                }
+
+                let currentIndex = 0;
+
+                const insertNext = () => {
+                    if (currentIndex >= normalizedList.length) {
+                        return isolatedDb.run("COMMIT", (commitErr) => {
+                            if (commitErr) {
+                                logger.error(COMPONENTS.API, 'Error committing attendance', commitErr, { date });
+                                return isolatedDb.run("ROLLBACK", (rollbackErr) => {
+                                    if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after commit failure', rollbackErr, { date });
+                                    isolatedDb.close(() => {
+                                        res.status(500).json({ error: 'Yoklama kaydedilirken hata oluştu' });
+                                    });
+                                });
+                            }
+                            isolatedDb.close(() => {
+                                res.json({ message: "Yoklama başarıyla kaydedildi", count: normalizedList.length });
+                            });
                         });
                     }
-                    currentIndex++;
-                    insertNext();
-                });
-            };
 
-            insertNext();
+                    const item = normalizedList[currentIndex];
+                    isolatedDb.run("INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)", [item.student_id, date, item.status], (err) => {
+                        if (err) {
+                            logger.error(COMPONENTS.API, 'Error inserting attendance', err, {
+                                studentId: item.student_id,
+                                date: date,
+                                status: item.status
+                            });
+                            return isolatedDb.run("ROLLBACK", (rollbackErr) => {
+                                if (rollbackErr) logger.error(COMPONENTS.API, 'Error rolling back after insert failure', rollbackErr, { date });
+                                isolatedDb.close(() => {
+                                    res.status(500).json({ error: 'Yoklama kaydedilirken bazı kayıtlarda hata oluştu' });
+                                });
+                            });
+                        }
+                        currentIndex++;
+                        insertNext();
+                    });
+                };
+
+                insertNext();
+            });
         });
     });
 });
@@ -2079,20 +2126,29 @@ app.put('/api/slides/reorder', requireAdminSession, requireCsrfToken, requireAdm
         }
     }
 
-    db.serialize(() => {
-        db.run("BEGIN IMMEDIATE TRANSACTION", function (beginErr) {
+    db.createIsolatedConnection((connErr, isolatedDb) => {
+        if (connErr) {
+            logger.error(COMPONENTS.API, 'Error creating isolated connection for slides reorder', connErr, { requestId: req.requestId });
+            return res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+        }
+
+        isolatedDb.run("BEGIN IMMEDIATE", function (beginErr) {
             if (beginErr) {
                 logger.error(COMPONENTS.API, 'Error beginning transaction for slides reorder', beginErr, { requestId: req.requestId });
-                return res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                return isolatedDb.close(() => {
+                    res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                });
             }
 
             let stmt;
             try {
-                stmt = db.prepare("UPDATE slides SET display_order = ? WHERE id = ?", function (prepErr) {
+                stmt = isolatedDb.prepare("UPDATE slides SET display_order = ? WHERE id = ?", function (prepErr) {
                     if (prepErr) {
                         logger.error(COMPONENTS.API, 'Error preparing statement for slides reorder', prepErr, { requestId: req.requestId });
-                        return db.run("ROLLBACK", () => {
-                            res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                        return isolatedDb.run("ROLLBACK", () => {
+                            isolatedDb.close(() => {
+                                res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                            });
                         });
                     }
 
@@ -2104,16 +2160,20 @@ app.put('/api/slides/reorder', requireAdminSession, requireCsrfToken, requireAdm
                             stmt.finalize((finalizeErr) => {
                                 if (finalizeErr) {
                                     logger.error(COMPONENTS.API, 'Error finalizing statement after successful updates', finalizeErr, { requestId: req.requestId });
-                                    return db.run("ROLLBACK", () => {
-                                        res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                                    return isolatedDb.run("ROLLBACK", () => {
+                                        isolatedDb.close(() => {
+                                            res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                                        });
                                     });
                                 }
 
-                                db.run("COMMIT", function (commitErr) {
+                                isolatedDb.run("COMMIT", function (commitErr) {
                                     if (commitErr) {
-                                        logger.error(COMPONENTS.API, 'Error committing slides reorder', commitErr, { requestId: req.requestId });
-                                        return db.run("ROLLBACK", () => {
-                                            res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                                        logger.error(COMPONENTS.API, 'Error committing transaction for slides reorder', commitErr, { requestId: req.requestId });
+                                        return isolatedDb.run("ROLLBACK", () => {
+                                            isolatedDb.close(() => {
+                                                res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                                            });
                                         });
                                     }
 
@@ -2123,7 +2183,9 @@ app.put('/api/slides/reorder', requireAdminSession, requireCsrfToken, requireAdm
                                         totalItems,
                                         requestId: req.requestId
                                     });
-                                    res.json({ message: 'Sıralama başarıyla güncellendi' });
+                                    isolatedDb.close(() => {
+                                        res.json({ message: 'Sıralama başarıyla güncellendi' });
+                                    });
                                 });
                             });
                             return;
@@ -2141,8 +2203,10 @@ app.put('/api/slides/reorder', requireAdminSession, requireCsrfToken, requireAdm
                                     if (finalizeErr) {
                                         logger.error(COMPONENTS.API, 'Error finalizing statement after update failure', finalizeErr, { requestId: req.requestId });
                                     }
-                                    return db.run("ROLLBACK", () => {
-                                        res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                                    return isolatedDb.run("ROLLBACK", () => {
+                                        isolatedDb.close(() => {
+                                            res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                                        });
                                     });
                                 });
                                 return;
@@ -2156,8 +2220,10 @@ app.put('/api/slides/reorder', requireAdminSession, requireCsrfToken, requireAdm
                 });
             } catch (prepErr) {
                 logger.error(COMPONENTS.API, 'Error preparing statement for slides reorder', prepErr, { requestId: req.requestId });
-                return db.run("ROLLBACK", () => {
-                    res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                return isolatedDb.run("ROLLBACK", () => {
+                    isolatedDb.close(() => {
+                        res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                    });
                 });
             }
         });

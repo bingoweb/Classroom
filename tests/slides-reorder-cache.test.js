@@ -90,7 +90,7 @@ function createTrackedResponse() {
 }
 
 test('Slides Reorder Cache Tests', async (t) => {
-    let originalDbAll, originalDbRun, originalDbSerialize, originalDbPrepare, originalLoggerError;
+    let originalDbAll, originalDbRun, originalDbSerialize, originalDbPrepare, originalLoggerError, originalDbCreateIsolatedConnection;
 
     t.before(async () => {
         await db.scheduleMigrationPromise;
@@ -101,7 +101,19 @@ test('Slides Reorder Cache Tests', async (t) => {
         originalDbRun = db.run;
         originalDbSerialize = db.serialize;
         originalDbPrepare = db.prepare;
+        originalDbCreateIsolatedConnection = db.createIsolatedConnection;
         originalLoggerError = Logger.prototype.error;
+        db.createIsolatedConnection = (cb) => {
+            const fakeDb = {
+                serialize: (...args) => db.serialize(...args),
+                prepare: (...args) => db.prepare(...args),
+                run: (...args) => db.run(...args),
+                get: (...args) => db.get(...args),
+                all: (...args) => db.all(...args),
+                close: (closeCb) => { if (closeCb) closeCb(null); }
+            };
+            cb(null, fakeDb);
+        };
     });
 
     t.afterEach(() => {
@@ -109,6 +121,7 @@ test('Slides Reorder Cache Tests', async (t) => {
         if (originalDbRun) db.run = originalDbRun;
         if (originalDbSerialize) db.serialize = originalDbSerialize;
         if (originalDbPrepare) db.prepare = originalDbPrepare;
+        if (originalDbCreateIsolatedConnection) db.createIsolatedConnection = originalDbCreateIsolatedConnection;
         if (originalLoggerError) Logger.prototype.error = originalLoggerError;
     });
 
@@ -199,7 +212,6 @@ test('Slides Reorder Cache Tests', async (t) => {
         assert.strictEqual(getResult1.responseCount, 1);
         assert.strictEqual(dbAllCount, 1);
 
-        let serializeCount = 0;
         let prepareCount = 0;
         let finalizeCount = 0;
         let capturedSql = null;
@@ -217,7 +229,6 @@ test('Slides Reorder Cache Tests', async (t) => {
         };
 
         db.serialize = function(cb) {
-            serializeCount++;
             cb();
         };
 
@@ -276,7 +287,6 @@ test('Slides Reorder Cache Tests', async (t) => {
 
         const result = await reorderRes.promise;
 
-        assert.strictEqual(serializeCount, 1);
         assert.strictEqual(prepareCount, 1);
         assert.strictEqual(capturedSql, 'UPDATE slides SET display_order = ? WHERE id = ?');
         assert.deepStrictEqual(capturedParams, [
@@ -287,7 +297,7 @@ test('Slides Reorder Cache Tests', async (t) => {
         assert.strictEqual(result.statusCode, 200);
         assert.deepStrictEqual(result.body, { message: 'Sıralama başarıyla güncellendi' });
         assert.strictEqual(result.responseCount, 1);
-        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "COMMIT"]);
+        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE", "COMMIT"]);
 
         // Immediately after success
         activeSlidesRow = [
@@ -395,7 +405,7 @@ test('Slides Reorder Cache Tests', async (t) => {
         assert.strictEqual(capturedCallbacks.length, 2);
         assert.strictEqual(capturedSql, 'UPDATE slides SET display_order = ? WHERE id = ?');
         assert.deepStrictEqual(capturedParams, [ [1, 2], [2, 1] ]);
-        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
+        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE", "ROLLBACK"]);
 
         assert.strictEqual(loggedComponent, COMPONENTS.API);
         assert.strictEqual(loggedMessage, 'Error updating slide order');
@@ -457,7 +467,7 @@ test('Slides Reorder Cache Tests', async (t) => {
 
         assert.strictEqual(result.statusCode, 500);
         assert.strictEqual(result.responseCount, 1);
-        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
+        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE", "ROLLBACK"]);
         
         const getRes2 = createTrackedResponse();
         activeHandler({ requestId: 'req-c2-2' }, getRes2);
@@ -516,7 +526,7 @@ test('Slides Reorder Cache Tests', async (t) => {
         assert.strictEqual(result.statusCode, 500);
         assert.strictEqual(result.responseCount, 1);
         assert.ok(!runCalls.includes("COMMIT"));
-        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
+        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE", "ROLLBACK"]);
         
         const getRes2 = createTrackedResponse();
         activeHandler({ requestId: 'req-c3-2' }, getRes2);
@@ -577,7 +587,7 @@ test('Slides Reorder Cache Tests', async (t) => {
 
         assert.strictEqual(result.statusCode, 500);
         assert.strictEqual(result.responseCount, 1);
-        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "COMMIT", "ROLLBACK"]);
+        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE", "COMMIT", "ROLLBACK"]);
         
         const getRes2 = createTrackedResponse();
         activeHandler({ requestId: 'req-c4-2' }, getRes2);
@@ -636,7 +646,7 @@ test('Slides Reorder Cache Tests', async (t) => {
         assert.strictEqual(result.statusCode, 500);
         assert.strictEqual(result.responseCount, 1);
         assert.strictEqual(capturedCallbacks.length, 1); // no later update starts
-        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
+        assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE", "ROLLBACK"]);
         
         const getRes2 = createTrackedResponse();
         activeHandler({ requestId: 'req-c5-2' }, getRes2);

@@ -92,18 +92,31 @@ test('Role Create ID Validation Tests', async (t) => {
     const middlewares = routeLayer.route.stack;
     const handler = middlewares[middlewares.length - 1].handle;
 
-    let originalDbRun, originalDbAll, originalDbGet;
+    let originalDbRun, originalDbAll, originalDbGet, originalDbCreateIsolatedConnection;
 
     t.beforeEach(() => {
         originalDbRun = db.run;
         originalDbAll = db.all;
         originalDbGet = db.get;
+        originalDbCreateIsolatedConnection = db.createIsolatedConnection;
+        db.createIsolatedConnection = function(cb) {
+            const fakeDb = {
+                serialize: (...args) => db.serialize(...args),
+                prepare: (...args) => db.prepare(...args),
+                run: (...args) => db.run(...args),
+                get: (...args) => db.get(...args),
+                all: (...args) => db.all(...args),
+                close: (closeCb) => { if (closeCb) closeCb(null); }
+            };
+            cb(null, fakeDb);
+        };
     });
 
     t.afterEach(() => {
         db.run = originalDbRun;
         db.all = originalDbAll;
         db.get = originalDbGet;
+        db.createIsolatedConnection = originalDbCreateIsolatedConnection;
     });
 
     function createPromiseHelper(testHandler) {
@@ -366,7 +379,7 @@ test('Role Create ID Validation Tests', async (t) => {
         assert.deepEqual(operations[0].params, [47]);
         assert.strictEqual(typeof operations[0].params[0], 'number');
 
-        assert.strictEqual(operations[1].sql, 'BEGIN IMMEDIATE TRANSACTION');
+        assert.strictEqual(operations[1].sql, 'BEGIN IMMEDIATE');
 
         assert.strictEqual(operations[2].sql, 'DELETE FROM roles WHERE role_type = ?');
         assert.deepEqual(operations[2].params, ['president']);
@@ -442,7 +455,7 @@ test('Role Create ID Validation Tests', async (t) => {
                 params = [];
             }
             runCalls.push(sql);
-            if (sql === 'BEGIN IMMEDIATE TRANSACTION') {
+            if (sql === "BEGIN IMMEDIATE") {
                 cb(new Error('begin failed'));
             } else {
                 cb(null);
@@ -454,7 +467,7 @@ test('Role Create ID Validation Tests', async (t) => {
         assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu' });
 
         assert.strictEqual(runCalls.length, 1);
-        assert.strictEqual(runCalls[0], 'BEGIN IMMEDIATE TRANSACTION');
+        assert.strictEqual(runCalls[0], 'BEGIN IMMEDIATE');
     });
 
     // B. Delete failure
@@ -489,7 +502,7 @@ test('Role Create ID Validation Tests', async (t) => {
         assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu' });
 
         assert.strictEqual(runCalls.length, 3);
-        assert.strictEqual(runCalls[0], 'BEGIN IMMEDIATE TRANSACTION');
+        assert.strictEqual(runCalls[0], 'BEGIN IMMEDIATE');
         assert.ok(runCalls[1].startsWith('DELETE FROM roles'));
         assert.strictEqual(runCalls[2], 'ROLLBACK');
     });
@@ -550,7 +563,7 @@ test('Role Create ID Validation Tests', async (t) => {
             assert.ok(!rawBody.includes('Error inserting role'), 'Response must not contain internal logger message');
 
             assert.strictEqual(runCalls.length, 4);
-            assert.strictEqual(runCalls[0], 'BEGIN IMMEDIATE TRANSACTION');
+            assert.strictEqual(runCalls[0], 'BEGIN IMMEDIATE');
             assert.ok(runCalls[1].startsWith('DELETE FROM roles'));
             assert.ok(runCalls[2].startsWith('INSERT INTO roles'));
             assert.strictEqual(runCalls[3], 'ROLLBACK');
@@ -621,7 +634,7 @@ test('Role Create ID Validation Tests', async (t) => {
         assert.deepEqual(resObj.body, { error: 'Rol atanırken hata oluştu' });
 
         assert.strictEqual(runCalls.length, 5);
-        assert.strictEqual(runCalls[0], 'BEGIN IMMEDIATE TRANSACTION');
+        assert.strictEqual(runCalls[0], 'BEGIN IMMEDIATE');
         assert.ok(runCalls[1].startsWith('DELETE FROM roles'));
         assert.ok(runCalls[2].startsWith('INSERT INTO roles'));
         assert.strictEqual(runCalls[3], 'COMMIT');

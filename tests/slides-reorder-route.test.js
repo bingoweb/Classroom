@@ -18,6 +18,7 @@ global.setInterval = () => {};
 
 const app = require('../backend/server.js');
 const db = require('../backend/database.js');
+const productionCreateIsolatedConnection = db.createIsolatedConnection;
 
 function closeDatabase(database) {
     return new Promise((resolve, reject) => {
@@ -112,6 +113,17 @@ test('Slides Reorder Route Tests', async (t) => {
         originalDbPrepare = db.prepare;
         originalDbGet = db.get;
         originalDbRun = db.run;
+        db.createIsolatedConnection = (cb) => {
+            const fakeDb = {
+                serialize: (...args) => db.serialize(...args),
+                prepare: (...args) => db.prepare(...args),
+                run: (...args) => db.run(...args),
+                get: (...args) => db.get(...args),
+                all: (...args) => db.all(...args),
+                close: (closeCb) => { if (closeCb) closeCb(null); }
+            };
+            cb(null, fakeDb);
+        };
     });
 
     t.afterEach(() => {
@@ -119,6 +131,7 @@ test('Slides Reorder Route Tests', async (t) => {
         if (originalDbPrepare) db.prepare = originalDbPrepare;
         if (originalDbGet) db.get = originalDbGet;
         if (originalDbRun) db.run = originalDbRun;
+        db.createIsolatedConnection = productionCreateIsolatedConnection;
     });
 
     t.after(async () => {
@@ -240,7 +253,7 @@ test('Slides Reorder Route Tests', async (t) => {
         assert.deepEqual(response.body, { message: 'Sıralama başarıyla güncellendi' });
 
         assert.strictEqual(getCalled, false);
-        assert.strictEqual(serializeCalled, 1);
+        assert.strictEqual(serializeCalled, 0);
         assert.strictEqual(prepareCalled, 1);
         assert.strictEqual(preparedSql, 'UPDATE slides SET display_order = ? WHERE id = ?');
         assert.strictEqual(runCalls.length, 2);
@@ -660,7 +673,7 @@ test('Slides Reorder Route Tests', async (t) => {
 
             assert.strictEqual(resCode, 200);
             assert.deepStrictEqual(resBody, { message: 'Sıralama başarıyla güncellendi' });
-            assert.strictEqual(serializeCalled, 1);
+            assert.strictEqual(serializeCalled, 0);
             assert.strictEqual(prepareCalled, 1);
             assert.strictEqual(preparedSql, 'UPDATE slides SET display_order = ? WHERE id = ?');
             assert.strictEqual(stmtRunCalls.length, 2);
@@ -669,7 +682,7 @@ test('Slides Reorder Route Tests', async (t) => {
                 [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]
             ]);
             assert.strictEqual(finalizeCalled, 1);
-            assert.deepStrictEqual(dbRunCalls, ["BEGIN IMMEDIATE TRANSACTION", "COMMIT"]);
+            assert.deepStrictEqual(dbRunCalls, ["BEGIN IMMEDIATE", "COMMIT"]);
         });
     });
 
@@ -802,7 +815,7 @@ test('Slides Reorder Route Tests', async (t) => {
                 run: function(sql, params, cb) {
                     if (typeof params === 'function') cb = params;
                     runCalls.push(sql);
-                    if (sql === "BEGIN IMMEDIATE TRANSACTION") {
+                    if (sql === "BEGIN IMMEDIATE") {
                         if (cb) cb(new Error('begin failed'));
                     } else if (cb) cb(null);
                 },
@@ -816,7 +829,7 @@ test('Slides Reorder Route Tests', async (t) => {
             assert.strictEqual(resObj.statusCode, 500);
             assert.deepStrictEqual(resObj.body, { error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
             assert.strictEqual(prepareCalled, false);
-            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION"]);
+            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE"]);
         });
 
         await t2.test('Update failure causes statement finalization followed by ROLLBACK', async () => {
@@ -850,7 +863,7 @@ test('Slides Reorder Route Tests', async (t) => {
             assert.strictEqual(resObj.statusCode, 500);
             assert.strictEqual(stmtRunCalls, 1);
             assert.strictEqual(finalizeCalled, true);
-            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
+            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE", "ROLLBACK"]);
         });
 
         await t2.test('Commit failure causes ROLLBACK', async () => {
@@ -877,7 +890,7 @@ test('Slides Reorder Route Tests', async (t) => {
             });
             assert.strictEqual(resObj.statusCode, 500);
             assert.strictEqual(finalizeCalled, true);
-            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "COMMIT", "ROLLBACK"]);
+            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE", "COMMIT", "ROLLBACK"]);
         });
 
         await t2.test('Successful updates cause finalization followed by COMMIT and success not sent before commit callback', async () => {
@@ -909,7 +922,7 @@ test('Slides Reorder Route Tests', async (t) => {
             assert.strictEqual(resObj.statusCode, 200);
             assert.strictEqual(finalizeCalled, true);
             assert.strictEqual(commitCallbackCompleted, true);
-            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "COMMIT"]);
+            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE", "COMMIT"]);
         });
 
         await t2.test('Asynchronous prepare failure', async () => {
@@ -928,7 +941,7 @@ test('Slides Reorder Route Tests', async (t) => {
             });
             assert.strictEqual(resObj.statusCode, 500);
             assert.deepStrictEqual(resObj.body, { error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
-            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
+            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE", "ROLLBACK"]);
         });
 
         await t2.test('Finalize failure after all updates', async () => {
@@ -951,7 +964,7 @@ test('Slides Reorder Route Tests', async (t) => {
             });
             assert.strictEqual(resObj.statusCode, 500);
             assert.strictEqual(finalizeCalled, true);
-            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
+            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE", "ROLLBACK"]);
         });
 
         await t2.test('Update failure plus finalize failure', async () => {
@@ -974,7 +987,7 @@ test('Slides Reorder Route Tests', async (t) => {
             });
             assert.strictEqual(resObj.statusCode, 500);
             assert.strictEqual(finalizeCalled, true);
-            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE TRANSACTION", "ROLLBACK"]);
+            assert.deepStrictEqual(runCalls, ["BEGIN IMMEDIATE", "ROLLBACK"]);
         });
     });
 
@@ -1080,6 +1093,121 @@ test('Slides Reorder Route Tests', async (t) => {
                     else resolve();
                 });
             });
+        }
+    });
+
+    await t.test('9. Isolation proof: shared connection writes are not rolled back by a failed reorder transaction', async () => {
+        const originalDbRunRef = db.run;
+        const realCreateIsolatedConnection = productionCreateIsolatedConnection;
+        assert.notStrictEqual(realCreateIsolatedConnection, db.createIsolatedConnection, 'Isolation proof must bypass the suite fake connection factory');
+
+        const runSql = (sql, params = []) => new Promise((resolve, reject) => {
+            originalDbRunRef.call(db, sql, params, function(err) {
+                if (err) reject(err);
+                else resolve(this);
+            });
+        });
+
+        const getSql = (sql, params = []) => new Promise((resolve, reject) => {
+            db.all(sql, params, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+
+        let resolvePause;
+        let invokeHandlerPromise;
+        try {
+            await runSql("DELETE FROM slides");
+            await runSql("CREATE TABLE IF NOT EXISTS unrelated_writes (id INTEGER PRIMARY KEY, msg TEXT)");
+            await runSql("DELETE FROM unrelated_writes");
+            await runSql("INSERT INTO slides (title, display_order, content_type, media_type, media_path) VALUES ('A', 1, 'text', 'none', '')");
+            await runSql("INSERT INTO slides (title, display_order, content_type, media_type, media_path) VALUES ('B', 2, 'text', 'none', '')");
+
+            const slides = await getSql("SELECT id FROM slides ORDER BY display_order");
+            const idA = slides[0].id;
+            const idB = slides[1].id;
+
+            await runSql("CREATE TRIGGER IF NOT EXISTS fail_reorder_update BEFORE UPDATE ON slides BEGIN SELECT RAISE(ABORT, 'forced reorder failure'); END;");
+
+            const pausePromise = new Promise(r => resolvePause = r);
+            let transactionPausedResolver;
+            const transactionPausedPromise = new Promise(r => transactionPausedResolver = r);
+            let isolatedConnectionCreated = false;
+            let updatePaused = false;
+
+            function attachInterceptor(dbObj) {
+                const origPrepare = dbObj.prepare;
+                dbObj.prepare = function(sql) {
+                    if (typeof sql === 'string' && sql.includes('UPDATE slides SET display_order = ? WHERE id = ?')) {
+                        const stmt = origPrepare.apply(this, arguments);
+                        const origRun = stmt.run;
+                        stmt.run = function(runParams, runCb) {
+                            if (!updatePaused) {
+                                updatePaused = true;
+                                transactionPausedResolver();
+                            }
+                            pausePromise.then(() => {
+                                origRun.call(this, runParams, runCb);
+                            });
+                        };
+                        return stmt;
+                    }
+                    return origPrepare.apply(this, arguments);
+                };
+                return dbObj.prepare;
+            }
+
+            assert.equal(typeof realCreateIsolatedConnection, 'function');
+            db.createIsolatedConnection = function(cb) {
+                realCreateIsolatedConnection.call(db, (err, isolatedDb) => {
+                    if (err) return cb(err);
+                    isolatedConnectionCreated = true;
+                    attachInterceptor(isolatedDb);
+                    cb(null, isolatedDb);
+                });
+            };
+
+            const payload = {
+                slideOrders: [
+                    { id: idA, display_order: 2 },
+                    { id: idB, display_order: 1 }
+                ]
+            };
+
+            invokeHandlerPromise = makeRequest('PUT', '/api/slides/reorder', payload);
+
+            const firstResult = await Promise.race([
+                transactionPausedPromise.then(() => ({ type: 'paused' })),
+                invokeHandlerPromise.then(response => ({ type: 'response', response }))
+            ]);
+            assert.deepEqual(firstResult, { type: 'paused' }, 'Reorder must use and pause a real isolated transaction connection');
+            assert.equal(isolatedConnectionCreated, true);
+
+            const unrelatedWritePromise = new Promise((resolve, reject) => {
+                originalDbRunRef.call(db, "INSERT INTO unrelated_writes (msg) VALUES ('unrelated')", (err) => err ? reject(err) : resolve());
+            });
+
+            resolvePause();
+
+            const response = await invokeHandlerPromise;
+            await unrelatedWritePromise;
+
+            assert.strictEqual(response.statusCode, 500);
+            assert.deepEqual(response.body, { error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+
+            const postFailSlides = await getSql("SELECT * FROM slides ORDER BY display_order");
+            assert.strictEqual(postFailSlides[0].id, idA);
+            assert.strictEqual(postFailSlides[1].id, idB);
+
+            const unrelatedWrites = await getSql("SELECT * FROM unrelated_writes");
+            assert.strictEqual(unrelatedWrites.length, 1, 'Unrelated write must be preserved');
+            assert.strictEqual(unrelatedWrites[0].msg, 'unrelated');
+        } finally {
+            if (resolvePause) resolvePause();
+            if (invokeHandlerPromise) await invokeHandlerPromise.catch(() => {});
+            db.createIsolatedConnection = realCreateIsolatedConnection;
+            try { await runSql("DROP TRIGGER IF EXISTS fail_reorder_update;"); } catch (err) {}
         }
     });
 });

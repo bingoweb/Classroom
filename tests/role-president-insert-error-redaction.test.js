@@ -159,11 +159,27 @@ test('Role President Insert Error Redaction Tests', async (t) => {
 
     const originalDbGet = db.get;
     const originalDbRun = db.run;
+    const originalDbCreateIsolatedConnection = db.createIsolatedConnection;
     const originalLogError = Logger.prototype.error;
+
+    t.beforeEach(() => {
+        db.createIsolatedConnection = function(cb) {
+            const fakeDb = {
+                serialize: (...args) => db.serialize(...args),
+                prepare: (...args) => db.prepare(...args),
+                run: (...args) => db.run(...args),
+                get: (...args) => db.get(...args),
+                all: (...args) => db.all(...args),
+                close: (closeCb) => { if (closeCb) closeCb(null); }
+            };
+            cb(null, fakeDb);
+        };
+    });
 
     t.afterEach(() => {
         db.get = originalDbGet;
         db.run = originalDbRun;
+        db.createIsolatedConnection = originalDbCreateIsolatedConnection;
         Logger.prototype.error = originalLogError;
     });
 
@@ -199,7 +215,7 @@ test('Role President Insert Error Redaction Tests', async (t) => {
 
     const expectedStudentSql = "SELECT id FROM students WHERE id = ?";
     const expectedStudentParams = [47];
-    const expectedBeginSql = "BEGIN IMMEDIATE TRANSACTION";
+    const expectedBeginSql = "BEGIN IMMEDIATE";
     const expectedDeleteSql = "DELETE FROM roles WHERE role_type = ?";
     const expectedDeleteParams = ['president'];
     const expectedInsertSql = "INSERT INTO roles (student_id, role_type) VALUES (?, ?)";
@@ -551,7 +567,7 @@ test('Role President Insert Error Redaction Tests', async (t) => {
                 params = [];
             }
             runCalls.push({ sql, params });
-            if (sql === 'BEGIN IMMEDIATE TRANSACTION') {
+            if (sql === 'BEGIN IMMEDIATE') {
                 cb(beginError);
             } else {
                 cb(null);
@@ -712,6 +728,113 @@ test('Role President Insert Error Redaction Tests', async (t) => {
         
         assert.strictEqual(runCalls.length, 0, 'No transaction starts');
         assert.strictEqual(errorLogCalls.length, 0);
+    });
+
+    const runSql = (sql, params = []) => new Promise((resolve, reject) => {
+        db.run(sql, params, function (err) {
+            if (err) reject(err);
+            else resolve(this);
+        });
+    });
+
+    const getSql = (sql, params = []) => new Promise((resolve, reject) => {
+        db.all(sql, params, (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+        });
+    });
+
+    await t.test('Isolation proof: shared connection writes are not rolled back by a failed president transaction', async () => {
+        let originalDbRunRef = db.run;
+        let originalDbGetRef = db.get;
+
+        try {
+            await runSql("DELETE FROM roles");
+            await runSql("DELETE FROM students");
+            await runSql("CREATE TABLE IF NOT EXISTS unrelated_writes (id INTEGER PRIMARY KEY, msg TEXT)");
+            await runSql("DELETE FROM unrelated_writes");
+            await runSql("INSERT INTO students (id, name, gender) VALUES (1, 'A B', 'M'), (2, 'C D', 'F')");
+            await runSql("INSERT INTO roles (student_id, role_type) VALUES (1, 'president')");
+
+            await runSql("CREATE TRIGGER IF NOT EXISTS fail_president_update BEFORE INSERT ON roles BEGIN SELECT RAISE(ABORT, 'forced president failure'); END;");
+
+            let resolvePause;
+            const pausePromise = new Promise(r => resolvePause = r);
+            let transactionPausedResolver;
+            const transactionPausedPromise = new Promise(r => transactionPausedResolver = r);
+
+            db.get = function(sql, params, cb) {
+                originalDbGetRef.call(db, sql, params, cb);
+            };
+
+            function attachInterceptor(dbObj) {
+                const origRun = dbObj.run;
+                dbObj.run = function(sql, params, runCb) {
+                    const actualCb = typeof params === 'function' ? params : runCb;
+                    const actualParams = typeof params === 'function' ? [] : params;
+
+                    if (typeof sql === 'string' && sql.includes('DELETE FROM roles WHERE role_type = ?')) {
+                        transactionPausedResolver();
+                        pausePromise.then(() => {
+                            origRun.call(this, sql, actualParams, actualCb);
+                        });
+                    } else {
+                        origRun.call(this, sql, actualParams, actualCb);
+                    }
+                };
+                return origRun;
+            }
+
+            const restoreDbRun = attachInterceptor(db);
+
+            if (originalDbCreateIsolatedConnection) {
+                db.createIsolatedConnection = function(cb) {
+                    originalDbCreateIsolatedConnection.call(db, (err, isolatedDb) => {
+                        if (err) return cb(err);
+                        attachInterceptor(isolatedDb);
+                        cb(null, isolatedDb);
+                    });
+                };
+            }
+
+            const req = { body: { student_id: 2, role_type: 'president' }, requestId: 'req-isolation' };
+            const invokeHandlerPromise = (async () => {
+                const res = createTrackedResponse();
+                await finalHandler(req, res, () => {});
+                const result = await res.promise;
+                res.cleanup();
+                return result;
+            })();
+
+            await transactionPausedPromise;
+
+            const unrelatedWritePromise = new Promise((resolve, reject) => {
+                originalDbRunRef.call(db, "INSERT INTO unrelated_writes (msg) VALUES ('unrelated')", (err) => err ? reject(err) : resolve());
+            });
+
+            resolvePause();
+
+            const resObj = await invokeHandlerPromise;
+            await unrelatedWritePromise;
+
+            assert.strictEqual(resObj.statusCode, 500);
+            assert.deepStrictEqual(JSON.parse(resObj.body), { error: 'Rol atanırken hata oluştu' });
+
+            const postFailRoles = await getSql("SELECT * FROM roles WHERE role_type = 'president'");
+            assert.strictEqual(postFailRoles.length, 1);
+            assert.strictEqual(postFailRoles[0].student_id, 1);
+
+            const unrelatedWrites = await getSql("SELECT * FROM unrelated_writes");
+            assert.strictEqual(unrelatedWrites.length, 1, 'Unrelated write must be preserved');
+            assert.strictEqual(unrelatedWrites[0].msg, 'unrelated');
+        } finally {
+            db.run = originalDbRunRef;
+            db.get = originalDbGetRef;
+            if (originalDbCreateIsolatedConnection) {
+                db.createIsolatedConnection = originalDbCreateIsolatedConnection;
+            }
+            try { await runSql("DROP TRIGGER IF EXISTS fail_president_update;"); } catch (err) {}
+        }
     });
 
 });
