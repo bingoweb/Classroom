@@ -127,6 +127,7 @@ function createVmHarness() {
 globalThis.__slideshowTestApi = {
     nextSlide,
     scheduleNextSlide,
+    getSlideMediaLayoutMode,
 
     setSlidesData(value) {
         slidesData = value;
@@ -182,6 +183,17 @@ test('Slideshow Transition Lock', async (t) => {
         const harness = createVmHarness();
         assert.strictEqual(typeof harness.api.nextSlide, 'function', 'nextSlide is explicitly exposed as a function');
         assert.strictEqual(typeof harness.api.scheduleNextSlide, 'function', 'scheduleNextSlide is explicitly exposed as a function');
+        assert.strictEqual(typeof harness.api.getSlideMediaLayoutMode, 'function', 'slide media layout helper is explicitly exposed as a function');
+    });
+
+    await t.test('Uploaded image layout adapts to the card aspect ratio', () => {
+        const { api } = createVmHarness();
+
+        assert.strictEqual(api.getSlideMediaLayoutMode(3840, 2160, 2025, 1350), 'cover', '16:9 images fill the frame');
+        assert.strictEqual(api.getSlideMediaLayoutMode(1600, 1200, 2025, 1350), 'cover', '4:3 images fill the frame');
+        assert.strictEqual(api.getSlideMediaLayoutMode(1200, 1200, 2025, 1350), 'contain', 'square images keep their full composition');
+        assert.strictEqual(api.getSlideMediaLayoutMode(1080, 1920, 2025, 1350), 'contain', 'portrait images keep their full composition');
+        assert.strictEqual(api.getSlideMediaLayoutMode(0, 0, 2025, 1350), 'contain', 'invalid dimensions use the lossless fallback');
     });
 
     await t.test('A. Initial concurrent-transition guard remains locked', () => {

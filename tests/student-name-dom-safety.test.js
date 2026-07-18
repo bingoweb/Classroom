@@ -155,15 +155,43 @@ test('Student Name DOM Safety Tests', async (t) => {
         assert.ok(!presidentHtml.includes('<script>'), 'No raw script tag in president');
         assert.ok(!presidentHtml.includes('onerror="globalThis.__xss=1"'), 'No raw injected onerror attribute in president');
         assert.ok(presidentHtml.includes('&quot;&gt;&lt;img src=x onerror=&quot;globalThis.__xss=1&quot;&gt;'), 'President name is escaped');
+        assert.ok(!presidentHtml.includes('Henüz sınıf başkanı belirlenmedi'), 'Assigned president does not show empty state');
 
         assert.ok(!presidentHtml.includes('<script>globalThis.__xss=1</script>'), 'No raw script tag in VP');
         assert.ok(presidentHtml.includes('&lt;script&gt;globalThis.__xss=1&lt;/script&gt;'), 'VP name is escaped');
         
         assert.ok(!starsHtml.includes('onerror="globalThis.__xss=1"'), 'No raw injected onerror attribute in star');
         assert.ok(starsHtml.includes('&quot;&gt;&lt;img src=x onerror=&quot;globalThis.__xss=1&quot;&gt;'), 'Star name is escaped');
+        assert.ok(!getEl('duty-container').innerHTML.includes('Bugün için nöbetçi belirlenmedi'), 'Assigned duty student does not show empty state');
         
         assert.ok(!absentHtml.includes('<script>globalThis.__xss=1</script>'), 'No raw script tag in absent list');
         assert.ok(absentHtml.includes('&lt;script&gt;globalThis.__xss=1&lt;/script&gt;'), 'Absent name is escaped');
+    });
+
+    await t.test('Dashboard renders explanatory empty states for unassigned roles', async () => {
+        const scriptSource = fs.readFileSync(path.join(__dirname, '../public/js/script.js'), 'utf8');
+        const utilsSource = fs.readFileSync(path.join(__dirname, '../public/js/utils.js'), 'utf8');
+        const { sandbox, getEl } = createSandbox();
+
+        vm.createContext(sandbox);
+        vm.runInContext(utilsSource, sandbox);
+        sandbox.Utils = sandbox.window.Utils;
+        vm.runInContext(`${scriptSource}\n globalThis.__testApi = { fetchData };`, sandbox);
+
+        sandbox.Utils.fetchWithErrorHandling = async (url) => {
+            if (url.includes('/roles') || url.includes('/settings')) return [];
+            return [];
+        };
+
+        await sandbox.globalThis.__testApi.fetchData();
+
+        const presidentHtml = getEl('president-container').innerHTML;
+        const dutyHtml = getEl('duty-container').innerHTML;
+
+        assert.ok(presidentHtml.includes('Henüz sınıf başkanı belirlenmedi'));
+        assert.ok(dutyHtml.includes('Bugün için nöbetçi belirlenmedi'));
+        assert.ok(!presidentHtml.includes('>---<'));
+        assert.ok(!dutyHtml.includes('>---<'));
     });
 
     await t.test('Admin Panel (admin.js) safely escapes injected names and handles event delegation', async () => {

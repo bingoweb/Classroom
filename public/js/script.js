@@ -1,4 +1,5 @@
 let currentSlideIndex = 0;
+let slideLayoutRefreshFrame = null;
 
 // AKILLI VERİ KARŞILAŞTIRMA SİSTEMİ - gereksiz DOM güncellemelerini önler
 let lastDataHash = {
@@ -88,7 +89,12 @@ async function fetchData() {
             }
 
             if (!president && vicePresidents.length === 0) {
-                html = '<div class="student-name-large">---</div>';
+                html = `
+                    <div class="role-empty-state" role="status">
+                        <span class="role-empty-icon" aria-hidden="true">👑</span>
+                        <span>Henüz sınıf başkanı belirlenmedi</span>
+                    </div>
+                `;
             }
 
             presidentContainer.innerHTML = html;
@@ -150,7 +156,12 @@ async function fetchData() {
                 });
             }, 100);
         } else {
-            dutyContainer.innerHTML = '<div class="duty-name">---</div>';
+            dutyContainer.innerHTML = `
+                <div class="role-empty-state" role="status">
+                    <span class="role-empty-icon" aria-hidden="true">📋</span>
+                    <span>Bugün için nöbetçi belirlenmedi</span>
+                </div>
+            `;
         }
 
         // Render Stars - SLIDESHOW SİSTEMİ
@@ -420,6 +431,47 @@ async function initSlideshow() {
     }
 }
 
+function getSlideMediaLayoutMode(imageWidth, imageHeight, frameWidth, frameHeight) {
+    if (![imageWidth, imageHeight, frameWidth, frameHeight].every(value => Number.isFinite(value) && value > 0)) {
+        return 'contain';
+    }
+
+    const imageRatio = imageWidth / imageHeight;
+    const frameRatio = frameWidth / frameHeight;
+    const ratioDifference = Math.max(imageRatio / frameRatio, frameRatio / imageRatio);
+
+    return ratioDifference <= 1.25 ? 'cover' : 'contain';
+}
+
+function updateSlideImageLayout(slideElement, imageElement) {
+    const frameElement = slideElement.parentElement || slideElement;
+    const frameRect = frameElement.getBoundingClientRect();
+    const layoutMode = getSlideMediaLayoutMode(
+        imageElement.naturalWidth,
+        imageElement.naturalHeight,
+        frameRect.width,
+        frameRect.height
+    );
+
+    slideElement.dataset.mediaLayout = layoutMode;
+    imageElement.classList.toggle('slide-media--cover', layoutMode === 'cover');
+    imageElement.classList.toggle('slide-media--contain', layoutMode === 'contain');
+}
+
+function scheduleSlideImageLayoutRefresh() {
+    if (slideLayoutRefreshFrame !== null) return;
+
+    slideLayoutRefreshFrame = requestAnimationFrame(() => {
+        slideLayoutRefreshFrame = null;
+        document.querySelectorAll('.slideshow-container .slide--media').forEach(slideElement => {
+            const imageElement = slideElement.querySelector('.slide-media');
+            if (imageElement && imageElement.complete && imageElement.naturalWidth > 0) {
+                updateSlideImageLayout(slideElement, imageElement);
+            }
+        });
+    });
+}
+
 function createSlideElement(slide, isActive = false) {
     const slideDiv = document.createElement('div');
     slideDiv.className = `slide ${isActive ? 'active' : ''}`;
@@ -438,6 +490,7 @@ function createSlideElement(slide, isActive = false) {
 
     if (slide.media_type === 'video') {
         const video = document.createElement('video');
+        video.className = 'slide-video';
         video.src = slide.media_path;
         video.style.width = '100%';
         video.style.height = '100%';
@@ -497,13 +550,21 @@ function createSlideElement(slide, isActive = false) {
         }
     } else {
         // Image or GIF
+        slideDiv.classList.add('slide--media');
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'slide-media-backdrop';
+        backdrop.setAttribute('aria-hidden', 'true');
+        backdrop.style.backgroundImage = `url(${JSON.stringify(slide.media_path)})`;
+
         const img = document.createElement('img');
+        img.className = 'slide-media slide-media--contain';
         img.src = slide.media_path;
-        img.style.width = '100%';
-        img.style.height = '100%';
-        img.style.objectFit = 'cover';
-        img.style.objectPosition = 'center';
         img.alt = slide.title || 'Slide';
+        img.decoding = 'async';
+        img.onload = function () {
+            updateSlideImageLayout(slideDiv, this);
+        };
         img.onerror = function () {
             const error = new Error('Image load failed');
             logger.error(COMPONENTS.MEDIA, 'Image load failed', error, {
@@ -511,9 +572,15 @@ function createSlideElement(slide, isActive = false) {
                 mediaPath: slide.media_path,
                 mediaType: slide.media_type
             });
+            backdrop.style.display = 'none';
             this.style.display = 'none';
         };
+        slideDiv.appendChild(backdrop);
         slideDiv.appendChild(img);
+
+        if (img.complete && img.naturalWidth > 0) {
+            requestAnimationFrame(() => updateSlideImageLayout(slideDiv, img));
+        }
     }
 
     // Add text content if exists
@@ -1315,6 +1382,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateClock();
     initSlideshow();
+    window.addEventListener('resize', scheduleSlideImageLayoutRefresh);
 
     // Set up clock interval with cleanup tracking
     if (clockInterval) {
