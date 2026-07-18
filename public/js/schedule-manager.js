@@ -207,14 +207,12 @@ function getScheduleStatus(now) {
     if (isWeekend(dayIndex)) {
         const weekendMessages = {
             0: { // Pazar
-                iconChar: '🌅',
-                iconId: 'icon-sun',
+                image: 'assets/ui-icons-3d/schedule-sunrise.png',
                 title: 'Yarın Yeni Bir Hafta Başlıyor!',
                 subtitle: 'İyi dinlenin, yarın görüşürüz!'
             },
             6: { // Cumartesi
-                iconChar: '🏖️',
-                iconId: 'icon-sun',
+                image: 'assets/ui-icons-3d/schedule-weekend.png',
                 title: 'İyi Hafta Sonları!',
                 subtitle: 'Tatilinizin tadını çıkarın!'
             }
@@ -225,8 +223,7 @@ function getScheduleStatus(now) {
             mode: 'weekend',
             message: message.title,
             subtitle: message.subtitle,
-            icon: message.iconChar,
-            iconId: message.iconId,
+            image: message.image,
             countdown: null,
             progress: 0,
             visual: 'weekend'
@@ -248,7 +245,7 @@ function getScheduleStatus(now) {
             visual: 'clock',
             hoursUntilStart: hours,
             minutesUntilStart: mins,
-            iconId: 'icon-school'
+            image: 'assets/ui-icons-3d/school-clock.png'
         };
     }
 
@@ -256,11 +253,11 @@ function getScheduleStatus(now) {
     if (currentTime >= schoolEndMinutes) {
         const dayNames = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
         const dayThemes = {
-            1: { icon: '🌅', iconId: 'icon-home', subtitle: 'Harika bir hafta geçirdin!' },
-            2: { icon: '🌙', iconId: 'icon-home', subtitle: 'İyi dinlenin, yarın görüşürüz!' },
-            3: { icon: '🌸', iconId: 'icon-home', subtitle: 'Haftanın yarısını geçtik!' },
-            4: { icon: '🦊', iconId: 'icon-home', subtitle: 'Yarın Cuma, biraz daha sabır!' },
-            5: { icon: '🎉', iconId: 'icon-sun', subtitle: 'Harika bir hafta sonu geçirin!' }
+            1: { image: 'assets/ui-icons-3d/schedule-sunrise.png', subtitle: 'Harika bir hafta geçirdin!' },
+            2: { image: 'assets/ui-icons-3d/schedule-moon.png', subtitle: 'İyi dinlenin, yarın görüşürüz!' },
+            3: { image: 'assets/ui-icons-3d/schedule-flower.png', subtitle: 'Haftanın yarısını geçtik!' },
+            4: { image: 'assets/ui-icons-3d/schedule-fox.png', subtitle: 'Yarın Cuma, biraz daha sabır!' },
+            5: { image: 'assets/ui-icons-3d/schedule-celebration.png', subtitle: 'Harika bir hafta sonu geçirin!' }
         };
 
         const theme = dayThemes[dayIndex] || dayThemes[1];
@@ -268,8 +265,7 @@ function getScheduleStatus(now) {
             mode: 'after-school',
             message: 'Yarın Görüşürüz',
             subtitle: theme.subtitle,
-            icon: theme.icon,
-            iconId: theme.iconId,
+            image: theme.image,
             countdown: null,
             progress: 100,
             visual: 'goodbye',
@@ -397,7 +393,6 @@ if (typeof module !== 'undefined' && module.exports) {
         getScheduleSource
     };
 }
-
 
 
 

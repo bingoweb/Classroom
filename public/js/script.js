@@ -91,7 +91,7 @@ async function fetchData() {
             if (!president && vicePresidents.length === 0) {
                 html = `
                     <div class="role-empty-state" role="status">
-                        <span class="role-empty-icon" aria-hidden="true">👑</span>
+                        <img class="role-empty-icon" src="assets/icons/crown-3d.png" alt="" aria-hidden="true">
                         <span>Henüz sınıf başkanı belirlenmedi</span>
                     </div>
                 `;
@@ -159,7 +159,7 @@ async function fetchData() {
         } else {
             dutyContainer.innerHTML = `
                 <div class="role-empty-state" role="status">
-                    <span class="role-empty-icon" aria-hidden="true">📋</span>
+                    <img class="role-empty-icon" src="assets/icons/clipboard-3d.png" alt="" aria-hidden="true">
                     <span>Bugün için nöbetçi belirlenmedi</span>
                 </div>
             `;
@@ -213,7 +213,7 @@ async function fetchData() {
             // Yıldız yok durumu
             starsContainer.innerHTML = `
                 <div class="no-stars-message">
-                    <div class="no-stars-icon">⭐</div>
+                    <img class="no-stars-icon" src="assets/icons/star-3d.png" alt="" aria-hidden="true">
                     <div class="no-stars-text">Bu hafta henüz<br>yıldız belirlenmedi</div>
                 </div>
             `;
@@ -1101,6 +1101,69 @@ function updateClock() {
     }
 }
 
+function renderPeriodContext(container, status, options = {}) {
+    if (!container) return;
+
+    if (!status || !status.currentPeriodName) {
+        container.classList.remove('period-context');
+        container.classList.remove('is-single');
+        container.textContent = status && status.subtitle ? status.subtitle : '';
+        return;
+    }
+
+    const createChip = (variant, label, value) => {
+        const chip = document.createElement('div');
+        chip.className = `period-context-chip ${variant}`;
+
+        const valueElement = document.createElement('strong');
+        valueElement.className = 'period-context-value';
+        valueElement.textContent = value;
+
+        if (label) {
+            const labelElement = document.createElement('span');
+            labelElement.className = 'period-context-label';
+            labelElement.textContent = label;
+            chip.append(labelElement);
+        }
+        chip.append(valueElement);
+        return chip;
+    };
+
+    const nextName = status.nextLessonName || status.nextEventName || 'Okul Sonu';
+    const nextLabel = status.nextLessonName ? 'SIRADAKİ DERS' : 'SONRAKİ';
+    const showNext = options.showNext !== false;
+
+    container.classList.add('period-context');
+    if (!showNext) {
+        container.classList.add('is-single');
+        container.replaceChildren(
+            createChip('is-current is-only', '', status.currentPeriodName)
+        );
+        return;
+    }
+
+    container.classList.remove('is-single');
+    container.replaceChildren(
+        createChip('is-current', 'ŞİMDİ', status.currentPeriodName),
+        createChip('is-next', nextLabel, nextName)
+    );
+}
+
+function updateCountdownProgress(value) {
+    const progressBar = document.getElementById('countdown-bar');
+    if (!progressBar) return;
+
+    const numericValue = Number(value);
+    const boundedValue = Number.isFinite(numericValue)
+        ? Math.min(100, Math.max(0, numericValue))
+        : 0;
+
+    progressBar.style.width = `${boundedValue}%`;
+    if (progressBar.parentElement) {
+        progressBar.parentElement.setAttribute('aria-valuenow', String(Math.round(boundedValue)));
+    }
+}
+
 function updateCountdown(now) {
     // Use the new schedule manager module
     if (!window.ScheduleManager) {
@@ -1127,16 +1190,9 @@ function updateCountdown(now) {
             goodbyeMode.classList.add('weekend');
 
             const weekendVisual = document.getElementById('goodbye-visual');
-            if (status.iconId) {
-                weekendVisual.innerHTML = `
-                    <svg class="icon-3d-large goodbye-icon">
-                        <use href="#${status.iconId}"></use>
-                    </svg>`;
-            } else if (status.image) {
-                weekendVisual.innerHTML = `<img src="${status.image}" class="icon-3d-large goodbye-icon" alt="Weekend">`;
-            } else {
-                weekendVisual.textContent = status.icon;
-            }
+            weekendVisual.innerHTML = status.image
+                ? `<img src="${status.image}" class="icon-3d-large goodbye-icon" alt="Hafta sonu">`
+                : '';
 
             document.getElementById('goodbye-title').textContent = status.message;
             document.getElementById('goodbye-subtitle').textContent = status.subtitle;
@@ -1150,11 +1206,8 @@ function updateCountdown(now) {
                 beforeSchoolMode.style.display = 'flex';
                 // Update visual if needed
                 const clockVisual = beforeSchoolMode.querySelector('.clock-visual');
-                if (clockVisual && status.iconId) {
-                    clockVisual.innerHTML = `
-                        <svg class="clock-icon" viewBox="0 0 24 24" style="width: 100%; height: 100%; color: var(--primary); filter: drop-shadow(0 4px 8px rgba(108, 92, 231, 0.3));">
-                             <use href="#${status.iconId}"></use>
-                        </svg>`;
+                if (clockVisual && status.image) {
+                    clockVisual.innerHTML = `<img src="${status.image}" class="clock-icon" alt="Ders başlangıç saati">`;
                 }
 
                 const countdownEl = beforeSchoolMode.querySelector('#before-school-countdown');
@@ -1184,16 +1237,9 @@ function updateCountdown(now) {
             }
 
             const afterSchoolVisual = document.getElementById('goodbye-visual');
-            if (status.iconId) {
-                afterSchoolVisual.innerHTML = `
-                    <svg class="icon-3d-large goodbye-icon">
-                        <use href="#${status.iconId}"></use>
-                    </svg>`;
-            } else if (status.image) {
-                afterSchoolVisual.innerHTML = `<img src="${status.image}" class="icon-3d-large goodbye-icon" alt="Goodbye">`;
-            } else {
-                afterSchoolVisual.textContent = status.icon;
-            }
+            afterSchoolVisual.innerHTML = status.image
+                ? `<img src="${status.image}" class="icon-3d-large goodbye-icon" alt="Okul çıkışı">`
+                : '';
 
             document.getElementById('goodbye-title').textContent = status.message;
             document.getElementById('goodbye-subtitle').textContent = status.subtitle;
@@ -1212,27 +1258,14 @@ function updateCountdown(now) {
             countdownMode.style.display = 'flex';
             const titleEl = countdownMode.querySelector('h3');
             if (titleEl) titleEl.textContent = status.message;
-
-            let subtitleText = status.subtitle;
-            if (status.currentPeriodName) {
-                if (status.currentPeriodType === 'class') {
-                    if (status.nextLessonName) {
-                        subtitleText = `Şu an: ${status.currentPeriodName} • Sıradaki ders: ${status.nextLessonName}`;
-                    } else {
-                        subtitleText = `Şu an: ${status.currentPeriodName} • Sonraki: ${status.nextEventName || 'Okul Sonu'}`;
-                    }
-                } else if (status.currentPeriodType === 'break') {
-                    if (status.nextLessonName) {
-                        subtitleText = `Şu an: ${status.currentPeriodName} • Sıradaki: ${status.nextLessonName}`;
-                    } else {
-                        subtitleText = `Şu an: ${status.currentPeriodName} • Sonraki: ${status.nextEventName || 'Okul Sonu'}`;
-                    }
-                }
-            }
+            const scheduleSource = typeof window.ScheduleManager.getScheduleSource === 'function'
+                ? window.ScheduleManager.getScheduleSource()
+                : 'fallback';
+            const periodContextOptions = { showNext: scheduleSource === 'external' };
 
             const subtitleEl = countdownMode.querySelector('.countdown-subtitle');
             if (subtitleEl) {
-                subtitleEl.textContent = subtitleText;
+                renderPeriodContext(subtitleEl, status, periodContextOptions);
             } else {
                 // Create subtitle if it doesn't exist
                 const h3 = countdownMode.querySelector('h3');
@@ -1241,14 +1274,14 @@ function updateCountdown(now) {
                     if (!nextElement || !nextElement.classList.contains('countdown-subtitle')) {
                         const newSubtitle = document.createElement('div');
                         newSubtitle.className = 'countdown-subtitle';
-                        newSubtitle.textContent = subtitleText;
+                        renderPeriodContext(newSubtitle, status, periodContextOptions);
                         h3.insertAdjacentElement('afterend', newSubtitle);
                     }
                 }
             }
 
             document.getElementById('countdown').textContent = status.countdown;
-            document.getElementById('countdown-bar').style.width = `${status.progress}%`;
+            updateCountdownProgress(status.progress);
 
             if (window.stopConfetti) window.stopConfetti();
             break;
@@ -1258,8 +1291,9 @@ function updateCountdown(now) {
             countdownMode.style.display = 'flex';
             const errorTitleEl = countdownMode.querySelector('h3');
             if (errorTitleEl) errorTitleEl.textContent = status.message;
+            renderPeriodContext(countdownMode.querySelector('.countdown-subtitle'), status);
             document.getElementById('countdown').textContent = status.countdown;
-            document.getElementById('countdown-bar').style.width = '0%';
+            updateCountdownProgress(0);
             if (window.stopConfetti) window.stopConfetti();
             break;
 
@@ -1267,7 +1301,7 @@ function updateCountdown(now) {
             logger.warn(COMPONENTS.SYSTEM, 'Unknown schedule status mode', null, { mode: status.mode });
             countdownMode.style.display = 'flex';
             document.getElementById('countdown').textContent = '--:--';
-            document.getElementById('countdown-bar').style.width = '0%';
+            updateCountdownProgress(0);
     }
 }
 
@@ -1276,7 +1310,8 @@ async function updateStats() {
         const res = await fetch(`${CONFIG.API_URL}/stats`);
         const stats = await res.json();
 
-        document.getElementById('total-students').textContent = stats.total || 0;
+        const totalStudents = Number(stats.total) || 0;
+        document.getElementById('total-students').textContent = totalStudents;
         document.getElementById('girl-students').textContent = stats.girls || 0;
         document.getElementById('boy-students').textContent = stats.boys || 0;
 
@@ -1285,12 +1320,32 @@ async function updateStats() {
         const todayAbsent = stats.todayAbsent || 0;
         const absentStudents = stats.absentStudents || [];
         const todayTotal = todayPresent + todayAbsent;
+        const hasAttendance = todayTotal > 0;
+        const presentStudents = document.getElementById('present-students');
+        const attendanceHero = document.getElementById('attendance-hero');
+        const attendanceStatus = document.getElementById('today-attendance');
 
-        if (todayTotal > 0) {
-            document.getElementById('today-attendance').innerHTML =
-                `<span style="color: #00b894;">${todayPresent} VAR</span> / <span style="color: #d63031;">${todayAbsent} YOK</span>`;
-        } else {
-            document.getElementById('today-attendance').textContent = 'Yoklama Bekleniyor';
+        if (presentStudents) {
+            presentStudents.textContent = hasAttendance ? todayPresent : '--';
+        }
+
+        if (attendanceHero) {
+            attendanceHero.classList[hasAttendance ? 'remove' : 'add']('is-pending');
+        }
+
+        if (attendanceStatus) {
+            attendanceStatus.classList.remove('is-complete', 'has-absent', 'is-pending');
+
+            if (hasAttendance && todayAbsent === 0) {
+                attendanceStatus.textContent = 'TAM KADRO';
+                attendanceStatus.classList.add('is-complete');
+            } else if (hasAttendance) {
+                attendanceStatus.textContent = `${todayAbsent} ÖĞRENCİ YOK`;
+                attendanceStatus.classList.add('has-absent');
+            } else {
+                attendanceStatus.textContent = 'YOKLAMA BEKLENİYOR';
+                attendanceStatus.classList.add('is-pending');
+            }
         }
 
         const attendanceBox = document.getElementById('attendance-stat');
@@ -1324,6 +1379,7 @@ async function updateStats() {
     } catch (e) {
         console.error('Stats error', e);
         document.getElementById('total-students').textContent = '--';
+        document.getElementById('present-students').textContent = '--';
         document.getElementById('girl-students').textContent = '--';
         document.getElementById('boy-students').textContent = '--';
         document.getElementById('today-attendance').textContent = '--';

@@ -6,93 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2/D Sihirli Pano</title>
     <!-- Fonts removed - using system fonts for offline operation -->
-    <link rel="stylesheet" href="css/style.css?v=5">
+    <link rel="stylesheet" href="css/style.css?v=6">
     <link rel="stylesheet" href="css/kiosk-mode.css?v=1">
     <script src="js/config.js"></script>
     <script src="js/logger.js"></script>
-    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
-        <!-- Crown / President -->
-        <symbol id="icon-crown" viewBox="0 0 512 512">
-            <path fill="#FFC107" d="M112,208l48,96L256,128l96,176l48-96l80,256H32L112,208z" stroke="none" />
-            <path
-                d="M432,448H80c-8.8,0-16-7.2-16-16V320c0-8.8,7.2-16,16-16h352c8.8,0,16,7.2,16,16v112C448,440.8,440.8,448,432,448z"
-                fill="#FFB300" />
-            <circle cx="256" cy="128" r="16" fill="#F44336" />
-            <circle cx="160" cy="304" r="12" fill="#2196F3" />
-            <circle cx="352" cy="304" r="12" fill="#2196F3" />
-            <circle cx="112" cy="208" r="12" fill="#4CAF50" />
-            <circle cx="400" cy="208" r="12" fill="#4CAF50" />
-        </symbol>
-        <!-- Clipboard / Duty -->
-        <symbol id="icon-clipboard" viewBox="0 0 24 24" fill="currentColor">
-            <path
-                d="M19,3h-4.18C14.4,1.84,13.3,1,12,1c-1.3,0-2.4,0.84-2.82,2H5C3.9,3,3,3.9,3,5v16c0,1.1,0.9,2,2,2h14c1.1,0,2-0.9,2-2V5 C21,3.9,20.1,3,19,3z M12,2.75c0.41,0,0.75,0.34,0.75,0.75S12.41,4.25,12,4.25s-0.75-0.34-0.75-0.75S11.59,2.75,12,2.75z M10,17H7 v-2h3V17z M10,13H7v-2h3V13z M10,9H7V7h3V9z M17,17h-5v-2h5V17z M17,13h-5v-2h5V13z M17,9h-5V7h5V9z"
-                fill="#90CAF9" />
-        </symbol>
-        <!-- Star / Week Stars -->
-        <symbol id="icon-star" viewBox="0 0 512 512">
-            <defs>
-                <linearGradient id="starGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style="stop-color:#FFF59D;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#FDD835;stop-opacity:1" />
-                </linearGradient>
-            </defs>
-            <path fill="url(#starGrad)"
-                d="M256,32L326,174H480L356,264L402,406L256,316L110,406L156,264L32,174H186L256,32Z" stroke="#FBC02D"
-                stroke-width="10" stroke-linejoin="round" />
-        </symbol>
-        <!-- Chart / Stats -->
-        <symbol id="icon-chart" viewBox="0 0 24 24" fill="currentColor">
-            <rect x="5" y="10" width="4" height="11" rx="1" fill="#FFAB91" />
-            <rect x="15" y="5" width="4" height="16" rx="1" fill="#CE93D8" />
-            <path d="M4,22L20,22" stroke="#90A4AE" stroke-width="2" stroke-linecap="round" />
-        </symbol>
-        <!-- Clock / Time -->
-        <symbol id="icon-clock" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="12" r="10" fill="#E1BEE7" />
-            <path d="M12,6v6l4,2" stroke="#7B1FA2" stroke-width="2" stroke-linecap="round" />
-        </symbol>
-        <!-- Home / After School -->
-        <symbol id="icon-home" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z" fill="url(#homeGrad)" />
-            <defs>
-                <linearGradient id="homeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style="stop-color:#42A5F5;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#1E88E5;stop-opacity:1" />
-                </linearGradient>
-            </defs>
-        </symbol>
-        <!-- Sun / Weekend -->
-        <symbol id="icon-sun" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="12" r="5" fill="#FFEB3B" />
-            <path
-                d="M12 2V4M12 20V22M4 12H2M22 12H20M19.07 4.93L17.66 6.34M6.34 17.66L4.93 19.07M4.93 4.93L6.34 6.34M17.66 17.66L19.07 19.07"
-                stroke="#FF9800" stroke-width="3" stroke-linecap="round" />
-        </symbol>
-        <!-- Bell / Break -->
-        <symbol id="icon-bell" viewBox="0 0 24 24" fill="currentColor">
-            <path
-                d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"
-                fill="url(#bellGrad)" />
-            <defs>
-                <linearGradient id="bellGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:#FFD54F;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#FF6F00;stop-opacity:1" />
-                </linearGradient>
-            </defs>
-        </symbol>
-        <!-- School / Class -->
-        <symbol id="icon-school" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M5,13.18v4L12,21l7-3.82v-4L12,17L5,13.18z M12,3L1,9l11,6l9-4.91V17h2V9L12,3z"
-                fill="url(#schoolGrad)" />
-            <defs>
-                <linearGradient id="schoolGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style="stop-color:#66BB6A;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#43A047;stop-opacity:1" />
-                </linearGradient>
-            </defs>
-        </symbol>
-    </svg>
 </head>
 
 <body>
@@ -102,6 +19,10 @@
         <!-- Column 1: Time & Environment -->
         <div class="column col-left">
             <div class="card clock-card">
+                <div class="card-titlebar card-titlebar--sky">
+                    <img class="card-titlebar-icon" src="assets/ui-icons-3d/calendar-weekend.png" alt="" aria-hidden="true">
+                    <span>Günün Zamanı</span>
+                </div>
                 <div class="clock-content-wrapper">
                     <!-- Date Section (Top) -->
                     <div class="date-section">
@@ -117,15 +38,7 @@
                     <!-- Weekend Countdown Section (Bottom) -->
                     <div class="weekend-section" id="weekend-widget">
                         <div class="weekend-pill">
-                            <div class="weekend-icon">
-                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor"
-                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                                </svg>
-                            </div>
+                            <img class="weekend-icon" src="assets/ui-icons-3d/calendar-weekend.png" alt="" aria-hidden="true">
                             <div class="weekend-text-group">
                                 <span class="weekend-label">HAFTA SONUNA</span>
                                 <span class="weekend-value" id="weekend-counter">-- GÜN</span>
@@ -136,31 +49,43 @@
             </div>
 
             <div class="card stats-card">
-                <div class="stats-header-row">
-                    <svg class="stats-header-icon">
-                        <use href="#icon-chart"></use>
-                    </svg>
+                <div class="card-titlebar card-titlebar--mint stats-header-row">
+                    <img class="stats-header-icon" src="assets/icons/chart-3d.png" alt="" aria-hidden="true">
                     <div class="stats-header-text">Sınıf Mevcudu</div>
                 </div>
 
                 <div class="stats-body">
-                    <!-- Total Big Number -->
-                    <div class="stat-total-container">
-                        <div class="stat-total-value" id="total-students">--</div>
-                        <div class="stat-total-label">TOPLAM ÖĞRENCİ</div>
+                    <!-- Today's presence and fixed class capacity -->
+                    <div class="attendance-hero" id="attendance-hero">
+                        <div class="present-students-panel">
+                            <div class="present-students-kicker">
+                                <span class="presence-dot" aria-hidden="true"></span>
+                                Bugün Sınıfta
+                            </div>
+                            <div class="present-students-value-row">
+                                <span class="present-students-value" id="present-students">--</span>
+                                <span class="present-students-unit">öğrenci</span>
+                            </div>
+                        </div>
+
+                        <div class="class-capacity-panel">
+                            <span class="class-capacity-label">Sınıf Mevcudu</span>
+                            <span class="class-capacity-value" id="total-students">--</span>
+                            <span class="class-capacity-unit">öğrenci</span>
+                        </div>
                     </div>
 
                     <!-- Gender Split -->
                     <div class="stat-gender-row">
                         <div class="gender-box girl-box">
-                            <div class="gender-icon">👧</div>
+                            <img class="gender-icon" src="assets/ui-icons-3d/student-girl.png" alt="Kız öğrenci">
                             <div class="gender-info">
                                 <span class="gender-count" id="girl-students">--</span>
                                 <span class="gender-label">Kız</span>
                             </div>
                         </div>
                         <div class="gender-box boy-box">
-                            <div class="gender-icon">👦</div>
+                            <img class="gender-icon" src="assets/ui-icons-3d/student-boy.png" alt="Erkek öğrenci">
                             <div class="gender-info">
                                 <span class="gender-count" id="boy-students">--</span>
                                 <span class="gender-label">Erkek</span>
@@ -172,7 +97,7 @@
                     <div class="attendance-wrapper">
                         <div class="attendance-box" id="attendance-stat">
                             <div class="attendance-header">
-                                <span class="attendance-title">YOKLAMA (BUGÜN)</span>
+                                <span class="attendance-title">BUGÜNÜN YOKLAMASI</span>
                                 <span class="attendance-status" id="today-attendance">--</span>
                             </div>
                         </div>
@@ -189,17 +114,14 @@
             </div>
 
             <div class="card countdown-card" id="countdown-card">
+                <div class="card-titlebar card-titlebar--lilac">
+                    <img class="card-titlebar-icon" src="assets/ui-icons-3d/school-clock.png" alt="" aria-hidden="true">
+                    <span>Ders Akışı</span>
+                </div>
                 <!-- Before School Starts -->
                 <div class="before-school-mode" id="before-school-mode" style="display: none;">
                     <div class="clock-visual">
-                        <svg class="clock-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="4" />
-                            <circle cx="50" cy="50" r="3" fill="currentColor" />
-                            <line id="hour-hand" x1="50" y1="50" x2="50" y2="30" stroke="currentColor" stroke-width="3"
-                                stroke-linecap="round" />
-                            <line id="minute-hand" x1="50" y1="50" x2="50" y2="15" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" />
-                        </svg>
+                        <img class="clock-icon" src="assets/ui-icons-3d/school-clock.png" alt="Ders başlangıç saati">
                     </div>
                     <h3 id="before-school-title">Ders Başlamasına Kalan Süre</h3>
                     <p class="before-school-subtitle" id="before-school-subtitle">09:00 - Ders Başlıyor</p>
@@ -210,7 +132,8 @@
                 <div class="countdown-mode" id="countdown-mode">
                     <h3>Teneffüse Kalan Zaman</h3>
                     <div class="countdown-subtitle"></div>
-                    <div class="progress-bar-container">
+                    <div class="progress-bar-container" role="progressbar" aria-label="Ders süresi ilerlemesi"
+                        aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                         <div class="progress-bar" id="countdown-bar"></div>
                     </div>
                     <div class="countdown-text" id="countdown">--:--</div>
@@ -222,7 +145,7 @@
                         <!-- Dynamic daily theme icons will be inserted here -->
                     </div>
                     <h2 class="goodbye-title" id="goodbye-title">Yarın Görüşürüz!</h2>
-                    <p class="goodbye-subtitle" id="goodbye-subtitle">İyi dinlenin 🌟</p>
+                    <p class="goodbye-subtitle" id="goodbye-subtitle">İyi dinlenin</p>
                 </div>
             </div>
         </div>
@@ -234,6 +157,10 @@
             <div class="column col-center">
                 <!-- Noise Meter / Quiet Detective Card -->
                 <div class="card noise-meter-card" id="noise-meter-card">
+                    <div class="card-titlebar card-titlebar--aqua">
+                        <img class="card-titlebar-icon" src="assets/ui-icons-3d/microphone.png" alt="" aria-hidden="true">
+                        <span>Sınıfın Ses Dengesi</span>
+                    </div>
                     <div class="noise-content">
                         <div class="noise-character-wrapper">
                             <img id="noise-character-img" src="uploads/sessiz.png" alt="Sessiz Karakter">
@@ -242,7 +169,11 @@
                         </div>
                         <div class="noise-info">
                             <div class="noise-status" id="noise-status-text">
-                                ✨ Sınıfımız Harika ✨<br><span style="font-size:0.6em; opacity:0.8">Sessiz Mod</span>
+                                <img class="noise-status-icon" src="assets/ui-icons-3d/sparkles.png" alt="" aria-hidden="true">
+                                <span class="noise-status-copy">
+                                    <strong>Sınıfımız Harika</strong>
+                                    <small>Sessiz Mod</small>
+                                </span>
                             </div>
                             <div class="noise-meter-container">
                                 <div class="noise-meter-bar">
@@ -250,7 +181,7 @@
                                 </div>
                                 <!-- EKOLAYZER v2.0 - Premium Tasarım -->
                                 <div class="equalizer-container theme-neon" id="equalizer-container">
-                                    <span class="eq-label">🎙️</span>
+                                    <img class="eq-label" src="assets/ui-icons-3d/microphone.png" alt="Mikrofon">
                                     <div class="equalizer-bars">
                                         <!-- 128 Bar Extreme Res Equalizer -->
                                         <div class="eq-bar" id="eq-bar-1"></div>
@@ -386,9 +317,9 @@
                                     <!-- Tema Seçici (Admin panelinden yönetiliyor) -->
                                 </div>
                                 <div class="noise-scale-labels">
-                                    <span>🟢 Sessiz</span>
-                                    <span>🟡 Dikkat</span>
-                                    <span>🔴 Gürültü</span>
+                                    <span><i class="noise-legend-light quiet" aria-hidden="true"></i>Sessiz</span>
+                                    <span><i class="noise-legend-light warning" aria-hidden="true"></i>Dikkat</span>
+                                    <span><i class="noise-legend-light danger" aria-hidden="true"></i>Gürültü</span>
                                 </div>
                             </div>
                             <button id="mic-start-btn" class="mic-start-btn">Mikrofonu Aç</button>
@@ -396,6 +327,10 @@
                     </div>
                 </div>
                 <div class="card slideshow-card">
+                    <div class="card-titlebar card-titlebar--coral">
+                        <img class="card-titlebar-icon" src="assets/ui-icons-3d/sparkles.png" alt="" aria-hidden="true">
+                        <span>Sınıfımızdan</span>
+                    </div>
                     <div id="slideshow-container" class="slideshow-container"
                         style="position: relative; width: 100%; height: 100%; overflow: hidden;">
                         <!-- Slides injected by JS -->
@@ -406,7 +341,7 @@
             <!-- Right Column: Students -->
             <div class="column col-right">
                 <div class="card president-card">
-                    <div class="card-header">
+                    <div class="card-header card-titlebar card-titlebar--sunny">
                         <img src="assets/icons/crown-3d.png" class="icon-3d" alt="Crown">
                         Sınıf Başkanı
                     </div>
@@ -415,7 +350,7 @@
                     </div>
                 </div>
                 <div class="card duty-card">
-                    <div class="card-header">
+                    <div class="card-header card-titlebar card-titlebar--aqua">
                         <img src="assets/icons/clipboard-3d.png" class="icon-3d" alt="Duty">
                         Nöbetçiler
                     </div>
@@ -424,7 +359,7 @@
                     </div>
                 </div>
                 <div class="card star-card">
-                    <div class="card-header">
+                    <div class="card-header card-titlebar card-titlebar--berry">
                         <img src="assets/icons/star-3d.png" class="icon-3d" alt="Star">
                         Haftanın Yıldızları
                     </div>

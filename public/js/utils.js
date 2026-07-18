@@ -116,19 +116,19 @@ async function fetchWithErrorHandling(url, options = {}) {
  * @returns {Object} Icon and tip
  */
 function getWeatherInfo(weatherCode, temperature) {
-    let icon = '☀️';
+    let icon = 'assets/ui-icons-3d/weather-sun.png';
     let tip = 'Güneş gözlüğünü tak!';
 
     if (weatherCode > 3) {
-        icon = '☁️';
+        icon = 'assets/ui-icons-3d/weather-partly-cloudy.png';
         tip = 'Hava biraz bulutlu.';
     }
     if (weatherCode > 50) {
-        icon = '🌧️';
+        icon = 'assets/ui-icons-3d/weather-rain.png';
         tip = 'Şemsiyeni almayı unutma!';
     }
     if (weatherCode > 70) {
-        icon = '❄️';
+        icon = 'assets/ui-icons-3d/weather-snow.png';
         tip = 'Sıkı giyin, kar yağıyor!';
     }
     if (temperature < 10) {

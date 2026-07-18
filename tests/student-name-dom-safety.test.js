@@ -155,6 +155,10 @@ test('Student Name DOM Safety Tests', async (t) => {
         const presidentHtml = getEl('president-container').innerHTML;
         const starsHtml = getEl('stars-container').innerHTML;
         const absentHtml = getEl('absent-list').innerHTML;
+
+        assert.strictEqual(getEl('present-students').textContent, 9, 'Today\'s present count is the primary classroom value');
+        assert.strictEqual(getEl('total-students').textContent, 10, 'Fixed class capacity remains visible as the secondary value');
+        assert.strictEqual(getEl('today-attendance').textContent, '1 ÖĞRENCİ YOK', 'Attendance summary emphasizes the absent count without duplicating the hero value');
         
         assert.ok(!presidentHtml.includes('<script>'), 'No raw script tag in president');
         assert.ok(!presidentHtml.includes('onerror="globalThis.__xss=1"'), 'No raw injected onerror attribute in president');
@@ -173,6 +177,19 @@ test('Student Name DOM Safety Tests', async (t) => {
         
         assert.ok(!absentHtml.includes('<script>globalThis.__xss=1</script>'), 'No raw script tag in absent list');
         assert.ok(absentHtml.includes('&lt;script&gt;globalThis.__xss=1&lt;/script&gt;'), 'Absent name is escaped');
+
+        sandbox.fetch = async () => ({
+            json: async () => ({
+                total: 10, girls: 5, boys: 5,
+                todayPresent: 0, todayAbsent: 0,
+                absentStudents: []
+            })
+        });
+        await sandbox.globalThis.__testApi.updateStats();
+
+        assert.strictEqual(getEl('present-students').textContent, '--', 'Missing attendance is not misrepresented as zero students present');
+        assert.strictEqual(getEl('total-students').textContent, 10, 'Class capacity stays visible while attendance is pending');
+        assert.strictEqual(getEl('today-attendance').textContent, 'YOKLAMA BEKLENİYOR', 'Pending attendance has an explicit state');
     });
 
     await t.test('Dashboard renders explanatory empty states for unassigned roles', async () => {
@@ -199,6 +216,73 @@ test('Student Name DOM Safety Tests', async (t) => {
         assert.ok(dutyHtml.includes('Bugün için nöbetçi belirlenmedi'));
         assert.ok(!presidentHtml.includes('>---<'));
         assert.ok(!dutyHtml.includes('>---<'));
+    });
+
+    await t.test('Period context renders course names as text-only chips', () => {
+        const scriptSource = fs.readFileSync(path.join(__dirname, '../public/js/script.js'), 'utf8');
+        const { sandbox } = createSandbox();
+        vm.createContext(sandbox);
+        vm.runInContext(`${scriptSource}\n globalThis.__testApi = { renderPeriodContext, updateCountdownProgress };`, sandbox);
+
+        const classNames = new Set();
+        const makeElement = () => ({
+            className: '',
+            textContent: '',
+            children: [],
+            append(...nodes) { this.children.push(...nodes); }
+        });
+        sandbox.document.createElement = () => makeElement();
+
+        const container = {
+            textContent: '',
+            children: [],
+            classList: {
+                add: (name) => classNames.add(name),
+                remove: (name) => classNames.delete(name)
+            },
+            replaceChildren(...nodes) { this.children = nodes; }
+        };
+
+        sandbox.globalThis.__testApi.renderPeriodContext(container, {
+            currentPeriodName: '<img src=x onerror=alert(1)>',
+            nextLessonName: '<script>alert(2)</script>'
+        });
+
+        assert.ok(classNames.has('period-context'));
+        assert.strictEqual(container.children.length, 2);
+        assert.strictEqual(container.children[0].children[1].textContent, '<img src=x onerror=alert(1)>');
+        assert.strictEqual(container.children[1].children[1].textContent, '<script>alert(2)</script>');
+
+        sandbox.globalThis.__testApi.renderPeriodContext(container, {
+            currentPeriodName: '1. Ders',
+            nextLessonName: '2. Ders'
+        }, { showNext: false });
+
+        assert.ok(classNames.has('is-single'));
+        assert.strictEqual(container.children.length, 1);
+        assert.strictEqual(container.children[0].children.length, 1);
+        assert.strictEqual(container.children[0].children[0].textContent, '1. Ders');
+        assert.ok(!container.children[0].children.some(child => child.textContent === '2. Ders'));
+    });
+
+    await t.test('Countdown progress clamps visual and accessibility values', () => {
+        const scriptSource = fs.readFileSync(path.join(__dirname, '../public/js/script.js'), 'utf8');
+        const { sandbox, getEl } = createSandbox();
+        const aria = {};
+        getEl('countdown-bar').parentElement = {
+            setAttribute: (name, value) => { aria[name] = value; }
+        };
+
+        vm.createContext(sandbox);
+        vm.runInContext(`${scriptSource}\n globalThis.__testApi = { updateCountdownProgress };`, sandbox);
+
+        sandbox.globalThis.__testApi.updateCountdownProgress(145.8);
+        assert.strictEqual(getEl('countdown-bar').style.width, '100%');
+        assert.strictEqual(aria['aria-valuenow'], '100');
+
+        sandbox.globalThis.__testApi.updateCountdownProgress(-12);
+        assert.strictEqual(getEl('countdown-bar').style.width, '0%');
+        assert.strictEqual(aria['aria-valuenow'], '0');
     });
 
     await t.test('Admin Panel (admin.js) safely escapes injected names and handles event delegation', async () => {

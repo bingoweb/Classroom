@@ -50,6 +50,9 @@ class NoiseMeter {
             image: document.getElementById('noise-character-img'),
             fill: document.getElementById('noise-meter-fill'),
             status: document.getElementById('noise-status-text'),
+            statusIcon: document.querySelector('#noise-status-text .noise-status-icon'),
+            statusTitle: document.querySelector('#noise-status-text .noise-status-copy strong'),
+            statusSubtitle: document.querySelector('#noise-status-text .noise-status-copy small'),
             startBtn: document.getElementById('mic-start-btn'),
             eqWrapper: document.querySelector('.equalizer-bars'),
             eqContainer: document.getElementById('equalizer-container'),
@@ -67,6 +70,21 @@ class NoiseMeter {
         };
 
         this.init();
+    }
+
+    setStatus(iconPath, title, subtitle, color) {
+        if (!this.elements.status) return;
+
+        if (this.elements.statusIcon) {
+            this.elements.statusIcon.src = iconPath;
+        }
+        if (this.elements.statusTitle) {
+            this.elements.statusTitle.textContent = title;
+        }
+        if (this.elements.statusSubtitle) {
+            this.elements.statusSubtitle.textContent = subtitle;
+        }
+        this.elements.status.style.color = color;
     }
 
     init() {
@@ -153,26 +171,21 @@ class NoiseMeter {
             if (this.elements.startBtn) this.elements.startBtn.style.display = 'none';
             if (this.elements.card) this.elements.card.classList.add('active');
 
-            if (this.elements.status) {
-                this.elements.status.textContent = '🎤 Dinleniyor...';
-                this.elements.status.style.color = '#27ae60';
-            }
+            this.setStatus('assets/ui-icons-3d/microphone.png', 'Dinleniyor', 'Ses düzeyi ölçülüyor', '#27ae60');
 
             this.lastUpdateTime = Date.now();
             this.updateLoop();
 
             setTimeout(() => {
                 if (!this.isCalibrated && this.elements.status) {
-                    this.elements.status.textContent = 'Hazır';
-                    this.elements.status.style.color = '#27ae60';
+                    this.setStatus('assets/ui-icons-3d/microphone.png', 'Hazır', 'Sınıfı dinliyorum', '#27ae60');
                 }
             }, 5000);
 
         } catch (error) {
             console.error('Microphone error:', error);
             if (this.elements.status) {
-                this.elements.status.textContent = 'Mikrofon İzni Gerekli';
-                this.elements.status.style.color = '#ff4757';
+                this.setStatus('assets/ui-icons-3d/microphone.png', 'Mikrofon İzni Gerekli', 'Ölçüm başlatılamadı', '#ff4757');
             }
         }
     }
@@ -325,16 +338,13 @@ class NoiseMeter {
         if (this.elements.status) {
             switch (state) {
                 case 'low':
-                    this.elements.status.innerHTML = '✨ Harika Gidiyoruz! ✨<br><span style="font-size:0.6em; opacity:0.8">Sınıfımız süper</span>';
-                    this.elements.status.style.color = '#2ed573';
+                    this.setStatus('assets/ui-icons-3d/sparkles.png', 'Harika Gidiyoruz!', 'Sınıfımız süper', '#2ed573');
                     break;
                 case 'medium':
-                    this.elements.status.innerHTML = '🤫 Dikkat! Yükseliyor<br><span style="font-size:0.6em; opacity:0.8">Biraz sessiz olalım</span>';
-                    this.elements.status.style.color = '#ffa502';
+                    this.setStatus('assets/ui-icons-3d/quiet.png', 'Dikkat! Yükseliyor', 'Biraz sessiz olalım', '#ffa502');
                     break;
                 case 'high':
-                    this.elements.status.innerHTML = '🔊 Çok Yüksek!<br><span style="font-size:0.6em; opacity:0.8">Hadi düşürelim</span>';
-                    this.elements.status.style.color = '#ff4757';
+                    this.setStatus('assets/ui-icons-3d/loudspeaker.png', 'Çok Yüksek!', 'Hadi düşürelim', '#ff4757');
                     break;
             }
         }
