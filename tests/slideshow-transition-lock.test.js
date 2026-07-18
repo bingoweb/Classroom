@@ -190,6 +190,7 @@ test('Slideshow Transition Lock', async (t) => {
         const { api } = createVmHarness();
 
         assert.strictEqual(api.getSlideMediaLayoutMode(3840, 2160, 2025, 1350), 'cover', '16:9 images fill the frame');
+        assert.strictEqual(api.getSlideMediaLayoutMode(3840, 2160, 2025, 1394), 'contain', '16:9 images keep their full composition in the taller live 4K card');
         assert.strictEqual(api.getSlideMediaLayoutMode(1600, 1200, 2025, 1350), 'cover', '4:3 images fill the frame');
         assert.strictEqual(api.getSlideMediaLayoutMode(1200, 1200, 2025, 1350), 'contain', 'square images keep their full composition');
         assert.strictEqual(api.getSlideMediaLayoutMode(1080, 1920, 2025, 1350), 'contain', 'portrait images keep their full composition');

@@ -130,10 +130,11 @@ async function fetchData() {
                 const defaultAvatar = d.gender === 'F' ? CONFIG.DEFAULT_AVATAR_GIRL : CONFIG.DEFAULT_AVATAR_BOY;
                 const imgId = `duty-img-${d.id}-${index}`;
                 const nameId = `duty-name-${d.id}-${index}`;
+                const longNameClass = Array.from(d.name || '').length > 22 ? ' duty-name-long' : '';
                 return `
                 <div class="duty-item">
                     <img id="${imgId}" src="${avatarPath}" class="duty-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
-                    <div class="duty-name" id="${nameId}"></div>
+                    <div class="duty-name${longNameClass}" id="${nameId}"></div>
                 </div>
             `;
             }).join('');
@@ -176,9 +177,10 @@ async function fetchData() {
                 const avatarPath = Utils.getAvatarPath(s);
                 const defaultAvatar = s.gender === 'F' ? CONFIG.DEFAULT_AVATAR_GIRL : CONFIG.DEFAULT_AVATAR_BOY;
                 const isActive = index === 0 ? 'active' : '';
+                const imgId = `star-img-${s.id}-${index}`;
                 return `
                 <div class="star-slide ${isActive}" data-index="${index}">
-                    <img src="${avatarPath}" class="star-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
+                    <img id="${imgId}" src="${avatarPath}" class="star-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
                     <div class="star-name">${Utils.escapeHtml(s.name || '---')}</div>
                 </div>
             `;
@@ -195,6 +197,15 @@ async function fetchData() {
             }
 
             starsContainer.innerHTML = slidesHtml;
+
+            intervalManager.setTimeout(() => {
+                stars.forEach((star, index) => {
+                    const img = document.getElementById(`star-img-${star.id}-${index}`);
+                    if (img && typeof faceFocusEngine !== 'undefined') {
+                        faceFocusEngine.focusFace(img, Utils.getAvatarPath(star), 'star');
+                    }
+                });
+            }, 100);
 
             // Slideshow'u başlat
             initStarSlideshow(stars.length);
@@ -440,7 +451,9 @@ function getSlideMediaLayoutMode(imageWidth, imageHeight, frameWidth, frameHeigh
     const frameRatio = frameWidth / frameHeight;
     const ratioDifference = Math.max(imageRatio / frameRatio, frameRatio / imageRatio);
 
-    return ratioDifference <= 1.25 ? 'cover' : 'contain';
+    // Small ratio differences can be cropped safely. Larger differences keep
+    // the full composition and use the existing blurred backdrop to fill the card.
+    return ratioDifference <= 1.20 ? 'cover' : 'contain';
 }
 
 function updateSlideImageLayout(slideElement, imageElement) {
@@ -1116,11 +1129,11 @@ function updateCountdown(now) {
             const weekendVisual = document.getElementById('goodbye-visual');
             if (status.iconId) {
                 weekendVisual.innerHTML = `
-                    <svg class="icon-3d-large" style="width: 140px; height: 140px; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.25));">
+                    <svg class="icon-3d-large goodbye-icon">
                         <use href="#${status.iconId}"></use>
                     </svg>`;
             } else if (status.image) {
-                weekendVisual.innerHTML = `<img src="${status.image}" class="icon-3d-large" alt="Weekend" style="width: 140px; height: 140px; object-fit: contain; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));">`;
+                weekendVisual.innerHTML = `<img src="${status.image}" class="icon-3d-large goodbye-icon" alt="Weekend">`;
             } else {
                 weekendVisual.textContent = status.icon;
             }
@@ -1173,11 +1186,11 @@ function updateCountdown(now) {
             const afterSchoolVisual = document.getElementById('goodbye-visual');
             if (status.iconId) {
                 afterSchoolVisual.innerHTML = `
-                    <svg class="icon-3d-large" style="width: 140px; height: 140px; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.25));">
+                    <svg class="icon-3d-large goodbye-icon">
                         <use href="#${status.iconId}"></use>
                     </svg>`;
             } else if (status.image) {
-                afterSchoolVisual.innerHTML = `<img src="${status.image}" class="icon-3d-large" alt="Goodbye" style="width: 140px; height: 140px; object-fit: contain; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));">`;
+                afterSchoolVisual.innerHTML = `<img src="${status.image}" class="icon-3d-large goodbye-icon" alt="Goodbye">`;
             } else {
                 afterSchoolVisual.textContent = status.icon;
             }

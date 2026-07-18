@@ -104,6 +104,9 @@ test('Student Name DOM Safety Tests', async (t) => {
         const utilsSource = fs.readFileSync(path.join(__dirname, '../public/js/utils.js'), 'utf8');
         
         const { sandbox, domElements, getEl } = createSandbox();
+        const focusCalls = [];
+        sandbox.intervalManager.setTimeout = (callback) => callback();
+        sandbox.faceFocusEngine.focusFace = (...args) => focusCalls.push(args);
         vm.createContext(sandbox);
         vm.runInContext(utilsSource, sandbox);
         sandbox.Utils = sandbox.window.Utils;
@@ -119,6 +122,7 @@ test('Student Name DOM Safety Tests', async (t) => {
                     { role_type: 'president', id: 1, name: maliciousNames[0] },
                     { role_type: 'vice_president', id: 2, name: maliciousNames[1] },
                     { role_type: 'duty', id: 3, name: maliciousNames[2] },
+                    { role_type: 'duty', id: 5, name: 'Emir Can Özdemir Yıldırımoğlu' },
                     { role_type: 'star', id: 4, name: maliciousNames[0] }
                 ];
             }
@@ -162,7 +166,10 @@ test('Student Name DOM Safety Tests', async (t) => {
         
         assert.ok(!starsHtml.includes('onerror="globalThis.__xss=1"'), 'No raw injected onerror attribute in star');
         assert.ok(starsHtml.includes('&quot;&gt;&lt;img src=x onerror=&quot;globalThis.__xss=1&quot;&gt;'), 'Star name is escaped');
+        assert.ok(starsHtml.includes('id="star-img-4-0"'), 'Star portrait has a stable focus target');
+        assert.ok(focusCalls.some(([, , size]) => size === 'star'), 'Star portrait enters the face-focus flow');
         assert.ok(!getEl('duty-container').innerHTML.includes('Bugün için nöbetçi belirlenmedi'), 'Assigned duty student does not show empty state');
+        assert.ok(getEl('duty-container').innerHTML.includes('duty-name-long'), 'Long duty names receive the fitted two-line variant');
         
         assert.ok(!absentHtml.includes('<script>globalThis.__xss=1</script>'), 'No raw script tag in absent list');
         assert.ok(absentHtml.includes('&lt;script&gt;globalThis.__xss=1&lt;/script&gt;'), 'Absent name is escaped');
