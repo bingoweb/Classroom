@@ -6,6 +6,7 @@ const vm = require('node:vm');
 
 const scriptPath = path.join(__dirname, '../public/js/script.js');
 const scriptSource = fs.readFileSync(scriptPath, 'utf8');
+const styleSource = fs.readFileSync(path.join(__dirname, '../public/css/style.css'), 'utf8');
 
 function createVmHarness() {
     const logs = [];
@@ -43,10 +44,32 @@ function createVmHarness() {
         };
     }
 
+    function createDomElement() {
+        const attributes = {};
+        const children = [];
+
+        return {
+            className: '',
+            classList: createTrackedClassList(),
+            textContent: '',
+            attributes,
+            children,
+            style: {},
+            appendChild(child) {
+                children.push(child);
+                return child;
+            },
+            setAttribute(name, value) {
+                attributes[name] = value;
+            }
+        };
+    }
+
     let mockElements = {};
 
     const documentMock = {
         addEventListener: (event, cb) => {},
+        createElement: () => createDomElement(),
         querySelector: (selector) => {
             querySelectorCalls.push(selector);
             const match = selector.match(/data-slide-id="([^"]+)"/);
@@ -128,6 +151,7 @@ globalThis.__slideshowTestApi = {
     nextSlide,
     scheduleNextSlide,
     getSlideMediaLayoutMode,
+    createSlideCaptionElement,
 
     setSlidesData(value) {
         slidesData = value;
@@ -184,6 +208,31 @@ test('Slideshow Transition Lock', async (t) => {
         assert.strictEqual(typeof harness.api.nextSlide, 'function', 'nextSlide is explicitly exposed as a function');
         assert.strictEqual(typeof harness.api.scheduleNextSlide, 'function', 'scheduleNextSlide is explicitly exposed as a function');
         assert.strictEqual(typeof harness.api.getSlideMediaLayoutMode, 'function', 'slide media layout helper is explicitly exposed as a function');
+        assert.strictEqual(typeof harness.api.createSlideCaptionElement, 'function', 'slide caption helper is explicitly exposed as a function');
+    });
+
+    await t.test('Optional slide messages render as safe media subtitles', () => {
+        const { api } = createVmHarness();
+
+        assert.strictEqual(api.createSlideCaptionElement('   '), null, 'empty messages do not create an overlay');
+
+        const caption = api.createSlideCaptionElement('“Hayatta en hakiki mürşit ilimdir.”\n— Mustafa Kemal Atatürk');
+        assert.strictEqual(caption.className, 'slide-text-content');
+        assert.strictEqual(caption.attributes.role, 'note');
+        assert.strictEqual(caption.attributes['aria-label'], 'Slayt mesajı');
+        assert.strictEqual(caption.children.length, 1);
+        assert.strictEqual(caption.children[0].className, 'slide-caption-text');
+        assert.strictEqual(caption.children[0].textContent, '“Hayatta en hakiki mürşit ilimdir.”\n— Mustafa Kemal Atatürk');
+
+        const unsafeLooking = api.createSlideCaptionElement('<img src=x onerror=alert(1)>');
+        assert.strictEqual(unsafeLooking.children[0].textContent, '<img src=x onerror=alert(1)>', 'message stays text-only');
+
+        const longCaption = api.createSlideCaptionElement('a'.repeat(221));
+        assert.ok(longCaption.children[0].classList.contains('slide-caption-text--compact'), 'very long captions use the compact TV profile');
+
+        assert.ok(!scriptSource.includes('rainbowColors'), 'caption words no longer use prototype rainbow coloring');
+        assert.match(styleSource, /\.slideshow-card > \.card-titlebar\s*\{[^}]*width:\s*100%/s, 'slideshow title spans the same width as the noise title');
+        assert.match(styleSource, /\.slideshow-container \.slide-text-content\s*\{[^}]*inset:\s*auto 0 0/s, 'caption is anchored over the bottom of the media');
     });
 
     await t.test('Uploaded image layout adapts to the card aspect ratio', () => {

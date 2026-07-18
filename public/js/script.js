@@ -485,6 +485,28 @@ function scheduleSlideImageLayoutRefresh() {
     });
 }
 
+function createSlideCaptionElement(message) {
+    const captionText = String(message || '').trim();
+    if (!captionText) return null;
+
+    const caption = document.createElement('div');
+    caption.className = 'slide-text-content';
+    caption.setAttribute('role', 'note');
+    caption.setAttribute('aria-label', 'Slayt mesajı');
+
+    const captionCopy = document.createElement('span');
+    captionCopy.className = 'slide-caption-text';
+    if (captionText.length > 220) {
+        captionCopy.classList.add('slide-caption-text--compact');
+    } else if (captionText.length > 120) {
+        captionCopy.classList.add('slide-caption-text--long');
+    }
+    captionCopy.textContent = captionText;
+
+    caption.appendChild(captionCopy);
+    return caption;
+}
+
 function createSlideElement(slide, isActive = false) {
     const slideDiv = document.createElement('div');
     slideDiv.className = `slide ${isActive ? 'active' : ''}`;
@@ -596,51 +618,8 @@ function createSlideElement(slide, isActive = false) {
         }
     }
 
-    // Add text content if exists
-    if (slide.text_content) {
-        const textDiv = document.createElement('div');
-        textDiv.className = 'slide-text-content';
-        textDiv.style.position = 'absolute';
-        textDiv.style.bottom = '20px';
-        textDiv.style.left = '50%';
-        textDiv.style.transform = 'translateX(-50%)';
-        textDiv.style.background = 'rgba(0,0,0,0.85)';
-        textDiv.style.padding = '20px 35px';
-        textDiv.style.borderRadius = '15px';
-        textDiv.style.fontSize = '2rem';
-        textDiv.style.textAlign = 'center';
-        textDiv.style.maxWidth = '90%';
-        textDiv.style.fontWeight = '700';
-        textDiv.style.lineHeight = '1.4';
-        textDiv.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5)';
-        textDiv.style.opacity = '0'; // Start hidden, will be animated in
-
-        // Rainbow color palette
-        const rainbowColors = [
-            '#FF6B6B', // Red
-            '#FF8E53', // Orange
-            '#FFD93D', // Yellow
-            '#6BCF7F', // Green
-            '#4D96FF', // Blue
-            '#9B59B6'  // Purple
-        ];
-
-        // Split text into words and create colored spans
-        const words = slide.text_content.trim().split(/\s+/);
-        words.forEach((word, index) => {
-            const wordSpan = document.createElement('span');
-            wordSpan.className = 'word-animated';
-            wordSpan.textContent = word;
-            wordSpan.style.color = rainbowColors[index % rainbowColors.length];
-            wordSpan.style.display = 'inline-block';
-            wordSpan.style.marginRight = '8px';
-            wordSpan.style.opacity = '0'; // Start hidden for typewriter effect
-            wordSpan.style.transition = 'opacity 0.3s ease-in';
-            textDiv.appendChild(wordSpan);
-        });
-
-        slideDiv.appendChild(textDiv);
-    }
+    const caption = createSlideCaptionElement(slide.text_content);
+    if (caption) slideDiv.appendChild(caption);
 
     return slideDiv;
 }
@@ -678,20 +657,13 @@ function startSlideshow() {
             }
         }
 
-        // Animate in first slide's text (if exists) with typewriter effect
+        // Fade the optional subtitle in after the media settles.
         const firstTextDiv = slides[0].querySelector('.slide-text-content');
         if (firstTextDiv) {
-            // Wait a bit for image to appear first
             intervalManager.setTimeout(() => {
-                firstTextDiv.style.opacity = '1'; // Make container visible
-                firstTextDiv.classList.add('fade-in', 'typewriter-active');
-                const firstWords = firstTextDiv.querySelectorAll('.word-animated');
-                firstWords.forEach((word, index) => {
-                    intervalManager.setTimeout(() => {
-                        word.style.opacity = '1';
-                    }, index * 150); // 150ms delay between each word
-                });
-            }, 500); // 500ms delay after image appears
+                firstTextDiv.style.opacity = '1';
+                firstTextDiv.classList.add('fade-in');
+            }, 500);
         }
     } else {
         logger.error(COMPONENTS.SLIDESHOW, 'No slide elements found in DOM', null, {
@@ -823,14 +795,8 @@ function nextSlide() {
     const textFadeOutDuration = 400; // 400ms for text fade out
 
     if (currentTextDiv) {
-        currentTextDiv.classList.remove('fade-in', 'typewriter-active');
+        currentTextDiv.classList.remove('fade-in');
         currentTextDiv.classList.add('fade-out');
-
-        // Hide all words immediately
-        const currentWords = currentTextDiv.querySelectorAll('.word-animated');
-        currentWords.forEach(word => {
-            word.style.opacity = '0';
-        });
     }
 
     // Step 2: After text fades out, do image transition
@@ -902,20 +868,12 @@ function nextSlide() {
                 transitionTime: Math.round(transitionTime)
             });
 
-            // Step 3: After image transition, animate in new slide's text (if exists)
+            // Step 3: Fade the next slide's optional subtitle in.
             const nextTextDiv = nextSlideElement.querySelector('.slide-text-content');
             if (nextTextDiv) {
-                nextTextDiv.style.opacity = '1'; // Make container visible
+                nextTextDiv.style.opacity = '1';
                 nextTextDiv.classList.remove('fade-out');
-                nextTextDiv.classList.add('fade-in', 'typewriter-active');
-
-                // Animate words one by one (typewriter effect)
-                const nextWords = nextSlideElement.querySelectorAll('.word-animated');
-                nextWords.forEach((word, index) => {
-                    intervalManager.setTimeout(() => {
-                        word.style.opacity = '1';
-                    }, index * 150); // 150ms delay between each word
-                });
+                nextTextDiv.classList.add('fade-in');
             }
         }, transitionDuration);
 

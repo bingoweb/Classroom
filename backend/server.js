@@ -1834,11 +1834,21 @@ app.get('/api/slides/active', async (req, res) => {
             return res.json(slidesCache);
         }
 
-        // Fetch all active slides
+        // Prefer admin-created slides. The permanent Atatürk fallback set is
+        // returned only when there is no active, unexpired admin-created slide.
         const sql = `
-            SELECT * FROM slides 
-            WHERE is_active = 1 
+            SELECT * FROM slides
+            WHERE is_active = 1
             AND (expires_at IS NULL OR expires_at > datetime('now'))
+            AND is_fallback = CASE
+                WHEN EXISTS (
+                    SELECT 1 FROM slides
+                    WHERE is_active = 1
+                    AND is_fallback = 0
+                    AND (expires_at IS NULL OR expires_at > datetime('now'))
+                ) THEN 0
+                ELSE 1
+            END
             ORDER BY display_order ASC
         `;
         const params = [];

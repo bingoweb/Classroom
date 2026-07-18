@@ -97,6 +97,8 @@ function initDatabase() {
             expires_at TEXT,
             priority INTEGER DEFAULT 5,
             is_poster BOOLEAN DEFAULT 0,
+            is_fallback BOOLEAN DEFAULT 0,
+            fallback_key TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )`);
 
@@ -158,6 +160,93 @@ function initDatabase() {
                 console.error('Error adding is_poster column:', err.message);
             }
         });
+        db.run(`ALTER TABLE slides ADD COLUMN is_fallback BOOLEAN DEFAULT 0`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+                console.error('Error adding is_fallback column:', err.message);
+            }
+        });
+        db.run(`ALTER TABLE slides ADD COLUMN fallback_key TEXT`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+                console.error('Error adding fallback_key column:', err.message);
+            }
+        });
+        db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_slides_fallback_key ON slides(fallback_key)`);
+
+        // Keep a permanent, editable fallback set in SQLite. These rows are seeded
+        // once, remain hidden while an admin-created slide is active, and return
+        // automatically when the last admin-created slide is removed.
+        const fallbackSeedMarker = 'fallback_ataturk_slides_seeded_v1';
+        const fallbackSlides = [
+            {
+                key: 'ataturk-education',
+                title: 'Başöğretmen Atatürk',
+                mediaPath: '/assets/ataturk-slides/ataturk-1.webp',
+                text: '“Öğretmenler! Yeni nesil sizin eseriniz olacaktır.”\n— Mustafa Kemal Atatürk'
+            },
+            {
+                key: 'ataturk-children',
+                title: 'Atatürk ve Çocuklar',
+                mediaPath: '/assets/ataturk-slides/ataturk-2.webp',
+                text: '“Küçük hanımlar, küçük beyler! Sizler hepiniz geleceğin bir gülü, yıldızı ve ikbal ışığısınız.”\n— Mustafa Kemal Atatürk'
+            },
+            {
+                key: 'ataturk-sovereignty',
+                title: 'Ulusal Egemenlik',
+                mediaPath: '/assets/ataturk-slides/ataturk-3.webp',
+                text: '“Egemenlik kayıtsız şartsız milletindir.”\n— Mustafa Kemal Atatürk'
+            },
+            {
+                key: 'ataturk-youth',
+                title: 'Aydınlık Yarınlar',
+                mediaPath: '/assets/ataturk-slides/ataturk-4.webp',
+                text: '“Bütün ümidim gençliktedir.”\n— Mustafa Kemal Atatürk'
+            },
+            {
+                key: 'ataturk-science',
+                title: 'Bilimin Işığı',
+                mediaPath: '/assets/ataturk-slides/ataturk-5.webp',
+                text: '“Hayatta en hakiki mürşit ilimdir, fendir.”\n— Mustafa Kemal Atatürk'
+            },
+            {
+                key: 'ataturk-love',
+                title: 'Çocuk Sevgisi',
+                mediaPath: '/assets/ataturk-slides/ataturk-6.webp',
+                text: '“Çocuk sevgisi, insan sevgisi için bir ihtiyaçtır.”\n— Mustafa Kemal Atatürk'
+            },
+            {
+                key: 'ataturk-future',
+                title: 'Geleceğimiz Çocuklar',
+                mediaPath: '/assets/ataturk-slides/ataturk-7.webp',
+                text: '“Çocuklar geleceğimizin güvencesi, yaşama sevincimizdir.”\n— Mustafa Kemal Atatürk'
+            }
+        ];
+
+        const fallbackInsertSql = `
+            INSERT OR IGNORE INTO slides (
+                title, content_type, media_type, media_path, text_content,
+                display_duration, video_auto_advance, transition_type,
+                transition_duration, transition_mode, display_order,
+                is_active, priority, is_poster, is_fallback, fallback_key
+            )
+            SELECT ?, 'rule', 'image', ?, ?, 12000, 0, 'fade', 1000,
+                   'auto', ?, 1, 5, 0, 1, ?
+            WHERE NOT EXISTS (SELECT 1 FROM settings WHERE key = ?)
+        `;
+
+        fallbackSlides.forEach((slide, index) => {
+            db.run(fallbackInsertSql, [
+                slide.title,
+                slide.mediaPath,
+                slide.text,
+                index + 1,
+                slide.key,
+                fallbackSeedMarker
+            ]);
+        });
+        db.run(
+            `INSERT OR IGNORE INTO settings (key, value) VALUES (?, '1')`,
+            [fallbackSeedMarker]
+        );
     });
 
     ensureScheduleSchema(db)
