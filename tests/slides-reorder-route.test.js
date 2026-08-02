@@ -69,7 +69,7 @@ test('Slides Reorder Route Tests', async (t) => {
             });
         });
         // Initial login to get cookie
-        const loginData = JSON.stringify({ password: 'test_password' });
+        const loginData = JSON.stringify({ username: 'admin', password: 'test_password' });
         adminCookie = await new Promise((resolve, reject) => {
             const req = http.request(serverUrl + '/api/admin/login', {
                 method: 'POST',

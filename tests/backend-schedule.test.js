@@ -491,7 +491,7 @@ test('Schedule API and Migration Tests', async (t) => {
         async function request(method, reqPath, body = null, customHeaders = {}) {
             const isProtectedWrite = (method === 'POST' || method === 'PUT') && reqPath !== '/api/admin/login';
             if (isProtectedWrite && !adminCookie) {
-                const loginRes = await request('POST', '/api/admin/login', { password: 'test_password' });
+                const loginRes = await request('POST', '/api/admin/login', { username: 'admin', password: 'test_password' });
                 adminCookie = loginRes.cookie;
                 
                 const sessionRes = await request('GET', '/api/admin/session', null, { 'Cookie': adminCookie });
@@ -841,7 +841,7 @@ test('Schedule API and Migration Tests', async (t) => {
             });
 
             // Initial login to get cookie
-            const loginData = JSON.stringify({ password: 'test_password' });
+            const loginData = JSON.stringify({ username: 'admin', password: 'test_password' });
             const adminCookie = await new Promise((resolve, reject) => {
                 const req = http.request(serverUrl + '/api/admin/login', {
                     method: 'POST',

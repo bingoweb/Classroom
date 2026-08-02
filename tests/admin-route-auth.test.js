@@ -92,7 +92,7 @@ test('Admin Route Auth Test', async (t) => {
         };
 
         // Get a valid session
-        const loginRes = await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ password: adminPassword }), { 'Content-Type': 'application/json' });
+        const loginRes = await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ username: 'admin', password: adminPassword }), { 'Content-Type': 'application/json' });
         assert.strictEqual(loginRes.statusCode, 200);
         const setCookie = loginRes.headers['set-cookie'][0];
         const sessionCookie = setCookie.split(';')[0];
@@ -131,14 +131,14 @@ test('Admin Route Auth Test', async (t) => {
         assert.deepStrictEqual(JSON.parse(resUnknownValidFormat.body), { authenticated: false, message: 'Yönetici oturumu gerekli.' });
 
         // 4. Duplicate-cookie test must use two separately logged-in, active session cookies in the same header.
-        const loginResOther = await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ password: adminPassword }), { 'Content-Type': 'application/json' });
+        const loginResOther = await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ username: 'admin', password: adminPassword }), { 'Content-Type': 'application/json' });
         const sessionCookieOther = loginResOther.headers['set-cookie'][0].split(';')[0];
         const duplicateCookie = `${sessionCookie}; ${sessionCookieOther}`;
         const resDuplicate = await fetchPath('GET', '/admin/', duplicateCookie);
         assert.strictEqual(resDuplicate.statusCode, 401, `Expected 401 with duplicate cookie, got ${resDuplicate.statusCode}`);
 
         // 5. Log out a separate valid session and prove its old cookie returns 401.
-        const loginResTemp = await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ password: adminPassword }), { 'Content-Type': 'application/json' });
+        const loginResTemp = await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ username: 'admin', password: adminPassword }), { 'Content-Type': 'application/json' });
         const sessionCookieTemp = loginResTemp.headers['set-cookie'][0].split(';')[0];
         await fetchPath('POST', '/api/admin/logout', sessionCookieTemp);
         const resTempLogOut = await fetchPath('GET', '/admin/', sessionCookieTemp);
@@ -151,7 +151,7 @@ test('Admin Route Auth Test', async (t) => {
 
         // 6. Prove these remain public
         const publicRoutes = [
-            { m: 'POST', p: '/api/admin/login', body: JSON.stringify({ password: 'wrong' }), headers: { 'Content-Type': 'application/json' } },
+            { m: 'POST', p: '/api/admin/login', body: JSON.stringify({ username: 'admin', password: 'wrong' }), headers: { 'Content-Type': 'application/json' } },
             { m: 'POST', p: '/api/admin/logout' },
             { m: 'GET', p: '/api/admin/session' },
             { m: 'GET', p: '/api/students' },
@@ -165,7 +165,7 @@ test('Admin Route Auth Test', async (t) => {
             const resPub = await fetchPath(pr.m, pr.p, null, pr.body, pr.headers);
             if (pr.p === '/api/admin/login') {
                 assert.strictEqual(resPub.statusCode, 401, `Expected 401 Invalid Password for ${pr.m} ${pr.p}`);
-                assert.deepStrictEqual(JSON.parse(resPub.body), { authenticated: false, message: 'Parola hatalı.' });
+                assert.deepStrictEqual(JSON.parse(resPub.body), { authenticated: false, message: 'Kullanıcı adı veya parola hatalı.' });
             } else {
                 assert.notStrictEqual(resPub.statusCode, 401, `Expected public access for ${pr.m} ${pr.p}`);
             }
@@ -179,7 +179,7 @@ test('Admin Route Auth Test', async (t) => {
         mockedTime -= ((8 * 60 * 60 * 1000) + 1); // Revert time so rest of tests work with session
 
         // Re-login because hasSession() deleted the expired session from the store!
-        const loginRes2 = await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ password: adminPassword }), { 'Content-Type': 'application/json' });
+        const loginRes2 = await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ username: 'admin', password: adminPassword }), { 'Content-Type': 'application/json' });
         assert.strictEqual(loginRes2.statusCode, 200);
         const setCookie2 = loginRes2.headers['set-cookie'][0];
         const sessionCookie2 = setCookie2.split(';')[0];
@@ -217,7 +217,7 @@ test('Admin Route Auth Test', async (t) => {
         process.stderr.write = captureLog;
 
         const distinctiveBadPassword = 'DISTINCTIVE_BAD_PASSWORD_999';
-        await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ password: distinctiveBadPassword }), { 'Content-Type': 'application/json' });
+        await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ username: 'admin', password: distinctiveBadPassword }), { 'Content-Type': 'application/json' });
 
         const unknownValidId = 'U'.repeat(43);
         const distinctiveUnknownSession = 'classroom_admin_session=' + unknownValidId;
@@ -347,7 +347,7 @@ test('Admin Route Auth Test', async (t) => {
         }
 
         // 12. A token from one session is rejected for another session
-        const loginRes3 = await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ password: adminPassword }), { 'Content-Type': 'application/json' });
+        const loginRes3 = await fetchPath('POST', '/api/admin/login', null, JSON.stringify({ username: 'admin', password: adminPassword }), { 'Content-Type': 'application/json' });
         const sessionCookie3 = loginRes3.headers['set-cookie'][0].split(';')[0];
         const resCross = await fetchPath('POST', '/api/settings', sessionCookie3, '{}', {
             'Content-Type': 'application/json',

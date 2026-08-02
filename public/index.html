@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2/D Sihirli Pano</title>
     <!-- Fonts removed - using system fonts for offline operation -->
-    <link rel="stylesheet" href="css/style.css?v=7">
+    <link rel="stylesheet" href="css/style.css?v=8">
     <link rel="stylesheet" href="css/kiosk-mode.css?v=1">
     <script src="js/config.js"></script>
     <script src="js/logger.js"></script>
@@ -168,20 +168,35 @@
                             <div class="noise-ripple"></div>
                         </div>
                         <div class="noise-info">
-                            <div class="noise-status" id="noise-status-text">
-                                <img class="noise-status-icon" src="assets/ui-icons-3d/sparkles.png" alt="" aria-hidden="true">
+                            <div class="noise-status" id="noise-status-text" role="status" aria-live="polite">
+                                <img class="noise-status-icon" src="assets/ui-icons-3d/microphone.png" alt="" aria-hidden="true">
                                 <span class="noise-status-copy">
-                                    <strong>Sınıfımız Harika</strong>
-                                    <small>Sessiz Mod</small>
+                                    <strong>Ses Ölçer Hazırlanıyor</strong>
+                                    <small>Mikrofon bağlantısı kontrol ediliyor</small>
                                 </span>
                             </div>
                             <div class="noise-meter-container">
-                                <div class="noise-meter-bar">
-                                    <div class="noise-meter-fill" id="noise-meter-fill"></div>
+                                <div class="noise-progress" id="noise-level-meter" role="meter"
+                                    aria-label="Sınıfın ses düzeyi" aria-valuemin="0" aria-valuemax="100"
+                                    aria-valuenow="0" aria-valuetext="Ses ölçer hazırlanıyor">
+                                    <div class="noise-meter-bar">
+                                        <div class="noise-meter-fill" id="noise-meter-fill"></div>
+                                    </div>
+                                    <div class="noise-scale-labels">
+                                        <span class="noise-scale-label noise-scale-label--quiet" data-level="low">
+                                            <i class="noise-legend-light quiet" aria-hidden="true"></i>Sessiz
+                                        </span>
+                                        <span class="noise-scale-label noise-scale-label--warning" data-level="medium">
+                                            <i class="noise-legend-light warning" aria-hidden="true"></i>Dikkat
+                                        </span>
+                                        <span class="noise-scale-label noise-scale-label--danger" data-level="high">
+                                            <i class="noise-legend-light danger" aria-hidden="true"></i>Gürültü
+                                        </span>
+                                    </div>
                                 </div>
                                 <!-- EKOLAYZER v2.0 - Premium Tasarım -->
-                                <div class="equalizer-container theme-neon" id="equalizer-container">
-                                    <img class="eq-label" src="assets/ui-icons-3d/microphone.png" alt="Mikrofon">
+                                <div class="equalizer-container theme-neon" id="equalizer-container" aria-hidden="true">
+                                    <img class="eq-label" src="assets/ui-icons-3d/microphone.png" alt="">
                                     <div class="equalizer-bars">
                                         <!-- 128 Bar Extreme Res Equalizer -->
                                         <div class="eq-bar" id="eq-bar-1"></div>
@@ -316,13 +331,8 @@
                                     <!-- Tema Seçici -->
                                     <!-- Tema Seçici (Admin panelinden yönetiliyor) -->
                                 </div>
-                                <div class="noise-scale-labels">
-                                    <span><i class="noise-legend-light quiet" aria-hidden="true"></i>Sessiz</span>
-                                    <span><i class="noise-legend-light warning" aria-hidden="true"></i>Dikkat</span>
-                                    <span><i class="noise-legend-light danger" aria-hidden="true"></i>Gürültü</span>
-                                </div>
                             </div>
-                            <button id="mic-start-btn" class="mic-start-btn">Mikrofonu Aç</button>
+                            <button id="mic-start-btn" class="mic-start-btn" type="button" hidden>Tekrar Dene</button>
                         </div>
                     </div>
                 </div>
@@ -383,11 +393,11 @@
     <script src="js/schedule-manager.js"></script>
     <script src="js/dashboard-schedule-loader.js"></script>
     <script src="js/face-focus.js"></script>
-    <script src="js/media-analyzer.js"></script>
-    <script src="js/transitions.js"></script>
+    <script src="js/media-analyzer.js?v=3"></script>
+    <script src="js/transitions.js?v=3"></script>
     <script src="js/interval-manager.js"></script>
-    <script src="js/noise-meter.js"></script>
-    <script src="js/script.js?v=6"></script>
+    <script src="js/noise-meter.js?v=3"></script>
+    <script src="js/script.js?v=8"></script>
     <script src="js/dev-time-simulator.js"></script>
 </body>
 

@@ -106,15 +106,13 @@ test('Admin Rate Limit Tests', async (t) => {
         let validSessionCookie = null;
 
         await t.test('Test A - existing non-counted login failures', async () => {
-            // Missing configuration (503)
-            process.env.CLASSROOM_ADMIN_PASSWORD = '';
+            // Malformed username data (400)
             const res1 = await makeRequest(serverUrl, '/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: 'test_password' })
+                body: JSON.stringify({ username: 123, password: 'test_password' })
             });
-            assert.strictEqual(res1.statusCode, 503);
-            process.env.CLASSROOM_ADMIN_PASSWORD = 'test_password';
+            assert.strictEqual(res1.statusCode, 400);
 
             // Malformed password data (400)
             const res2 = await makeRequest(serverUrl, '/api/admin/login', {
@@ -131,11 +129,11 @@ test('Admin Rate Limit Tests', async (t) => {
                 const res = await makeRequest(serverUrl, '/api/admin/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': `10.0.0.${i}` },
-                    body: JSON.stringify({ password: 'wrong' })
+                    body: JSON.stringify({ username: 'admin', password: 'wrong' })
                 });
                 assert.strictEqual(res.statusCode, 401);
                 const data = JSON.parse(res.data);
-                assert.deepEqual(data, { authenticated: false, message: 'Parola hatalı.' });
+                assert.deepEqual(data, { authenticated: false, message: 'Kullanıcı adı veya parola hatalı.' });
                 assert.ok(!res.headers['set-cookie']);
             }
 
@@ -143,7 +141,7 @@ test('Admin Rate Limit Tests', async (t) => {
             const res6 = await makeRequest(serverUrl, '/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '10.0.0.6' },
-                body: JSON.stringify({ password: 'test_password' })
+                body: JSON.stringify({ username: 'admin', password: 'test_password' })
             });
             assert.strictEqual(res6.statusCode, 429);
             const data6 = JSON.parse(res6.data);
@@ -160,7 +158,7 @@ test('Admin Rate Limit Tests', async (t) => {
             const res1 = await makeRequest(serverUrl, '/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: 'wrong' })
+                body: JSON.stringify({ username: 'admin', password: 'wrong' })
             });
             assert.strictEqual(res1.statusCode, 401);
 
@@ -168,7 +166,7 @@ test('Admin Rate Limit Tests', async (t) => {
             const res2 = await makeRequest(serverUrl, '/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: 'test_password' })
+                body: JSON.stringify({ username: 'admin', password: 'test_password' })
             });
             assert.strictEqual(res2.statusCode, 200);
             validSessionCookie = res2.headers['set-cookie'][0].split(';')[0];
@@ -178,7 +176,7 @@ test('Admin Rate Limit Tests', async (t) => {
                 const res = await makeRequest(serverUrl, '/api/admin/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: 'wrong' })
+                    body: JSON.stringify({ username: 'admin', password: 'wrong' })
                 });
                 assert.strictEqual(res.statusCode, 401);
             }
@@ -187,7 +185,7 @@ test('Admin Rate Limit Tests', async (t) => {
             const res6 = await makeRequest(serverUrl, '/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: 'wrong' })
+                body: JSON.stringify({ username: 'admin', password: 'wrong' })
             });
             assert.strictEqual(res6.statusCode, 429);
         });
@@ -201,7 +199,7 @@ test('Admin Rate Limit Tests', async (t) => {
             const res = await makeRequest(serverUrl, '/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: 'test_password' })
+                body: JSON.stringify({ username: 'admin', password: 'test_password' })
             });
             assert.strictEqual(res.statusCode, 200);
             session2Cookie = res.headers['set-cookie'][0].split(';')[0];

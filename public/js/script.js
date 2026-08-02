@@ -239,6 +239,7 @@ let activeTimeouts = new Set(); // Track all active timeouts for cleanup
 let clockInterval = null; // Track clock update interval
 let dataRefreshInterval = null; // Track data refresh interval
 let isTransitioning = false; // Mutex flag to prevent race conditions
+let slideshowGeneration = 0; // Invalidates callbacks from a replaced slide set
 
 // STAR SLIDESHOW SİSTEMİ
 let starSlideInterval = null;
@@ -328,7 +329,7 @@ function nextStarSlide(totalSlides) {
     }
 }
 
-async function initSlideshow() {
+async function initSlideshow(preloadedSlides = null) {
     const container = document.getElementById('slideshow-container');
 
     if (!container) {
@@ -340,6 +341,8 @@ async function initSlideshow() {
         return;
     }
 
+    slideshowGeneration += 1;
+
     try {
         if (typeof logger !== 'undefined') {
             logger.debug(COMPONENTS.SLIDESHOW, 'Initializing slideshow', null, {
@@ -347,28 +350,31 @@ async function initSlideshow() {
             });
         }
 
-        // Fetch slides from API (AI optimized)
-        const response = await fetch(`${CONFIG.API_URL}/slides/active`);
+        let data = preloadedSlides;
+        if (!Array.isArray(data)) {
+            // Fetch slides from API (AI optimized)
+            const response = await fetch(`${CONFIG.API_URL}/slides/active`);
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `HTTP error! status: ${response.status}`;
-            try {
-                const errorJson = JSON.parse(errorText);
-                errorMessage = errorJson.error || errorMessage;
-            } catch (e) {
-                errorMessage = errorText || errorMessage;
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMessage = `HTTP error! status: ${response.status}`;
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMessage = errorJson.error || errorMessage;
+                } catch (e) {
+                    errorMessage = errorText || errorMessage;
+                }
+                const error = new Error(errorMessage);
+                if (typeof logger !== 'undefined') {
+                    logger.error(COMPONENTS.SLIDESHOW, 'Failed to fetch slides from API', error, {
+                        status: response.status,
+                        statusText: response.statusText
+                    });
+                }
+                throw error;
             }
-            const error = new Error(errorMessage);
-            if (typeof logger !== 'undefined') {
-                logger.error(COMPONENTS.SLIDESHOW, 'Failed to fetch slides from API', error, {
-                    status: response.status,
-                    statusText: response.statusText
-                });
-            }
-            throw error;
+            data = await response.json();
         }
-        const data = await response.json();
         slidesData = data;
 
         if (typeof logger !== 'undefined') {
@@ -631,6 +637,10 @@ function startSlideshow() {
     }
 
     currentSlideIndex = 0;
+    const startGeneration = slideshowGeneration;
+    if (typeof resetTransitionHistory === 'function') {
+        resetTransitionHistory();
+    }
 
     logger.debug(COMPONENTS.SLIDESHOW, 'Starting slideshow', null, {
         totalSlides: slidesData.length,
@@ -661,6 +671,7 @@ function startSlideshow() {
         const firstTextDiv = slides[0].querySelector('.slide-text-content');
         if (firstTextDiv) {
             intervalManager.setTimeout(() => {
+                if (startGeneration !== slideshowGeneration) return;
                 firstTextDiv.style.opacity = '1';
                 firstTextDiv.classList.add('fade-in');
             }, 500);
@@ -706,13 +717,15 @@ function scheduleNextSlide() {
 
     // Clear existing interval
     if (slideshowInterval) {
-        clearTimeout(slideshowInterval);
+        intervalManager.clearTimeout(slideshowInterval);
         slideshowInterval = null;
     }
 
     // Schedule next slide
+    const scheduledGeneration = slideshowGeneration;
     slideshowInterval = intervalManager.setTimeout(() => {
         slideshowInterval = null;
+        if (scheduledGeneration !== slideshowGeneration) return;
         nextSlide();
     }, duration);
 }
@@ -735,6 +748,7 @@ function nextSlide() {
 
     // Set transition flag
     isTransitioning = true;
+    const transitionGeneration = slideshowGeneration;
 
     const currentSlide = slidesData[currentSlideIndex];
     if (!currentSlide || !currentSlide.id) {
@@ -801,6 +815,8 @@ function nextSlide() {
 
     // Step 2: After text fades out, do image transition
     intervalManager.setTimeout(() => {
+        if (transitionGeneration !== slideshowGeneration) return;
+
         // Get transition type
         let transitionType = 'fade';
         let transitionDuration = 1000;
@@ -817,7 +833,15 @@ function nextSlide() {
         } else {
             logger.debug(COMPONENTS.TRANSITIONS, 'getSmartTransition not available, using fallback', null);
         }
-        transitionDuration = slidesData[currentSlideIndex].transition_duration || 1000;
+        transitionDuration = Number(slidesData[currentSlideIndex].transition_duration) || 1000;
+        transitionDuration = Math.min(1800, Math.max(350, transitionDuration));
+
+        const prefersReducedMotion = typeof window.matchMedia === 'function'
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReducedMotion) {
+            transitionType = 'fade';
+            transitionDuration = Math.min(500, transitionDuration);
+        }
 
         logger.debug(COMPONENTS.SLIDESHOW, 'Transitioning to next slide', null, {
             fromSlideId: currentSlideId,
@@ -826,10 +850,26 @@ function nextSlide() {
             transitionDuration
         });
 
+        // Both slides must be composited while the effect is running. Keeping
+        // the incoming slide at display:none makes even a correct effect look
+        // like an abrupt cut when it is revealed at the end.
+        currentSlideElement.style.display = 'block';
+        nextSlideElement.style.display = 'block';
+        currentSlideElement.classList.add('is-transitioning', 'is-transitioning-out');
+        nextSlideElement.classList.add('is-transitioning', 'is-transitioning-in');
+        nextSlideElement.classList.add('active');
+        currentSlideElement.dataset.transitionType = transitionType;
+        nextSlideElement.dataset.transitionType = transitionType;
+
         // Apply transition
         if (typeof applyTransition === 'function') {
             try {
-                applyTransition(currentSlideElement, nextSlideElement, transitionType, transitionDuration);
+                transitionDuration = applyTransition(
+                    currentSlideElement,
+                    nextSlideElement,
+                    transitionType,
+                    transitionDuration
+                ) || transitionDuration;
             } catch (err) {
                 logger.error(COMPONENTS.TRANSITIONS, 'Error applying transition', err, {
                     transitionType,
@@ -852,14 +892,17 @@ function nextSlide() {
             nextSlideElement.style.opacity = '1';
         }
 
-        // Update active state
-        currentSlideElement.classList.remove('active');
-        nextSlideElement.classList.add('active');
-
         // Show/hide slides
         intervalManager.setTimeout(() => {
+            if (transitionGeneration !== slideshowGeneration) return;
+
             currentSlideElement.style.display = 'none';
             nextSlideElement.style.display = 'block';
+            currentSlideElement.classList.remove('active');
+            currentSlideElement.classList.remove('is-transitioning', 'is-transitioning-out');
+            nextSlideElement.classList.remove('is-transitioning', 'is-transitioning-in');
+            delete currentSlideElement.dataset.transitionType;
+            delete nextSlideElement.dataset.transitionType;
 
             const transitionTime = performance.now() - startTime;
             logger.debug(COMPONENTS.SLIDESHOW, 'Slide transition completed', null, {
@@ -875,6 +918,10 @@ function nextSlide() {
                 nextTextDiv.classList.remove('fade-out');
                 nextTextDiv.classList.add('fade-in');
             }
+
+            currentSlideIndex = nextIndex;
+            isTransitioning = false;
+            scheduleNextSlide();
         }, transitionDuration);
 
         // Play video if next slide is video
@@ -891,13 +938,6 @@ function nextSlide() {
             }
         }
 
-        currentSlideIndex = nextIndex;
-
-        // Clear transition flag after transition completes
-        isTransitioning = false;
-
-        // Schedule next slide
-        scheduleNextSlide();
     }, textFadeOutDuration);
 }
 
@@ -907,15 +947,58 @@ function rotateSlide() {
 }
 
 // Refresh slideshow when slides are updated
+function getSlidesSnapshot(slides) {
+    if (!Array.isArray(slides)) return '[]';
+
+    return JSON.stringify(slides.map(slide => ({
+        id: slide.id,
+        title: slide.title,
+        content_type: slide.content_type,
+        media_type: slide.media_type,
+        media_path: slide.media_path,
+        text_content: slide.text_content,
+        display_duration: slide.display_duration,
+        video_auto_advance: slide.video_auto_advance,
+        transition_type: slide.transition_type,
+        transition_duration: slide.transition_duration,
+        transition_mode: slide.transition_mode,
+        display_order: slide.display_order,
+        expires_at: slide.expires_at
+    })));
+}
+
 async function refreshSlideshow() {
     logger.debug(COMPONENTS.SLIDESHOW, 'Refreshing slideshow', null);
+
+    let refreshedSlides;
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/slides/active`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        refreshedSlides = await response.json();
+    } catch (err) {
+        logger.error(COMPONENTS.SLIDESHOW, 'Slide refresh check failed; keeping current rotation', err);
+        return;
+    }
+
+    if (getSlidesSnapshot(refreshedSlides) === getSlidesSnapshot(slidesData)) {
+        logger.debug(COMPONENTS.SLIDESHOW, 'Slide data unchanged; keeping current rotation', null, {
+            slideCount: slidesData.length,
+            currentSlideIndex
+        });
+        return;
+    }
+
+    // Invalidate all callbacks that still belong to the previous slide set.
+    slideshowGeneration += 1;
 
     // Reset transition flag
     isTransitioning = false;
 
     // Cleanup all intervals and timeouts
     if (slideshowInterval) {
-        clearTimeout(slideshowInterval);
+        intervalManager.clearTimeout(slideshowInterval);
         slideshowInterval = null;
     }
 
@@ -950,7 +1033,7 @@ async function refreshSlideshow() {
     }
 
     try {
-        await initSlideshow();
+        await initSlideshow(refreshedSlides);
         logger.debug(COMPONENTS.SLIDESHOW, 'Slideshow refreshed successfully', null);
     } catch (err) {
         logger.error(COMPONENTS.SLIDESHOW, 'Error refreshing slideshow', err);

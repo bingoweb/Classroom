@@ -71,7 +71,7 @@ test('JSON middleware is registered exactly once and handles requests', async ()
         await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
         const port = server.address().port;
 
-        const loginData = JSON.stringify({ password: 'test_password' });
+        const loginData = JSON.stringify({ username: 'admin', password: 'test_password' });
         const loginOptions = {
             hostname: '127.0.0.1',
             port: port,

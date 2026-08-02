@@ -19,7 +19,29 @@ const TRANSITION_CATEGORIES = {
     ARTISTIC: ['particle', 'glitch', 'morph', 'cube', 'cover', 'uncover'],
 
     // Safe defaults (always work well)
-    SAFE: ['fade', 'slide-left', 'slide-right', 'zoom-in', 'dissolve']
+    SAFE: ['fade', 'slide-left', 'slide-right', 'zoom-in', 'dissolve'],
+
+    // Curated for automatic/random playback on large classroom displays.
+    // Manual mode keeps the complete transition library available.
+    PROFESSIONAL: [
+        'fade', 'dissolve',
+        'slide-left', 'slide-right', 'slide-up', 'slide-down',
+        'zoom-in', 'zoom-out',
+        'push', 'cover'
+    ]
+};
+
+const TRANSITION_FAMILIES = {
+    fade: 'soft',
+    dissolve: 'soft',
+    'slide-left': 'directional',
+    'slide-right': 'directional',
+    'slide-up': 'directional',
+    'slide-down': 'directional',
+    push: 'directional',
+    cover: 'directional',
+    'zoom-in': 'depth',
+    'zoom-out': 'depth'
 };
 
 /**
@@ -134,12 +156,7 @@ function getSmartTransition(slide, allSlides, currentIndex) {
  * Avoids repetition and poor combinations
  */
 function getIntelligentRandom(slide, allSlides, currentIndex) {
-    const allTransitions = [
-        ...TRANSITION_CATEGORIES.SMOOTH,
-        ...TRANSITION_CATEGORIES.DYNAMIC,
-        ...TRANSITION_CATEGORIES.DIRECTIONAL,
-        ...TRANSITION_CATEGORIES.ARTISTIC
-    ];
+    const allTransitions = [...TRANSITION_CATEGORIES.PROFESSIONAL];
 
     // Remove recently used
     const available = allTransitions.filter(t => !previousTransitions.includes(t));
@@ -149,7 +166,7 @@ function getIntelligentRandom(slide, allSlides, currentIndex) {
     const rules = TRANSITION_RULES.contentType[slide.content_type] || {};
     const suitable = pool.filter(t => !rules.avoid || !rules.avoid.includes(t));
 
-    const finalPool = suitable.length > 0 ? suitable : pool;
+    const finalPool = avoidConsecutiveTransitionFamily(suitable.length > 0 ? suitable : pool);
     const selected = finalPool[Math.floor(Math.random() * finalPool.length)];
 
     updateHistory(selected);
@@ -240,11 +257,55 @@ function getAutoTransition(slide, allSlides, currentIndex) {
         candidates.forEach(t => weights[t] = 10);
     }
 
+    candidates = candidates.filter(t => TRANSITION_CATEGORIES.PROFESSIONAL.includes(t));
+    candidates = avoidConsecutiveTransitionFamily(candidates);
+
+    if (candidates.length === 0) {
+        candidates = avoidConsecutiveTransitionFamily(TRANSITION_CATEGORIES.SAFE);
+        candidates.forEach(t => weights[t] = weights[t] || 10);
+    }
+
     // Weighted random selection
     const selected = weightedRandomChoice(candidates, weights);
     updateHistory(selected);
 
     return selected;
+}
+
+function getTransitionFamily(transition) {
+    return TRANSITION_FAMILIES[transition] || 'special';
+}
+
+function avoidConsecutiveTransitionFamily(candidates) {
+    const uniqueCandidates = [...new Set(candidates)]
+        .filter(transition => TRANSITION_CATEGORIES.PROFESSIONAL.includes(transition));
+    const previous = previousTransitions[previousTransitions.length - 1];
+
+    if (!previous) return uniqueCandidates;
+
+    const previousFamily = getTransitionFamily(previous);
+    const preferred = uniqueCandidates.filter(transition => (
+        transition !== previous && getTransitionFamily(transition) !== previousFamily
+    ));
+
+    if (preferred.length > 0) {
+        const recentFamilyCounts = previousTransitions.reduce((counts, transition) => {
+            const family = getTransitionFamily(transition);
+            counts[family] = (counts[family] || 0) + 1;
+            return counts;
+        }, {});
+        const minimumUsage = Math.min(
+            ...preferred.map(transition => recentFamilyCounts[getTransitionFamily(transition)] || 0)
+        );
+        const balanced = preferred.filter(transition => (
+            (recentFamilyCounts[getTransitionFamily(transition)] || 0) === minimumUsage
+        ));
+
+        return balanced.length > 0 ? balanced : preferred;
+    }
+
+    const noExactRepeat = uniqueCandidates.filter(transition => transition !== previous);
+    return noExactRepeat.length > 0 ? noExactRepeat : uniqueCandidates;
 }
 
 /**
@@ -352,6 +413,7 @@ if (typeof window !== 'undefined') {
     window.analyzeImageCharacteristics = analyzeImageCharacteristics;
     window.getTransitionStats = getTransitionStats;
     window.resetTransitionHistory = resetTransitionHistory;
+    window.getTransitionFamily = getTransitionFamily;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -359,6 +421,8 @@ if (typeof module !== 'undefined' && module.exports) {
         getSmartTransition,
         analyzeImageCharacteristics,
         getTransitionStats,
-        resetTransitionHistory
+        resetTransitionHistory,
+        getTransitionFamily,
+        PROFESSIONAL_TRANSITIONS: [...TRANSITION_CATEGORIES.PROFESSIONAL]
     };
 }

@@ -2003,7 +2003,19 @@ a {
     align-items: center;
     justify-content: center;
     padding: 2rem;
+    backface-visibility: hidden;
+}
+
+.slide.is-transitioning {
     will-change: opacity, transform;
+}
+
+.slide.is-transitioning-in {
+    z-index: 2;
+}
+
+.slide.is-transitioning-out {
+    z-index: 1;
 }
 
 .slide.active {
@@ -2037,6 +2049,13 @@ a {
     100% {
         transform: scale(1);
         opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .slide,
+    .slide img {
+        animation: none !important;
     }
 }
 
@@ -3933,6 +3952,8 @@ a {
 .noise-content {
     flex: 1 1 auto;
     min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 35%) minmax(0, 65%);
     border-radius: clamp(16px, 0.9vw, 28px);
     overflow: hidden;
     background: rgba(255, 255, 255, 0.56);
@@ -3940,23 +3961,135 @@ a {
 }
 
 .noise-character-wrapper {
+    width: 100%;
+    min-width: 0;
     background: linear-gradient(180deg, rgba(232, 250, 255, 0.76), rgba(248, 236, 255, 0.72));
     border-right-color: rgba(128, 170, 190, 0.14);
 }
 
 .noise-info {
+    min-width: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-content: stretch;
+    justify-content: stretch;
     padding: clamp(0.55rem, 0.8vw, 1.25rem);
     gap: clamp(0.35rem, 0.55vw, 0.85rem);
 }
 
 .noise-status {
+    justify-content: flex-start;
+    width: 100%;
+    min-width: 0;
+    padding: clamp(0.45rem, 0.55vw, 0.85rem) clamp(0.65rem, 0.8vw, 1.2rem);
     color: #33465d;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(225, 249, 250, 0.9));
+    border: 2px solid rgba(255, 255, 255, 0.98);
+    border-radius: clamp(14px, 0.8vw, 22px);
+    box-shadow: 0 6px 15px rgba(59, 109, 133, 0.1), inset 0 1px 0 white;
     text-shadow: none;
 }
 
+.noise-status-copy strong,
+.noise-status-copy small {
+    overflow-wrap: anywhere;
+}
+
+.noise-status-copy small {
+    color: #587087;
+    opacity: 1;
+}
+
+.noise-status-icon {
+    width: clamp(2rem, 2vw, 3.5rem);
+    height: clamp(2rem, 2vw, 3.5rem);
+}
+
+.noise-meter-container {
+    min-height: 0;
+    justify-content: center;
+}
+
+.noise-progress {
+    display: grid;
+    gap: clamp(0.25rem, 0.3vw, 0.5rem);
+    width: 100%;
+}
+
 .noise-meter-bar {
+    --warning-threshold: 70%;
+    --danger-threshold: 85%;
     border-color: rgba(255, 255, 255, 0.98);
     box-shadow: inset 0 2px 5px rgba(58, 77, 98, 0.1), 0 4px 10px rgba(77, 109, 130, 0.08);
+}
+
+.noise-meter-bar::before {
+    left: var(--warning-threshold);
+}
+
+.noise-meter-bar::after {
+    left: var(--danger-threshold);
+}
+
+.noise-scale-labels {
+    display: grid;
+    grid-template-columns: 70fr 15fr 15fr;
+    gap: clamp(0.2rem, 0.3vw, 0.45rem);
+    margin-top: 0;
+    padding: 0;
+}
+
+.noise-scale-labels .noise-scale-label {
+    justify-content: center;
+    min-width: 0;
+    padding: clamp(0.28rem, 0.3vw, 0.45rem) clamp(0.2rem, 0.35vw, 0.55rem);
+    font-family: var(--font-display);
+    font-size: clamp(0.88rem, 0.75vw, 1.35rem);
+    line-height: 1;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    border-radius: clamp(10px, 0.55vw, 16px);
+    color: #52657a;
+    background: rgba(255, 255, 255, 0.68);
+    box-shadow: 0 3px 8px rgba(57, 83, 107, 0.08);
+    opacity: 0.58;
+    transform: scale(0.97);
+    transition: opacity 180ms ease, transform 180ms ease, color 180ms ease, box-shadow 180ms ease;
+}
+
+.noise-scale-label.is-active {
+    opacity: 1;
+    transform: scale(1);
+    animation: noiseLevelBeacon 1.05s ease-in-out infinite;
+}
+
+.noise-scale-label--quiet.is-active {
+    color: #087c43;
+    background: linear-gradient(135deg, #f5fff9, #cffff0);
+    box-shadow: 0 0 0 3px rgba(46, 213, 115, 0.16), 0 6px 14px rgba(29, 160, 89, 0.18);
+}
+
+.noise-scale-label--warning.is-active {
+    color: #936000;
+    background: linear-gradient(135deg, #fffdf3, #ffedb8);
+    box-shadow: 0 0 0 3px rgba(255, 165, 2, 0.17), 0 6px 14px rgba(204, 126, 0, 0.18);
+}
+
+.noise-scale-label--danger.is-active {
+    color: #ad2435;
+    background: linear-gradient(135deg, #fff7f8, #ffd1d8);
+    box-shadow: 0 0 0 3px rgba(255, 71, 87, 0.17), 0 6px 14px rgba(201, 46, 64, 0.2);
+}
+
+@keyframes noiseLevelBeacon {
+    0%,
+    100% {
+        filter: brightness(1);
+    }
+
+    50% {
+        filter: brightness(1.12);
+        box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.72), 0 7px 16px rgba(52, 84, 112, 0.2);
+    }
 }
 
 .equalizer-container {
@@ -3986,10 +4119,60 @@ a {
 }
 
 .mic-start-btn {
+    width: fit-content;
+    min-width: clamp(9rem, 8vw, 13rem);
+    min-height: clamp(2.4rem, 3vh, 3.5rem);
+    padding: clamp(0.45rem, 0.55vh, 0.8rem) clamp(1rem, 1.1vw, 1.8rem);
+    justify-self: center;
+    align-self: center;
+    box-sizing: border-box;
+    font-family: var(--font-display);
+    font-size: clamp(0.95rem, 1vw, 1.35rem);
+    line-height: 1;
     color: #425169;
     background: linear-gradient(135deg, #ffffff, #e8ddff);
     border: 2px solid rgba(255, 255, 255, 0.98);
     box-shadow: 0 7px 16px rgba(102, 88, 158, 0.15), inset 0 1px 0 white;
+}
+
+.mic-start-btn:disabled {
+    cursor: wait;
+    opacity: 0.72;
+    transform: none;
+}
+
+.noise-meter-card.mic-state-idle .noise-status,
+.noise-meter-card.mic-state-requesting .noise-status {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(220, 247, 250, 0.92));
+}
+
+.noise-meter-card.mic-state-unavailable .noise-status {
+    color: #49637a !important;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(235, 228, 255, 0.92));
+    border-color: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 7px 18px rgba(105, 91, 164, 0.12), inset 0 1px 0 white;
+}
+
+.noise-meter-card.mic-state-unavailable .noise-meter-fill {
+    width: 0;
+}
+
+.noise-meter-card.mic-state-idle .eq-bar,
+.noise-meter-card.mic-state-requesting .eq-bar,
+.noise-meter-card.mic-state-unavailable .eq-bar {
+    height: 7%;
+    opacity: 0.3;
+    animation: none;
+}
+
+.noise-meter-card.mic-state-idle .eq-peak,
+.noise-meter-card.mic-state-requesting .eq-peak,
+.noise-meter-card.mic-state-unavailable .eq-peak {
+    opacity: 0;
+}
+
+.noise-meter-card.mic-state-unavailable .equalizer-container {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(237, 242, 255, 0.92));
 }
 
 /* Slideshow: retain the animated celebration border inside the shared system. */

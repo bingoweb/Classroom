@@ -4,7 +4,9 @@ class NoiseMeter {
         this.audioContext = null;
         this.analyser = null;
         this.microphone = null;
+        this.stream = null;
         this.dataArray = null;
+        this.isStarting = false;
 
         this.noiseScore = 0;
         this.maxScore = 100;
@@ -24,7 +26,7 @@ class NoiseMeter {
         this.isCalibrated = true;
         this.baselineNoise = 0.05;
 
-        this.currentLevel = 'low';
+        this.currentLevel = null;
 
         // Settings from Admin
         this.settingsWarning = 70;
@@ -48,6 +50,8 @@ class NoiseMeter {
         this.elements = {
             card: document.getElementById('noise-meter-card'),
             image: document.getElementById('noise-character-img'),
+            levelMeter: document.getElementById('noise-level-meter'),
+            meterBar: document.querySelector('.noise-meter-bar'),
             fill: document.getElementById('noise-meter-fill'),
             status: document.getElementById('noise-status-text'),
             statusIcon: document.querySelector('#noise-status-text .noise-status-icon'),
@@ -56,6 +60,7 @@ class NoiseMeter {
             startBtn: document.getElementById('mic-start-btn'),
             eqWrapper: document.querySelector('.equalizer-bars'),
             eqContainer: document.getElementById('equalizer-container'),
+            scaleLabels: Array.from(document.querySelectorAll('.noise-scale-label')),
             eqBars: [],
             eqPeaks: []
         };
@@ -85,6 +90,79 @@ class NoiseMeter {
             this.elements.statusSubtitle.textContent = subtitle;
         }
         this.elements.status.style.color = color;
+    }
+
+    setMicrophoneState(state, {
+        icon = 'assets/ui-icons-3d/microphone.png',
+        title,
+        subtitle,
+        color = '#49637a',
+        buttonText = 'Tekrar Dene',
+        showButton = false
+    }) {
+        if (this.elements.card) {
+            this.elements.card.classList.remove(
+                'mic-state-idle',
+                'mic-state-requesting',
+                'mic-state-listening',
+                'mic-state-unavailable'
+            );
+            this.elements.card.classList.add(`mic-state-${state}`);
+            this.elements.card.dataset.micState = state;
+        }
+
+        if (state !== 'listening') {
+            this.currentLevel = null;
+            if (this.elements.card) {
+                this.elements.card.classList.remove('state-low', 'state-medium', 'state-high');
+            }
+            this.elements.scaleLabels.forEach(label => {
+                label.classList.remove('is-active');
+                label.setAttribute('aria-current', 'false');
+            });
+            if (this.elements.levelMeter) {
+                this.elements.levelMeter.setAttribute('aria-valuenow', '0');
+                this.elements.levelMeter.setAttribute('aria-valuetext', title);
+            }
+        }
+
+        this.setStatus(icon, title, subtitle, color);
+
+        if (this.elements.startBtn) {
+            this.elements.startBtn.hidden = !showButton;
+            this.elements.startBtn.disabled = state === 'requesting';
+            this.elements.startBtn.textContent = buttonText;
+        }
+    }
+
+    getMicrophoneErrorState(error) {
+        const errorName = error?.name || 'UnknownError';
+
+        if (['NotFoundError', 'DevicesNotFoundError'].includes(errorName)) {
+            return {
+                title: 'Ses Ölçer Dinlenmede',
+                subtitle: 'Mikrofon bağlanınca yeniden deneyin'
+            };
+        }
+
+        if (['NotAllowedError', 'SecurityError'].includes(errorName)) {
+            return {
+                title: 'Ses Ölçer Hazır Değil',
+                subtitle: 'Öğretmen mikrofon iznini açabilir'
+            };
+        }
+
+        if (['NotReadableError', 'TrackStartError', 'AbortError'].includes(errorName)) {
+            return {
+                title: 'Ses Ölçer Kısa Bir Molada',
+                subtitle: 'Mikrofon başka bir uygulamada olabilir'
+            };
+        }
+
+        return {
+            title: 'Ses Ölçer Hazır Değil',
+            subtitle: 'Biraz sonra yeniden deneyin'
+        };
     }
 
     init() {
@@ -118,6 +196,11 @@ class NoiseMeter {
             this.applySettings(window.PANEL_SETTINGS);
         }
 
+        this.setMicrophoneState('idle', {
+            title: 'Ses Ölçer Hazırlanıyor',
+            subtitle: 'Mikrofon bağlantısı kontrol ediliyor'
+        });
+
         setTimeout(() => this.startListening(), 1000);
     }
 
@@ -137,8 +220,30 @@ class NoiseMeter {
         }
 
         // 3. Thresholds
-        this.settingsWarning = parseInt(settings.warning_threshold) || 70;
-        this.settingsDanger = parseInt(settings.danger_threshold) || 85;
+        const warning = parseInt(settings.warning_threshold);
+        const danger = parseInt(settings.danger_threshold);
+        this.settingsWarning = Math.max(1, Math.min(98, Number.isFinite(warning) ? warning : 70));
+        this.settingsDanger = Math.max(
+            this.settingsWarning + 1,
+            Math.min(99, Number.isFinite(danger) ? danger : 85)
+        );
+        this.updateScaleLayout();
+    }
+
+    updateScaleLayout() {
+        if (this.elements.meterBar) {
+            this.elements.meterBar.style.setProperty('--warning-threshold', `${this.settingsWarning}%`);
+            this.elements.meterBar.style.setProperty('--danger-threshold', `${this.settingsDanger}%`);
+        }
+
+        const labelsContainer = this.elements.scaleLabels[0]?.parentElement;
+        if (labelsContainer) {
+            labelsContainer.style.gridTemplateColumns = [
+                `${this.settingsWarning}fr`,
+                `${this.settingsDanger - this.settingsWarning}fr`,
+                `${100 - this.settingsDanger}fr`
+            ].join(' ');
+        }
     }
 
     setTheme(themeName) {
@@ -152,13 +257,28 @@ class NoiseMeter {
     }
 
     async startListening() {
-        if (this.isListening) return;
+        if (this.isListening || this.isStarting) return;
+
+        this.isStarting = true;
+        this.setMicrophoneState('requesting', {
+            title: 'Mikrofon Bağlanıyor',
+            subtitle: 'Ses dengesi hazırlanıyor',
+            buttonText: 'Bağlanıyor…'
+        });
+
+        let pendingStream = null;
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            if (!navigator.mediaDevices?.getUserMedia) {
+                const unsupportedError = new Error('Microphone API is unavailable');
+                unsupportedError.name = 'NotSupportedError';
+                throw unsupportedError;
+            }
+
+            pendingStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.analyser = this.audioContext.createAnalyser();
-            this.microphone = this.audioContext.createMediaStreamSource(stream);
+            this.microphone = this.audioContext.createMediaStreamSource(pendingStream);
 
             this.analyser.fftSize = 1024;
             this.analyser.smoothingTimeConstant = 0.7;
@@ -167,11 +287,17 @@ class NoiseMeter {
             const bufferLength = this.analyser.frequencyBinCount;
             this.dataArray = new Uint8Array(bufferLength);
 
+            this.stream = pendingStream;
+            pendingStream = null;
             this.isListening = true;
-            if (this.elements.startBtn) this.elements.startBtn.style.display = 'none';
+            this.isStarting = false;
             if (this.elements.card) this.elements.card.classList.add('active');
 
-            this.setStatus('assets/ui-icons-3d/microphone.png', 'Dinleniyor', 'Ses düzeyi ölçülüyor', '#27ae60');
+            this.setMicrophoneState('listening', {
+                title: 'Dinleniyor',
+                subtitle: 'Ses düzeyi ölçülüyor',
+                color: '#178958'
+            });
 
             this.lastUpdateTime = Date.now();
             this.updateLoop();
@@ -183,10 +309,45 @@ class NoiseMeter {
             }, 5000);
 
         } catch (error) {
-            console.error('Microphone error:', error);
-            if (this.elements.status) {
-                this.setStatus('assets/ui-icons-3d/microphone.png', 'Mikrofon İzni Gerekli', 'Ölçüm başlatılamadı', '#ff4757');
+            this.isStarting = false;
+
+            if (pendingStream) {
+                pendingStream.getTracks().forEach(track => track.stop());
             }
+            if (this.audioContext && typeof this.audioContext.close === 'function') {
+                const closePromise = this.audioContext.close();
+                if (closePromise && typeof closePromise.catch === 'function') {
+                    closePromise.catch(() => {});
+                }
+            }
+            this.audioContext = null;
+            this.analyser = null;
+            this.microphone = null;
+            this.dataArray = null;
+
+            const expectedErrors = new Set([
+                'NotAllowedError',
+                'SecurityError',
+                'NotFoundError',
+                'DevicesNotFoundError',
+                'NotReadableError',
+                'TrackStartError',
+                'AbortError',
+                'NotSupportedError'
+            ]);
+            if (expectedErrors.has(error?.name)) {
+                console.info('Noise meter unavailable:', error.name);
+            } else {
+                console.error('Unexpected microphone error:', error);
+            }
+
+            const errorState = this.getMicrophoneErrorState(error);
+            this.setMicrophoneState('unavailable', {
+                icon: 'assets/ui-icons-3d/quiet.png',
+                title: errorState.title,
+                subtitle: errorState.subtitle,
+                showButton: true
+            });
         }
     }
 
@@ -303,9 +464,9 @@ class NoiseMeter {
 
         if (this.elements.fill) {
             this.elements.fill.style.width = `${percentage}%`;
-            if (percentage > dangerVal) {
+            if (percentage >= dangerVal) {
                 this.elements.fill.style.background = 'linear-gradient(90deg, #ff4757, #ff6b81)';
-            } else if (percentage > warningVal) {
+            } else if (percentage >= warningVal) {
                 this.elements.fill.style.background = 'linear-gradient(90deg, #ffa502, #ff7f50)';
             } else {
                 this.elements.fill.style.background = 'linear-gradient(90deg, #2ed573, #7bed9f)';
@@ -313,8 +474,17 @@ class NoiseMeter {
         }
 
         let newLevel = 'low';
-        if (percentage > dangerVal) newLevel = 'high';
-        else if (percentage > warningVal) newLevel = 'medium';
+        if (percentage >= dangerVal) newLevel = 'high';
+        else if (percentage >= warningVal) newLevel = 'medium';
+
+        if (this.elements.levelMeter) {
+            const levelNames = { low: 'Sessiz', medium: 'Dikkat', high: 'Gürültü' };
+            this.elements.levelMeter.setAttribute('aria-valuenow', `${Math.round(percentage)}`);
+            this.elements.levelMeter.setAttribute(
+                'aria-valuetext',
+                `${levelNames[newLevel]}: yüzde ${Math.round(percentage)}`
+            );
+        }
 
         if (newLevel !== this.currentLevel) this.changeState(newLevel);
     }
@@ -334,6 +504,12 @@ class NoiseMeter {
             this.elements.card.classList.remove('state-low', 'state-medium', 'state-high');
             this.elements.card.classList.add(`state-${state}`);
         }
+
+        this.elements.scaleLabels.forEach(label => {
+            const isActive = label.dataset.level === state;
+            label.classList.toggle('is-active', isActive);
+            label.setAttribute('aria-current', isActive ? 'true' : 'false');
+        });
 
         if (this.elements.status) {
             switch (state) {

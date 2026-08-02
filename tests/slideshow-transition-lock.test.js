@@ -7,6 +7,8 @@ const vm = require('node:vm');
 const scriptPath = path.join(__dirname, '../public/js/script.js');
 const scriptSource = fs.readFileSync(scriptPath, 'utf8');
 const styleSource = fs.readFileSync(path.join(__dirname, '../public/css/style.css'), 'utf8');
+const mediaAnalyzer = require('../public/js/media-analyzer.js');
+const transitionEngine = require('../public/js/transitions.js');
 
 function createVmHarness() {
     const logs = [];
@@ -14,6 +16,7 @@ function createVmHarness() {
     let nextTimeoutId = 1;
     const appliedTransitions = [];
     const querySelectorCalls = [];
+    let reducedMotion = false;
 
     function createTrackedClassList(initialClasses = []) {
         const classes = new Set(initialClasses);
@@ -37,6 +40,7 @@ function createVmHarness() {
     function createMockElement(id, initialClasses = []) {
         return {
             id,
+            dataset: {},
             classList: createTrackedClassList(initialClasses),
             querySelector: () => null,
             querySelectorAll: () => [],
@@ -54,8 +58,13 @@ function createVmHarness() {
             textContent: '',
             attributes,
             children,
+            dataset: {},
             style: {},
+            querySelector: () => null,
+            querySelectorAll: () => [],
+            addEventListener: () => {},
             appendChild(child) {
+                child.parentElement = this;
                 children.push(child);
                 return child;
             },
@@ -66,10 +75,23 @@ function createVmHarness() {
     }
 
     let mockElements = {};
+    let fetchedSlides = [];
+    const slideshowContainer = createDomElement();
+    let containerHtml = '';
+    Object.defineProperty(slideshowContainer, 'innerHTML', {
+        get() {
+            return containerHtml;
+        },
+        set(value) {
+            containerHtml = value;
+            slideshowContainer.children.length = 0;
+        }
+    });
 
     const documentMock = {
         addEventListener: (event, cb) => {},
         createElement: () => createDomElement(),
+        getElementById: (id) => id === 'slideshow-container' ? slideshowContainer : null,
         querySelector: (selector) => {
             querySelectorCalls.push(selector);
             const match = selector.match(/data-slide-id="([^"]+)"/);
@@ -77,11 +99,13 @@ function createVmHarness() {
                 return mockElements[match[1]];
             }
             return null;
-        }
+        },
+        querySelectorAll: (selector) => selector === '.slide' ? slideshowContainer.children : []
     };
 
     const windowMock = {
-        addEventListener: () => {}
+        addEventListener: () => {},
+        matchMedia: () => ({ matches: reducedMotion })
     };
 
     const intervalManagerMock = {
@@ -132,7 +156,7 @@ function createVmHarness() {
         console: { log: () => {}, error: () => {} },
         performance: { now: () => Date.now() },
         requestAnimationFrame: (cb) => { cb(); },
-        fetch: () => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }),
+        fetch: () => Promise.resolve({ ok: true, json: () => Promise.resolve(fetchedSlides) }),
         CONFIG: CONFIG_MOCK,
         logger: loggerMock,
         COMPONENTS: COMPONENTS_MOCK,
@@ -152,6 +176,8 @@ globalThis.__slideshowTestApi = {
     scheduleNextSlide,
     getSlideMediaLayoutMode,
     createSlideCaptionElement,
+    getSlidesSnapshot,
+    refreshSlideshow,
 
     setSlidesData(value) {
         slidesData = value;
@@ -165,12 +191,17 @@ globalThis.__slideshowTestApi = {
         isTransitioning = value;
     },
 
+    setSlideshowGeneration(value) {
+        slideshowGeneration = value;
+    },
+
     getState() {
         return {
             slidesData,
             currentSlideIndex,
             isTransitioning,
-            slideshowInterval
+            slideshowInterval,
+            slideshowGeneration
         };
     }
 };
@@ -184,7 +215,10 @@ globalThis.__slideshowTestApi = {
         scheduledTimeouts,
         appliedTransitions,
         setMockElements: (elements) => { mockElements = elements; },
+        setFetchedSlides: (slides) => { fetchedSlides = slides; },
+        setReducedMotion: (value) => { reducedMotion = value; },
         createMockElement,
+        slideshowContainer,
         getQuerySelectorCalls: () => querySelectorCalls,
         clearQuerySelectorCalls: () => { querySelectorCalls.length = 0; }
     };
@@ -196,8 +230,8 @@ test('Slideshow Transition Lock', async (t) => {
         assert.ok(scriptSource.includes('function scheduleNextSlide()'), 'function scheduleNextSlide() still exists');
         assert.ok(scriptSource.includes('Skipping nextSlide: transition already in progress'), 'concurrent guard message still exists');
 
-        const regex = /\/\/\s*Clear transition flag after transition completes\s*isTransitioning\s*=\s*false;\s*\/\/\s*Schedule next slide\s*scheduleNextSlide\(\);/m;
-        assert.match(scriptSource, regex, 'normal success sequence remains');
+        const regex = /currentSlideIndex\s*=\s*nextIndex;\s*isTransitioning\s*=\s*false;\s*scheduleNextSlide\(\);/m;
+        assert.match(scriptSource, regex, 'index, lock and timer are finalized together after the effect');
 
         assert.ok(!scriptSource.includes('module.exports'), 'no module.exports was added');
         assert.ok(!scriptSource.includes('__slideshowTestApi'), 'no production __slideshowTestApi symbol was added');
@@ -209,6 +243,124 @@ test('Slideshow Transition Lock', async (t) => {
         assert.strictEqual(typeof harness.api.scheduleNextSlide, 'function', 'scheduleNextSlide is explicitly exposed as a function');
         assert.strictEqual(typeof harness.api.getSlideMediaLayoutMode, 'function', 'slide media layout helper is explicitly exposed as a function');
         assert.strictEqual(typeof harness.api.createSlideCaptionElement, 'function', 'slide caption helper is explicitly exposed as a function');
+        assert.strictEqual(typeof harness.api.getSlidesSnapshot, 'function', 'slide refresh snapshot helper is explicitly exposed as a function');
+        assert.strictEqual(typeof harness.api.refreshSlideshow, 'function', 'slide refresh function is explicitly exposed as a function');
+    });
+
+    await t.test('Periodic refresh does not restart an unchanged seven-slide rotation', async () => {
+        const harness = createVmHarness();
+        const slides = Array.from({ length: 7 }, (_, index) => ({
+            id: index + 1,
+            title: `Slide ${index + 1}`,
+            media_type: 'image',
+            media_path: `/slide-${index + 1}.webp`,
+            text_content: `Message ${index + 1}`,
+            display_duration: 12000,
+            display_order: index + 1
+        }));
+
+        harness.api.setSlidesData(slides);
+        harness.setFetchedSlides(slides);
+        harness.api.setCurrentSlideIndex(3);
+        await harness.api.refreshSlideshow();
+
+        const state = harness.api.getState();
+        assert.strictEqual(state.slidesData.length, 7);
+        assert.strictEqual(state.currentSlideIndex, 3, 'unchanged refresh preserves the current slide');
+        assert.ok(
+            harness.logs.some(log => log.msg === 'Slide data unchanged; keeping current rotation'),
+            'refresh reports that the existing rotation was preserved'
+        );
+    });
+
+    await t.test('Automatic and random selection stay professional without adjacent family repetition', () => {
+        const slides = Array.from({ length: 7 }, (_, index) => ({
+            id: index + 1,
+            content_type: 'rule',
+            media_type: 'image',
+            transition_mode: index % 2 === 0 ? 'random' : 'auto'
+        }));
+        const approved = new Set(mediaAnalyzer.PROFESSIONAL_TRANSITIONS);
+
+        mediaAnalyzer.resetTransitionHistory();
+        const selected = slides.map((slide, index) => (
+            mediaAnalyzer.getSmartTransition(slide, slides, index)
+        ));
+
+        selected.forEach(transition => {
+            assert.ok(approved.has(transition), `${transition} belongs to the curated professional pool`);
+        });
+        for (let index = 1; index < selected.length; index += 1) {
+            assert.notStrictEqual(selected[index], selected[index - 1], 'the exact effect does not repeat');
+            assert.notStrictEqual(
+                mediaAnalyzer.getTransitionFamily(selected[index]),
+                mediaAnalyzer.getTransitionFamily(selected[index - 1]),
+                'the same motion family does not repeat'
+            );
+        }
+        assert.strictEqual(
+            new Set(selected.map(mediaAnalyzer.getTransitionFamily)).size,
+            3,
+            'a seven-slide cycle uses all three professional motion families'
+        );
+    });
+
+    await t.test('Changed slide data rebuilds the rotation and invalidates old callbacks', async () => {
+        const harness = createVmHarness();
+        const initialSlides = Array.from({ length: 7 }, (_, index) => ({
+            id: index + 1,
+            title: `Initial ${index + 1}`,
+            content_type: 'photo',
+            media_type: 'image',
+            media_path: `/initial-${index + 1}.webp`,
+            text_content: `Initial message ${index + 1}`,
+            display_duration: 12000,
+            transition_duration: 1000,
+            display_order: index + 1
+        }));
+        const replacementSlides = initialSlides.map((slide, index) => ({
+            ...slide,
+            title: `Replacement ${index + 1}`,
+            text_content: `Replacement message ${index + 1}`
+        }));
+
+        harness.api.setSlidesData(initialSlides);
+        harness.api.setCurrentSlideIndex(3);
+        const oldGeneration = harness.api.getState().slideshowGeneration;
+        harness.setFetchedSlides(replacementSlides);
+
+        await harness.api.refreshSlideshow();
+
+        const state = harness.api.getState();
+        assert.strictEqual(state.slidesData[0].title, 'Replacement 1');
+        assert.strictEqual(state.currentSlideIndex, 0, 'replacement rotation starts from its first slide');
+        assert.ok(state.slideshowGeneration > oldGeneration, 'generation advances to invalidate stale callbacks');
+        assert.strictEqual(harness.slideshowContainer.children.length, 7, 'all replacement slides are rebuilt');
+        assert.ok(
+            harness.logs.some(log => log.msg === 'Slideshow refreshed successfully'),
+            'successful replacement is observable in logs'
+        );
+    });
+
+    await t.test('Transition engine composites both slides and releases temporary GPU hints', async () => {
+        const container = { style: {} };
+        const currentSlide = { style: {}, parentElement: container };
+        const nextSlide = { style: {}, parentElement: container };
+
+        const duration = transitionEngine.applyTransition(currentSlide, nextSlide, 'fade', 100);
+
+        assert.strictEqual(duration, 350, 'too-short effects are clamped to a readable duration');
+        assert.strictEqual(currentSlide.style.display, 'block');
+        assert.strictEqual(nextSlide.style.display, 'block', 'incoming slide is composited before animation starts');
+        assert.strictEqual(currentSlide.style.willChange, 'transform, opacity');
+        assert.strictEqual(nextSlide.style.willChange, 'transform, opacity');
+        assert.strictEqual(currentSlide.style.zIndex, '1');
+        assert.strictEqual(nextSlide.style.zIndex, '2', 'incoming composition stays above the outgoing slide');
+
+        await new Promise(resolve => setTimeout(resolve, 470));
+        assert.strictEqual(currentSlide.style.willChange, '', 'temporary GPU hint is removed after cleanup');
+        assert.strictEqual(nextSlide.style.willChange, '', 'incoming slide GPU hint is removed after cleanup');
+        assert.strictEqual(nextSlide.style.zIndex, '', 'temporary stacking order is removed after cleanup');
     });
 
     await t.test('Optional slide messages render as safe media subtitles', () => {
@@ -416,7 +568,7 @@ test('Slideshow Transition Lock', async (t) => {
         assert.strictEqual(appliedTransitions.length, 0);
     });
 
-    await t.test('G. Healthy transition lifecycle remains unchanged', () => {
+    await t.test('G. Healthy transition remains locked until the visual effect completes', () => {
         const harness = createVmHarness();
         const { api, scheduledTimeouts, appliedTransitions } = harness;
 
@@ -456,14 +608,85 @@ test('Slideshow Transition Lock', async (t) => {
         assert.strictEqual(appliedTransitions[0].type, 'fade', 'transition type is exactly the controlled expected type');
         assert.strictEqual(appliedTransitions[0].duration, 800, 'transition duration is exactly the configured slide transition duration');
         
-        assert.strictEqual(currentElement.classList.contains('active'), false, 'currentElement loses active');
+        assert.strictEqual(currentElement.classList.contains('active'), true, 'currentElement stays active while fading out');
         assert.strictEqual(nextElement.classList.contains('active'), true, 'nextElement gains active');
+        assert.strictEqual(nextElement.style.display, 'block', 'incoming slide is visible while the effect runs');
+        assert.strictEqual(nextElement.dataset.transitionType, 'fade', 'the chosen effect is observable during QA');
 
         state = api.getState();
-        assert.strictEqual(state.currentSlideIndex, 1, 'currentSlideIndex becomes 1');
-        assert.strictEqual(state.isTransitioning, false, 'isTransitioning becomes false');
-        
+        assert.strictEqual(state.currentSlideIndex, 0, 'index is not committed before the effect completes');
+        assert.strictEqual(state.isTransitioning, true, 'transition lock stays active for the full effect');
+
+        const completionTimeout = scheduledTimeouts.find(t => t.delay === 800);
+        assert.ok(completionTimeout, 'completion is scheduled for the normalized effect duration');
+        scheduledTimeouts.length = 0;
+        completionTimeout.cb();
+
+        state = api.getState();
+        assert.strictEqual(currentElement.classList.contains('active'), false, 'currentElement loses active after completion');
+        assert.strictEqual(nextElement.dataset.transitionType, undefined, 'temporary transition metadata is cleaned up');
+        assert.strictEqual(state.currentSlideIndex, 1, 'currentSlideIndex commits after completion');
+        assert.strictEqual(state.isTransitioning, false, 'isTransitioning releases after completion');
+
         const nextSlideTimeout = scheduledTimeouts.find(t => t.delay === 2200);
         assert.ok(nextSlideTimeout, 'a future slideshow timeout is captured using the second slide’s display_duration');
+    });
+
+    await t.test('H. Replaced slide data cannot be overwritten by a stale completion callback', () => {
+        const harness = createVmHarness();
+        const { api, scheduledTimeouts } = harness;
+        const currentElement = harness.createMockElement(1, ['slide', 'active']);
+        const nextElement = harness.createMockElement(2, ['slide']);
+
+        api.setSlidesData([
+            { id: 1, display_duration: 1200, transition_duration: 800 },
+            { id: 2, display_duration: 2200, transition_duration: 900 }
+        ]);
+        harness.setMockElements({ 1: currentElement, 2: nextElement });
+
+        api.nextSlide();
+        const transitionTimeout = scheduledTimeouts.find(timeout => timeout.delay === 400);
+        scheduledTimeouts.length = 0;
+        transitionTimeout.cb();
+
+        const staleCompletion = scheduledTimeouts.find(timeout => timeout.delay === 800);
+        assert.ok(staleCompletion, 'old rotation has a pending completion callback');
+
+        api.setSlidesData([{ id: 101, display_duration: 5000 }]);
+        api.setCurrentSlideIndex(0);
+        api.setIsTransitioning(false);
+        api.setSlideshowGeneration(api.getState().slideshowGeneration + 1);
+        scheduledTimeouts.length = 0;
+        staleCompletion.cb();
+
+        const state = api.getState();
+        assert.strictEqual(state.slidesData[0].id, 101);
+        assert.strictEqual(state.currentSlideIndex, 0, 'stale callback cannot commit its old next index');
+        assert.strictEqual(state.isTransitioning, false);
+        assert.strictEqual(scheduledTimeouts.length, 0, 'stale callback cannot schedule another old-rotation timer');
+    });
+
+    await t.test('I. Reduced-motion viewers receive a short fade', () => {
+        const harness = createVmHarness();
+        const { api, scheduledTimeouts, appliedTransitions } = harness;
+
+        api.setSlidesData([
+            { id: 1, display_duration: 1200, transition_duration: 1400 },
+            { id: 2, display_duration: 2200, transition_duration: 1400 }
+        ]);
+        harness.setMockElements({
+            1: harness.createMockElement(1, ['slide', 'active']),
+            2: harness.createMockElement(2, ['slide'])
+        });
+        harness.setReducedMotion(true);
+
+        api.nextSlide();
+        const transitionTimeout = scheduledTimeouts.find(timeout => timeout.delay === 400);
+        scheduledTimeouts.length = 0;
+        transitionTimeout.cb();
+
+        assert.strictEqual(appliedTransitions.length, 1);
+        assert.strictEqual(appliedTransitions[0].type, 'fade');
+        assert.strictEqual(appliedTransitions[0].duration, 500, 'long effects are capped at 500ms');
     });
 });

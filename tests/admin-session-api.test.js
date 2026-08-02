@@ -131,36 +131,36 @@ test('Admin Session API Tests', async (t) => {
         }
     });
 
-    await t.test('1. Login fails safely with HTTP 503 when CLASSROOM_ADMIN_PASSWORD is missing', async () => {
+    await t.test('1. Missing password override falls back to the default credential safely', async () => {
         delete process.env.CLASSROOM_ADMIN_PASSWORD;
-        const res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { password: 'test-password' });
-        assert.strictEqual(res.statusCode, 503);
-        assert.deepStrictEqual(res.body, { authenticated: false, message: 'Yönetici parolası yapılandırılmamış.' });
+        const res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { username: 'admin', password: 'wrong-password' });
+        assert.strictEqual(res.statusCode, 401);
+        assert.deepStrictEqual(res.body, { authenticated: false, message: 'Kullanıcı adı veya parola hatalı.' });
         assert.strictEqual(res.headers['set-cookie'], undefined);
     });
 
-    await t.test('2. Login fails with HTTP 400 when password is missing or not a string', async () => {
+    await t.test('2. Login fails with HTTP 400 when username or password has an invalid format', async () => {
         let res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, {});
         assert.strictEqual(res.statusCode, 400);
-        assert.deepStrictEqual(res.body, { authenticated: false, message: 'Geçersiz parola formatı.' });
+        assert.deepStrictEqual(res.body, { authenticated: false, message: 'Geçersiz giriş bilgisi formatı.' });
 
-        res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { password: 123 });
+        res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { username: 'admin', password: 123 });
         assert.strictEqual(res.statusCode, 400);
-        assert.deepStrictEqual(res.body, { authenticated: false, message: 'Geçersiz parola formatı.' });
+        assert.deepStrictEqual(res.body, { authenticated: false, message: 'Geçersiz giriş bilgisi formatı.' });
         assert.strictEqual(res.headers['set-cookie'], undefined);
     });
 
-    await t.test('3. Login fails with HTTP 401 when password is wrong', async () => {
-        const res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { password: 'wrong-password' });
+    await t.test('3. Login fails with HTTP 401 when username or password is wrong', async () => {
+        const res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { username: 'admin', password: 'wrong-password' });
         assert.strictEqual(res.statusCode, 401);
-        assert.deepStrictEqual(res.body, { authenticated: false, message: 'Parola hatalı.' });
+        assert.deepStrictEqual(res.body, { authenticated: false, message: 'Kullanıcı adı veya parola hatalı.' });
         assert.strictEqual(res.headers['set-cookie'], undefined);
     });
 
     let validCookieHeader = null;
 
     await t.test('4. Correct password creates a session and sets a classroom_admin_session cookie', async () => {
-        const res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { password: 'test-password' });
+        const res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { username: 'admin', password: 'test-password' });
         assert.strictEqual(res.statusCode, 200);
         assert.deepStrictEqual(res.body, { authenticated: true, message: 'Yönetici oturumu açıldı.' });
         assert.ok(res.headers['set-cookie']);
@@ -169,7 +169,7 @@ test('Admin Session API Tests', async (t) => {
     });
 
     await t.test('5. Login response never includes the configured password', async () => {
-        const res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { password: 'test-password' });
+        const res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { username: 'admin', password: 'test-password' });
         assert.strictEqual(JSON.stringify(res.body).includes('test-password'), false);
     });
 
@@ -219,7 +219,7 @@ test('Admin Session API Tests', async (t) => {
     });
 
     await t.test('11. Local HTTP cookie contains HttpOnly, SameSite=Strict, Path=/, and Max-Age=28800, but not Secure', async () => {
-        const res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { password: 'test-password' });
+        const res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { username: 'admin', password: 'test-password' });
         const cookie = res.headers['set-cookie'][0];
         assert.ok(cookie.includes('HttpOnly'));
         assert.ok(cookie.includes('SameSite=Strict'));
@@ -230,7 +230,7 @@ test('Admin Session API Tests', async (t) => {
 
     await t.test('12. With CLASSROOM_ADMIN_COOKIE_SECURE=true, login cookie includes Secure', async () => {
         process.env.CLASSROOM_ADMIN_COOKIE_SECURE = 'true';
-        const res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { password: 'test-password' });
+        const res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { username: 'admin', password: 'test-password' });
         const cookie = res.headers['set-cookie'][0];
         assert.ok(cookie.includes('Secure'));
     });

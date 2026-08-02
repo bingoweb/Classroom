@@ -86,7 +86,7 @@ test('Admin Session Error Redaction Test', async (t) => {
                 });
             });
             req.on('error', reject);
-            req.write(JSON.stringify({ password: distinctivePassword }));
+            req.write(JSON.stringify({ username: 'admin', password: distinctivePassword }));
             req.end();
         });
 

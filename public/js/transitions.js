@@ -7,8 +7,12 @@ const TRANSITIONS = {
         apply: (currentSlide, nextSlide, duration = 1000) => {
             currentSlide.style.transition = `opacity ${duration}ms ease-in-out`;
             nextSlide.style.transition = `opacity ${duration}ms ease-in-out`;
-            currentSlide.style.opacity = '0';
-            nextSlide.style.opacity = '1';
+            currentSlide.style.opacity = '1';
+            nextSlide.style.opacity = '0';
+            setTimeout(() => {
+                currentSlide.style.opacity = '0';
+                nextSlide.style.opacity = '1';
+            }, 10);
         },
         cleanup: (slide) => {
             slide.style.transition = '';
@@ -438,6 +442,7 @@ function applyTransition(currentSlide, nextSlide, transitionType, duration = 100
     }
 
     const transition = TRANSITIONS[transitionType];
+    const normalizedDuration = Math.min(1800, Math.max(350, Number(duration) || 1000));
     
     // Ensure slides are positioned correctly
     currentSlide.style.position = 'absolute';
@@ -450,15 +455,35 @@ function applyTransition(currentSlide, nextSlide, transitionType, duration = 100
     currentSlide.style.height = '100%';
     nextSlide.style.width = '100%';
     nextSlide.style.height = '100%';
+    currentSlide.style.display = 'block';
+    nextSlide.style.display = 'block';
+    currentSlide.style.visibility = 'visible';
+    nextSlide.style.visibility = 'visible';
+    currentSlide.style.zIndex = '1';
+    nextSlide.style.zIndex = '2';
+    currentSlide.style.willChange = transitionType === 'blur'
+        ? 'filter, opacity'
+        : transitionType === 'wipe'
+            ? 'clip-path, opacity'
+            : 'transform, opacity';
+    nextSlide.style.willChange = currentSlide.style.willChange;
 
     // Apply transition
-    transition.apply(currentSlide, nextSlide, duration);
+    transition.apply(currentSlide, nextSlide, normalizedDuration);
 
     // Cleanup after transition
     setTimeout(() => {
         transition.cleanup(currentSlide);
         transition.cleanup(nextSlide);
-    }, duration + 100);
+        currentSlide.style.willChange = '';
+        nextSlide.style.willChange = '';
+        currentSlide.style.visibility = '';
+        nextSlide.style.visibility = '';
+        currentSlide.style.zIndex = '';
+        nextSlide.style.zIndex = '';
+    }, normalizedDuration + 100);
+
+    return normalizedDuration;
 }
 
 // Export for use in other files
@@ -470,4 +495,3 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { TRANSITIONS, applyTransition };
 }
-

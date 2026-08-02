@@ -10,7 +10,7 @@ const { normalizePath } = require('./utils');
 const { getIstanbulDateKey } = require('./date-utils');
 const { validateNormalizedSchedule, resolveScheduleDayKey, isValidDayKey } = require('./schedule-service');
 const { getNormalizedScheduleRows, replaceNormalizedSchedule } = require('./schedule-repository');
-const { readAdminPassword, matchesAdminPassword } = require('./admin-auth-config.js');
+const { matchesAdminCredentials } = require('./admin-auth-config.js');
 const { createAdminSessionStore } = require('./admin-session-store.js');
 const {
     serializeAdminSessionCookie,
@@ -219,27 +219,22 @@ const loginFailureLimiter = createFailureRateLimiter({
 });
 
 app.post('/api/admin/login', loginFailureLimiter.guard, (req, res) => {
-    const configuredPassword = readAdminPassword();
-
-    if (configuredPassword === null) {
-        return res.status(503).json({
-            authenticated: false,
-            message: 'Yönetici parolası yapılandırılmamış.'
-        });
-    }
-
-    if (!req.body || typeof req.body.password !== 'string') {
+    if (
+        !req.body ||
+        typeof req.body.username !== 'string' ||
+        typeof req.body.password !== 'string'
+    ) {
         return res.status(400).json({
             authenticated: false,
-            message: 'Geçersiz parola formatı.'
+            message: 'Geçersiz giriş bilgisi formatı.'
         });
     }
 
-    if (!matchesAdminPassword(req.body.password)) {
+    if (!matchesAdminCredentials(req.body.username, req.body.password)) {
         loginFailureLimiter.recordFailure(req);
         return res.status(401).json({
             authenticated: false,
-            message: 'Parola hatalı.'
+            message: 'Kullanıcı adı veya parola hatalı.'
         });
     }
 

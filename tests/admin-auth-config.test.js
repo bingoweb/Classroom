@@ -2,36 +2,51 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+    ADMIN_USERNAME_ENV,
     ADMIN_PASSWORD_ENV,
+    DEFAULT_ADMIN_USERNAME,
+    DEFAULT_ADMIN_PASSWORD_DIGEST_HEX,
+    readAdminUsername,
     readAdminPassword,
-    matchesAdminPassword
+    matchesAdminUsername,
+    matchesAdminPassword,
+    matchesAdminCredentials
 } = require('../backend/admin-auth-config.js');
 
-test('1. ADMIN_PASSWORD_ENV uses the required environment-variable name', () => {
+test('1. Admin credential environment variables use the required names', () => {
+    assert.strictEqual(ADMIN_USERNAME_ENV, 'CLASSROOM_ADMIN_USERNAME');
     assert.strictEqual(ADMIN_PASSWORD_ENV, 'CLASSROOM_ADMIN_PASSWORD');
 });
 
-test('2. Missing or invalid environment objects are treated as unconfigured', () => {
+test('2. The default username is admin and can be overridden exactly', () => {
+    assert.strictEqual(DEFAULT_ADMIN_USERNAME, 'admin');
+    assert.strictEqual(readAdminUsername({}), 'admin');
+    assert.strictEqual(readAdminUsername({ CLASSROOM_ADMIN_USERNAME: 'yonetici' }), 'yonetici');
+    assert.strictEqual(matchesAdminUsername('admin', {}), true);
+    assert.strictEqual(matchesAdminUsername('Admin', {}), false);
+});
+
+test('3. Missing or invalid password environment objects are treated as unconfigured', () => {
     assert.strictEqual(readAdminPassword(null), null);
     assert.strictEqual(readAdminPassword(false), null);
     assert.strictEqual(readAdminPassword('invalid'), null);
     assert.strictEqual(readAdminPassword({}), null);
 });
 
-test('3. Empty and whitespace-only values are treated as unconfigured', () => {
+test('4. Empty and whitespace-only values are treated as unconfigured', () => {
     assert.strictEqual(readAdminPassword({ CLASSROOM_ADMIN_PASSWORD: '' }), null);
     assert.strictEqual(readAdminPassword({ CLASSROOM_ADMIN_PASSWORD: ' ' }), null);
     assert.strictEqual(readAdminPassword({ CLASSROOM_ADMIN_PASSWORD: '\t\n' }), null);
 });
 
-test('4. Non-string values are treated as unconfigured', () => {
+test('5. Non-string values are treated as unconfigured', () => {
     assert.strictEqual(readAdminPassword({ CLASSROOM_ADMIN_PASSWORD: 0 }), null);
     assert.strictEqual(readAdminPassword({ CLASSROOM_ADMIN_PASSWORD: false }), null);
     assert.strictEqual(readAdminPassword({ CLASSROOM_ADMIN_PASSWORD: {} }), null);
     assert.strictEqual(readAdminPassword({ CLASSROOM_ADMIN_PASSWORD: [] }), null);
 });
 
-test('5. A valid configured password is returned without normalization', () => {
+test('6. A valid configured password is returned without normalization', () => {
     assert.strictEqual(
         readAdminPassword({ CLASSROOM_ADMIN_PASSWORD: 'sinif-parolasi' }),
         'sinif-parolasi'
@@ -43,7 +58,7 @@ test('5. A valid configured password is returned without normalization', () => {
     );
 });
 
-test('6. The supplied environment object is not mutated', () => {
+test('7. The supplied environment object is not mutated', () => {
     const env = Object.freeze({
         CLASSROOM_ADMIN_PASSWORD: 'degistirilmemeli'
     });
@@ -54,7 +69,7 @@ test('6. The supplied environment object is not mutated', () => {
     });
 });
 
-test('7. The default process.env value is read at call time', () => {
+test('8. The default process.env value is read at call time', () => {
     const hadOriginalValue = Object.prototype.hasOwnProperty.call(
         process.env,
         'CLASSROOM_ADMIN_PASSWORD'
@@ -79,7 +94,7 @@ test('7. The default process.env value is read at call time', () => {
     }
 });
 
-test('8. An exact configured password matches', () => {
+test('9. An exact configured password matches', () => {
     const env = {
         CLASSROOM_ADMIN_PASSWORD: 'sinif-parolasi'
     };
@@ -90,7 +105,7 @@ test('8. An exact configured password matches', () => {
     );
 });
 
-test('9. An incorrect password does not match', () => {
+test('10. An incorrect password does not match', () => {
     const env = {
         CLASSROOM_ADMIN_PASSWORD: 'sinif-parolasi'
     };
@@ -101,7 +116,7 @@ test('9. An incorrect password does not match', () => {
     );
 });
 
-test('10. Missing configuration and non-string candidates do not match', () => {
+test('11. Incorrect default candidates and non-string candidates do not match', () => {
     assert.strictEqual(matchesAdminPassword('aday', {}), false);
     assert.strictEqual(
         matchesAdminPassword('aday', {
@@ -120,7 +135,7 @@ test('10. Missing configuration and non-string candidates do not match', () => {
     assert.strictEqual(matchesAdminPassword({}, env), false);
 });
 
-test('11. Different password lengths return false without throwing', () => {
+test('12. Different password lengths return false without throwing', () => {
     const env = {
         CLASSROOM_ADMIN_PASSWORD: 'uzun-sinif-parolasi'
     };
@@ -137,7 +152,7 @@ test('11. Different password lengths return false without throwing', () => {
     });
 });
 
-test('12. Password comparison preserves whitespace exactly', () => {
+test('13. Password comparison preserves whitespace exactly', () => {
     const env = {
         CLASSROOM_ADMIN_PASSWORD: '  bosluklu-parola  '
     };
@@ -156,7 +171,7 @@ test('12. Password comparison preserves whitespace exactly', () => {
     );
 });
 
-test('13. Password comparison preserves Unicode exactly', () => {
+test('14. Password comparison preserves Unicode exactly', () => {
     const env = {
         CLASSROOM_ADMIN_PASSWORD: 'öğretmen-🔐'
     };
@@ -175,7 +190,7 @@ test('13. Password comparison preserves Unicode exactly', () => {
     );
 });
 
-test('14. Password comparison reads process.env at call time and restores safely', () => {
+test('15. Password comparison reads process.env at call time and restores safely', () => {
     const hadOriginalValue = Object.prototype.hasOwnProperty.call(
         process.env,
         'CLASSROOM_ADMIN_PASSWORD'
@@ -209,4 +224,23 @@ test('14. Password comparison reads process.env at call time and restores safely
             delete process.env.CLASSROOM_ADMIN_PASSWORD;
         }
     }
+});
+
+test('16. The committed default password is represented only by its SHA-256 digest', () => {
+    assert.strictEqual(
+        DEFAULT_ADMIN_PASSWORD_DIGEST_HEX,
+        'da19166e6ccc17da20921240a80d12c2e89e95450823d872a247dd77802374c1'
+    );
+    assert.match(DEFAULT_ADMIN_PASSWORD_DIGEST_HEX, /^[a-f0-9]{64}$/);
+});
+
+test('17. Username and password must both match', () => {
+    const env = {
+        CLASSROOM_ADMIN_USERNAME: 'admin',
+        CLASSROOM_ADMIN_PASSWORD: 'sinif-parolasi'
+    };
+
+    assert.strictEqual(matchesAdminCredentials('admin', 'sinif-parolasi', env), true);
+    assert.strictEqual(matchesAdminCredentials('yanlis', 'sinif-parolasi', env), false);
+    assert.strictEqual(matchesAdminCredentials('admin', 'yanlis-parola', env), false);
 });
