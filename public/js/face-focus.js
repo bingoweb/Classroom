@@ -9,9 +9,12 @@
 class FaceFocusEngine {
     constructor() {
         this.faceCache = new Map(); // Yüz pozisyonlarını cache'ler
+        this.pendingDetections = new Map(); // Aynı fotoğraf için yinelenen analizi önler
         this.detectionQueue = []; // Algılama kuyruğu
         this.isProcessing = false;
-        this.maxConcurrent = 3; // Aynı anda işlenecek maksimum resim
+        // Canvas pixel reads are synchronous. One analysis per turn prevents
+        // several portraits from combining into a visible startup long task.
+        this.maxConcurrent = 1;
     }
 
     /**
@@ -24,7 +27,7 @@ class FaceFocusEngine {
         if (!imgElement || !imageSrc) return;
 
         // Cache kontrolü
-        const cacheKey = `${imageSrc}_${containerSize}`;
+        const cacheKey = imageSrc;
         if (this.faceCache.has(cacheKey)) {
             const cachedPosition = this.faceCache.get(cacheKey);
             this.applyFocus(imgElement, cachedPosition, containerSize);
@@ -64,7 +67,29 @@ class FaceFocusEngine {
      * Gelişmiş yüz algılama (arka plan)
      */
     async queueDetection(imgElement, imageSrc, containerSize) {
-        this.detectionQueue.push({ imgElement, imageSrc, containerSize });
+        // The same student can appear in more than one role. A later image
+        // load must reuse the result instead of entering the canvas queue again.
+        if (this.faceCache.has(imageSrc)) {
+            this.applyFocus(imgElement, this.faceCache.get(imageSrc), containerSize);
+            return;
+        }
+
+        // If the same portrait is already waiting, attach this card to that
+        // work item. One pixel read can then position every matching role card.
+        const queuedMatch = this.detectionQueue.find(item => item.imageSrc === imageSrc);
+        if (queuedMatch) {
+            queuedMatch.linkedTargets.push({ imgElement, containerSize });
+            return;
+        }
+
+        // If its analysis is already running, advancedDetection will share the
+        // pending promise and apply the common result to this element.
+        if (this.pendingDetections.has(imageSrc)) {
+            await this.advancedDetection({ imgElement, imageSrc, containerSize });
+            return;
+        }
+
+        this.detectionQueue.push({ imgElement, imageSrc, containerSize, linkedTargets: [] });
         if (!this.isProcessing) {
             this.processQueue();
         }
@@ -88,14 +113,23 @@ class FaceFocusEngine {
     /**
      * Gelişmiş yüz algılama - Canvas tabanlı
      */
-    async advancedDetection({ imgElement, imageSrc, containerSize }) {
+    async advancedDetection({ imgElement, imageSrc, containerSize, linkedTargets = [] }) {
         try {
-            const facePosition = await this.detectFaceWithCanvas(imgElement);
+            let detectionPromise = this.pendingDetections.get(imageSrc);
+            if (!detectionPromise) {
+                detectionPromise = this.detectFaceWithCanvas(imgElement)
+                    .finally(() => this.pendingDetections.delete(imageSrc));
+                this.pendingDetections.set(imageSrc, detectionPromise);
+            }
+
+            const facePosition = await detectionPromise;
 
             if (facePosition) {
-                const cacheKey = `${imageSrc}_${containerSize}`;
-                this.faceCache.set(cacheKey, facePosition);
+                this.faceCache.set(imageSrc, facePosition);
                 this.applyFocus(imgElement, facePosition, containerSize);
+                linkedTargets.forEach(target => {
+                    this.applyFocus(target.imgElement, facePosition, target.containerSize);
+                });
             }
         } catch (error) {
             console.warn('Advanced detection failed:', error);
@@ -111,9 +145,19 @@ class FaceFocusEngine {
             try {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                canvas.width = imgElement.naturalWidth;
-                canvas.height = imgElement.naturalHeight;
-                ctx.drawImage(imgElement, 0, 0);
+                if (!ctx || !imgElement.naturalWidth || !imgElement.naturalHeight) {
+                    resolve(null);
+                    return;
+                }
+
+                const maxAnalysisDimension = 320;
+                const scale = Math.min(
+                    1,
+                    maxAnalysisDimension / Math.max(imgElement.naturalWidth, imgElement.naturalHeight)
+                );
+                canvas.width = Math.max(1, Math.round(imgElement.naturalWidth * scale));
+                canvas.height = Math.max(1, Math.round(imgElement.naturalHeight * scale));
+                ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
 
                 // Basit yüz algılama: Parlaklık ve kontrast analizi
                 // Gerçek uygulamada face-api.js veya MediaPipe kullanılabilir
@@ -174,7 +218,6 @@ class FaceFocusEngine {
     calculateFaceScore(imageData, centerX, centerY, width, height) {
         const radius = Math.min(width, height) * 0.15; // Yüz yaklaşık boyutu
         let totalBrightness = 0;
-        let totalContrast = 0;
         let pixelCount = 0;
 
         const startX = Math.max(0, Math.floor(centerX - radius));
@@ -349,4 +392,3 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { FaceFocusEngine, faceFocusEngine };
 }
-

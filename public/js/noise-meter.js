@@ -6,47 +6,27 @@ class NoiseMeter {
         this.microphone = null;
         this.stream = null;
         this.dataArray = null;
+        this.timeDataArray = null;
         this.isStarting = false;
+        this.animationFrameId = null;
+        this.stateImageTimer = null;
+        this.stateImageWarmups = [];
 
         this.noiseScore = 0;
         this.maxScore = 100;
-        this.riseRate = 5;
-        this.fallRate = 3;
-
-        this.quietThreshold = 0.27;
-        this.normalThreshold = 0.32;
-        this.loudThreshold = 0.71;
-
+        this.warningThreshold = 70;
+        this.dangerThreshold = 85;
+        this.levelHysteresis = 4;
         this.lastUpdateTime = Date.now();
-        this.smoothedVolume = 0;
-        this.smoothingFactor = 0.3;
 
         this.calibrationSamples = [];
-        this.calibrationDuration = 10;
-        this.isCalibrated = true;
-        this.baselineNoise = 0.05;
+        this.calibrationSampleLimit = 120;
+        this.isCalibrated = false;
+        this.noiseFloorDb = -55;
+        this.minimumNoiseFloorDb = -72;
+        this.maximumNoiseFloorDb = -38;
 
         this.currentLevel = null;
-
-        // Settings from Admin
-        this.settingsWarning = 70;
-        this.settingsDanger = 85;
-        this.currentThemeName = 'neon'; // Default
-
-        // Theme Palettes - ULTRA VIBRANT & NEON COLORS
-        this.themes = {
-            neon: ['#ff0055', '#ffaa00', '#ffff00', '#00ff00'],    // Hot Pink -> Orange -> Yellow -> Lime
-            fire: ['#ff0000', '#ff4500', '#ffcc00', '#ffff00'],    // Bright Red -> Red-Orange -> Gold -> Yellow
-            ocean: ['#0000ff', '#0088ff', '#00ffff', '#e0ffff'],   // Blue -> Azure -> Cyan -> Light Cyan
-            forest: ['#009900', '#33cc33', '#66ff66', '#ccff00'],  // Green -> Lime -> Bright Green -> Electric Lime
-            sunset: ['#cc00cc', '#ff0066', '#ff9933', '#ffff00'],  // Purple -> Magenta -> Orange -> Yellow
-            love: ['#ff0000', '#ff0066', '#ff3399', '#ff99cc'],    // Red -> Hot Pink -> Rose -> Light Pink
-            royal: ['#4b0082', '#9900cc', '#cc00ff', '#ffd700'],   // Indigo -> Violet -> Neon Purple -> Gold
-            matrix: ['#002200', '#006600', '#00cc00', '#00ff00'],  // Dark Green -> Green -> Matrix Green -> Bright Neon
-            ice: ['#0055ff', '#00aaff', '#00ffff', '#ffffff'],     // Deep Blue -> Sky Blue -> Cyan -> White
-            rainbow: ['#ff0000', '#00ff00', '#0000ff', '#ffff00']  // Primary Colors (High Saturation)
-        };
-
         this.elements = {
             card: document.getElementById('noise-meter-card'),
             image: document.getElementById('noise-character-img'),
@@ -59,7 +39,6 @@ class NoiseMeter {
             statusSubtitle: document.querySelector('#noise-status-text .noise-status-copy small'),
             startBtn: document.getElementById('mic-start-btn'),
             eqWrapper: document.querySelector('.equalizer-bars'),
-            eqContainer: document.getElementById('equalizer-container'),
             scaleLabels: Array.from(document.querySelectorAll('.noise-scale-label')),
             eqBars: [],
             eqPeaks: []
@@ -67,11 +46,17 @@ class NoiseMeter {
 
         this.peakLevels = new Array(128).fill(0);
         this.peakHoldCounters = new Array(128).fill(0);
+        this.displayedBarLevels = new Array(128).fill(-1);
+        this.displayedPeakLevels = new Array(128).fill(-1);
+        this.equalizerBands = [];
+        this.equalizerBinCount = 0;
+        this.lastAriaValue = '';
+        this.updateLoop = this.updateLoop.bind(this);
 
         this.images = {
-            low: 'uploads/sessiz.png',
-            medium: 'uploads/uyari.png',
-            high: 'uploads/gurultu.png'
+            low: 'assets/noise-states/quiet.webp',
+            medium: 'assets/noise-states/attention.webp',
+            high: 'assets/noise-states/loud.webp'
         };
 
         this.init();
@@ -113,6 +98,7 @@ class NoiseMeter {
 
         if (state !== 'listening') {
             this.currentLevel = null;
+            this.lastAriaValue = '';
             if (this.elements.card) {
                 this.elements.card.classList.remove('state-low', 'state-medium', 'state-high');
             }
@@ -168,6 +154,7 @@ class NoiseMeter {
     init() {
         if (this.elements.eqWrapper) {
             this.elements.eqWrapper.innerHTML = '';
+            const equalizerFragment = document.createDocumentFragment();
             for (let i = 0; i < 128; i++) {
                 const column = document.createElement('div');
                 column.className = 'eq-column';
@@ -178,23 +165,19 @@ class NoiseMeter {
                 bar.id = `eq-bar-${i + 1}`;
                 column.appendChild(peak);
                 column.appendChild(bar);
-                this.elements.eqWrapper.appendChild(column);
+                equalizerFragment.appendChild(column);
                 this.elements.eqBars.push(bar);
                 this.elements.eqPeaks.push(peak);
             }
+            this.elements.eqWrapper.appendChild(equalizerFragment);
         }
 
         if (this.elements.startBtn) {
             this.elements.startBtn.addEventListener('click', () => this.startListening());
         }
 
-        // Global Settings Listener
-        window.addEventListener('settingsLoaded', (e) => this.applySettings(e.detail));
-
-        // Initial Settings Check
-        if (window.PANEL_SETTINGS) {
-            this.applySettings(window.PANEL_SETTINGS);
-        }
+        this.updateScaleLayout();
+        window.addEventListener('pagehide', () => this.stopListening(), { once: true });
 
         this.setMicrophoneState('idle', {
             title: 'Ses Ölçer Hazırlanıyor',
@@ -204,56 +187,143 @@ class NoiseMeter {
         setTimeout(() => this.startListening(), 1000);
     }
 
-    applySettings(settings) {
-        console.log('NoiseMeter settings applied:', settings);
+    warmStateImages() {
+        if (typeof Image !== 'function') return;
 
-        // 1. Equalizer Theme
-        if (settings.equalizer_theme) {
-            this.setTheme(settings.equalizer_theme);
-        }
+        const currentSource = this.elements.image?.getAttribute?.('src') || '';
+        this.stateImageWarmups = Object.values(this.images)
+            .filter(source => source !== currentSource)
+            .map(source => {
+                const image = new Image();
+                image.decoding = 'async';
+                image.src = source;
+                return image;
+            });
 
-        // 2. Sensitivity
-        if (settings.noiseSensitivity) {
-            const sens = parseInt(settings.noiseSensitivity);
-            this.riseRate = 3 + (sens * 0.5);
-            this.fallRate = 2 + (sens * 0.2);
-        }
+        const decodeTasks = this.stateImageWarmups.map(image => (
+            typeof image.decode === 'function'
+                ? image.decode().catch(() => undefined)
+                : Promise.resolve()
+        ));
 
-        // 3. Thresholds
-        const warning = parseInt(settings.warning_threshold);
-        const danger = parseInt(settings.danger_threshold);
-        this.settingsWarning = Math.max(1, Math.min(98, Number.isFinite(warning) ? warning : 70));
-        this.settingsDanger = Math.max(
-            this.settingsWarning + 1,
-            Math.min(99, Number.isFinite(danger) ? danger : 85)
-        );
-        this.updateScaleLayout();
+        Promise.allSettled(decodeTasks).finally(() => {
+            this.stateImageWarmups = [];
+        });
     }
 
     updateScaleLayout() {
         if (this.elements.meterBar) {
-            this.elements.meterBar.style.setProperty('--warning-threshold', `${this.settingsWarning}%`);
-            this.elements.meterBar.style.setProperty('--danger-threshold', `${this.settingsDanger}%`);
+            this.elements.meterBar.style.setProperty('--warning-threshold', `${this.warningThreshold}%`);
+            this.elements.meterBar.style.setProperty('--danger-threshold', `${this.dangerThreshold}%`);
         }
 
         const labelsContainer = this.elements.scaleLabels[0]?.parentElement;
         if (labelsContainer) {
             labelsContainer.style.gridTemplateColumns = [
-                `${this.settingsWarning}fr`,
-                `${this.settingsDanger - this.settingsWarning}fr`,
-                `${100 - this.settingsDanger}fr`
+                `${this.warningThreshold}fr`,
+                `${this.dangerThreshold - this.warningThreshold}fr`,
+                `${100 - this.dangerThreshold}fr`
             ].join(' ');
         }
     }
 
-    setTheme(themeName) {
-        this.currentThemeName = themeName;
+    clamp(value, minimum, maximum) {
+        return Math.max(minimum, Math.min(maximum, value));
+    }
 
-        if (this.elements.eqContainer) {
-            const classes = this.elements.eqContainer.className.split(' ').filter(c => !c.startsWith('theme-'));
-            this.elements.eqContainer.className = classes.join(' ');
-            this.elements.eqContainer.classList.add(`theme-${themeName}`);
+    calculateDecibels(samples) {
+        if (!samples?.length) return -100;
+
+        let sumOfSquares = 0;
+        for (let i = 0; i < samples.length; i++) {
+            const normalizedSample = (samples[i] - 128) / 128;
+            sumOfSquares += normalizedSample * normalizedSample;
         }
+
+        const rms = Math.sqrt(sumOfSquares / samples.length);
+        return 20 * Math.log10(Math.max(rms, 0.00001));
+    }
+
+    updateCalibration(decibels) {
+        if (this.isCalibrated) return true;
+
+        this.calibrationSamples.push(this.clamp(decibels, -90, -20));
+        if (this.calibrationSamples.length < this.calibrationSampleLimit) return false;
+
+        const sortedSamples = [...this.calibrationSamples].sort((a, b) => a - b);
+        const quietSampleIndex = Math.floor(sortedSamples.length * 0.25);
+        this.noiseFloorDb = this.clamp(
+            sortedSamples[quietSampleIndex],
+            this.minimumNoiseFloorDb,
+            this.maximumNoiseFloorDb
+        );
+        this.calibrationSamples = [];
+        this.isCalibrated = true;
+        return true;
+    }
+
+    normalizeLoudness(decibels) {
+        if (!this.isCalibrated) return 0;
+
+        const distanceFromFloor = decibels - this.noiseFloorDb;
+        if (distanceFromFloor < 8) {
+            const adaptationRate = distanceFromFloor < 0 ? 0.01 : 0.001;
+            this.noiseFloorDb = this.clamp(
+                this.noiseFloorDb + ((decibels - this.noiseFloorDb) * adaptationRate),
+                this.minimumNoiseFloorDb,
+                this.maximumNoiseFloorDb
+            );
+        }
+
+        const activityStartDb = this.noiseFloorDb + 7;
+        const fullActivityDb = Math.min(-12, this.noiseFloorDb + 30);
+        const activityRange = Math.max(12, fullActivityDb - activityStartDb);
+        return this.clamp((decibels - activityStartDb) / activityRange, 0, 1);
+    }
+
+    configureEqualizerBands(totalBins) {
+        if (this.equalizerBinCount === totalBins && this.equalizerBands.length === 128) return;
+
+        this.equalizerBinCount = totalBins;
+        this.equalizerBands = Array.from({ length: 128 }, (_, index) => {
+            let amplification = 1.5;
+            if (index < 32) amplification = 1.25;
+            if (index > 64) amplification = 2.5;
+            if (index > 96) amplification = 4.0;
+
+            return {
+                startBin: Math.floor(Math.pow(index / 128, 1.8) * (totalBins - 50)),
+                endBin: Math.floor(Math.pow((index + 1) / 128, 1.8) * (totalBins - 50)) + 1,
+                amplification
+            };
+        });
+    }
+
+    updateNoiseScore(loudness, deltaTime) {
+        const safeDelta = this.clamp(deltaTime, 0, 0.25);
+        const targetScore = this.clamp(loudness, 0, 1) * this.maxScore;
+        const timeConstant = targetScore > this.noiseScore ? 2.2 : 3.2;
+        const blend = 1 - Math.exp(-safeDelta / timeConstant);
+
+        this.noiseScore += (targetScore - this.noiseScore) * blend;
+        if (this.noiseScore < 0.05) this.noiseScore = 0;
+        this.noiseScore = this.clamp(this.noiseScore, 0, this.maxScore);
+    }
+
+    resolveLevel(percentage) {
+        if (this.currentLevel === 'high') {
+            if (percentage >= this.dangerThreshold - this.levelHysteresis) return 'high';
+            return percentage >= this.warningThreshold - this.levelHysteresis ? 'medium' : 'low';
+        }
+
+        if (this.currentLevel === 'medium') {
+            if (percentage >= this.dangerThreshold) return 'high';
+            return percentage >= this.warningThreshold - this.levelHysteresis ? 'medium' : 'low';
+        }
+
+        if (percentage >= this.dangerThreshold) return 'high';
+        if (percentage >= this.warningThreshold) return 'medium';
+        return 'low';
     }
 
     async startListening() {
@@ -275,7 +345,14 @@ class NoiseMeter {
                 throw unsupportedError;
             }
 
-            pendingStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            pendingStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    autoGainControl: false,
+                    echoCancellation: false,
+                    noiseSuppression: false
+                },
+                video: false
+            });
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.analyser = this.audioContext.createAnalyser();
             this.microphone = this.audioContext.createMediaStreamSource(pendingStream);
@@ -286,6 +363,11 @@ class NoiseMeter {
 
             const bufferLength = this.analyser.frequencyBinCount;
             this.dataArray = new Uint8Array(bufferLength);
+            this.timeDataArray = new Uint8Array(this.analyser.fftSize);
+            this.configureEqualizerBands(bufferLength);
+            this.calibrationSamples = [];
+            this.isCalibrated = false;
+            this.noiseScore = 0;
 
             this.stream = pendingStream;
             pendingStream = null;
@@ -294,19 +376,16 @@ class NoiseMeter {
             if (this.elements.card) this.elements.card.classList.add('active');
 
             this.setMicrophoneState('listening', {
-                title: 'Dinleniyor',
-                subtitle: 'Ses düzeyi ölçülüyor',
-                color: '#178958'
+                title: 'Ortam Tanınıyor',
+                subtitle: 'Ses dengesi otomatik ayarlanıyor',
+                color: '#49637a'
             });
 
+            // Decode the remaining visual states only after the microphone is
+            // usable. An unavailable kiosk keeps its initial load lean.
+            this.warmStateImages();
             this.lastUpdateTime = Date.now();
             this.updateLoop();
-
-            setTimeout(() => {
-                if (!this.isCalibrated && this.elements.status) {
-                    this.setStatus('assets/ui-icons-3d/microphone.png', 'Hazır', 'Sınıfı dinliyorum', '#27ae60');
-                }
-            }, 5000);
 
         } catch (error) {
             this.isStarting = false;
@@ -324,6 +403,7 @@ class NoiseMeter {
             this.analyser = null;
             this.microphone = null;
             this.dataArray = null;
+            this.timeDataArray = null;
 
             const expectedErrors = new Set([
                 'NotAllowedError',
@@ -351,39 +431,63 @@ class NoiseMeter {
         }
     }
 
+    stopListening() {
+        this.isListening = false;
+        this.isStarting = false;
+
+        if (this.stateImageTimer !== null && typeof clearTimeout === 'function') {
+            clearTimeout(this.stateImageTimer);
+            this.stateImageTimer = null;
+        }
+        this.stateImageWarmups = [];
+
+        if (this.animationFrameId !== null && typeof cancelAnimationFrame === 'function') {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+            this.stream = null;
+        }
+        if (this.microphone && typeof this.microphone.disconnect === 'function') {
+            try {
+                this.microphone.disconnect();
+            } catch (_) {
+                // Kaynak zaten ayrılmış olabilir.
+            }
+        }
+        this.microphone = null;
+
+        if (this.audioContext && typeof this.audioContext.close === 'function') {
+            const closePromise = this.audioContext.close();
+            if (closePromise && typeof closePromise.catch === 'function') {
+                closePromise.catch(() => {});
+            }
+        }
+        this.audioContext = null;
+        this.analyser = null;
+        this.dataArray = null;
+        this.timeDataArray = null;
+    }
+
     updateLoop() {
-        if (!this.isListening) return;
-        requestAnimationFrame(() => this.updateLoop());
+        this.animationFrameId = null;
+        if (!this.isListening || !this.analyser || !this.dataArray || !this.timeDataArray) return;
+        this.animationFrameId = requestAnimationFrame(this.updateLoop);
 
         this.analyser.getByteFrequencyData(this.dataArray);
-
-        let sum = 0;
-        const startBin = 4;
-        const endBin = 80;
-        for (let i = startBin; i < endBin; i++) sum += this.dataArray[i];
-
-        const average = sum / (endBin - startBin);
-        const instantVolume = average / 255;
-
-        this.smoothedVolume = (instantVolume * this.smoothingFactor) + (this.smoothedVolume * (1 - this.smoothingFactor));
-
+        this.analyser.getByteTimeDomainData(this.timeDataArray);
         this.updateEqualizerBars();
 
         const now = Date.now();
         const deltaTime = (now - this.lastUpdateTime) / 1000;
         this.lastUpdateTime = now;
 
-        const volumeLevel = this.smoothedVolume;
+        const decibels = this.calculateDecibels(this.timeDataArray);
+        if (!this.updateCalibration(decibels)) return;
 
-        if (volumeLevel > this.loudThreshold) {
-            this.noiseScore += this.riseRate * 1.5 * deltaTime;
-        } else if (volumeLevel > this.normalThreshold) {
-            this.noiseScore += this.riseRate * 0.5 * deltaTime;
-        } else {
-            this.noiseScore -= this.fallRate * deltaTime;
-        }
-
-        this.noiseScore = Math.max(0, Math.min(this.maxScore, this.noiseScore));
+        this.updateNoiseScore(this.normalizeLoudness(decibels), deltaTime);
         this.updateUI();
     }
 
@@ -393,17 +497,14 @@ class NoiseMeter {
         const totalBars = 128;
         const totalBins = this.dataArray.length;
         const step = 5;
-
-        // Get current theme palette
-        const palette = this.themes[this.currentThemeName] || this.themes['neon'];
+        this.configureEqualizerBands(totalBins);
 
         for (let i = 0; i < totalBars; i++) {
             const bar = this.elements.eqBars[i];
             const peak = this.elements.eqPeaks[i];
             if (!bar) continue;
 
-            const startBin = Math.floor(Math.pow(i / totalBars, 1.8) * (totalBins - 50));
-            const endBin = Math.floor(Math.pow((i + 1) / totalBars, 1.8) * (totalBins - 50)) + 1;
+            const { startBin, endBin, amplification } = this.equalizerBands[i];
 
             let sum = 0;
             let count = 0;
@@ -412,11 +513,6 @@ class NoiseMeter {
 
             let avg = count > 0 ? sum / count : 0;
             if (avg < 5) avg = 0;
-
-            let amplification = 1.5;
-            if (i < 32) amplification = 1.25;
-            if (i > 64) amplification = 2.5;
-            if (i > 96) amplification = 4.0;
 
             let percent = (avg / 255) * 100 * amplification;
             percent = Math.min(100, Math.max(0, percent));
@@ -435,23 +531,21 @@ class NoiseMeter {
             }
             if (this.peakLevels[i] < quantizedPercent) this.peakLevels[i] = quantizedPercent;
 
-            // Dynamic Bar Color based on Theme Palette
-            let color;
-            if (i < 32) color = palette[0];      // 1st Quarter
-            else if (i < 64) color = palette[1]; // 2nd Quarter
-            else if (i < 96) color = palette[2]; // 3rd Quarter
-            else color = palette[3];             // 4th Quarter
-
-            bar.style.height = `${quantizedPercent}%`;
-            bar.style.backgroundColor = color;
+            if (this.displayedBarLevels[i] !== quantizedPercent) {
+                bar.style.height = `${quantizedPercent}%`;
+                this.displayedBarLevels[i] = quantizedPercent;
+            }
 
             if (peak) {
                 let displayPeak = Math.floor(this.peakLevels[i] / step) * step;
-                if (displayPeak > 0) {
-                    peak.style.bottom = `${displayPeak}%`;
-                    peak.style.opacity = 0.9;
-                } else {
-                    peak.style.opacity = 0;
+                if (this.displayedPeakLevels[i] !== displayPeak) {
+                    if (displayPeak > 0) {
+                        peak.style.bottom = `${displayPeak}%`;
+                        peak.style.opacity = 0.9;
+                    } else {
+                        peak.style.opacity = 0;
+                    }
+                    this.displayedPeakLevels[i] = displayPeak;
                 }
             }
         }
@@ -459,31 +553,25 @@ class NoiseMeter {
 
     updateUI() {
         const percentage = (this.noiseScore / this.maxScore) * 100;
-        const warningVal = this.settingsWarning;
-        const dangerVal = this.settingsDanger;
 
         if (this.elements.fill) {
             this.elements.fill.style.width = `${percentage}%`;
-            if (percentage >= dangerVal) {
-                this.elements.fill.style.background = 'linear-gradient(90deg, #ff4757, #ff6b81)';
-            } else if (percentage >= warningVal) {
-                this.elements.fill.style.background = 'linear-gradient(90deg, #ffa502, #ff7f50)';
-            } else {
-                this.elements.fill.style.background = 'linear-gradient(90deg, #2ed573, #7bed9f)';
-            }
         }
 
-        let newLevel = 'low';
-        if (percentage >= dangerVal) newLevel = 'high';
-        else if (percentage >= warningVal) newLevel = 'medium';
+        const newLevel = this.resolveLevel(percentage);
 
         if (this.elements.levelMeter) {
             const levelNames = { low: 'Sessiz', medium: 'Dikkat', high: 'Gürültü' };
-            this.elements.levelMeter.setAttribute('aria-valuenow', `${Math.round(percentage)}`);
-            this.elements.levelMeter.setAttribute(
-                'aria-valuetext',
-                `${levelNames[newLevel]}: yüzde ${Math.round(percentage)}`
-            );
+            const roundedPercentage = Math.round(percentage);
+            const ariaValue = `${newLevel}:${roundedPercentage}`;
+            if (ariaValue !== this.lastAriaValue) {
+                this.elements.levelMeter.setAttribute('aria-valuenow', `${roundedPercentage}`);
+                this.elements.levelMeter.setAttribute(
+                    'aria-valuetext',
+                    `${levelNames[newLevel]}: yüzde ${roundedPercentage}`
+                );
+                this.lastAriaValue = ariaValue;
+            }
         }
 
         if (newLevel !== this.currentLevel) this.changeState(newLevel);
@@ -492,10 +580,27 @@ class NoiseMeter {
     changeState(state) {
         this.currentLevel = state;
 
+        const fillColors = {
+            low: 'linear-gradient(90deg, #2ed573, #7bed9f)',
+            medium: 'linear-gradient(90deg, #ffa502, #ff7f50)',
+            high: 'linear-gradient(90deg, #ff4757, #ff6b81)'
+        };
+        if (this.elements.fill && this.elements.fill.dataset.level !== state) {
+            this.elements.fill.style.background = fillColors[state];
+            this.elements.fill.dataset.level = state;
+        }
+
         if (this.elements.image) {
+            if (this.stateImageTimer !== null && typeof clearTimeout === 'function') {
+                clearTimeout(this.stateImageTimer);
+            }
             this.elements.image.style.transform = 'translateX(-50%) scale(0.9)';
-            setTimeout(() => {
+            if (this.elements.image.getAttribute?.('src') !== this.images[state]) {
                 this.elements.image.src = this.images[state];
+            }
+            this.stateImageTimer = setTimeout(() => {
+                this.stateImageTimer = null;
+                if (this.currentLevel !== state) return;
                 this.elements.image.style.transform = 'translateX(-50%) scale(1)';
             }, 200);
         }

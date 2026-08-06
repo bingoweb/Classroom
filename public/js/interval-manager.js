@@ -27,7 +27,10 @@ class IntervalManager {
      * @returns {number} Timeout ID
      */
     setTimeout(callback, delay) {
-        const id = setTimeout(callback, delay);
+        const id = setTimeout(() => {
+            this.timeouts.delete(id);
+            callback();
+        }, delay);
         this.timeouts.add(id);
         return id;
     }

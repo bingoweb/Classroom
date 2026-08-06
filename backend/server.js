@@ -18,6 +18,10 @@ const {
     readAdminSessionIdFromCookieHeader
 } = require('./admin-session-cookie.js');
 const { createFailureRateLimiter, createRequestRateLimiter } = require('./request-rate-limiter.js');
+const {
+    setPublicStaticCacheHeaders,
+    setUploadStaticCacheHeaders
+} = require('./static-cache-policy.js');
 
 const crypto = require('crypto');
 const csrfSecret = crypto.randomBytes(32);
@@ -143,9 +147,7 @@ app.use('/admin', requireAdminSession);
 
 // Serve static files from PUBLIC directory (Frontend)
 app.use(express.static(path.join(__dirname, '../public'), {
-    setHeaders: (res, path) => {
-        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    }
+    setHeaders: setPublicStaticCacheHeaders
 }));
 
 // Upload configuration
@@ -200,7 +202,9 @@ if (!fs.existsSync(slidesDir)) {
 }
 
 // Serve uploads directory
-app.use('/uploads', express.static(uploadsDir));
+app.use('/uploads', express.static(uploadsDir, {
+    setHeaders: setUploadStaticCacheHeaders
+}));
 
 // --- API Endpoints ---
 

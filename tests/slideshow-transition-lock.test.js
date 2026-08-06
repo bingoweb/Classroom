@@ -48,7 +48,7 @@ function createVmHarness() {
         };
     }
 
-    function createDomElement() {
+    function createDomElement(tagName = 'div') {
         const attributes = {};
         const children = [];
 
@@ -60,7 +60,24 @@ function createVmHarness() {
             children,
             dataset: {},
             style: {},
-            querySelector: () => null,
+            tagName: tagName.toUpperCase(),
+            playCalls: 0,
+            load() {},
+            play() { this.playCalls += 1; },
+            pause() {},
+            querySelector(selector) {
+                if (selector === 'video') {
+                    return children.find(child => child.tagName === 'VIDEO') || null;
+                }
+                if (selector.startsWith('.')) {
+                    const className = selector.slice(1);
+                    return children.find(child => (
+                        String(child.className || '').split(/\s+/).includes(className)
+                        || child.classList.contains(className)
+                    )) || null;
+                }
+                return null;
+            },
             querySelectorAll: () => [],
             addEventListener: () => {},
             appendChild(child) {
@@ -90,7 +107,7 @@ function createVmHarness() {
 
     const documentMock = {
         addEventListener: (event, cb) => {},
-        createElement: () => createDomElement(),
+        createElement: (tagName) => createDomElement(tagName),
         getElementById: (id) => id === 'slideshow-container' ? slideshowContainer : null,
         querySelector: (selector) => {
             querySelectorCalls.push(selector);
@@ -174,8 +191,12 @@ function createVmHarness() {
 globalThis.__slideshowTestApi = {
     nextSlide,
     scheduleNextSlide,
+    startSlideshow,
     getSlideMediaLayoutMode,
     createSlideCaptionElement,
+    createSlideElement,
+    hydrateSlideMedia,
+    renderSlideshowFallback,
     getSlidesSnapshot,
     refreshSlideshow,
 
@@ -241,10 +262,74 @@ test('Slideshow Transition Lock', async (t) => {
         const harness = createVmHarness();
         assert.strictEqual(typeof harness.api.nextSlide, 'function', 'nextSlide is explicitly exposed as a function');
         assert.strictEqual(typeof harness.api.scheduleNextSlide, 'function', 'scheduleNextSlide is explicitly exposed as a function');
+        assert.strictEqual(typeof harness.api.startSlideshow, 'function', 'slideshow start is explicitly exposed as a function');
         assert.strictEqual(typeof harness.api.getSlideMediaLayoutMode, 'function', 'slide media layout helper is explicitly exposed as a function');
         assert.strictEqual(typeof harness.api.createSlideCaptionElement, 'function', 'slide caption helper is explicitly exposed as a function');
+        assert.strictEqual(typeof harness.api.hydrateSlideMedia, 'function', 'slide media hydration helper is explicitly exposed as a function');
+        assert.strictEqual(typeof harness.api.renderSlideshowFallback, 'function', 'fallback renderer is explicitly exposed as a function');
         assert.strictEqual(typeof harness.api.getSlidesSnapshot, 'function', 'slide refresh snapshot helper is explicitly exposed as a function');
         assert.strictEqual(typeof harness.api.refreshSlideshow, 'function', 'slide refresh function is explicitly exposed as a function');
+    });
+
+    await t.test('Emergency tribute fallback uses the same modern media-caption component', () => {
+        const harness = createVmHarness();
+        const fallback = harness.api.renderSlideshowFallback(harness.slideshowContainer);
+
+        assert.strictEqual(harness.slideshowContainer.children.length, 1);
+        assert.strictEqual(fallback.className, 'slide active');
+        assert.strictEqual(fallback.dataset.mediaHydrated, 'true');
+        assert.strictEqual(fallback.children[1].src, 'assets/tribute.webp');
+        assert.strictEqual(
+            fallback.children[2].children[0].textContent,
+            '“Vatanını en çok seven, görevini en iyi yapandır.”\n— Mustafa Kemal Atatürk'
+        );
+        assert.ok(!scriptSource.includes('class="tribute-text"'), 'legacy red italic fallback markup is gone');
+    });
+
+    await t.test('The first video starts once, after its slide is attached to the live container', () => {
+        const harness = createVmHarness();
+        const slide = {
+            id: 1,
+            media_type: 'video',
+            media_path: '/welcome.mp4',
+            content_type: 'video',
+            display_duration: 5000
+        };
+        const slideElement = harness.api.createSlideElement(slide, true);
+        const video = slideElement.querySelector('video');
+
+        assert.strictEqual(video.playCalls, 0, 'detached video is not asked to play');
+
+        harness.slideshowContainer.appendChild(slideElement);
+        harness.api.setSlidesData([slide]);
+        harness.api.startSlideshow();
+
+        assert.strictEqual(video.playCalls, 1, 'attached first video receives exactly one play request');
+    });
+
+    await t.test('Only the visible and immediately upcoming slide media hydrate on startup', () => {
+        const harness = createVmHarness();
+        const slides = [
+            { id: 1, media_type: 'image', media_path: '/first.webp', content_type: 'photo' },
+            { id: 2, media_type: 'image', media_path: '/second.webp', content_type: 'photo' },
+            { id: 3, media_type: 'image', media_path: '/third.webp', content_type: 'photo' }
+        ];
+
+        const elements = slides.map((slide, index) => harness.api.createSlideElement(slide, index === 0));
+        slides.forEach((slide, index) => { elements[index].dataset.slideId = String(slide.id); });
+        harness.api.setSlidesData(slides);
+        harness.setMockElements({ 1: elements[0], 2: elements[1], 3: elements[2] });
+        harness.api.setCurrentSlideIndex(0);
+
+        assert.strictEqual(elements[0].dataset.mediaHydrated, 'true', 'visible media is ready immediately');
+        assert.strictEqual(elements[1].dataset.mediaHydrated, undefined);
+        assert.strictEqual(elements[2].dataset.mediaHydrated, undefined);
+
+        harness.api.scheduleNextSlide();
+
+        assert.strictEqual(elements[1].dataset.mediaHydrated, 'true', 'next media is prepared during display time');
+        assert.strictEqual(elements[1].children[1].loading, 'eager', 'hidden look-ahead media is genuinely fetchable');
+        assert.strictEqual(elements[2].dataset.mediaHydrated, undefined, 'later media stays deferred');
     });
 
     await t.test('Periodic refresh does not restart an unchanged seven-slide rotation', async () => {
@@ -356,11 +441,31 @@ test('Slideshow Transition Lock', async (t) => {
         assert.strictEqual(nextSlide.style.willChange, 'transform, opacity');
         assert.strictEqual(currentSlide.style.zIndex, '1');
         assert.strictEqual(nextSlide.style.zIndex, '2', 'incoming composition stays above the outgoing slide');
+        assert.strictEqual(currentSlide.style.transition, 'opacity 175ms ease-in');
+        assert.strictEqual(
+            nextSlide.style.transition,
+            'opacity 175ms ease-out',
+            'fade waits for the outgoing image so portraits never double-expose'
+        );
 
         await new Promise(resolve => setTimeout(resolve, 470));
         assert.strictEqual(currentSlide.style.willChange, '', 'temporary GPU hint is removed after cleanup');
         assert.strictEqual(nextSlide.style.willChange, '', 'incoming slide GPU hint is removed after cleanup');
         assert.strictEqual(nextSlide.style.zIndex, '', 'temporary stacking order is removed after cleanup');
+    });
+
+    await t.test('Depth and dissolve effects reveal portraits in two phases', async () => {
+        for (const transitionType of ['zoom-in', 'zoom-out', 'dissolve']) {
+            const container = { style: {} };
+            const currentSlide = { style: {}, parentElement: container };
+            const nextSlide = { style: {}, parentElement: container };
+
+            transitionEngine.applyTransition(currentSlide, nextSlide, transitionType, 350);
+
+            assert.strictEqual(nextSlide.style.opacity, '0', `${transitionType} keeps the incoming portrait hidden first`);
+            await new Promise(resolve => setTimeout(resolve, 190));
+            assert.strictEqual(nextSlide.style.opacity, '1', `${transitionType} reveals the incoming portrait in phase two`);
+        }
     });
 
     await t.test('Optional slide messages render as safe media subtitles', () => {

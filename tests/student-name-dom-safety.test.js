@@ -9,6 +9,7 @@ test('Student Name DOM Safety Tests', async (t) => {
     // We mock the DOM environment for the VMs
     const createSandbox = () => {
         const domElements = {};
+        const domContentLoadedHandlers = [];
         const getEl = (id) => {
             if (!domElements[id]) {
                 domElements[id] = { 
@@ -16,10 +17,12 @@ test('Student Name DOM Safety Tests', async (t) => {
                     innerHTML: '', 
                     textContent: '', 
                     className: '',
+                    dataset: {},
                     style: {}, 
                     classList: { contains: () => false, add: () => {}, remove: () => {} },
                     addEventListener: () => {},
                     getAttribute: function(attr) { return this[attr]; },
+                    setAttribute: function(attr, value) { this[attr] = String(value); },
                     getContext: () => ({ fillRect: () => {} }),
                     appendChild: () => {},
                     removeChild: () => {},
@@ -33,8 +36,7 @@ test('Student Name DOM Safety Tests', async (t) => {
             getElementById: getEl,
             addEventListener: (event, handler) => {
                 if (event === 'DOMContentLoaded') {
-                    // Defer execution slightly to ensure all script defines are done, or execute inline
-                    setTimeout(handler, 0);
+                    domContentLoadedHandlers.push(handler);
                 }
             },
             querySelector: () => getEl('qs_mock'),
@@ -70,7 +72,11 @@ test('Student Name DOM Safety Tests', async (t) => {
         sandbox.window = sandbox; // Make window reference the global sandbox
         sandbox.globalThis = sandbox; // Ensure globalThis points to sandbox
         
-        return { sandbox, domElements, getEl };
+        const fireDomContentLoaded = () => {
+            domContentLoadedHandlers.splice(0).forEach(handler => handler());
+        };
+
+        return { sandbox, domElements, getEl, fireDomContentLoaded };
     };
 
     const maliciousNames = [
@@ -119,7 +125,7 @@ test('Student Name DOM Safety Tests', async (t) => {
         sandbox.Utils.fetchWithErrorHandling = async (url) => {
             if (url.includes('/roles')) {
                 return [
-                    { role_type: 'president', id: 1, name: maliciousNames[0] },
+                    { role_type: 'president', id: 1, name: maliciousNames[0], gender: 'F' },
                     { role_type: 'vice_president', id: 2, name: maliciousNames[1] },
                     { role_type: 'duty', id: 3, name: maliciousNames[2] },
                     { role_type: 'duty', id: 5, name: 'Emir Can Özdemir Yıldırımoğlu' },
@@ -171,6 +177,12 @@ test('Student Name DOM Safety Tests', async (t) => {
         assert.ok(!starsHtml.includes('onerror="globalThis.__xss=1"'), 'No raw injected onerror attribute in star');
         assert.ok(starsHtml.includes('&quot;&gt;&lt;img src=x onerror=&quot;globalThis.__xss=1&quot;&gt;'), 'Star name is escaped');
         assert.ok(starsHtml.includes('id="star-img-4-0"'), 'Star portrait has a stable focus target');
+        assert.match(presidentHtml, /president-avatar-large" alt="" aria-hidden="true"/);
+        assert.ok(presidentHtml.includes("this.src='girl.png'"), 'female president keeps a gender-appropriate fallback portrait');
+        assert.match(presidentHtml, /vice-president-avatar" alt="" aria-hidden="true"/);
+        assert.match(getEl('duty-container').innerHTML, /duty-avatar" alt="" aria-hidden="true"/);
+        assert.match(starsHtml, /star-avatar" alt="" aria-hidden="true"/);
+        assert.match(absentHtml, /marquee-avatar" alt="" aria-hidden="true"/);
         assert.ok(focusCalls.some(([, , size]) => size === 'star'), 'Star portrait enters the face-focus flow');
         assert.ok(!getEl('duty-container').innerHTML.includes('Bugün için nöbetçi belirlenmedi'), 'Assigned duty student does not show empty state');
         assert.ok(getEl('duty-container').innerHTML.includes('duty-name-long'), 'Long duty names receive the fitted two-line variant');
@@ -236,6 +248,7 @@ test('Student Name DOM Safety Tests', async (t) => {
         const container = {
             textContent: '',
             children: [],
+            dataset: {},
             classList: {
                 add: (name) => classNames.add(name),
                 remove: (name) => classNames.delete(name)
@@ -270,6 +283,7 @@ test('Student Name DOM Safety Tests', async (t) => {
         const { sandbox, getEl } = createSandbox();
         const aria = {};
         getEl('countdown-bar').parentElement = {
+            getAttribute: (name) => aria[name],
             setAttribute: (name, value) => { aria[name] = value; }
         };
 
@@ -289,7 +303,7 @@ test('Student Name DOM Safety Tests', async (t) => {
         const adminSource = fs.readFileSync(path.join(__dirname, '../public/admin/admin.js'), 'utf8');
         const utilsSource = fs.readFileSync(path.join(__dirname, '../public/js/utils.js'), 'utf8');
         
-        const { sandbox, domElements, getEl } = createSandbox();
+        const { sandbox, domElements, getEl, fireDomContentLoaded } = createSandbox();
         vm.createContext(sandbox);
         vm.runInContext(utilsSource, sandbox);
         sandbox.Utils = sandbox.window.Utils;
@@ -320,8 +334,9 @@ test('Student Name DOM Safety Tests', async (t) => {
             };
         `;
         vm.runInContext(instrumentedSource, sandbox);
+        fireDomContentLoaded();
         
-        // Wait for setTimeout to fire DOMContentLoaded
+        // Wait for async work started by the explicitly fired DOMContentLoaded handler.
         await new Promise(resolve => setTimeout(resolve, 50));
 
         const roles = [

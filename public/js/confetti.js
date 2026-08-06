@@ -1,82 +1,68 @@
-const canvas = document.createElement('canvas');
-canvas.style.position = 'fixed';
-canvas.style.top = '0';
-canvas.style.left = '0';
-canvas.style.width = '100%';
-canvas.style.height = '100%';
-canvas.style.pointerEvents = 'none';
-canvas.style.zIndex = '9999';
-document.body.appendChild(canvas);
+(function initializeClassroomConfetti() {
+    'use strict';
 
-const ctx = canvas.getContext('2d');
-let particles = [];
+    const colors = ['#ffd33d', '#ff625f', '#08b9c3', '#7854d8', '#49bd6a', '#ff8fc4'];
+    let celebrationTimer = null;
+    let isRunning = false;
 
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+    function launchBurst(originX, angle) {
+        if (typeof window.confetti !== 'function') return;
 
-class Particle {
-    constructor() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height - canvas.height;
-        this.size = Math.random() * 10 + 5;
-        this.speed = Math.random() * 3 + 2;
-        this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
-        this.rotation = Math.random() * 360;
-        this.rotationSpeed = Math.random() * 10 - 5;
+        window.confetti({
+            particleCount: 48,
+            angle,
+            spread: 64,
+            startVelocity: 38,
+            gravity: 0.82,
+            scalar: 1.08,
+            ticks: 210,
+            origin: { x: originX, y: 0.74 },
+            colors,
+            shapes: ['circle', 'square'],
+            disableForReducedMotion: true,
+            zIndex: 9999
+        });
     }
 
-    update() {
-        this.y += this.speed;
-        this.rotation += this.rotationSpeed;
-        if (this.y > canvas.height) {
-            this.y = -10;
-            this.x = Math.random() * canvas.width;
+    function launchGentleShower() {
+        if (typeof window.confetti !== 'function') return;
+
+        window.confetti({
+            particleCount: 12,
+            spread: 78,
+            startVelocity: 16,
+            gravity: 0.58,
+            drift: (Math.random() - 0.5) * 0.8,
+            scalar: 0.82,
+            ticks: 260,
+            origin: { x: 0.18 + Math.random() * 0.64, y: -0.04 },
+            colors,
+            shapes: ['circle', 'square'],
+            disableForReducedMotion: true,
+            zIndex: 9999
+        });
+    }
+
+    function startConfetti() {
+        if (isRunning) return;
+        isRunning = true;
+
+        launchBurst(0.04, 60);
+        launchBurst(0.96, 120);
+        celebrationTimer = window.setInterval(launchGentleShower, 1350);
+    }
+
+    function stopConfetti() {
+        isRunning = false;
+        if (celebrationTimer !== null) {
+            window.clearInterval(celebrationTimer);
+            celebrationTimer = null;
+        }
+        if (typeof window.confetti === 'function' && typeof window.confetti.reset === 'function') {
+            window.confetti.reset();
         }
     }
 
-    draw() {
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.rotate(this.rotation * Math.PI / 180);
-        ctx.fillStyle = this.color;
-        ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
-        ctx.restore();
-    }
-}
-
-let animationId;
-let isRunning = false;
-
-function startConfetti() {
-    if (isRunning) return;
-    isRunning = true;
-    particles = [];
-    for (let i = 0; i < 100; i++) {
-        particles.push(new Particle());
-    }
-    animate();
-}
-
-function stopConfetti() {
-    isRunning = false;
-    cancelAnimationFrame(animationId);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
-
-function animate() {
-    if (!isRunning) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    particles.forEach(p => {
-        p.update();
-        p.draw();
-    });
-    animationId = requestAnimationFrame(animate);
-}
-
-// Expose globally
-window.startConfetti = startConfetti;
-window.stopConfetti = stopConfetti;
+    window.startConfetti = startConfetti;
+    window.stopConfetti = stopConfetti;
+})();

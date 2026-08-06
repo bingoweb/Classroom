@@ -25,7 +25,13 @@ test('Admin Error Logs Tests', async (t) => {
                         classes: new Set(),
                         contains: function(c) { return this.classes.has(c); },
                         add: function(c) { this.classes.add(c); },
-                        remove: function(c) { this.classes.delete(c); }
+                        remove: function(c) { this.classes.delete(c); },
+                        toggle: function(c, force) {
+                            if (force === true) this.classes.add(c);
+                            else if (force === false) this.classes.delete(c);
+                            else if (this.classes.has(c)) this.classes.delete(c);
+                            else this.classes.add(c);
+                        }
                     },
                     addEventListener: () => {},
                     getAttribute: function(attr) { return this[attr]; },
@@ -129,7 +135,12 @@ test('Admin Error Logs Tests', async (t) => {
     };
 
     await t.test('HTML contract', () => {
-        assert.ok(htmlContent.includes(`<button class="tab-btn" onclick="showTab('error-logs')">Hata Logları</button>`), 'exactly one visible tab button calls `showTab(\'error-logs\')`');
+        assert.match(
+            htmlContent,
+            /id="systemButton" class="admin-action-btn admin-action-btn--system"\s+onclick="showTab\('error-logs'\)">⚙️ Sistem<\/button>/,
+            'system action opens the error log section'
+        );
+        assert.ok(!htmlContent.includes(`<button class="tab-btn" onclick="showTab('error-logs')">`), 'error logs are not a primary tab');
         assert.ok(htmlContent.includes(`<div id="error-logs" class="content-section">`), 'exactly one `error-logs` content section exists');
         assert.ok(htmlContent.includes(`id="errorLogsList"`));
         assert.ok(htmlContent.includes(`id="debugModeToggle"`));
@@ -150,8 +161,6 @@ test('Admin Error Logs Tests', async (t) => {
         vm.createContext(sandbox);
         vm.runInContext(scriptContent, sandbox);
 
-        sandbox.window.loadScheduleIntegration = undefined;
-        sandbox.window.scheduleDiagnosticsController = undefined;
         vm.runInContext(adminScriptContent, sandbox);
 
         let refreshCalled = 0;

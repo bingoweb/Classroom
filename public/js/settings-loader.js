@@ -8,15 +8,7 @@ class SettingsLoader {
             displayMode: 'normal',
             colorTheme: 'light',
             fontSize: '100',
-            autoRefreshInterval: '0',
-            clockFormat: '24',
-            noiseSensitivity: '5',
-            warning_threshold: '70',
-            danger_threshold: '85',
-            equalizer_theme: 'neon',
-            slideshowAutoPlay: 'true',
-            slideshowLoop: 'true',
-            slideshowProgress: 'true'
+            autoRefreshInterval: '0'
         };
 
         this.apiBase = typeof CONFIG !== 'undefined' ? CONFIG.API_URL : '/api';
@@ -40,11 +32,6 @@ class SettingsLoader {
                 const data = await res.json();
                 this.applySettings(data);
 
-                // Store globally for other scripts
-                window.PANEL_SETTINGS = this.settings;
-
-                // Dispatch event so other scripts know settings are loaded
-                window.dispatchEvent(new CustomEvent('settingsLoaded', { detail: this.settings }));
             }
         } catch (error) {
             console.error('Error loading settings:', error);
@@ -80,9 +67,6 @@ class SettingsLoader {
             this.setupAutoRefresh(this.settings.autoRefreshInterval);
         }
 
-        // 5. Clock Format (handled by clock widget listening to global settings usually, but we can trigger update)
-
-        // 6. Equalizer Theme - handled by main.js or equalizer script
     }
 
     applyTheme(theme) {

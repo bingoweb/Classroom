@@ -10,6 +10,7 @@ const LOG_LEVELS = {
 };
 
 const COMPONENTS = {
+    DASHBOARD: 'DASHBOARD',
     SLIDESHOW: 'SLIDESHOW',
     ADMIN: 'ADMIN',
     API: 'API',
@@ -103,7 +104,12 @@ class Logger {
     // Write to server (via API)
     async writeToServer(logEntry) {
         try {
-            if (typeof fetch !== 'undefined' && typeof CONFIG !== 'undefined') {
+            const isAdminSurface = typeof window !== 'undefined'
+                && /(?:^|\/)admin(?:\/|$)/.test(window.location.pathname);
+
+            // The log API is intentionally admin-authenticated. The public kiosk
+            // keeps its console and bounded memory logs without making doomed 401 requests.
+            if (isAdminSurface && typeof fetch !== 'undefined' && typeof CONFIG !== 'undefined') {
                 await fetch(`${CONFIG.API_URL}/logs`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -228,5 +234,3 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { Logger, logger, COMPONENTS, LOG_LEVELS };
 }
-
-

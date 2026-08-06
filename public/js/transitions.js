@@ -1,18 +1,44 @@
 // Transitions Library - 15+ Slide Transition Effects
 // GPU-accelerated transitions for visual spectacle
 
+function applyTwoPhaseReveal(currentSlide, nextSlide, duration, {
+    outgoingTransform,
+    incomingTransform
+}) {
+    const halfDuration = Math.max(175, Math.round(duration / 2));
+    currentSlide.style.transition = `transform ${halfDuration}ms ease-in, opacity ${halfDuration}ms ease-in`;
+    nextSlide.style.transition = `transform ${halfDuration}ms ease-out, opacity ${halfDuration}ms ease-out`;
+    nextSlide.style.transform = incomingTransform;
+    nextSlide.style.opacity = '0';
+
+    setTimeout(() => {
+        currentSlide.style.transform = outgoingTransform;
+        currentSlide.style.opacity = '0';
+    }, 10);
+    setTimeout(() => {
+        nextSlide.style.transform = 'scale(1)';
+        nextSlide.style.opacity = '1';
+    }, halfDuration);
+}
+
 const TRANSITIONS = {
     // 1. Fade - Smooth fade transition
     fade: {
         apply: (currentSlide, nextSlide, duration = 1000) => {
-            currentSlide.style.transition = `opacity ${duration}ms ease-in-out`;
-            nextSlide.style.transition = `opacity ${duration}ms ease-in-out`;
+            // Fade through the theatre background instead of cross-dissolving
+            // two portraits. Cross-dissolve creates an unprofessional double
+            // exposure whenever the display is captured mid-transition.
+            const halfDuration = Math.max(175, Math.round(duration / 2));
+            currentSlide.style.transition = `opacity ${halfDuration}ms ease-in`;
+            nextSlide.style.transition = `opacity ${halfDuration}ms ease-out`;
             currentSlide.style.opacity = '1';
             nextSlide.style.opacity = '0';
             setTimeout(() => {
                 currentSlide.style.opacity = '0';
-                nextSlide.style.opacity = '1';
             }, 10);
+            setTimeout(() => {
+                nextSlide.style.opacity = '1';
+            }, halfDuration);
         },
         cleanup: (slide) => {
             slide.style.transition = '';
@@ -107,17 +133,10 @@ const TRANSITIONS = {
     // 6. Zoom In
     'zoom-in': {
         apply: (currentSlide, nextSlide, duration = 1000) => {
-            nextSlide.style.transform = 'scale(0.5)';
-            nextSlide.style.opacity = '0';
-            currentSlide.style.transition = `transform ${duration}ms ease-in-out, opacity ${duration}ms ease-in-out`;
-            nextSlide.style.transition = `transform ${duration}ms ease-in-out, opacity ${duration}ms ease-in-out`;
-            
-            setTimeout(() => {
-                currentSlide.style.transform = 'scale(1.5)';
-                currentSlide.style.opacity = '0';
-                nextSlide.style.transform = 'scale(1)';
-                nextSlide.style.opacity = '1';
-            }, 10);
+            applyTwoPhaseReveal(currentSlide, nextSlide, duration, {
+                outgoingTransform: 'scale(1.12)',
+                incomingTransform: 'scale(0.92)'
+            });
         },
         cleanup: (slide) => {
             slide.style.transform = '';
@@ -129,17 +148,10 @@ const TRANSITIONS = {
     // 7. Zoom Out
     'zoom-out': {
         apply: (currentSlide, nextSlide, duration = 1000) => {
-            nextSlide.style.transform = 'scale(1.5)';
-            nextSlide.style.opacity = '0';
-            currentSlide.style.transition = `transform ${duration}ms ease-in-out, opacity ${duration}ms ease-in-out`;
-            nextSlide.style.transition = `transform ${duration}ms ease-in-out, opacity ${duration}ms ease-in-out`;
-            
-            setTimeout(() => {
-                currentSlide.style.transform = 'scale(0.5)';
-                currentSlide.style.opacity = '0';
-                nextSlide.style.transform = 'scale(1)';
-                nextSlide.style.opacity = '1';
-            }, 10);
+            applyTwoPhaseReveal(currentSlide, nextSlide, duration, {
+                outgoingTransform: 'scale(0.9)',
+                incomingTransform: 'scale(1.1)'
+            });
         },
         cleanup: (slide) => {
             slide.style.transform = '';
@@ -319,17 +331,10 @@ const TRANSITIONS = {
     // 15. Dissolve (opacity with slight scale)
     dissolve: {
         apply: (currentSlide, nextSlide, duration = 1000) => {
-            nextSlide.style.transform = 'scale(0.95)';
-            nextSlide.style.opacity = '0';
-            currentSlide.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
-            nextSlide.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
-            
-            setTimeout(() => {
-                currentSlide.style.opacity = '0';
-                currentSlide.style.transform = 'scale(1.05)';
-                nextSlide.style.opacity = '1';
-                nextSlide.style.transform = 'scale(1)';
-            }, 10);
+            applyTwoPhaseReveal(currentSlide, nextSlide, duration, {
+                outgoingTransform: 'scale(1.035)',
+                incomingTransform: 'scale(0.975)'
+            });
         },
         cleanup: (slide) => {
             slide.style.transform = '';

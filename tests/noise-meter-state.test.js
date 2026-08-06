@@ -34,6 +34,7 @@ function createElement() {
         }
     };
     return {
+        appendCalls: 0,
         children,
         attributes,
         className: '',
@@ -46,12 +47,25 @@ function createElement() {
         textContent: '',
         addEventListener() {},
         appendChild(child) {
+            this.appendCalls += 1;
+            if (child.isFragment) {
+                child.children.forEach(fragmentChild => {
+                    fragmentChild.parentElement = this;
+                    children.push(fragmentChild);
+                });
+                child.children.length = 0;
+                return child;
+            }
             child.parentElement = this;
             children.push(child);
             return child;
         },
         setAttribute(name, value) {
             attributes[name] = String(value);
+        },
+        getAttribute(name) {
+            if (name === 'src') return this.src;
+            return attributes[name] ?? null;
         },
         set innerHTML(value) {
             children.length = 0;
@@ -82,7 +96,7 @@ function createHarness() {
     });
     const scaleLabelsContainer = createElement();
     scaleLabels.forEach(label => scaleLabelsContainer.appendChild(label));
-    equalizerContainer.className = 'equalizer-container theme-neon';
+    equalizerContainer.className = 'equalizer-container';
 
     const elementsById = {
         'noise-meter-card': card,
@@ -105,8 +119,12 @@ function createHarness() {
     class WorkingAudioContext {
         createAnalyser() {
             return {
+                fftSize: 1024,
                 frequencyBinCount: 512,
-                getByteFrequencyData() {}
+                getByteFrequencyData() {},
+                getByteTimeDomainData(array) {
+                    array.fill(128);
+                }
             };
         }
 
@@ -129,6 +147,11 @@ function createHarness() {
         },
         document: {
             addEventListener() {},
+            createDocumentFragment() {
+                const fragment = createElement();
+                fragment.isFragment = true;
+                return fragment;
+            },
             createElement,
             getElementById: id => elementsById[id] || null,
             querySelector: selector => selectorElements[selector] || null,
@@ -142,6 +165,7 @@ function createHarness() {
             }
         },
         requestAnimationFrame() {},
+        clearTimeout() {},
         setTimeout() {
             return 1;
         },
@@ -162,6 +186,7 @@ function createHarness() {
         logs,
         elements: {
             card,
+            image,
             levelMeter,
             meterBar,
             fill,
@@ -185,6 +210,7 @@ test('noise meter starts in a neutral, non-interactive preparation state', () =>
     assert.strictEqual(harness.elements.statusTitle.textContent, 'Ses Ölçer Hazırlanıyor');
     assert.strictEqual(harness.elements.startButton.hidden, true);
     assert.strictEqual(harness.elements.equalizerWrapper.children.length, 128);
+    assert.strictEqual(harness.elements.equalizerWrapper.appendCalls, 1);
     assert.strictEqual(meter.isStarting, false);
     assert.strictEqual(meter.currentLevel, null);
     assert.ok(harness.elements.scaleLabels.every(label => !label.classList.contains('is-active')));
@@ -214,18 +240,111 @@ test('progress bar activates only the label for the current threshold range', ()
     );
 });
 
-test('configured thresholds align the progress markers and label ranges', () => {
+test('rapid threshold changes cancel stale character image transitions', () => {
+    const harness = createHarness();
+    const meter = new harness.NoiseMeter();
+    const pendingTimers = new Map();
+    let nextTimerId = 10;
+
+    harness.sandbox.setTimeout = callback => {
+        const timerId = nextTimerId++;
+        pendingTimers.set(timerId, callback);
+        return timerId;
+    };
+    harness.sandbox.clearTimeout = timerId => pendingTimers.delete(timerId);
+
+    meter.changeState('medium');
+    assert.strictEqual(harness.elements.image.src, 'assets/noise-states/attention.webp');
+    meter.changeState('high');
+    for (const callback of pendingTimers.values()) callback();
+
+    assert.strictEqual(harness.elements.image.src, 'assets/noise-states/loud.webp');
+    assert.strictEqual(meter.currentLevel, 'high');
+});
+
+test('equalizer frequency bands are precomputed and reused between animation frames', () => {
     const harness = createHarness();
     const meter = new harness.NoiseMeter();
 
-    meter.applySettings({ warning_threshold: '60', danger_threshold: '80' });
+    meter.configureEqualizerBands(512);
+    const firstBands = meter.equalizerBands;
 
-    assert.strictEqual(harness.elements.meterBar.style['--warning-threshold'], '60%');
-    assert.strictEqual(harness.elements.meterBar.style['--danger-threshold'], '80%');
+    assert.strictEqual(firstBands.length, 128);
+    assert.ok(firstBands.every(band => Number.isInteger(band.startBin)));
+    assert.ok(firstBands.every(band => Number.isInteger(band.endBin)));
+    assert.ok(firstBands.every(band => band.endBin > band.startBin));
+
+    meter.configureEqualizerBands(512);
+    assert.strictEqual(meter.equalizerBands, firstBands);
+
+    meter.configureEqualizerBands(1024);
+    assert.notStrictEqual(meter.equalizerBands, firstBands);
+});
+
+test('automatic thresholds align the progress markers and label ranges', () => {
+    const harness = createHarness();
+    const meter = new harness.NoiseMeter();
+
+    assert.strictEqual(harness.elements.meterBar.style['--warning-threshold'], '70%');
+    assert.strictEqual(harness.elements.meterBar.style['--danger-threshold'], '85%');
     assert.strictEqual(
         harness.elements.scaleLabelsContainer.style.gridTemplateColumns,
-        '60fr 20fr 20fr'
+        '70fr 15fr 15fr'
     );
+});
+
+test('ambient calibration learns a robust floor and normalizes relative loudness', () => {
+    const harness = createHarness();
+    const meter = new harness.NoiseMeter();
+
+    for (let i = 0; i < meter.calibrationSampleLimit - 20; i++) {
+        assert.strictEqual(meter.updateCalibration(-56), false);
+    }
+    for (let i = 0; i < 20; i++) {
+        meter.updateCalibration(-30);
+    }
+
+    assert.strictEqual(meter.isCalibrated, true);
+    assert.strictEqual(meter.noiseFloorDb, -56);
+    assert.strictEqual(meter.calibrationSamples.length, 0);
+    assert.strictEqual(meter.normalizeLoudness(-56), 0);
+    assert.ok(meter.normalizeLoudness(-26) > 0.99);
+});
+
+test('time-domain loudness uses RMS instead of frequency-bin averages', () => {
+    const harness = createHarness();
+    const meter = new harness.NoiseMeter();
+    const silence = new Uint8Array(32).fill(128);
+    const loudSignal = Uint8Array.from({ length: 32 }, (_, index) => index % 2 ? 255 : 0);
+
+    assert.strictEqual(meter.calculateDecibels(silence), -100);
+    assert.ok(meter.calculateDecibels(loudSignal) > -1);
+});
+
+test('level hysteresis prevents flicker around warning and danger boundaries', () => {
+    const harness = createHarness();
+    const meter = new harness.NoiseMeter();
+
+    meter.currentLevel = 'medium';
+    assert.strictEqual(meter.resolveLevel(68), 'medium');
+    assert.strictEqual(meter.resolveLevel(65), 'low');
+
+    meter.currentLevel = 'high';
+    assert.strictEqual(meter.resolveLevel(83), 'high');
+    assert.strictEqual(meter.resolveLevel(80), 'medium');
+});
+
+test('sustained loudness raises the score smoothly without frame-time jumps', () => {
+    const harness = createHarness();
+    const meter = new harness.NoiseMeter();
+
+    for (let i = 0; i < 20; i++) meter.updateNoiseScore(1, 0.25);
+    assert.ok(meter.noiseScore > meter.dangerThreshold);
+
+    const scoreBeforeJump = meter.noiseScore;
+    meter.updateNoiseScore(0, 30);
+    assert.ok(meter.noiseScore < scoreBeforeJump);
+    assert.ok(meter.noiseScore > 80, 'uzun sekme duraklaması tek karede skoru sıfırlamamalı');
 });
 
 test('missing microphone becomes a calm retryable state without an error log', async () => {
@@ -236,6 +355,8 @@ test('missing microphone becomes a calm retryable state without an error log', a
         throw error;
     };
     const meter = new harness.NoiseMeter();
+    let warmupCount = 0;
+    meter.warmStateImages = () => { warmupCount += 1; };
 
     await meter.startListening();
 
@@ -251,6 +372,7 @@ test('missing microphone becomes a calm retryable state without an error log', a
     assert.strictEqual(harness.elements.startButton.disabled, false);
     assert.strictEqual(harness.logs.error.length, 0);
     assert.strictEqual(harness.logs.info.length, 1);
+    assert.strictEqual(warmupCount, 0, 'unused state images stay deferred without a microphone');
 });
 
 test('a pending microphone request cannot be started twice', async () => {
@@ -264,6 +386,8 @@ test('a pending microphone request cannot be started twice', async () => {
         });
     };
     const meter = new harness.NoiseMeter();
+    let warmupCount = 0;
+    meter.warmStateImages = () => { warmupCount += 1; };
 
     const firstRequest = meter.startListening();
     const secondRequest = meter.startListening();
@@ -276,6 +400,7 @@ test('a pending microphone request cannot be started twice', async () => {
     assert.strictEqual(meter.isStarting, false);
     assert.strictEqual(harness.elements.card.dataset.micState, 'listening');
     assert.strictEqual(harness.elements.startButton.hidden, true);
+    assert.strictEqual(warmupCount, 1, 'remaining state images warm exactly once after audio becomes usable');
 });
 
 test('a stream is released when audio setup fails after permission succeeds', async () => {

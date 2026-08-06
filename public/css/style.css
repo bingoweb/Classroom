@@ -1607,74 +1607,9 @@ a {
     box-shadow: none !important;
 }
 
-/* Neon Tema - Yeşil/Mavi/Mor */
-.equalizer-container.theme-neon .eq-bar,
+/* Sabit ekolayzer teması: ana sayfanın mavi, turkuaz ve yeşil paleti */
 .eq-bar {
-    background: #00ff88;
-    /* Düz renk */
-}
-
-/* ========== TEMA 2: OCEAN ========== */
-.equalizer-container.theme-ocean .eq-bar {
-    background: #03a9f4;
-    /* Düz renk */
-    box-shadow: none;
-}
-
-/* ========== TEMA 3: SUNSET ========== */
-.equalizer-container.theme-sunset .eq-bar {
-    background: #ff9800;
-    /* Düz renk */
-    box-shadow: none;
-}
-
-/* ========== TEMA 4: FOREST (Doğa) ========== */
-.equalizer-container.theme-forest .eq-bar {
-    background: #4caf50;
-    /* Düz renk */
-    box-shadow: none;
-}
-
-/* ========== TEMA 5: LOVE (Sevgi) ========== */
-.equalizer-container.theme-love .eq-bar {
-    background: #e91e63;
-    /* Düz renk */
-    box-shadow: none;
-}
-
-/* ========== TEMA 6: ROYAL (Asil) ========== */
-.equalizer-container.theme-royal .eq-bar {
-    background: #673ab7;
-    /* Düz renk */
-    box-shadow: none;
-}
-
-/* ========== TEMA 7: ICE (Buz) ========== */
-.equalizer-container.theme-ice .eq-bar {
-    background: #00bcd4;
-    /* Düz renk */
-    box-shadow: none;
-}
-
-/* ========== TEMA 8: FIRE (Ateş) ========== */
-.equalizer-container.theme-fire .eq-bar {
-    background: #f44336;
-    /* Düz renk */
-    box-shadow: none;
-}
-
-/* ========== TEMA 9: MATRIX (Dijital) ========== */
-.equalizer-container.theme-matrix .eq-bar {
-    background: #00ff00;
-    /* Düz renk */
-    box-shadow: none;
-    border: none;
-}
-
-/* ========== TEMA 10: RAINBOW (Gökkuşağı) ========== */
-.equalizer-container.theme-rainbow .eq-bar {
-    background: #9c27b0;
-    /* Düz renk */
+    background: linear-gradient(180deg, #5d79e7 0%, #43c9c6 52%, #54d99a 100%);
     box-shadow: none;
 }
 
@@ -1753,40 +1688,6 @@ a {
         0 0 20px currentColor,
         0 0 40px currentColor,
         inset 0 0 10px rgba(255, 255, 255, 0.5) !important;
-}
-
-/* ========== TEMA SEÇİCİ ========== */
-.eq-theme-selector {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-left: 0.3rem;
-    z-index: 1;
-}
-
-.eq-theme-btn {
-    width: 24px;
-    height: 24px;
-    border: none;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
-    cursor: pointer;
-    font-size: 0.7rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    padding: 0;
-}
-
-.eq-theme-btn:hover {
-    transform: scale(1.2);
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.eq-theme-btn.active {
-    background: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
 }
 
 /* 12 bar için ekstra yükseklikler */
@@ -4104,7 +4005,6 @@ a {
     background: linear-gradient(90deg, transparent, rgba(118, 103, 211, 0.08), transparent);
 }
 
-.equalizer-container.theme-neon .eq-bar,
 .equalizer-container .eq-bar {
     background: linear-gradient(180deg, #5d79e7 0%, #43c9c6 52%, #54d99a 100%);
 }

@@ -29,10 +29,10 @@ test('Internet Requirement Copy Tests', async (t) => {
         assert.ok(!adminHtmlContent.includes('İnternet bağlantısı gerekmez'), 'Admin HTML contains stale "İnternet bağlantısı gerekmez"');
     });
 
-    await t.test('5. The admin HTML contains exactly one system requirement message', () => {
+    await t.test('5. The simplified admin HTML omits the retired system requirement card', () => {
         const msg = '🌐 Sistem ve harici kaynaklar için internet bağlantısı gereklidir.';
         const matchCount = (adminHtmlContent.match(new RegExp(msg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-        assert.strictEqual(matchCount, 1, 'Admin HTML must contain exactly one system requirement message');
+        assert.strictEqual(matchCount, 0, 'Admin HTML must not restore the retired system requirement card');
     });
 
     await t.test('6. The known stale phrase "offline operation" is absent from public/admin/index.html and public/admin/admin.js', () => {

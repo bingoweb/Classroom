@@ -5,14 +5,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2/D Sihirli Pano</title>
-    <!-- Fonts removed - using system fonts for offline operation -->
+    <link rel="icon" href="assets/favicon.png" type="image/png" sizes="64x64">
+    <!-- Pinned local fonts keep the kiosk consistent and fully offline. -->
+    <link rel="preload" href="assets/kiosk-magic-park-shell.webp" as="image" type="image/webp">
+    <link rel="preload" href="assets/noise-states/quiet.webp" as="image" type="image/webp" fetchpriority="high">
+    <link rel="preload" href="fonts/fredoka-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="css/style.css?v=8">
     <link rel="stylesheet" href="css/kiosk-mode.css?v=1">
+    <link rel="stylesheet" href="css/kiosk-magic-park.css?v=11">
     <script src="js/config.js"></script>
     <script src="js/logger.js"></script>
 </head>
 
-<body>
+<body class="magic-park-theme">
     <div class="background-overlay"></div>
 
     <div class="bento-grid">
@@ -20,7 +25,6 @@
         <div class="column col-left">
             <div class="card clock-card">
                 <div class="card-titlebar card-titlebar--sky">
-                    <img class="card-titlebar-icon" src="assets/ui-icons-3d/calendar-weekend.png" alt="" aria-hidden="true">
                     <span>Günün Zamanı</span>
                 </div>
                 <div class="clock-content-wrapper">
@@ -50,7 +54,6 @@
 
             <div class="card stats-card">
                 <div class="card-titlebar card-titlebar--mint stats-header-row">
-                    <img class="stats-header-icon" src="assets/icons/chart-3d.png" alt="" aria-hidden="true">
                     <div class="stats-header-text">Sınıf Mevcudu</div>
                 </div>
 
@@ -115,7 +118,6 @@
 
             <div class="card countdown-card" id="countdown-card">
                 <div class="card-titlebar card-titlebar--lilac">
-                    <img class="card-titlebar-icon" src="assets/ui-icons-3d/school-clock.png" alt="" aria-hidden="true">
                     <span>Ders Akışı</span>
                 </div>
                 <!-- Before School Starts -->
@@ -158,12 +160,12 @@
                 <!-- Noise Meter / Quiet Detective Card -->
                 <div class="card noise-meter-card" id="noise-meter-card">
                     <div class="card-titlebar card-titlebar--aqua">
-                        <img class="card-titlebar-icon" src="assets/ui-icons-3d/microphone.png" alt="" aria-hidden="true">
                         <span>Sınıfın Ses Dengesi</span>
                     </div>
                     <div class="noise-content">
                         <div class="noise-character-wrapper">
-                            <img id="noise-character-img" src="uploads/sessiz.png" alt="Sessiz Karakter">
+                            <img id="noise-character-img" src="assets/noise-states/quiet.webp" alt="Sessiz Karakter"
+                                width="2816" height="1536" decoding="async" fetchpriority="high">
                             <!-- Ripple Effect for noise -->
                             <div class="noise-ripple"></div>
                         </div>
@@ -195,139 +197,9 @@
                                     </div>
                                 </div>
                                 <!-- EKOLAYZER v2.0 - Premium Tasarım -->
-                                <div class="equalizer-container theme-neon" id="equalizer-container" aria-hidden="true">
+                                <div class="equalizer-container" id="equalizer-container" aria-hidden="true">
                                     <img class="eq-label" src="assets/ui-icons-3d/microphone.png" alt="">
-                                    <div class="equalizer-bars">
-                                        <!-- 128 Bar Extreme Res Equalizer -->
-                                        <div class="eq-bar" id="eq-bar-1"></div>
-                                        <div class="eq-bar" id="eq-bar-2"></div>
-                                        <div class="eq-bar" id="eq-bar-3"></div>
-                                        <div class="eq-bar" id="eq-bar-4"></div>
-                                        <div class="eq-bar" id="eq-bar-5"></div>
-                                        <div class="eq-bar" id="eq-bar-6"></div>
-                                        <div class="eq-bar" id="eq-bar-7"></div>
-                                        <div class="eq-bar" id="eq-bar-8"></div>
-                                        <div class="eq-bar" id="eq-bar-9"></div>
-                                        <div class="eq-bar" id="eq-bar-10"></div>
-                                        <div class="eq-bar" id="eq-bar-11"></div>
-                                        <div class="eq-bar" id="eq-bar-12"></div>
-                                        <div class="eq-bar" id="eq-bar-13"></div>
-                                        <div class="eq-bar" id="eq-bar-14"></div>
-                                        <div class="eq-bar" id="eq-bar-15"></div>
-                                        <div class="eq-bar" id="eq-bar-16"></div>
-                                        <div class="eq-bar" id="eq-bar-17"></div>
-                                        <div class="eq-bar" id="eq-bar-18"></div>
-                                        <div class="eq-bar" id="eq-bar-19"></div>
-                                        <div class="eq-bar" id="eq-bar-20"></div>
-                                        <div class="eq-bar" id="eq-bar-21"></div>
-                                        <div class="eq-bar" id="eq-bar-22"></div>
-                                        <div class="eq-bar" id="eq-bar-23"></div>
-                                        <div class="eq-bar" id="eq-bar-24"></div>
-                                        <div class="eq-bar" id="eq-bar-25"></div>
-                                        <div class="eq-bar" id="eq-bar-26"></div>
-                                        <div class="eq-bar" id="eq-bar-27"></div>
-                                        <div class="eq-bar" id="eq-bar-28"></div>
-                                        <div class="eq-bar" id="eq-bar-29"></div>
-                                        <div class="eq-bar" id="eq-bar-30"></div>
-                                        <div class="eq-bar" id="eq-bar-31"></div>
-                                        <div class="eq-bar" id="eq-bar-32"></div>
-                                        <div class="eq-bar" id="eq-bar-33"></div>
-                                        <div class="eq-bar" id="eq-bar-34"></div>
-                                        <div class="eq-bar" id="eq-bar-35"></div>
-                                        <div class="eq-bar" id="eq-bar-36"></div>
-                                        <div class="eq-bar" id="eq-bar-37"></div>
-                                        <div class="eq-bar" id="eq-bar-38"></div>
-                                        <div class="eq-bar" id="eq-bar-39"></div>
-                                        <div class="eq-bar" id="eq-bar-40"></div>
-                                        <div class="eq-bar" id="eq-bar-41"></div>
-                                        <div class="eq-bar" id="eq-bar-42"></div>
-                                        <div class="eq-bar" id="eq-bar-43"></div>
-                                        <div class="eq-bar" id="eq-bar-44"></div>
-                                        <div class="eq-bar" id="eq-bar-45"></div>
-                                        <div class="eq-bar" id="eq-bar-46"></div>
-                                        <div class="eq-bar" id="eq-bar-47"></div>
-                                        <div class="eq-bar" id="eq-bar-48"></div>
-                                        <div class="eq-bar" id="eq-bar-49"></div>
-                                        <div class="eq-bar" id="eq-bar-50"></div>
-                                        <div class="eq-bar" id="eq-bar-51"></div>
-                                        <div class="eq-bar" id="eq-bar-52"></div>
-                                        <div class="eq-bar" id="eq-bar-53"></div>
-                                        <div class="eq-bar" id="eq-bar-54"></div>
-                                        <div class="eq-bar" id="eq-bar-55"></div>
-                                        <div class="eq-bar" id="eq-bar-56"></div>
-                                        <div class="eq-bar" id="eq-bar-57"></div>
-                                        <div class="eq-bar" id="eq-bar-58"></div>
-                                        <div class="eq-bar" id="eq-bar-59"></div>
-                                        <div class="eq-bar" id="eq-bar-60"></div>
-                                        <div class="eq-bar" id="eq-bar-61"></div>
-                                        <div class="eq-bar" id="eq-bar-62"></div>
-                                        <div class="eq-bar" id="eq-bar-63"></div>
-                                        <div class="eq-bar" id="eq-bar-64"></div>
-                                        <div class="eq-bar" id="eq-bar-65"></div>
-                                        <div class="eq-bar" id="eq-bar-66"></div>
-                                        <div class="eq-bar" id="eq-bar-67"></div>
-                                        <div class="eq-bar" id="eq-bar-68"></div>
-                                        <div class="eq-bar" id="eq-bar-69"></div>
-                                        <div class="eq-bar" id="eq-bar-70"></div>
-                                        <div class="eq-bar" id="eq-bar-71"></div>
-                                        <div class="eq-bar" id="eq-bar-72"></div>
-                                        <div class="eq-bar" id="eq-bar-73"></div>
-                                        <div class="eq-bar" id="eq-bar-74"></div>
-                                        <div class="eq-bar" id="eq-bar-75"></div>
-                                        <div class="eq-bar" id="eq-bar-76"></div>
-                                        <div class="eq-bar" id="eq-bar-77"></div>
-                                        <div class="eq-bar" id="eq-bar-78"></div>
-                                        <div class="eq-bar" id="eq-bar-79"></div>
-                                        <div class="eq-bar" id="eq-bar-80"></div>
-                                        <div class="eq-bar" id="eq-bar-81"></div>
-                                        <div class="eq-bar" id="eq-bar-82"></div>
-                                        <div class="eq-bar" id="eq-bar-83"></div>
-                                        <div class="eq-bar" id="eq-bar-84"></div>
-                                        <div class="eq-bar" id="eq-bar-85"></div>
-                                        <div class="eq-bar" id="eq-bar-86"></div>
-                                        <div class="eq-bar" id="eq-bar-87"></div>
-                                        <div class="eq-bar" id="eq-bar-88"></div>
-                                        <div class="eq-bar" id="eq-bar-89"></div>
-                                        <div class="eq-bar" id="eq-bar-90"></div>
-                                        <div class="eq-bar" id="eq-bar-91"></div>
-                                        <div class="eq-bar" id="eq-bar-92"></div>
-                                        <div class="eq-bar" id="eq-bar-93"></div>
-                                        <div class="eq-bar" id="eq-bar-94"></div>
-                                        <div class="eq-bar" id="eq-bar-95"></div>
-                                        <div class="eq-bar" id="eq-bar-96"></div>
-                                        <div class="eq-bar" id="eq-bar-97"></div>
-                                        <div class="eq-bar" id="eq-bar-98"></div>
-                                        <div class="eq-bar" id="eq-bar-99"></div>
-                                        <div class="eq-bar" id="eq-bar-100"></div>
-                                        <div class="eq-bar" id="eq-bar-101"></div>
-                                        <div class="eq-bar" id="eq-bar-102"></div>
-                                        <div class="eq-bar" id="eq-bar-103"></div>
-                                        <div class="eq-bar" id="eq-bar-104"></div>
-                                        <div class="eq-bar" id="eq-bar-105"></div>
-                                        <div class="eq-bar" id="eq-bar-106"></div>
-                                        <div class="eq-bar" id="eq-bar-107"></div>
-                                        <div class="eq-bar" id="eq-bar-108"></div>
-                                        <div class="eq-bar" id="eq-bar-109"></div>
-                                        <div class="eq-bar" id="eq-bar-110"></div>
-                                        <div class="eq-bar" id="eq-bar-111"></div>
-                                        <div class="eq-bar" id="eq-bar-112"></div>
-                                        <div class="eq-bar" id="eq-bar-113"></div>
-                                        <div class="eq-bar" id="eq-bar-114"></div>
-                                        <div class="eq-bar" id="eq-bar-115"></div>
-                                        <div class="eq-bar" id="eq-bar-116"></div>
-                                        <div class="eq-bar" id="eq-bar-117"></div>
-                                        <div class="eq-bar" id="eq-bar-118"></div>
-                                        <div class="eq-bar" id="eq-bar-119"></div>
-                                        <div class="eq-bar" id="eq-bar-120"></div>
-                                        <div class="eq-bar" id="eq-bar-121"></div>
-                                        <div class="eq-bar" id="eq-bar-122"></div>
-                                        <div class="eq-bar" id="eq-bar-123"></div>
-                                        <div class="eq-bar" id="eq-bar-124"></div>
-                                        <div class="eq-bar" id="eq-bar-125"></div>
-                                        <div class="eq-bar" id="eq-bar-126"></div>
-                                        <div class="eq-bar" id="eq-bar-127"></div>
-                                        <div class="eq-bar" id="eq-bar-128"></div>
-                                    </div>
+                                    <div class="equalizer-bars"></div>
                                     <!-- Tema Seçici -->
                                     <!-- Tema Seçici (Admin panelinden yönetiliyor) -->
                                 </div>
@@ -338,7 +210,6 @@
                 </div>
                 <div class="card slideshow-card">
                     <div class="card-titlebar card-titlebar--coral">
-                        <img class="card-titlebar-icon" src="assets/ui-icons-3d/sparkles.png" alt="" aria-hidden="true">
                         <span>Sınıfımızdan</span>
                     </div>
                     <div id="slideshow-container" class="slideshow-container"
@@ -352,8 +223,7 @@
             <div class="column col-right">
                 <div class="card president-card">
                     <div class="card-header card-titlebar card-titlebar--sunny">
-                        <img src="assets/icons/crown-3d.png" class="icon-3d" alt="Crown">
-                        Sınıf Başkanı
+                        <span>Sınıf Başkanı</span>
                     </div>
                     <div id="president-container" class="student-display-large">
                         <!-- President injected by JS -->
@@ -361,8 +231,7 @@
                 </div>
                 <div class="card duty-card">
                     <div class="card-header card-titlebar card-titlebar--aqua">
-                        <img src="assets/icons/clipboard-3d.png" class="icon-3d" alt="Duty">
-                        Nöbetçiler
+                        <span>Nöbetçiler</span>
                     </div>
                     <div id="duty-container" class="duty-grid">
                         <!-- Duty students injected by JS -->
@@ -370,8 +239,7 @@
                 </div>
                 <div class="card star-card">
                     <div class="card-header card-titlebar card-titlebar--berry">
-                        <img src="assets/icons/star-3d.png" class="icon-3d" alt="Star">
-                        Haftanın Yıldızları
+                        <span>Haftanın Yıldızları</span>
                     </div>
                     <div id="stars-container" class="stars-grid">
                         <!-- Stars injected by JS -->
@@ -383,21 +251,24 @@
     </div>
 
     <!-- Scripts -->
+    <script src="vendor/gsap/gsap-3.15.0.min.js"></script>
+    <script src="vendor/canvas-confetti/canvas-confetti-1.9.4.js"></script>
     <script src="js/time-provider.js"></script>
     <script src="js/settings-loader.js"></script> <!-- En başta yüklenmeli -->
     <script src="js/display-mode-manager.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/confetti.js"></script>
+    <script src="js/kiosk-motion.js?v=4"></script>
     <script src="js/api-service.js"></script>
     <script src="js/schedule-normalizer.js"></script>
     <script src="js/schedule-manager.js"></script>
     <script src="js/dashboard-schedule-loader.js"></script>
-    <script src="js/face-focus.js"></script>
+    <script src="js/face-focus.js?v=2"></script>
     <script src="js/media-analyzer.js?v=3"></script>
-    <script src="js/transitions.js?v=3"></script>
-    <script src="js/interval-manager.js"></script>
-    <script src="js/noise-meter.js?v=3"></script>
-    <script src="js/script.js?v=8"></script>
+    <script src="js/transitions.js?v=6"></script>
+    <script src="js/interval-manager.js?v=2"></script>
+    <script src="js/noise-meter.js?v=5"></script>
+    <script src="js/script.js?v=9"></script>
     <script src="js/dev-time-simulator.js"></script>
 </body>
 

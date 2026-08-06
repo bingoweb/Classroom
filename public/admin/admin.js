@@ -4,7 +4,10 @@ window.showTab = function (tabName) {
     document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
 
-    document.getElementById(tabName).classList.add('active');
+    const section = document.getElementById(tabName);
+    if (!section) return;
+
+    section.classList.add('active');
     // Find the button that calls this function and add active class
     const buttons = document.querySelectorAll('.tab-btn');
     buttons.forEach(btn => {
@@ -13,13 +16,12 @@ window.showTab = function (tabName) {
         }
     });
 
-    if (tabName === 'scheduleDiagnostics') {
-        if (typeof window.loadScheduleIntegration === 'function') {
-            window.loadScheduleIntegration();
-        } else if (window.scheduleDiagnosticsController) {
-            window.scheduleDiagnosticsController.load();
-        }
-    } else if (tabName === 'error-logs') {
+    const systemButton = document.getElementById('systemButton');
+    if (systemButton) {
+        systemButton.classList.toggle('active', tabName === 'error-logs');
+    }
+
+    if (tabName === 'error-logs') {
         if (typeof window.refreshErrorLogs === 'function') {
             window.refreshErrorLogs();
         }
@@ -932,7 +934,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // fetchWord(); - removed, feature deprecated
     fetchSlides();
     fetchSlideSettings();
-    fetchEqualizerTheme();
 
     // Slide form event listeners
     const slideForm = document.getElementById('slideForm');
@@ -960,7 +961,6 @@ document.addEventListener('DOMContentLoaded', () => {
         slideSettingsForm.addEventListener('submit', handleSlideSettingsSubmit);
     }
 
-    fetchEqualizerTheme();
 });
 
 // ===== SLIDE MANAGEMENT FUNCTIONS =====
@@ -1826,370 +1826,3 @@ window.saveAttendance = async function () {
         Utils.showError('Yoklama kaydedilirken hata oluştu.');
     }
 };
-// Equalizer Theme Management
-const THEME_GRADIENTS = {
-    neon: ['#ff0055', '#ffaa00', '#00ff00'],
-    ocean: ['#0000ff', '#00ffff', '#ffffff'],
-    sunset: ['#cc00cc', '#ff0066', '#ff9933'],
-    forest: ['#009900', '#66ff00', '#ccff00'],
-    love: ['#ff0000', '#ff3366', '#ff0066'],
-    royal: ['#4b0082', '#9933ff', '#cc00ff'],
-    ice: ['#0055ff', '#00aaff', '#00ffff'],
-    fire: ['#ff0000', '#ff6600', '#ffcc00'],
-    matrix: ['#003300', '#00ff00', '#00ff00'],
-    rainbow: ['#ff0000', '#00ff00', '#0000ff', '#ffff00']
-};
-
-window.setEqualizerTheme = async function (themeName) {
-    // 1. UI Update (Immediate Feedback)
-    document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
-    const activeBtn = document.getElementById(`theme-btn-${themeName}`);
-    if (activeBtn) activeBtn.classList.add('active');
-
-    document.getElementById('currentThemeDisplay').textContent = `Seçili Tema: ${themeName.toUpperCase()}`;
-
-    // 2. Update Preview
-    updateThemePreview(themeName);
-
-    try {
-        const response = await fetch(`${CONFIG.API_URL}/settings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: 'equalizer_theme', value: themeName })
-        });
-
-        if (!response.ok) {
-            Utils.showError('Tema değiştirilirken hata oluştu');
-            return;
-        }
-
-        Utils.showSuccess(`Tema değiştirildi: ${themeName.toUpperCase()}`);
-    } catch (e) {
-        if (typeof logger !== 'undefined') { logger.error(COMPONENTS.ADMIN, 'Error setting theme', e); }
-        Utils.showError('Tema değiştirilirken hata oluştu.');
-    }
-};
-
-window.fetchEqualizerTheme = async function () {
-    try {
-        const res = await fetch(`${CONFIG.API_URL}/settings`);
-        const settings = await res.json();
-
-        let theme = 'neon'; // varsayılan
-
-        // settings array mi obje mi kontrol et
-        if (Array.isArray(settings)) {
-            const found = settings.find(s => s.key === 'equalizer_theme');
-            if (found) theme = found.value;
-        } else if (settings.equalizer_theme) {
-            theme = settings.equalizer_theme;
-        }
-
-        document.getElementById('currentThemeDisplay').textContent = `Seçili Tema: ${theme.toUpperCase()}`;
-
-        // Butonu aktif yap
-        document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
-        const activeBtn = document.getElementById(`theme-btn-${theme}`);
-        if (activeBtn) activeBtn.classList.add('active');
-
-        // Önizlemeyi güncelle
-        updateThemePreview(theme);
-
-    } catch (e) {
-        if (typeof logger !== 'undefined') {
-            logger.error(COMPONENTS.ADMIN, 'Error fetching theme', e);
-        }
-        // Varsayılan tema ile önizlemeyi güncelle
-        updateThemePreview('neon');
-    }
-};
-
-// =============================================
-// ADMIN EQUALİZER ÖNİZLEME - GERÇEK MİKROFON
-// =============================================
-let adminAudioContext = null;
-let adminAnalyser = null;
-let adminMicrophone = null;
-let adminDataArray = null;
-let adminIsListening = false;
-let adminEqBars = [];
-let adminEqPeaks = [];
-let adminCurrentTheme = 'neon';
-let adminPeakLevels = new Array(128).fill(0);
-let adminPeakHoldCounters = new Array(128).fill(0);
-
-const ADMIN_THEMES = {
-    neon: ['#ff0055', '#ffaa00', '#ffff00', '#00ff00'],
-    fire: ['#ff0000', '#ff4500', '#ffcc00', '#ffff00'],
-    ocean: ['#0000ff', '#0088ff', '#00ffff', '#e0ffff'],
-    forest: ['#009900', '#33cc33', '#66ff66', '#ccff00'],
-    sunset: ['#cc00cc', '#ff0066', '#ff9933', '#ffff00'],
-    love: ['#ff0000', '#ff0066', '#ff3399', '#ff99cc'],
-    royal: ['#4b0082', '#9900cc', '#cc00ff', '#ffd700'],
-    matrix: ['#002200', '#006600', '#00cc00', '#00ff00'],
-    ice: ['#0055ff', '#00aaff', '#00ffff', '#ffffff'],
-    rainbow: ['#ff0000', '#00ff00', '#0000ff', '#ffff00']
-};
-
-function initAdminEqualizer() {
-    const eqWrapper = document.querySelector('#equalizer-container .equalizer-bars');
-    if (!eqWrapper) return;
-
-    // 128 bar oluştur - ana sayfa ile aynı
-    eqWrapper.innerHTML = '';
-    adminEqBars = [];
-    adminEqPeaks = [];
-    for (let i = 0; i < 128; i++) {
-        const column = document.createElement('div');
-        column.className = 'eq-column';
-        const peak = document.createElement('div');
-        peak.className = 'eq-peak';
-        const bar = document.createElement('div');
-        bar.className = 'eq-bar';
-        bar.id = `eq-bar-${i + 1}`;
-        column.appendChild(peak);
-        column.appendChild(bar);
-        eqWrapper.appendChild(column);
-        adminEqBars.push(bar);
-        adminEqPeaks.push(peak);
-    }
-}
-
-window.startAdminMicrophone = async function () {
-    if (adminIsListening) return;
-
-    const statusEl = document.getElementById('admin-mic-status');
-    const btnEl = document.getElementById('admin-mic-btn');
-
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        adminAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-        adminAnalyser = adminAudioContext.createAnalyser();
-        adminMicrophone = adminAudioContext.createMediaStreamSource(stream);
-
-        adminAnalyser.fftSize = 1024;
-        adminAnalyser.smoothingTimeConstant = 0.7;
-        adminMicrophone.connect(adminAnalyser);
-
-        const bufferLength = adminAnalyser.frequencyBinCount;
-        adminDataArray = new Uint8Array(bufferLength);
-
-        adminIsListening = true;
-
-        if (btnEl) btnEl.style.display = 'none';
-        if (statusEl) {
-            statusEl.textContent = '🎤 Dinleniyor...';
-            statusEl.style.color = '#2ed573';
-        }
-
-        // Barları oluştur
-        initAdminEqualizer();
-
-        // Döngüyü başlat
-        adminUpdateLoop();
-
-    } catch (error) {
-        console.error('Microphone error:', error);
-        if (statusEl) {
-            statusEl.textContent = '❌ Mikrofon İzni Gerekli';
-            statusEl.style.color = '#ff4757';
-        }
-    }
-};
-
-function adminUpdateLoop() {
-    if (!adminIsListening) return;
-    requestAnimationFrame(adminUpdateLoop);
-
-    adminAnalyser.getByteFrequencyData(adminDataArray);
-
-    const totalBars = 128;
-    const totalBins = adminDataArray.length;
-    const step = 5;
-    const palette = ADMIN_THEMES[adminCurrentTheme] || ADMIN_THEMES.neon;
-
-    for (let i = 0; i < totalBars; i++) {
-        const bar = adminEqBars[i];
-        const peak = adminEqPeaks[i];
-        if (!bar) continue;
-
-        const startBin = Math.floor(Math.pow(i / totalBars, 1.8) * (totalBins - 50));
-        const endBin = Math.floor(Math.pow((i + 1) / totalBars, 1.8) * (totalBins - 50)) + 1;
-
-        let sum = 0;
-        let count = 0;
-        for (let j = startBin; j < endBin; j++) {
-            if (j < totalBins) {
-                sum += adminDataArray[j];
-                count++;
-            }
-        }
-        if (count === 0 && startBin < totalBins) {
-            sum = adminDataArray[startBin];
-            count = 1;
-        }
-
-        let avg = count > 0 ? sum / count : 0;
-        if (avg < 5) avg = 0;
-
-        let amplification = 1.5;
-        if (i < 32) amplification = 1.25;
-        if (i > 64) amplification = 2.5;
-        if (i > 96) amplification = 4.0;
-
-        let percent = (avg / 255) * 100 * amplification;
-        percent = Math.min(100, Math.max(0, percent));
-
-        let quantizedPercent = Math.floor(percent / step) * step;
-        if (quantizedPercent < step && avg > 0) quantizedPercent = step;
-        if (avg === 0) quantizedPercent = 0;
-
-        // Peak Hold
-        if (adminPeakLevels[i] < quantizedPercent) {
-            adminPeakLevels[i] = quantizedPercent;
-            adminPeakHoldCounters[i] = 30;
-        } else {
-            if (adminPeakHoldCounters[i] > 0) adminPeakHoldCounters[i]--;
-            else adminPeakLevels[i] -= 0.25;
-        }
-        if (adminPeakLevels[i] < quantizedPercent) adminPeakLevels[i] = quantizedPercent;
-
-        // Renk hesapla
-        let color;
-        if (i < 32) color = palette[0];
-        else if (i < 64) color = palette[1];
-        else if (i < 96) color = palette[2];
-        else color = palette[3];
-
-        bar.style.height = `${quantizedPercent}%`;
-        bar.style.backgroundColor = color;
-
-        if (peak) {
-            let displayPeak = Math.floor(adminPeakLevels[i] / step) * step;
-            if (displayPeak > 0) {
-                peak.style.bottom = `${displayPeak}%`;
-                peak.style.opacity = 0.9;
-            } else {
-                peak.style.opacity = 0;
-            }
-        }
-    }
-}
-
-// Tema değiştiğinde admin önizlemeyi de güncelle
-function updateThemePreview(themeName) {
-    adminCurrentTheme = themeName;
-
-    // Equalizer container tema sınıfını güncelle
-    const eqContainer = document.getElementById('equalizer-container');
-    if (eqContainer) {
-        const classes = eqContainer.className.split(' ').filter(c => !c.startsWith('theme-'));
-        eqContainer.className = classes.join(' ');
-        eqContainer.classList.add(`theme-${themeName}`);
-    }
-}
-
-// Sayfa yüklendiğinde ekolayzer barlarını oluştur
-document.addEventListener('DOMContentLoaded', function () {
-    initAdminEqualizer();
-});
-
-// Initialize Schedule Diagnostics and Draft Editor
-document.addEventListener('DOMContentLoaded', () => {
-    const diagnostics = window.AdminScheduleDiagnostics;
-    const editor = window.AdminScheduleDraftEditor;
-    const normalizer = window.ScheduleNormalizer;
-    const api = window.api;
-
-    if (
-        !diagnostics ||
-        !api ||
-        typeof api.request !== 'function'
-    ) {
-        return;
-    }
-
-    const diagView = diagnostics.createDomScheduleDiagnosticsView(document);
-
-    window.scheduleDiagnosticsController = diagnostics.createScheduleDiagnosticsController({
-        api,
-        view: diagView,
-        logger: typeof logger !== 'undefined' ? logger : null,
-        endpoint: '/schedule/normalized',
-        day: 'weekday'
-    });
-
-    if (editor && normalizer) {
-        const editorView = editor.createDomScheduleDraftEditorView(document);
-        
-        let compositeView = editorView;
-        if (window.AdminScheduleReviewPanel) {
-            const reviewView = window.AdminScheduleReviewPanel.createScheduleReviewPanelView(document);
-            window.scheduleReviewPanelController = window.AdminScheduleReviewPanel.createScheduleReviewPanelController({
-                view: reviewView,
-                logger: typeof logger !== 'undefined' ? logger : null
-            });
-            compositeView = {
-                render: function(state) {
-                    editorView.render(state);
-                    window.scheduleReviewPanelController.renderEditorState(state);
-                }
-            };
-        }
-
-        window.scheduleDraftEditorController = editor.createScheduleDraftEditorController({
-            normalizer,
-            view: compositeView,
-            logger: typeof logger !== 'undefined' ? logger : null
-        });
-
-        // Set up event listeners for the editor buttons
-        const addRowBtn = document.getElementById('sdeAddRowBtn');
-        const validateBtn = document.getElementById('sdeValidateBtn');
-        const resetBtn = document.getElementById('sdeResetBtn');
-
-        if (addRowBtn) {
-            addRowBtn.addEventListener('click', () => {
-                window.scheduleDraftEditorController.addRow();
-            });
-        }
-        if (validateBtn) {
-            validateBtn.addEventListener('click', () => {
-                window.scheduleDraftEditorController.validate();
-            });
-        }
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => {
-                window.scheduleDraftEditorController.resetToSource();
-            });
-        }
-    }
-
-    // Integration Loader
-    let integrationLoadPromise = null;
-    window.loadScheduleIntegration = async function() {
-        if (!window.scheduleDiagnosticsController) return;
-        if (integrationLoadPromise) return integrationLoadPromise;
-
-        integrationLoadPromise = (async () => {
-            try {
-                const result = await window.scheduleDiagnosticsController.load();
-                if (window.scheduleDraftEditorController) {
-                    window.scheduleDraftEditorController.acceptDiagnosticsResult(result);
-                }
-                return result;
-            } finally {
-                integrationLoadPromise = null;
-            }
-        })();
-        
-        return integrationLoadPromise;
-    };
-
-    const refreshBtn = document.getElementById('refreshScheduleDiagnosticsBtn');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => {
-            window.loadScheduleIntegration();
-        });
-    }
-});

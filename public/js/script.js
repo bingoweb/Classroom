@@ -4,7 +4,7 @@ let slideLayoutRefreshFrame = null;
 // AKILLI VERİ KARŞILAŞTIRMA SİSTEMİ - gereksiz DOM güncellemelerini önler
 let lastDataHash = {
     roles: null,
-    settings: null
+    stats: null
 };
 
 // Veri hash'leme fonksiyonu
@@ -24,8 +24,13 @@ function hasDataChanged(key, newData) {
 
 async function fetchData() {
     try {
-        // Roles
-        const roles = await Utils.fetchWithErrorHandling(`${CONFIG.API_URL}/roles`);
+        // Independent dashboard resources should not form a request waterfall.
+        const [roles, stats] = await Promise.all([
+            Utils.fetchWithErrorHandling(`${CONFIG.API_URL}/roles`),
+            Utils.fetchWithErrorHandling(`${CONFIG.API_URL}/stats`)
+        ]);
+
+        await updateStats(stats);
 
         if (!roles || !Array.isArray(roles)) {
             if (typeof logger !== 'undefined') {
@@ -36,10 +41,7 @@ async function fetchData() {
 
         // AKILLI KONTROL: Roles verisi değişmediyse DOM'u güncelleme
         if (!hasDataChanged('roles', roles)) {
-            // Data unchanged, skipping DOM update
-            // Sadece settings ve stats güncelle
-            const settings = await Utils.fetchWithErrorHandling(`${CONFIG.API_URL}/settings`);
-            updateStats();
+            // Data unchanged, skipping role DOM updates.
             return;
         }
 
@@ -62,10 +64,11 @@ async function fetchData() {
             // Başkan (büyük)
             if (president) {
                 const avatarPath = Utils.getAvatarPath(president);
+                const defaultAvatar = president.gender === 'F' ? CONFIG.DEFAULT_AVATAR_GIRL : CONFIG.DEFAULT_AVATAR_BOY;
                 const imgId = `president-img-${president.id}`;
                 html += `
                     <div class="president-main">
-                        <img id="${imgId}" src="${avatarPath}" class="president-avatar-large" onerror="this.onerror=null; this.src='${CONFIG.DEFAULT_AVATAR_BOY}'">
+                        <img id="${imgId}" src="${avatarPath}" class="president-avatar-large" alt="" aria-hidden="true" onerror="this.onerror=null; this.src='${defaultAvatar}'">
                         <div class="president-name-large">${Utils.escapeHtml(president.name || '---')}</div>
                     </div>
                 `;
@@ -80,7 +83,7 @@ async function fetchData() {
                     const imgId = `vice-president-img-${vp.id}-${index}`;
                     html += `
                         <div class="vice-president-item">
-                            <img id="${imgId}" src="${avatarPath}" class="vice-president-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
+                            <img id="${imgId}" src="${avatarPath}" class="vice-president-avatar" alt="" aria-hidden="true" onerror="this.onerror=null; this.src='${defaultAvatar}'">
                             <div class="vice-president-name">${Utils.escapeHtml(vp.name || '---')}</div>
                         </div>
                     `;
@@ -133,7 +136,7 @@ async function fetchData() {
                 const longNameClass = Array.from(d.name || '').length > 22 ? ' duty-name-long' : '';
                 return `
                 <div class="duty-item">
-                    <img id="${imgId}" src="${avatarPath}" class="duty-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
+                    <img id="${imgId}" src="${avatarPath}" class="duty-avatar" alt="" aria-hidden="true" onerror="this.onerror=null; this.src='${defaultAvatar}'">
                     <div class="duty-name${longNameClass}" id="${nameId}"></div>
                 </div>
             `;
@@ -180,7 +183,7 @@ async function fetchData() {
                 const imgId = `star-img-${s.id}-${index}`;
                 return `
                 <div class="star-slide ${isActive}" data-index="${index}">
-                    <img id="${imgId}" src="${avatarPath}" class="star-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
+                    <img id="${imgId}" src="${avatarPath}" class="star-avatar" alt="" aria-hidden="true" onerror="this.onerror=null; this.src='${defaultAvatar}'">
                     <div class="star-name">${Utils.escapeHtml(s.name || '---')}</div>
                 </div>
             `;
@@ -218,12 +221,6 @@ async function fetchData() {
                 </div>
             `;
         }
-
-        // Settings
-        const settings = await Utils.fetchWithErrorHandling(`${CONFIG.API_URL}/settings`);
-
-        // Stats
-        updateStats();
 
     } catch (error) {
         console.error('Error fetching data:', error);
@@ -387,16 +384,7 @@ async function initSlideshow(preloadedSlides = null) {
             if (typeof logger !== 'undefined') {
                 logger.warn(COMPONENTS.SLIDESHOW, 'No slides found, using fallback', null);
             }
-            // Fallback to default tribute slide if no slides
-            container.innerHTML = `
-                <div class="slide tribute-slide active">
-                    <img src="assets/tribute.png" alt="Atatürk">
-                    <div class="tribute-text">
-                        <h2>"Vatanını en çok seven, görevini en iyi yapandır."</h2>
-                        <p>- Mustafa Kemal Atatürk</p>
-                    </div>
-                </div>
-            `;
+            renderSlideshowFallback(container);
             return;
         }
 
@@ -435,17 +423,25 @@ async function initSlideshow(preloadedSlides = null) {
                 errorMessage: error.message
             });
         }
-        // Fallback
-        container.innerHTML = `
-            <div class="slide tribute-slide active">
-                <img src="assets/tribute.png" alt="Atatürk">
-                <div class="tribute-text">
-                    <h2>"Vatanını en çok seven, görevini en iyi yapandır."</h2>
-                    <p>- Mustafa Kemal Atatürk</p>
-                </div>
-            </div>
-        `;
+        renderSlideshowFallback(container);
     }
+}
+
+function renderSlideshowFallback(container) {
+    if (!container) return null;
+
+    const fallbackSlide = createSlideElement({
+        id: 'fallback-tribute',
+        title: 'Mustafa Kemal Atatürk',
+        content_type: 'quote',
+        media_type: 'image',
+        media_path: 'assets/tribute.webp',
+        text_content: '“Vatanını en çok seven, görevini en iyi yapandır.”\n— Mustafa Kemal Atatürk'
+    }, true);
+
+    container.innerHTML = '';
+    container.appendChild(fallbackSlide);
+    return fallbackSlide;
 }
 
 function getSlideMediaLayoutMode(imageWidth, imageHeight, frameWidth, frameHeight) {
@@ -519,6 +515,7 @@ function createSlideElement(slide, isActive = false) {
     slideDiv.dataset.slideId = slide.id;
     slideDiv.dataset.mediaType = slide.media_type;
     slideDiv.dataset.contentType = slide.content_type;
+    slideDiv.dataset.mediaPath = slide.media_path;
 
     // Maximize media to fit container
     slideDiv.style.position = 'absolute';
@@ -532,7 +529,7 @@ function createSlideElement(slide, isActive = false) {
     if (slide.media_type === 'video') {
         const video = document.createElement('video');
         video.className = 'slide-video';
-        video.src = slide.media_path;
+        video.preload = isActive ? 'auto' : 'none';
         video.style.width = '100%';
         video.style.height = '100%';
         video.style.objectFit = 'cover';
@@ -577,18 +574,6 @@ function createSlideElement(slide, isActive = false) {
         };
 
         slideDiv.appendChild(video);
-        if (isActive) {
-            currentVideoElement = video;
-            const playPromise = video.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(e => {
-                    logger.error(COMPONENTS.MEDIA, 'Video play() rejected', e, {
-                        slideId: slide.id,
-                        mediaPath: slide.media_path
-                    });
-                });
-            }
-        }
     } else {
         // Image or GIF
         slideDiv.classList.add('slide--media');
@@ -596,13 +581,13 @@ function createSlideElement(slide, isActive = false) {
         const backdrop = document.createElement('div');
         backdrop.className = 'slide-media-backdrop';
         backdrop.setAttribute('aria-hidden', 'true');
-        backdrop.style.backgroundImage = `url(${JSON.stringify(slide.media_path)})`;
 
         const img = document.createElement('img');
         img.className = 'slide-media slide-media--contain';
-        img.src = slide.media_path;
         img.alt = slide.title || 'Slide';
         img.decoding = 'async';
+        img.loading = isActive ? 'eager' : 'lazy';
+        img.fetchPriority = isActive ? 'high' : 'auto';
         img.onload = function () {
             updateSlideImageLayout(slideDiv, this);
         };
@@ -627,7 +612,51 @@ function createSlideElement(slide, isActive = false) {
     const caption = createSlideCaptionElement(slide.text_content);
     if (caption) slideDiv.appendChild(caption);
 
+    if (isActive) {
+        hydrateSlideMedia(slideDiv);
+    }
+
     return slideDiv;
+}
+
+function hydrateSlideMedia(slideElement) {
+    if (!slideElement || slideElement.dataset.mediaHydrated === 'true') return false;
+
+    const mediaPath = slideElement.dataset.mediaPath;
+    if (!mediaPath) return false;
+
+    if (slideElement.dataset.mediaType === 'video') {
+        const video = slideElement.querySelector('video');
+        if (!video) return false;
+        video.preload = 'auto';
+        video.src = mediaPath;
+        if (typeof video.load === 'function') video.load();
+    } else {
+        const image = slideElement.querySelector('.slide-media');
+        const backdrop = slideElement.querySelector('.slide-media-backdrop');
+        if (!image) return false;
+        // A hidden slide is not fetched reliably while loading="lazy". Once a
+        // slide enters the one-item look-ahead window, make the preload eager.
+        image.loading = 'eager';
+        image.src = mediaPath;
+        if (backdrop) {
+            backdrop.style.backgroundImage = `url(${JSON.stringify(mediaPath)})`;
+        }
+    }
+
+    slideElement.dataset.mediaHydrated = 'true';
+    return true;
+}
+
+function prepareUpcomingSlide(fromIndex = currentSlideIndex) {
+    if (!Array.isArray(slidesData) || slidesData.length < 2) return;
+
+    const nextIndex = (fromIndex + 1) % slidesData.length;
+    const nextSlide = slidesData[nextIndex];
+    if (!nextSlide || !nextSlide.id) return;
+
+    const nextElement = document.querySelector(`.slide[data-slide-id="${nextSlide.id}"]`);
+    hydrateSlideMedia(nextElement);
 }
 
 function startSlideshow() {
@@ -715,6 +744,10 @@ function scheduleNextSlide() {
 
     const duration = currentSlide.display_duration || CONFIG.SLIDE_DURATION;
 
+    // Keep one media item ready ahead of the rotation without downloading the
+    // entire gallery during the kiosk's first meaningful paint.
+    prepareUpcomingSlide(currentSlideIndex);
+
     // Clear existing interval
     if (slideshowInterval) {
         intervalManager.clearTimeout(slideshowInterval);
@@ -796,6 +829,9 @@ function nextSlide() {
         scheduleNextSlide();
         return;
     }
+
+    // Safety net for unusually short display durations or a refreshed gallery.
+    hydrateSlideMedia(nextSlideElement);
 
     // Stop current video if playing
     if (currentVideoElement) {
@@ -1108,7 +1144,11 @@ function updateClock() {
     const now = window.TimeProvider ? window.TimeProvider.now() : new Date();
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
-    document.getElementById('clock').innerHTML = `${hours}<span class="blink">:</span>${minutes}`;
+    const clockEl = document.getElementById('clock');
+    const clockText = `${hours}:${minutes}`;
+    if (clockEl && clockEl.textContent !== clockText) {
+        clockEl.innerHTML = `${hours}<span class="blink">:</span>${minutes}`;
+    }
 
     const dayName = now.toLocaleDateString('tr-TR', { weekday: 'long' });
     const fullDate = now.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -1117,8 +1157,8 @@ function updateClock() {
     const dayNameEl = document.getElementById('day-name');
     const dateEl = document.getElementById('date');
 
-    if (dayNameEl) dayNameEl.textContent = dayName;
-    if (dateEl) dateEl.textContent = fullDate;
+    setTextIfChanged(dayNameEl, dayName);
+    setTextIfChanged(dateEl, fullDate);
 
     updateCountdown(now);
 
@@ -1132,18 +1172,60 @@ function updateClock() {
         // Or if it's weekend (6 or 0), show "Enjoy!"
 
         if (day === 6 || day === 0) {
-            weekendCounter.textContent = 'İYİ TATİLLER!';
-            weekendCounter.style.color = '#00b894'; // Green for success
+            setTextIfChanged(weekendCounter, 'İYİ TATİLLER!');
+            if (weekendCounter.dataset.statusColor !== '#00b894') {
+                weekendCounter.style.color = '#00b894'; // Green for success
+                weekendCounter.dataset.statusColor = '#00b894';
+            }
         } else {
             // For weekdays (1-5)
-            weekendCounter.textContent = `${daysLeft} GÜN KALDI`;
-            weekendCounter.style.color = '#e17055'; // Orange for countdown
+            setTextIfChanged(weekendCounter, `${daysLeft} GÜN KALDI`);
+            if (weekendCounter.dataset.statusColor !== '#e17055') {
+                weekendCounter.style.color = '#e17055'; // Orange for countdown
+                weekendCounter.dataset.statusColor = '#e17055';
+            }
         }
     }
 }
 
+function setTextIfChanged(element, value) {
+    if (element && element.textContent !== value) element.textContent = value;
+}
+
+function setDisplayIfChanged(element, value) {
+    if (element && element.style.display !== value) element.style.display = value;
+}
+
+function syncModeVisual(container, imagePath, className, altText) {
+    if (!container) return;
+
+    const currentImage = container.querySelector('img');
+    if (!imagePath) {
+        if (container.children.length > 0) container.replaceChildren();
+        return;
+    }
+
+    if (currentImage && currentImage.getAttribute('src') === imagePath) return;
+
+    const image = document.createElement('img');
+    image.src = imagePath;
+    image.className = className;
+    image.alt = altText;
+    container.replaceChildren(image);
+}
+
 function renderPeriodContext(container, status, options = {}) {
     if (!container) return;
+
+    const renderKey = JSON.stringify([
+        status?.subtitle || '',
+        status?.currentPeriodName || '',
+        status?.nextLessonName || '',
+        status?.nextEventName || '',
+        options.showNext !== false
+    ]);
+    if (container.dataset.periodContextKey === renderKey) return;
+    container.dataset.periodContextKey = renderKey;
 
     if (!status || !status.currentPeriodName) {
         container.classList.remove('period-context');
@@ -1199,9 +1281,13 @@ function updateCountdownProgress(value) {
         ? Math.min(100, Math.max(0, numericValue))
         : 0;
 
-    progressBar.style.width = `${boundedValue}%`;
+    const width = `${boundedValue}%`;
+    if (progressBar.style.width !== width) progressBar.style.width = width;
     if (progressBar.parentElement) {
-        progressBar.parentElement.setAttribute('aria-valuenow', String(Math.round(boundedValue)));
+        const roundedValue = String(Math.round(boundedValue));
+        if (progressBar.parentElement.getAttribute('aria-valuenow') !== roundedValue) {
+            progressBar.parentElement.setAttribute('aria-valuenow', roundedValue);
+        }
     }
 }
 
@@ -1217,26 +1303,29 @@ function updateCountdown(now) {
     const goodbyeMode = document.getElementById('goodbye-mode');
     const beforeSchoolMode = document.getElementById('before-school-mode');
 
-    // Hide all modes first
-    countdownMode.style.display = 'none';
-    goodbyeMode.style.display = 'none';
-    if (beforeSchoolMode) beforeSchoolMode.style.display = 'none';
+    const useGoodbyeMode = status.mode === 'weekend' || status.mode === 'after-school';
+    const useBeforeSchoolMode = status.mode === 'before-school' && Boolean(beforeSchoolMode);
+    const useCountdownMode = !useGoodbyeMode && !useBeforeSchoolMode;
+
+    setDisplayIfChanged(countdownMode, useCountdownMode ? 'flex' : 'none');
+    setDisplayIfChanged(goodbyeMode, useGoodbyeMode ? 'flex' : 'none');
+    setDisplayIfChanged(beforeSchoolMode, useBeforeSchoolMode ? 'flex' : 'none');
 
     // Handle different modes
     switch (status.mode) {
         case 'weekend':
             // Show goodbye mode with weekend styling
-            goodbyeMode.style.display = 'flex';
-            goodbyeMode.classList.remove('monday', 'tuesday', 'wednesday', 'thursday', 'friday');
-            goodbyeMode.classList.add('weekend');
+            setDisplayIfChanged(goodbyeMode, 'flex');
+            if (!goodbyeMode.classList.contains('weekend')) {
+                goodbyeMode.classList.remove('monday', 'tuesday', 'wednesday', 'thursday', 'friday');
+                goodbyeMode.classList.add('weekend');
+            }
 
             const weekendVisual = document.getElementById('goodbye-visual');
-            weekendVisual.innerHTML = status.image
-                ? `<img src="${status.image}" class="icon-3d-large goodbye-icon" alt="Hafta sonu">`
-                : '';
+            syncModeVisual(weekendVisual, status.image, 'icon-3d-large goodbye-icon', 'Hafta sonu');
 
-            document.getElementById('goodbye-title').textContent = status.message;
-            document.getElementById('goodbye-subtitle').textContent = status.subtitle;
+            setTextIfChanged(document.getElementById('goodbye-title'), status.message);
+            setTextIfChanged(document.getElementById('goodbye-subtitle'), status.subtitle);
 
             if (window.stopConfetti) window.stopConfetti();
             break;
@@ -1244,46 +1333,43 @@ function updateCountdown(now) {
         case 'before-school':
             // Show before school mode with countdown
             if (beforeSchoolMode) {
-                beforeSchoolMode.style.display = 'flex';
+                setDisplayIfChanged(beforeSchoolMode, 'flex');
                 // Update visual if needed
                 const clockVisual = beforeSchoolMode.querySelector('.clock-visual');
-                if (clockVisual && status.image) {
-                    clockVisual.innerHTML = `<img src="${status.image}" class="clock-icon" alt="Ders başlangıç saati">`;
-                }
+                syncModeVisual(clockVisual, status.image, 'clock-icon', 'Ders başlangıç saati');
 
                 const countdownEl = beforeSchoolMode.querySelector('#before-school-countdown');
                 const subtitleEl = beforeSchoolMode.querySelector('#before-school-subtitle');
-                if (countdownEl) countdownEl.textContent = status.countdown;
-                if (subtitleEl) subtitleEl.textContent = status.subtitle;
+                setTextIfChanged(countdownEl, status.countdown);
+                setTextIfChanged(subtitleEl, status.subtitle);
             } else {
                 // Fallback to countdown mode if before-school-mode doesn't exist
-                countdownMode.style.display = 'flex';
+                setDisplayIfChanged(countdownMode, 'flex');
                 const titleEl = countdownMode.querySelector('h3');
-                if (titleEl) titleEl.textContent = status.message;
-                document.getElementById('countdown').textContent = status.countdown;
-                document.getElementById('countdown-bar').style.width = '0%';
+                setTextIfChanged(titleEl, status.message);
+                setTextIfChanged(document.getElementById('countdown'), status.countdown);
+                updateCountdownProgress(0);
             }
             if (window.stopConfetti) window.stopConfetti();
             break;
 
         case 'after-school':
             // Show goodbye mode
-            goodbyeMode.style.display = 'flex';
-            goodbyeMode.classList.remove('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'weekend');
+            setDisplayIfChanged(goodbyeMode, 'flex');
 
             const dayIndex = now.getDay();
             const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-            if (dayIndex >= 1 && dayIndex <= 5) {
-                goodbyeMode.classList.add(dayNames[dayIndex]);
+            const activeDayClass = dayIndex >= 1 && dayIndex <= 5 ? dayNames[dayIndex] : '';
+            if (!activeDayClass || !goodbyeMode.classList.contains(activeDayClass)) {
+                goodbyeMode.classList.remove('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'weekend');
+                if (activeDayClass) goodbyeMode.classList.add(activeDayClass);
             }
 
             const afterSchoolVisual = document.getElementById('goodbye-visual');
-            afterSchoolVisual.innerHTML = status.image
-                ? `<img src="${status.image}" class="icon-3d-large goodbye-icon" alt="Okul çıkışı">`
-                : '';
+            syncModeVisual(afterSchoolVisual, status.image, 'icon-3d-large goodbye-icon', 'Okul çıkışı');
 
-            document.getElementById('goodbye-title').textContent = status.message;
-            document.getElementById('goodbye-subtitle').textContent = status.subtitle;
+            setTextIfChanged(document.getElementById('goodbye-title'), status.message);
+            setTextIfChanged(document.getElementById('goodbye-subtitle'), status.subtitle);
 
             // Trigger Confetti on Friday
             if (dayIndex === 5 && window.startConfetti) {
@@ -1296,9 +1382,9 @@ function updateCountdown(now) {
         case 'in-class':
         case 'in-break':
             // Show countdown mode
-            countdownMode.style.display = 'flex';
+            setDisplayIfChanged(countdownMode, 'flex');
             const titleEl = countdownMode.querySelector('h3');
-            if (titleEl) titleEl.textContent = status.message;
+            setTextIfChanged(titleEl, status.message);
             const scheduleSource = typeof window.ScheduleManager.getScheduleSource === 'function'
                 ? window.ScheduleManager.getScheduleSource()
                 : 'fallback';
@@ -1321,7 +1407,7 @@ function updateCountdown(now) {
                 }
             }
 
-            document.getElementById('countdown').textContent = status.countdown;
+            setTextIfChanged(document.getElementById('countdown'), status.countdown);
             updateCountdownProgress(status.progress);
 
             if (window.stopConfetti) window.stopConfetti();
@@ -1329,27 +1415,36 @@ function updateCountdown(now) {
 
         case 'error':
             // Show error state
-            countdownMode.style.display = 'flex';
+            setDisplayIfChanged(countdownMode, 'flex');
             const errorTitleEl = countdownMode.querySelector('h3');
-            if (errorTitleEl) errorTitleEl.textContent = status.message;
+            setTextIfChanged(errorTitleEl, status.message);
             renderPeriodContext(countdownMode.querySelector('.countdown-subtitle'), status);
-            document.getElementById('countdown').textContent = status.countdown;
+            setTextIfChanged(document.getElementById('countdown'), status.countdown);
             updateCountdownProgress(0);
             if (window.stopConfetti) window.stopConfetti();
             break;
 
         default:
             logger.warn(COMPONENTS.SYSTEM, 'Unknown schedule status mode', null, { mode: status.mode });
-            countdownMode.style.display = 'flex';
-            document.getElementById('countdown').textContent = '--:--';
+            setDisplayIfChanged(countdownMode, 'flex');
+            setTextIfChanged(document.getElementById('countdown'), '--:--');
             updateCountdownProgress(0);
     }
 }
 
-async function updateStats() {
+async function updateStats(preloadedStats) {
     try {
-        const res = await fetch(`${CONFIG.API_URL}/stats`);
-        const stats = await res.json();
+        let stats = preloadedStats;
+        if (stats === undefined) {
+            const res = await fetch(`${CONFIG.API_URL}/stats`);
+            stats = await res.json();
+        }
+
+        if (!stats || typeof stats !== 'object' || Array.isArray(stats)) {
+            throw new Error('Invalid stats response');
+        }
+
+        if (!hasDataChanged('stats', stats)) return;
 
         const totalStudents = Number(stats.total) || 0;
         document.getElementById('total-students').textContent = totalStudents;
@@ -1405,7 +1500,7 @@ async function updateStats() {
                     const defaultAvatar = student.gender === 'F' ? CONFIG.DEFAULT_AVATAR_GIRL : CONFIG.DEFAULT_AVATAR_BOY;
                     return `
                         <span class="marquee-item">
-                            <img src="${avatarPath}" class="marquee-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}'">
+                            <img src="${avatarPath}" class="marquee-avatar" alt="" aria-hidden="true" onerror="this.onerror=null; this.src='${defaultAvatar}'">
                             ${Utils.escapeHtml(student.name)}
                         </span>
                     `;
@@ -1419,6 +1514,7 @@ async function updateStats() {
         }
     } catch (e) {
         console.error('Stats error', e);
+        lastDataHash.stats = null;
         document.getElementById('total-students').textContent = '--';
         document.getElementById('present-students').textContent = '--';
         document.getElementById('girl-students').textContent = '--';
