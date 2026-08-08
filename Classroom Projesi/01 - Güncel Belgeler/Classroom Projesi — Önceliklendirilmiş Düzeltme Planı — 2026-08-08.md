@@ -710,7 +710,7 @@ Böylece frontend “Bugün” ve backend “bugün” aynı `Europe/Istanbul` t
 **Öncelik:** P1  
 **Kullanıcı etkisi:** Orta  
 **Risk:** Düşük  
-**Durum:** ⬜ Bekliyor
+**Durum:** 🟩 Tamamlandı ve doğrulandı — 8 Ağustos 2026
 
 ## 8.1 Sorun
 
@@ -772,6 +772,166 @@ Atomik tek-endpoint refactor'u ayrı P2 iyileştirmesi olarak ele alınabilir.
 3. ikinci 500 → success gösterilmez.
 4. üçüncü 500 → success gösterilmez.
 5. malformed error body → generic error.
+
+## 8.5 Uygulama ve doğrulama kaydı — 8 Ağustos 2026
+
+### Kök neden
+
+`handleSlideSettingsSubmit()` üç ayrı `POST /api/slide-settings` isteğini `await` ediyordu fakat dönen `Response` nesnelerinin `ok` alanını hiç kontrol etmiyordu. Browser `fetch()` HTTP 400/500 yanıtlarında Promise reject etmediği için 500 yanıtı dahi normal akış gibi devam ediyor, sonraki ayarlar gönderiliyor ve fonksiyon sonunda yanlış success bildirimi üretiyordu.
+
+### Uygulanan çözüm
+
+- `public/admin/admin.js` içindeki `handleSlideSettingsSubmit()` içinde ortak `updateSetting(key, value)` yardımcı akışı eklendi.
+- Her `POST /api/slide-settings` yanıtında `response.ok` zorunlu olarak kontrol ediliyor.
+- İlk HTTP hatasında sonraki ayar yazmaları durduruluyor.
+- Backend güvenli `{ error: "..." }` mesajı döndürürse kullanıcıya bu mesaj gösteriliyor.
+- Error body JSON değilse, `error` alanı string değilse veya boşsa sınırlı bir `HTTP status + statusText` mesajına düşülüyor.
+- Ağ hatasının dahili detayı logger'da kalıyor; `ECONNRESET` benzeri teknik ayrıntılar kullanıcıya sızdırılmıyor.
+- Success bildirimi yalnız üç isteğin de `ok === true` olması halinde gösteriliyor.
+- Yeni regresyon testi `tests/admin-slide-settings-submit.test.js` olarak eklendi ve `test:core` kapısına dahil edildi.
+
+### TDD kırmızı kanıtı
+
+Üretim kodu değiştirilmeden önce yeni hedef test çalıştırıldı:
+
+- toplam **8 test**,
+- **2 pass / 6 fail**.
+
+Kırmızı koşuda doğrulanan gerçek eski davranışlar:
+
+- ilk 500'den sonra beklenen 1 POST yerine **3 POST** yapılıyordu,
+- ikinci 400'den sonra beklenen 2 POST yerine **3 POST** yapılıyordu,
+- üçüncü 503/malformed body durumunda success bildirimi çıkıyordu,
+- HTTP hata yanıtları hiçbir `response.ok` kontrolünden geçmiyordu.
+
+### Hedef test sonucu
+
+Düzeltme sonrası:
+
+- `tests/admin-slide-settings-submit.test.js` → **8 / 8 pass**.
+
+Test kapsamı:
+
+1. üç başarılı response ve exact normalize payload'lar,
+2. birinci HTTP 500,
+3. ikinci HTTP 400,
+4. üçüncü HTTP 503 + malformed JSON,
+5. network exception,
+6. null/blank/non-string server error gövdeleri,
+7. dahili network detayının UI'a sızmaması,
+8. source guard ile `response.ok` kontrolünün kalıcı olması.
+
+### Komşu regresyon sonucu
+
+Admin notification, slide management, admin auth/session, rate-limit, settings update ve error-redaction dahil komşu paket:
+
+- **100 / 100 pass**,
+- **0 fail**.
+
+Bu pakette backend `POST /api/slide-settings` için:
+
+- validation,
+- başarılı SQLite write,
+- gerçek SQLite regression,
+- database error redaction
+
+da yeniden doğrulandı.
+
+### Tam çekirdek sonucu
+
+Yeni P1-4 testi `test:core` içine dahil edilmiş halde:
+
+- `npm run test:core` → **1306 / 1306 pass**,
+- **0 fail**.
+
+### Gerçek browser + temp SQLite kabul turu
+
+Asıl `backend/classroom.db` dosyasına dokunulmadı. DB `/tmp` altında kopyalanıp ayrı portta geçici Classroom server çalıştırıldı ve gerçek Chromium admin paneli kullanıldı.
+
+#### Başarı yolu
+
+Form değerleri:
+
+- duration: `11 s`,
+- transition mode: `random`,
+- transition duration: `1.4 s`.
+
+Gerçek backend'e üç POST gönderildi. Sonrasında `/api/slide-settings` tekrar okunarak SQLite persistence doğrulandı:
+
+- `default_duration = 11000`,
+- `default_transition_mode = random`,
+- `default_transition_duration = 1400`.
+
+UI sonucu:
+
+- `Ayarlar başarıyla kaydedildi!`,
+- `role="status"`.
+
+#### Kontrollü birinci 500
+
+Gerçek admin handler'ında ilk slide-settings response 500 olarak enjekte edildi:
+
+- POST sayısı: **1**,
+- sonraki iki POST gönderilmedi,
+- success yok,
+- error notification `role="alert"`.
+
+#### Kontrollü ikinci 400
+
+İkinci response 400 olarak enjekte edildi:
+
+- POST sayısı: **2**,
+- üçüncü POST gönderilmedi,
+- success yok,
+- hata notification görünür.
+
+#### Kontrollü üçüncü malformed 503
+
+Üçüncü response `503 Service Unavailable` ve JSON olmayan body ile enjekte edildi:
+
+- POST sayısı: **3**,
+- success yok,
+- UI mesajı: `Ayarlar kaydedilirken hata oluştu (503 Service Unavailable).`,
+- `role="alert"`.
+
+#### Gerçek backend 400
+
+Aynı temp sunucuda eksik key ile gerçek `POST /api/slide-settings`:
+
+- HTTP **400**,
+- `{ "error": "Key ve value gereklidir" }`.
+
+#### Gerçek SQLite 500
+
+Yalnız temp DB'deki `slide_settings` tablosu test amacıyla kaldırıldı. Gerçek admin form handler tekrar çalıştırıldı:
+
+- gerçek ağ kaydı: `POST /api/slide-settings` → **500**,
+- POST sayısı: **1**,
+- sonraki POST'lar gönderilmedi,
+- success yok,
+- kullanıcı mesajı: `Slayt ayarları güncellenirken hata oluştu`,
+- `role="alert"`.
+
+Chrome network kaydında hem gerçek **400** hem gerçek **500** response görüldü.
+
+Geçici server kapatıldı ve `/tmp` test DB/log/pid dosyaları temizlendi.
+
+### Bilinen residual risk — atomiklik
+
+P1-4'ün kapsamı yanlış success ve hata sonrası gereksiz devamı kapatmaktır. Üç ayrı POST hâlâ tek transaction değildir.
+
+Gerçek browser testinde bu açıkça gözlendi:
+
+- ikinci istek 400 olduğunda `default_duration` yeni değere yazılmış kaldı, diğer iki eski değerde kaldı,
+- üçüncü istek 503 olduğunda ilk iki ayar yeni değere yazılmış kaldı, üçüncü ayar eski değerde kaldı.
+
+Bu nedenle **kısmi yazma mümkündür**. Bu durum P1-4'ün kapanış kriterini bozmaz; çünkü planın 8.3 kararında atomik refactor ayrı P2 olarak tanımlanmıştır. Ancak risk kapatılmış sayılmayacaktır.
+
+Açık P2 işi:
+
+**Slide settings için tek atomik `PUT /api/slide-settings` endpoint'i + backend transaction + frontend tek-request geçişi.**
+
+P1-4 yalnız false-success / HTTP error handling problemi açısından 🟩 kapatılmıştır.
 
 ---
 
@@ -1803,20 +1963,21 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 1 | Slayt Aktif/Pasif yönetimi | P1 | 🟩 |
 | 2 | Admin görünür feedback | P1 | 🟩 |
 | 3 | Admin İstanbul “Bugün” tarihi | P1 | 🟩 |
-| 4 | Slide settings HTTP hata kontrolü | P1 | ⬜ |
+| 4 | Slide settings HTTP hata kontrolü | P1 | 🟩 |
 | 5 | Admin password fail-closed | P1 | ⬜ |
 | 6 | Slide delete error redaction | P1 | ⬜ |
-| 7 | SheetJS local + tek sürüm | P2 | ⬜ |
-| 8 | npm dependency security turu | P2 | ⬜ |
-| 9 | GitHub CI son main run yeşil | P2 | ⬜ |
-| 10 | GSAP resize güvenilirliği | P2 | ⬜ |
-| 11 | Fallback slide sistem sahipliği | P2 | ⬜ |
-| 12 | Fiziksel 4K kabul | P2 | ⬜ |
-| 13 | Stale bakım scriptleri | P3 | ⬜ |
-| 14 | README/context/docs güncelleme | P3 | ⬜ |
-| 15 | Legacy settings katmanı | P3 | ⬜ |
-| 16 | Orphan backend config/utils | P3 | ⬜ |
-| 17 | Büyük server/admin/CSS refactor planı | P3 | ⬜ |
+| 7 | Slide settings atomik tek-endpoint refactor | P2 | ⬜ |
+| 8 | SheetJS local + tek sürüm | P2 | ⬜ |
+| 9 | npm dependency security turu | P2 | ⬜ |
+| 10 | GitHub CI son main run yeşil | P2 | ⬜ |
+| 11 | GSAP resize güvenilirliği | P2 | ⬜ |
+| 12 | Fallback slide sistem sahipliği | P2 | ⬜ |
+| 13 | Fiziksel 4K kabul | P2 | ⬜ |
+| 14 | Stale bakım scriptleri | P3 | ⬜ |
+| 15 | README/context/docs güncelleme | P3 | ⬜ |
+| 16 | Legacy settings katmanı | P3 | ⬜ |
+| 17 | Orphan backend config/utils | P3 | ⬜ |
+| 18 | Büyük server/admin/CSS refactor planı | P3 | ⬜ |
 
 Durum simgeleri:
 

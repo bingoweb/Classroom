@@ -1651,29 +1651,47 @@ async function handleSlideSettingsSubmit(e) {
     const transitionMode = document.getElementById('defaultTransitionMode').value;
     const transitionDuration = document.getElementById('defaultTransitionDuration').value;
 
+    async function updateSetting(key, value) {
+        const response = await fetch(`${CONFIG.API_URL}/slide-settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key, value })
+        });
+
+        if (response.ok) {
+            return;
+        }
+
+        const statusLabel = `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
+        let userMessage = `Ayarlar kaydedilirken hata oluştu (${statusLabel}).`;
+
+        try {
+            const errorData = await response.json();
+            if (errorData && typeof errorData.error === 'string' && errorData.error.trim()) {
+                userMessage = errorData.error.trim();
+            }
+        } catch (parseError) {
+            // Fall back to the bounded HTTP status message above.
+        }
+
+        const requestError = new Error(`Slide setting update failed with HTTP ${statusLabel}`);
+        requestError.userMessage = userMessage;
+        throw requestError;
+    }
+
     try {
-        await fetch(`${CONFIG.API_URL}/slide-settings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: 'default_duration', value: (parseInt(duration) * 1000).toString() })
-        });
-
-        await fetch(`${CONFIG.API_URL}/slide-settings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: 'default_transition_mode', value: transitionMode })
-        });
-
-        await fetch(`${CONFIG.API_URL}/slide-settings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: 'default_transition_duration', value: (parseFloat(transitionDuration) * 1000).toString() })
-        });
+        await updateSetting('default_duration', (parseInt(duration) * 1000).toString());
+        await updateSetting('default_transition_mode', transitionMode);
+        await updateSetting('default_transition_duration', (parseFloat(transitionDuration) * 1000).toString());
 
         Utils.showSuccess('Ayarlar başarıyla kaydedildi!');
-    } catch (e) {
-        if (typeof logger !== 'undefined') { logger.error(COMPONENTS.ADMIN, 'Error saving slide settings', e); }
-        Utils.showError('Ayarlar kaydedilirken hata oluştu.');
+    } catch (error) {
+        if (typeof logger !== 'undefined') {
+            logger.error(COMPONENTS.ADMIN, 'Error saving slide settings', error);
+        }
+        Utils.showError(error && typeof error.userMessage === 'string'
+            ? error.userMessage
+            : 'Ayarlar kaydedilirken hata oluştu.');
     }
 }
 
