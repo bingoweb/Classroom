@@ -1992,7 +1992,7 @@ P2-1 🟩 tamamlanmıştır.
 
 **Öncelik:** P2 güvenlik/bakım
 **Risk:** Orta-Yüksek
-**Durum:** 🟨 Devam ediyor — Express/non-major ve sqlite3 6 güvenlik turları tamamlandı; Multer 2 major uyumluluk turu açık
+**Durum:** 🟩 Tamamlandı — Express/non-major, sqlite3 6 ve Multer 2 güvenlik/uyumluluk turları doğrulandı; üretim audit sonucu 0
 
 ## 12.1 Mevcut doğrulama
 
@@ -2676,6 +2676,307 @@ Multer öğrenci fotoğrafı, Excel importu ve slayt medya upload yüzeylerinde 
 **Sıradaki iş: Tur C — Multer 2.2.0 upload compatibility + gerçek multipart smoke + full core.**
 
 P2-2 bu nedenle 🟨 açık kalır.
+
+## 12.10 Tur C — Multer 2.2.0 upload runtime major geçişi — 8 Ağustos 2026
+
+**Durum:** 🟩 Tur C tamamlandı; P2-2 ana dependency-security maddesi bu turla kapanmıştır.
+
+### Neden ayrı compatibility turu yapıldı?
+
+`sqlite3` geçişinden sonra `npm audit --omit=dev` sıfır bulguya ulaşmış olsa da temiz `npm ci` kurulumu `multer@1.4.5-lts.2` için açık bir deprecation/security uyarısı veriyordu ve paket metadata'sı 2.x serisine geçilmesini öneriyordu.
+
+Multer projenin doğrudan dosya kabul sınırında bulunduğu için sürüm numarası tek başına yeterli kanıt sayılmadı. Etkilenen gerçek route yüzeyleri:
+
+1. `POST /api/students` — öğrenci fotoğrafı,
+2. `POST /api/students/import` — XLSX öğrenci importu,
+3. `PUT /api/students/:id/photo` — öğrenci fotoğraf replacement,
+4. `POST /api/slides` — slayt medya upload,
+5. `PUT /api/slides/:id` — slayt medya replacement.
+
+### İzole `/tmp` Multer 2 adayı
+
+Ana checkout değiştirilmeden `/tmp/classroom-multer2-audit` kopyasında:
+
+- `multer@2.2.0` exact kuruldu,
+- Node 22 üzerinde gerçek runtime yüklendi,
+- `npm audit --omit=dev` → **0 vulnerability**,
+- upload ağırlıklı mevcut regresyon paketi → **170 / 170 pass**,
+- temp full `npm run test:core` → **1344 / 1344 pass**, **0 fail**.
+
+Bu aşamada henüz migration kabul edilmedi; gerçek multipart parser davranışı ayrıca sınandı.
+
+### İlk gerçek slayt upload testinde yakalanan test girdisi hatası
+
+İlk gerçek slayt upload smoke'unda `.webp` dosyası kullanıldı ve Multer 2 route'u HTTP 500 döndürdü. Bu sonuç migration failure diye kabul edilmedi; server log ve mevcut `fileFilter` kodu incelendi.
+
+Kök neden:
+
+- slayt `fileFilter` uzantı regex'i `jpeg|jpg|png|gif|mp4|webm|mov`,
+- `.webp` slayt uzantısı mevcut ürün sözleşmesinde listede yok,
+- koşul hem uygun uzantı hem uygun MIME istediği için WebP bilinçli/mevcut biçimde reddediliyordu.
+
+Bu nedenle test girdisi geçerli `.png` ile tekrarlandı ve gerçek slayt create başarılı oldu. WebP sonucu Multer 2 regresyonu olarak sınıflandırılmadı.
+
+### Gerçek multipart ürün akışları — izole Multer 2 server
+
+Gerçek `curl multipart/form-data`, admin session cookie ve gerçek CSRF token ile:
+
+#### Öğrenci fotoğraf create
+
+- gerçek WebP fotoğraf upload,
+- HTTP **200**,
+- DB'de `/uploads/<dosya>` web yolu,
+- fiziksel dosya temp `backend/uploads` altında gerçekten oluştu.
+
+#### Öğrenci fotoğraf update
+
+- ikinci gerçek WebP upload,
+- HTTP **200**,
+- yeni dosya oluştu,
+- eski managed fotoğraf fiziksel olarak silindi.
+
+#### Gerçek Excel import
+
+- repo içindeki `docs/ornek_ogrenci_listesi.xlsx` multipart olarak gönderildi,
+- HTTP **200**,
+- **4 öğrenci** insert edildi,
+- XLSX için oluşturulan geçici upload dosyası işlem bitince silindi,
+- upload klasörü dosya sayısı import öncesi/sonrası değişmedi.
+
+#### Slayt create
+
+- gerçek PNG multipart upload,
+- HTTP **200**,
+- DB `media_path` üretildi,
+- fiziksel dosya `backend/uploads/slides` altında doğrulandı.
+
+#### Slayt media replacement
+
+Fresh-copy final kabul turunda slayta ikinci PNG yüklendi:
+
+- HTTP **200**,
+- yeni media path DB'de görüldü,
+- yeni fiziksel dosya oluştu,
+- önceki slayt medya dosyası silindi.
+
+### Boyut ve rejection davranışları
+
+#### 6 MB öğrenci fotoğrafı
+
+Multer route limiti 10 MB, uygulama iş kuralı 5 MB'dir.
+
+Gerçek 6 MB JPEG:
+
+- Multer parser'dan geçti,
+- uygulama 5 MB kontrolü → HTTP **400**,
+- mesaj: `Resim dosyası çok büyük. Maksimum 5MB olmalıdır.`,
+- upload edilen fiziksel dosya temizlendi,
+- orphan oluşmadı.
+
+#### Geçersiz slayt MIME/fileFilter
+
+Gerçek `text/plain` dosyası:
+
+- HTTP **500** generic JSON,
+- `{ "error": "Sunucu hatası oluştu" }`,
+- slayt upload klasöründe yeni/orphan dosya oluşmadı.
+
+#### 11 MB öğrenci fotoğrafı
+
+Gerçek 11 MB JPEG:
+
+- Multer middleware 10 MB limiti → `MulterError: LIMIT_FILE_SIZE`,
+- mevcut global error handler → HTTP **500** generic JSON,
+- partial/orphan dosya kalmadı.
+
+### Multer 1 kontrol karşılaştırması
+
+500 davranışlarının 2.x regresyonu olup olmadığı ayrı bir `/tmp/classroom-multer1-control` sunucusunda, aynı isteklerle kontrol edildi.
+
+Multer 1.4.5-lts.2 de:
+
+- invalid slayt fileFilter → aynı HTTP 500 generic JSON,
+- >10 MB fotoğraf → aynı HTTP 500 generic JSON,
+- iki senaryoda da orphan dosya yok
+
+sonucunu verdi.
+
+Dolayısıyla bu HTTP 500 error-mapping davranışı **Multer 2 tarafından oluşturulmuş bir regresyon değildir**. Mevcut backend error UX borcudur ve ileride ayrı iyileştirme olarak ele alınmalıdır; Tur C migration kabulünü bozmaz.
+
+### Ana checkout'a lock aktarımı
+
+Multer 2 lock farkı satır diff'iyle değil yapısal JSON olarak incelendi:
+
+- 4 mevcut package kaydı değişti,
+- Multer 1.x'e özgü 9 artık kullanılmayan kayıt kaldırıldı,
+- `concat-stream` 2.0.0,
+- `readable-stream` 3.6.2,
+- `multer` 2.2.0.
+
+Doğrulanmış temp lock ana checkout'a taşındıktan sonra canonical JSON SHA-256 karşılaştırması yapıldı.
+
+Her iki lock hash'i:
+
+`3cd8ca26b754e14e583825a472233762b458e1b4bd0cb2fa6c406b87e7eabdb4`
+
+Hash birebir eşleşmeden `npm ci` çalıştırılmadı.
+
+### Ana checkout temiz kurulumu
+
+`npm ci` sonrası gerçek runtime tree:
+
+- Express 4.22.2,
+- Multer **2.2.0**,
+- busboy 1.6.0,
+- concat-stream 2.0.0,
+- readable-stream 3.6.2,
+- sqlite3 6.0.1.
+
+`npm audit --omit=dev`:
+
+- info: 0,
+- low: 0,
+- moderate: 0,
+- high: 0,
+- critical: 0,
+- **total: 0**.
+
+Multer 1.x deprecation uyarısı temiz `npm ci` çıktısından kalktı.
+
+### Kalıcı dependency guard
+
+`tests/dependency-security-baseline.test.js` genişletildi.
+
+Artık ayrıca:
+
+- `package.json` Multer exact `2.2.0`,
+- lock root Multer exact `2.2.0`,
+- locked Multer `2.2.0`,
+- concat-stream `2.0.0`,
+- readable-stream `3.6.2`,
+- Multer 1.x bagajı olan `mkdirp`, `object-assign`, `xtend`, `process-nextick-args`, `core-util-is`, `isarray` lock'a geri dönmemeli
+
+sözleşmelerini korur.
+
+Güncel dependency baseline:
+
+- **8 / 8 pass**.
+
+### Kalıcı gerçek multipart runtime smoke
+
+Yeni test:
+
+`tests/multer-runtime-smoke.test.js`
+
+Bu test gerçek ephemeral Express HTTP server + gerçek `FormData/Blob` multipart üzerinden:
+
+1. runtime Multer version = 2.2.0,
+2. gerçek PNG multipart upload → alanlar parse edilir ve fiziksel dosya oluşur,
+3. `fileFilter` rejection → error + orphan yok,
+4. file-size limit → `LIMIT_FILE_SIZE` + partial/orphan yok
+
+kontrollerini yapar.
+
+Test `test:core` içine kalıcı olarak eklendi.
+
+Hedef runtime smoke:
+
+- **5 / 5 pass**.
+
+### Ana checkout upload-heavy regresyon paketi
+
+Multer 2 gerçek `node_modules` ağacı üzerinde:
+
+- student photo create/update,
+- Excel import error/redaction,
+- slide create/cache,
+- slide media path,
+- slide update,
+- admin upload middleware auth/order,
+- rate-limit
+
+alanlarını içeren paket:
+
+- **170 / 170 pass**
+- **0 fail**.
+
+### Ana checkout tam regresyonu
+
+Commit öncesi iki tam core turu çalıştırıldı. Son fresh kapı:
+
+`npm run test:core`
+
+- **1351 / 1351 pass**
+- **0 fail**.
+
+Testlerdeki bilinen izole DB startup/teardown log gürültüsü dışında assertion failure yoktur.
+
+### Fresh-copy final multipart kabulü
+
+Ana çalışma ağacındaki değişikliklerden **yeni bir `/tmp` proje kopyası** oluşturuldu. Bu kopyada yeniden `npm ci` yapıldı:
+
+- Multer 2.2.0,
+- audit total 0.
+
+Gerçek HTTP + gerçek multipart ile yeniden doğrulandı:
+
+- admin login 200 + 64 karakter CSRF,
+- öğrenci fotoğraf create 200,
+- öğrenci fotoğraf update 200 + eski file cleanup,
+- gerçek XLSX import 200 + 4 kayıt + temp Excel cleanup,
+- slayt create PNG 200,
+- slayt media replacement PNG 200 + eski file cleanup,
+- 6 MB uygulama limiti 400 + orphan yok,
+- invalid slide filter 500 generic + orphan yok + Multer 1 kontrolüyle aynı,
+- 11 MB Multer limiti 500 generic + orphan yok + Multer 1 kontrolüyle aynı,
+- slayt delete 200,
+- öğrenci delete 200,
+- kapanışta root upload dosyaları: **0**,
+- kapanışta slide upload dosyaları: **0**.
+
+Asıl `backend/classroom.db` ve gerçek proje upload dosyaları bu kabul turunda değiştirilmedi.
+
+### Commit ve GitHub kaydı
+
+- Commit: `174760a90b3f15a8bf39f1598bcf021fc00dd3c1`
+- Mesaj: `chore: upgrade multer upload runtime`
+- Dal: `main`
+- Push: başarılı
+- Push sonrası `HEAD == origin/main` doğrulandı.
+
+### P2-2 kapanış kararı
+
+Başlangıçta üretim dependency taraması **14 vulnerability** veriyordu. Üç kontrollü tur sonunda:
+
+- Tur A: Express/non-major dependency remediation,
+- Tur B: sqlite3 6.0.1 native/database migration,
+- Tur C: Multer 2.2.0 upload runtime migration
+
+ayrı ayrı test edilip kabul edildi.
+
+Güncel sonuç:
+
+- `npm audit --omit=dev` → **0 vulnerability**,
+- deprecated Multer 1.x kaldırıldı,
+- Express 4.22.2,
+- sqlite3 6.0.1 / SQLite 3.52.0,
+- Multer 2.2.0,
+- full core **1351 / 1351**.
+
+**P2-2 🟩 Tamamlandı.**
+
+### Yeni gözlem — migration dışı upload error UX borcu
+
+Tur C gerçek multipart testleri şu mevcut davranışı ayrıca görünür hale getirdi:
+
+- slayt `fileFilter` rejection,
+- Multer `LIMIT_FILE_SIZE`
+
+gibi parser/middleware hataları global Express error handler'a düşüp HTTP 500 generic JSON olarak dönüyor.
+
+Multer 1 kontrolünde de birebir aynı olduğu için bu bir Multer 2 regresyonu değildir. Ancak semantik olarak kullanıcı input/rejection türündeki bu hataların gelecekte kontrollü **4xx** response ve öğretmene açıklayıcı mesajla eşlenmesi daha doğrudur.
+
+Bu gözlem kaybolmamalı; backend error UX/hardening sırasında ayrı düzeltme maddesi olarak ele alınacaktır.
 
 ---
 
@@ -3378,7 +3679,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 6 | Slide delete error redaction | P1 | 🟩 |
 | 7 | Slide settings atomik tek-endpoint refactor | P2 | 🟩 |
 | 8 | SheetJS local + tek sürüm | P2 | 🟩 |
-| 9 | npm dependency security turu | P2 | 🟨 |
+| 9 | npm dependency security turu | P2 | 🟩 |
 | 10 | GitHub CI son main run yeşil | P2 | ⬜ |
 | 11 | GSAP resize güvenilirliği | P2 | ⬜ |
 | 12 | Fallback slide sistem sahipliği | P2 | ⬜ |
