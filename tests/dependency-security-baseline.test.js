@@ -11,7 +11,7 @@ function lockedVersion(name) {
     return lockJson.packages[`node_modules/${name}`]?.version;
 }
 
-test('Dependency security baseline for the non-major remediation wave', async (t) => {
+test('Dependency security baseline', async (t) => {
     await t.test('Express stays on the audited 4.22.2 line', () => {
         assert.equal(packageJson.dependencies.express, '^4.22.2');
         assert.equal(lockJson.packages[''].dependencies.express, '^4.22.2');
@@ -23,18 +23,25 @@ test('Dependency security baseline for the non-major remediation wave', async (t
         assert.equal(lockedVersion('qs'), '6.15.3');
         assert.equal(lockedVersion('path-to-regexp'), '0.1.13');
         assert.equal(lockedVersion('raw-body'), '2.5.3');
-    });
-
-    await t.test('non-major transitive audit fixes remain locked', () => {
-        assert.equal(lockedVersion('brace-expansion'), '1.1.18');
-        assert.equal(lockedVersion('minimatch'), '3.1.5');
-        assert.equal(lockedVersion('ip-address'), '10.4.0');
         assert.equal(lockedVersion('side-channel'), '1.1.1');
         assert.equal(lockedVersion('side-channel-list'), '1.0.1');
     });
 
-    await t.test('the remaining sqlite3 major migration is not silently mixed into this wave', () => {
-        assert.equal(packageJson.dependencies.sqlite3, '^5.1.6');
-        assert.equal(lockedVersion('sqlite3'), '5.1.7');
+    await t.test('sqlite3 is pinned to the validated 6.0.1 major migration', () => {
+        assert.equal(packageJson.dependencies.sqlite3, '6.0.1');
+        assert.equal(lockJson.packages[''].dependencies.sqlite3, '6.0.1');
+        assert.equal(lockedVersion('sqlite3'), '6.0.1');
+    });
+
+    await t.test('sqlite3 native build chain stays on the remediated toolchain', () => {
+        assert.equal(lockedVersion('node-gyp'), '12.4.0');
+        assert.equal(lockedVersion('tar'), '7.5.22');
+    });
+
+    await t.test('the vulnerable sqlite3 5.x build-chain packages do not return', () => {
+        assert.equal(lockedVersion('make-fetch-happen'), undefined);
+        assert.equal(lockedVersion('cacache'), undefined);
+        assert.equal(lockedVersion('http-proxy-agent'), undefined);
+        assert.equal(lockedVersion('@tootallnate/once'), undefined);
     });
 });
