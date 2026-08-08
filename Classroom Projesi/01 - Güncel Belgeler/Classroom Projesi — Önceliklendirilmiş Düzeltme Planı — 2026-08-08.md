@@ -3902,7 +3902,7 @@ Fiziksel ekranda öğretmenin günlük kullanımını bozacak görsel veya işle
 # 17. P3-1 — Stale bakım scriptlerini temizle
 
 **Öncelik:** P3  
-**Durum:** ⬜ Bekliyor
+**Durum:** 🟩 Tamamlandı ve doğrulandı
 
 ## 17.1 `scripts/test_system.js`
 
@@ -4133,6 +4133,39 @@ Ancak doğrudan silinmemelidir.
 4. gerçekten orphan ise sil.
 5. `public/js/config.js` ve `public/js/utils.js` ile yanlışlıkla shared dependency sanılmadığını doğrula.
 6. core suite.
+
+## Sonuç — 8 Ağustos 2026
+
+Repo çapı require/import, test ve script taraması ilk varsayımı kısmen düzeltti:
+
+- `backend/config.js` için runtime, test veya script import/referansı bulunmadı.
+- Dosya, güncel `public/js/config.js` ile aynı tarihsel kökten gelen fakat eski `http://localhost:3000/api` değerini taşıyan kullanılmayan backend kopyasıydı.
+- `backend/config.js` fiziksel olarak kaldırıldı.
+- `backend/utils.js` **orphan değildir**. `backend/server.js`, `normalizePath` fonksiyonunu `require('./utils')` ile aktif olarak kullanmaktadır.
+- `tests/slides-get-id.test.js` de `backend/utils.js` içindeki `normalizePath` davranışını doğrudan kullanmaktadır.
+- Bu nedenle `backend/utils.js` bilinçli olarak korundu; sırf dosya adı frontend kopyasına benzediği için silinmedi.
+- `public/js/config.js` ve `public/js/utils.js` kiosk/admin tarafından script olarak yüklenmeye devam etmektedir ve bu işte değiştirilmemiştir.
+- Yeni `tests/backend-orphan-cleanup.test.js` regression testi bu ayrımı kalıcı kontrat haline getirdi ve `test:core` içine bağlandı.
+
+### TDD kanıtı
+
+- RED: `backend/config.js` fiziksel olarak mevcut olduğu için yeni focused test `1 fail / 2 pass` verdi.
+- GREEN: yalnız `backend/config.js` kaldırıldıktan sonra focused test `3/3 pass` verdi.
+
+### Doğrulama kanıtları
+
+- `npm run test:backend-orphan-cleanup` → `3/3 pass`
+- `npm run test:core` → `1384/1384 pass`
+- `npm run test:system-smoke` → `SYSTEM_SMOKE_PASS`
+- `npm audit --omit=dev` → `0 vulnerabilities`
+- `git diff --check` → temiz
+- syntax kontrolleri → temiz
+- Kod/test milestone commit: `4c6d0aa268b252ee51600fe586d92b38ecadceca`
+- GitHub Actions run: `31273885001`
+- Node 22 → PASS
+- Node 24 → PASS
+
+Bu kanıtlarla P3-4 kapanmıştır. P2-6 fiziksel 55\" 4K TV kabulü ayrı açık kalite kapısı olarak kalır.
 
 ---
 
@@ -4435,7 +4468,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 14 | Stale bakım scriptleri | P3 | ⬜ |
 | 15 | README/context/docs güncelleme | P3 | ⬜ |
 | 16 | Legacy settings katmanı | P3 | 🟩 |
-| 17 | Orphan backend config/utils | P3 | ⬜ |
+| 17 | Orphan backend config/utils | P3 | 🟩 |
 | 18 | Büyük server/admin/CSS refactor planı | P3 | ⬜ |
 
 Durum simgeleri:
