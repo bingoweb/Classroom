@@ -166,7 +166,28 @@ function getIntelligentRandom(slide, allSlides, currentIndex) {
     const rules = TRANSITION_RULES.contentType[slide.content_type] || {};
     const suitable = pool.filter(t => !rules.avoid || !rules.avoid.includes(t));
 
-    const finalPool = avoidConsecutiveTransitionFamily(suitable.length > 0 ? suitable : pool);
+    let finalPool = avoidConsecutiveTransitionFamily(suitable.length > 0 ? suitable : pool);
+    const previous = previousTransitions[previousTransitions.length - 1];
+
+    // Recent-effect avoidance is a preference, but adjacent motion-family repetition is not.
+    // If the recent-history filter leaves only the previous family, retry from the full
+    // professional pool so a different family can be selected before reusing an older effect.
+    if (previous && finalPool.length > 0) {
+        const previousFamily = getTransitionFamily(previous);
+        const hasDifferentFamily = finalPool.some(
+            transition => getTransitionFamily(transition) !== previousFamily
+        );
+
+        if (!hasDifferentFamily) {
+            const allSuitable = allTransitions.filter(
+                transition => !rules.avoid || !rules.avoid.includes(transition)
+            );
+            finalPool = avoidConsecutiveTransitionFamily(
+                allSuitable.length > 0 ? allSuitable : allTransitions
+            );
+        }
+    }
+
     const selected = finalPool[Math.floor(Math.random() * finalPool.length)];
 
     updateHistory(selected);

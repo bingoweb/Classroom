@@ -366,28 +366,65 @@ test('Slideshow Transition Lock', async (t) => {
             transition_mode: index % 2 === 0 ? 'random' : 'auto'
         }));
         const approved = new Set(mediaAnalyzer.PROFESSIONAL_TRANSITIONS);
+        const originalRandom = Math.random;
 
-        mediaAnalyzer.resetTransitionHistory();
-        const selected = slides.map((slide, index) => (
-            mediaAnalyzer.getSmartTransition(slide, slides, index)
-        ));
+        try {
+            Math.random = () => 0;
+            mediaAnalyzer.resetTransitionHistory();
+            const selected = slides.map((slide, index) => (
+                mediaAnalyzer.getSmartTransition(slide, slides, index)
+            ));
 
-        selected.forEach(transition => {
-            assert.ok(approved.has(transition), `${transition} belongs to the curated professional pool`);
-        });
-        for (let index = 1; index < selected.length; index += 1) {
-            assert.notStrictEqual(selected[index], selected[index - 1], 'the exact effect does not repeat');
-            assert.notStrictEqual(
-                mediaAnalyzer.getTransitionFamily(selected[index]),
-                mediaAnalyzer.getTransitionFamily(selected[index - 1]),
-                'the same motion family does not repeat'
+            selected.forEach(transition => {
+                assert.ok(approved.has(transition), `${transition} belongs to the curated professional pool`);
+            });
+            for (let index = 1; index < selected.length; index += 1) {
+                assert.notStrictEqual(selected[index], selected[index - 1], 'the exact effect does not repeat');
+                assert.notStrictEqual(
+                    mediaAnalyzer.getTransitionFamily(selected[index]),
+                    mediaAnalyzer.getTransitionFamily(selected[index - 1]),
+                    'the same motion family does not repeat'
+                );
+            }
+            assert.strictEqual(
+                new Set(selected.map(mediaAnalyzer.getTransitionFamily)).size,
+                3,
+                'a seven-slide cycle uses all three professional motion families'
             );
+        } finally {
+            Math.random = originalRandom;
+            mediaAnalyzer.resetTransitionHistory();
         }
-        assert.strictEqual(
-            new Set(selected.map(mediaAnalyzer.getTransitionFamily)).size,
-            3,
-            'a seven-slide cycle uses all three professional motion families'
-        );
+    });
+
+    await t.test('Random mode relaxes recent-effect avoidance before repeating the previous motion family', () => {
+        const slides = Array.from({ length: 12 }, (_, index) => ({
+            id: index + 1,
+            content_type: 'rule',
+            media_type: 'image',
+            transition_mode: 'random'
+        }));
+        const originalRandom = Math.random;
+
+        try {
+            Math.random = () => 0;
+            mediaAnalyzer.resetTransitionHistory();
+            const selected = slides.map((slide, index) => (
+                mediaAnalyzer.getSmartTransition(slide, slides, index)
+            ));
+            const families = selected.map(mediaAnalyzer.getTransitionFamily);
+
+            for (let index = 1; index < families.length; index += 1) {
+                assert.notStrictEqual(
+                    families[index],
+                    families[index - 1],
+                    `motion family repeated at selection ${index + 1}: ${selected[index - 1]} -> ${selected[index]}`
+                );
+            }
+        } finally {
+            Math.random = originalRandom;
+            mediaAnalyzer.resetTransitionHistory();
+        }
     });
 
     await t.test('Changed slide data rebuilds the rotation and invalidates old callbacks', async () => {
