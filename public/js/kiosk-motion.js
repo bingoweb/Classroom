@@ -53,7 +53,14 @@
                 return undefined;
             }
 
-            const entrance = gsap.timeline({ defaults: { ease: 'back.out(1.35)' } });
+            const entrance = gsap.timeline({
+                defaults: { ease: 'back.out(1.35)' },
+                onComplete: () => {
+                    gsap.set('.card-titlebar', {
+                        clearProps: 'transform,translate,rotate,scale'
+                    });
+                }
+            });
             entrance
                 .from('.card-titlebar', {
                     y: '-1.2vh',
