@@ -4234,6 +4234,43 @@ Kanıtlar:
 
 `backend/server.js` 3064 → 2944 satıra indi. Sıradaki extraction dalgası **P3-5A2 — schedule** olacaktır. P2-6 gerçek 55\" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
+### 21.0.2 9 Ağustos 2026 — P3-5A2 schedule route extraction
+
+İkinci backend refactor dalgası tamamlandı. Schedule route'ları ve migration-readiness guard'ı tek domain kayıt modülüne taşındı; schedule service/repository/schema katmanları ve HTTP davranışı değiştirilmedi.
+
+Uygulanan sınır:
+
+- `backend/routes/schedule-routes.js`: readiness guard + normalized GET/PUT + legacy GET/POST,
+- `backend/server.js`: eski göreli konumda `registerScheduleRoutes(app, deps)`,
+- `tests/backend-route-extraction.test.js`: A2 fiziksel extraction ve çift-kayıt önleme sözleşmesi.
+
+Korunan kritik sözleşmeler:
+
+- `app.use('/api/schedule', requireScheduleStorageReady)` tüm schedule route'larından önce,
+- migration failure → HTTP 503 + `SCHEDULE_STORAGE_UNAVAILABLE`,
+- normalized GET/PUT response ve validation sözleşmeleri,
+- isolated SQLite replacement transaction akışı,
+- legacy GET/POST uyumluluğu,
+- schedule write middleware sırası auth → CSRF → write rate-limit,
+- `schedule-service.js`, `schedule-repository.js`, `schedule-schema.js` davranışı.
+
+Kanıtlar:
+
+- TDD extraction testi RED → GREEN,
+- extraction 2/2,
+- schedule odak grubu **127/127**,
+- tam core **1386/1386**,
+- system smoke PASS,
+- audit 0,
+- syntax ve diff check temiz,
+- Playwright kiosk normalized schedule GET 200,
+- Chrome DevTools admin session/CSRF 64 + normalized PUT 200 + normalized GET 200 + legacy GET 200,
+- temiz kiosk reload console error/warn/issue 0,
+- exact milestone commit `17838a510758309d4a50b30c846b4dbe7990a9df`,
+- GitHub Actions run `31280821858`: Node 22 ve Node 24 PASS.
+
+`backend/server.js` 2944 → 2725 satıra indi. Sıradaki extraction dalgası **P3-5A3 — students** olacaktır. P2-6 gerçek 55\" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
 ## 21.1 `backend/server.js` — ~2800 satır
@@ -4531,7 +4568,8 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 17 | Orphan backend config/utils | P3 | 🟩 |
 | 18 | Büyük server/admin/CSS refactor planı | P3 | 🟩 |
 | 19 | P3-5A1 settings/system route extraction | P3 | 🟩 |
-| 20 | P3-5A2 schedule route extraction | P3 | ⬜ |
+| 20 | P3-5A2 schedule route extraction | P3 | 🟩 |
+| 21 | P3-5A3 students route extraction | P3 | ⬜ |
 
 Durum simgeleri:
 

@@ -158,7 +158,7 @@ Bu bölümdeki A1 → A8 sırası **uygulama/commit sırasıdır**. Mevcut Expre
 
 ### P3-5A — Backend route modülerleştirme
 
-**Durum:** 🟨 Uygulanıyor — A1 tamamlandı ve doğrulandı; sıradaki dalga A2 schedule extraction.
+**Durum:** 🟨 Uygulanıyor — A1 ve A2 tamamlandı ve doğrulandı; sıradaki dalga A3 students extraction.
 
 #### A0 — Contract baseline
 
@@ -233,9 +233,11 @@ Kod/test milestone:
 
 Bilinen fresh-DB `error_logs` cleanup-order log gürültüsü bu refactor sırasında değiştirilmedi; A6 notunda belirtildiği gibi ayrı bugfix olarak kalıyor.
 
-**Sıradaki backend dalgası: A2 — Schedule.** `schedule-service.js`, `schedule-repository.js`, `schedule-schema.js` ve `requireScheduleStorageReady` davranışı korunarak ayrıca ele alınacaktır.
+**A1 sonrası sıradaki backend dalgası A2 — Schedule idi.** Bu dalga aşağıdaki A2 kanıtlarıyla tamamlandı.
 
 #### A2 — Schedule
+
+**Durum:** 🟩 9 Ağustos 2026 — tamamlandı ve doğrulandı.
 
 Önerilen dosya:
 
@@ -244,6 +246,48 @@ backend/routes/schedule-routes.js
 ```
 
 Mevcut `schedule-service.js`, `schedule-repository.js` ve `schedule-schema.js` aynen kullanılmalıdır. `requireScheduleStorageReady` middleware sırası korunmalıdır.
+
+##### A2 uygulama sonucu
+
+Schedule route yüzeyi planlanan `registerXRoutes(app, deps)` kalıbıyla ayrıldı:
+
+- `backend/routes/schedule-routes.js` oluşturuldu.
+- `requireScheduleStorageReady` guard'ı route modülüne taşındı ve `app.use('/api/schedule', requireScheduleStorageReady)` kayıt sırası korunuyor.
+- `GET /api/schedule/normalized` ve korumalı `PUT /api/schedule/normalized` yeni modüle taşındı.
+- legacy `GET /api/schedule` ve korumalı `POST /api/schedule` yeni modüle taşındı.
+- `server.js`, `registerScheduleRoutes(app, deps)` çağrısını settings ile system route kayıtlarının arasındaki eski göreli konumda yapıyor.
+- `schedule-service.js`, `schedule-repository.js` ve `schedule-schema.js` yeniden yazılmadı.
+- normalized write için isolated SQLite connection + `replaceNormalizedSchedule(...)` + close sırası korunuyor.
+- legacy schedule SQL, response metinleri ve auth → CSRF → write-rate-limit middleware zinciri değiştirilmedi.
+- `backend/server.js` 2944 satırdan 2725 satıra indi; yeni `backend/routes/schedule-routes.js` 251 satır.
+
+TDD ve regresyon kanıtı:
+
+1. `tests/backend-route-extraction.test.js` içine A2 sözleşmesi önce eklendi ve `backend/routes/schedule-routes.js must exist` nedeniyle RED verdi.
+2. Route ve readiness guard extraction sonrası aynı test GREEN oldu; A1 + A2 extraction testi 2/2 geçti.
+3. Schedule odak grubu (`backend-schedule`, legacy write, schedule read redaction, admin route auth) **127/127 pass** verdi.
+4. Tam `npm run test:core`: **1386/1386 pass**.
+5. `npm run test:system-smoke`: **SYSTEM_SMOKE_PASS**.
+6. `npm audit --omit=dev`: **0 vulnerability**.
+7. `node --check backend/server.js`, `node --check backend/routes/schedule-routes.js` ve `git diff --check` temiz.
+
+Tarayıcı kanıtı, izole temp DB + ayrı port üzerinde:
+
+- Playwright kiosk yükünde `GET /api/schedule/normalized?day=weekday` **200**.
+- Chrome DevTools gerçek admin session akışında `x-csrf-token` uzunluğu 64 olarak doğrulandı.
+- Aynı browser session'da normalized `PUT` **200**, ardından normalized `GET` **200** ve legacy `GET /api/schedule` **200** döndü.
+- Temiz kiosk reload sonrası Chrome console `error/warn/issue` **0**; schedule network çağrıları 200/304 dışında hata üretmedi.
+
+Kod/test milestone:
+
+- Commit: `17838a510758309d4a50b30c846b4dbe7990a9df`
+- GitHub Actions: `31280821858`
+- Node 24: PASS (24 sn)
+- Node 22: PASS (30 sn)
+
+Bilinen fresh-DB `error_logs` cleanup-order log gürültüsü bu refactor sırasında yine değiştirilmedi.
+
+**Sıradaki backend dalgası: A3 — Students.** Student CRUD/import/photo cleanup ve upload güvenliği mevcut test sözleşmeleriyle korunarak ayrıca ele alınacaktır.
 
 #### A3 — Students
 
