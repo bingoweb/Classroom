@@ -695,6 +695,14 @@ Son tam `npm run test:core`:
 
 Böylece frontend “Bugün” ve backend “bugün” aynı `Europe/Istanbul` takvim günü sözleşmesine bağlandı.
 
+### Commit ve GitHub kaydı
+
+- Commit: `16cdda5cf741da7dd450c20ffe458a6791a0f4b8`
+- Mesaj: `fix: use Istanbul date in admin attendance`
+- Dal: `main`
+- Push: `main -> origin/main` başarılı.
+- Push sonrası yerel `HEAD` ile `origin/main` aynı SHA olarak doğrulandı.
+
 ---
 
 # 8. P1-4 — Slayt ayarları HTTP hata kontrolünü düzelt
