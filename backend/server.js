@@ -2461,20 +2461,47 @@ app.delete('/api/slides/:id', requireAdminSession, requireCsrfToken, requireAdmi
         return res.status(400).json({ error: 'Geçersiz slayt ID' });
     }
 
+    if (typeof req.requestId !== 'string' || req.requestId.trim() === '') {
+        req.requestId = crypto.randomUUID();
+    }
+
+    const slideDeleteInternalError = 'Slayt silinirken hata oluştu';
+    const logSlideDeleteFailure = (stage, error) => {
+        logger.error(COMPONENTS.DATABASE, 'Error deleting slide', error, {
+            slideId,
+            requestId: req.requestId,
+            stage
+        });
+    };
+
     db.createIsolatedConnection((connErr, isolatedDb) => {
-        if (connErr) return res.status(500).json({ error: connErr.message });
+        if (connErr) {
+            logSlideDeleteFailure('connection', connErr);
+            return res.status(500).json({ error: slideDeleteInternalError });
+        }
 
         isolatedDb.run("BEGIN IMMEDIATE", function (beginErr) {
             if (beginErr) {
+                logSlideDeleteFailure('begin', beginErr);
                 return isolatedDb.close(() => {
-                    res.status(500).json({ error: beginErr.message });
+                    res.status(500).json({ error: slideDeleteInternalError });
                 });
             }
 
-            const rollbackAndRespond = (originalErr, statusCode, errorMsg, logContextMsg) => {
+            const rollbackAndRespond = (originalErr, statusCode, errorMsg, stage) => {
+                if (originalErr) {
+                    logSlideDeleteFailure(stage, originalErr);
+                }
+
                 isolatedDb.run("ROLLBACK", (rollbackErr) => {
                     if (rollbackErr) {
-                        logger.error(COMPONENTS.DATABASE, 'Rollback failed after ' + logContextMsg, rollbackErr, { originalError: originalErr ? originalErr.message : null });
+                        logger.error(COMPONENTS.DATABASE, 'Rollback failed after slide delete error', rollbackErr, {
+                            slideId,
+                            requestId: req.requestId,
+                            stage: 'rollback',
+                            originalStage: stage,
+                            originalError: originalErr ? originalErr.message : null
+                        });
                     }
                     isolatedDb.close(() => {
                         res.status(statusCode).json({ error: errorMsg });
@@ -2483,22 +2510,22 @@ app.delete('/api/slides/:id', requireAdminSession, requireCsrfToken, requireAdmi
             };
 
             isolatedDb.get("SELECT media_path, display_order FROM slides WHERE id = ?", [slideId], (lookupErr, row) => {
-                if (lookupErr) return rollbackAndRespond(lookupErr, 500, lookupErr.message, 'lookup error');
-                if (!row) return rollbackAndRespond(null, 404, 'Slayt bulunamadı', 'missing slide');
+                if (lookupErr) return rollbackAndRespond(lookupErr, 500, slideDeleteInternalError, 'lookup');
+                if (!row) return rollbackAndRespond(null, 404, 'Slayt bulunamadı', 'missing');
 
                 const mediaPath = row.media_path;
                 const displayOrder = row.display_order;
 
                 isolatedDb.run("DELETE FROM slides WHERE id = ?", [slideId], function (deleteErr) {
-                    if (deleteErr) return rollbackAndRespond(deleteErr, 500, deleteErr.message, 'delete error');
+                    if (deleteErr) return rollbackAndRespond(deleteErr, 500, slideDeleteInternalError, 'delete');
 
                     const deleteChanges = this.changes;
 
                     isolatedDb.run("UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?", [displayOrder], function(reorderErr) {
-                        if (reorderErr) return rollbackAndRespond(reorderErr, 500, reorderErr.message, 'compaction error');
+                        if (reorderErr) return rollbackAndRespond(reorderErr, 500, slideDeleteInternalError, 'compaction');
 
                         isolatedDb.run("COMMIT", function (commitErr) {
-                            if (commitErr) return rollbackAndRespond(commitErr, 500, commitErr.message, 'commit error');
+                            if (commitErr) return rollbackAndRespond(commitErr, 500, slideDeleteInternalError, 'commit');
 
                             isolatedDb.close(() => {
                                 slidesCache = null;

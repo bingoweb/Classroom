@@ -1227,7 +1227,7 @@ P1-5 fail-closed güvenlik sözleşmesi açısından 🟩 kapatılmıştır.
 
 **Öncelik:** P1 güvenlik / consistency  
 **Risk:** Düşük-Orta  
-**Durum:** ⬜ Bekliyor
+**Durum:** 🟩 Tamamlandı ve doğrulandı — 8 Ağustos 2026
 
 ## 10.1 Sorun
 
@@ -1286,6 +1286,233 @@ sözleşmeleri korunmalıdır.
 Ayrı error-redaction testi eklenmeli veya `slides-delete-transaction.test.js` genişletilmelidir.
 
 Her failure point için distinctive secret error string enjekte edilip response'da bulunmadığı doğrulanmalıdır.
+
+## 10.5 Uygulama ve doğrulama kaydı — 8 Ağustos 2026
+
+### Kök neden
+
+`DELETE /api/slides/:id` transaction akışı doğru rollback mantığına sahipti ancak internal DB hatalarını client response'a doğrudan taşıyordu. Sızıntı tek bir dalda değildi; aşağıdaki aşamaların tamamında ham `.message` kullanımı vardı:
+
+- isolated connection,
+- `BEGIN IMMEDIATE`,
+- slide lookup,
+- primary `DELETE`,
+- display-order compaction,
+- `COMMIT`.
+
+Mevcut regresyon testlerinin bir bölümü de bu ham SQLite mesajlarını doğru davranış olarak bekliyordu. Dolayısıyla yalnız production kodu değil, test sözleşmesi de güvenli client contract'a çevrildi.
+
+### Uygulanan çözüm
+
+`backend/server.js` içindeki slide DELETE route'unda tek internal client mesajı tanımlandı:
+
+`Slayt silinirken hata oluştu`
+
+Internal failure'lar artık:
+
+- client'a sabit güvenli 500 mesajı verir,
+- özgün `Error` nesnesini server logger'da korur,
+- `slideId`,
+- `requestId`,
+- `stage`
+
+bağlamıyla loglanır.
+
+Stage değerleri:
+
+- `connection`,
+- `begin`,
+- `lookup`,
+- `delete`,
+- `compaction`,
+- `commit`.
+
+Rollback kendisi de hata verirse secondary hata ayrıca:
+
+- `stage: rollback`,
+- `originalStage`,
+- `originalError`
+
+bağlamıyla loglanır; primary veya rollback iç detayı client'a çıkmaz.
+
+404 business-rule sözleşmesi aynen korunur:
+
+`Slayt bulunamadı`
+
+### Gerçek HTTP testinde yakalanan ikinci eksik — requestId
+
+İlk gerçek HTTP/SQLite acceptance turunda redaction ve rollback doğru çalıştı fakat log context'inde `requestId` bulunmadığı görüldü.
+
+Nedeni:
+
+- backend'de birçok route `req.requestId` kullanıyor,
+- ancak gerçek HTTP isteklerine requestId atayan global middleware yok,
+- unit testler requestId'yi elle enjekte ettiği için bu eksik daha önce görünmüyordu.
+
+P1-6 kapsamını tüm uygulamada middleware refactor'una büyütmemek için slide DELETE route'una lokal correlation fallback eklendi:
+
+- mevcut geçerli `req.requestId` varsa korunur,
+- yoksa `crypto.randomUUID()` ile UUID v4 üretilir,
+- route'un error ve success loglarının tamamı aynı requestId'yi kullanır.
+
+Bu eksiklik ayrıca önce kırmızı testle yeniden üretildi; production değişikliğinden önce requestId `undefined` olduğu için test beklendiği gibi fail oldu.
+
+### TDD kırmızı kanıtı — ana redaction davranışı
+
+Production route değiştirilmeden önce:
+
+`slides-delete-error-redaction + slides-delete-id + slides-delete-cache + slides-delete-transaction`
+
+birlikte çalıştırıldı.
+
+Sonuç:
+
+- **36 test**,
+- **16 pass**,
+- **20 fail**.
+
+Kırmızı koşu connection/begin/lookup/delete/compaction/commit iç hata metinlerinin client response'a gerçekten sızdığını gösterdi.
+
+Distinctive test marker'ları response'da doğrudan görüldüğü için testin yanlış nedenle kırılmadığı doğrulandı.
+
+### Yeni özel redaction testi
+
+Yeni dosya:
+
+`tests/slides-delete-error-redaction.test.js`
+
+Kapsam:
+
+1. gerçek-style request'te requestId yoksa UUID v4 üretimi,
+2. isolated connection failure,
+3. begin failure,
+4. lookup failure,
+5. delete failure,
+6. compaction failure,
+7. commit failure,
+8. rollback failure,
+9. missing-slide 404 korunması.
+
+Son hedef sonucu:
+
+- **10 / 10 pass**.
+
+Her internal failure testinde:
+
+- distinctive internal detail client body'de bulunmuyor,
+- özgün Error logger'da kalıyor,
+- stage doğru,
+- slideId doğru,
+- requestId mevcut,
+- DB close ve rollback sayıları kontrol ediliyor,
+- response exactly once contract korunuyor.
+
+### Transaction / cache odaklı regresyon
+
+Redaction testi hariç mevcut DELETE transaction/cache/ID paketleri de tekrar çalıştırıldı.
+
+Sonuç:
+
+- **27 / 27 pass**.
+
+Yeni redaction testiyle birlikte delete-focused toplam:
+
+- **36 / 36 pass**.
+
+Gerçek SQLite trigger tabanlı transaction testi de yeşil kaldı; zorlanan compaction hatasında rollback gerçek SQLite üzerinde doğrulandı.
+
+### Geniş komşu slide/auth regresyonu
+
+Aşağıdaki alanlar birlikte çalıştırıldı:
+
+- delete redaction,
+- delete ID validation,
+- delete cache,
+- delete real transaction,
+- reorder route/cache,
+- slide update route/cache,
+- slide create/read/active error redaction,
+- admin route auth,
+- admin session,
+- admin rate-limit.
+
+Sonuç:
+
+- **189 / 189 pass**,
+- **0 fail**.
+
+### Gerçek HTTP + gerçek SQLite acceptance turu
+
+Asıl `backend/classroom.db` kullanılmadı. Ayrı `/tmp` SQLite DB ve ayrı portta gerçek Node/Express server çalıştırıldı. Admin auth yalnız test süreci için environment üzerinden sağlandı; credential değeri repo veya belgeye yazılmadı.
+
+Temp DB'ye üç slayt oluşturuldu:
+
+- `P16-A`, order 1,
+- `P16-B`, order 2,
+- `P16-C`, order 3.
+
+Ardından compaction update'inde bilerek internal hata oluşturan temp SQLite trigger eklendi.
+
+#### Hatalı DELETE
+
+Gerçek browser admin session + gerçek CSRF token ile `P16-B` DELETE edildi.
+
+Sonuç:
+
+- HTTP **500**,
+- body tam olarak güvenli generic error,
+- internal test marker client response'da **yok**.
+
+DB rollback doğrulaması:
+
+- üç slayt da hâlâ mevcut,
+- ID'ler değişmedi,
+- order değerleri hâlâ `1 / 2 / 3`.
+
+Server log:
+
+- özgün SQLite constraint ayrıntısını korudu,
+- `slideId` doğru,
+- `stage: compaction`,
+- gerçek HTTP request için üretilmiş UUID v4 `requestId` mevcut.
+
+Bu acceptance turu, unit testlerin kaçırdığı gerçek requestId eksikliğini de yakalayıp kapattı.
+
+#### Başarılı DELETE
+
+Temp trigger kaldırıldı ve aynı `P16-B` gerçek HTTP üzerinden tekrar silindi.
+
+Sonuç:
+
+- HTTP **200**,
+- `{ message: 'Slayt başarıyla silindi', changes: 1 }`,
+- DB'de `P16-B` yok,
+- `P16-A` order 1,
+- `P16-C` order **2**.
+
+Yani post-delete compaction gerçek SQLite üzerinde başarılı.
+
+Success logunda da UUID requestId mevcut.
+
+#### Missing slide ve public read
+
+Aynı authenticated gerçek HTTP ortamında:
+
+- olmayan slide DELETE → **404** `Slayt bulunamadı`,
+- `/api/slides/active` → **200**.
+
+### Tam çekirdek kabul kapısı
+
+Yeni redaction testi `test:core` içine dahil edilmiş halde:
+
+- `node --check backend/server.js` → pass,
+- `git diff --check` → temiz,
+- `npm run test:core` → **1318 / 1318 pass**,
+- **0 fail**.
+
+Geçici Chromium context, Node server, SQLite DB, trigger ve `/tmp` test dosyaları kapatılıp temizlendi. Gerçek proje DB'sine dokunulmadı.
+
+P1-6 yalnız hata metnini değiştirme değil; client redaction + transaction preservation + server diagnostics + real request correlation birlikte doğrulandığı için 🟩 kapatılmıştır.
 
 ---
 
@@ -2145,7 +2372,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 3 | Admin İstanbul “Bugün” tarihi | P1 | 🟩 |
 | 4 | Slide settings HTTP hata kontrolü | P1 | 🟩 |
 | 5 | Admin password fail-closed | P1 | 🟩 |
-| 6 | Slide delete error redaction | P1 | ⬜ |
+| 6 | Slide delete error redaction | P1 | 🟩 |
 | 7 | Slide settings atomik tek-endpoint refactor | P2 | ⬜ |
 | 8 | SheetJS local + tek sürüm | P2 | ⬜ |
 | 9 | npm dependency security turu | P2 | ⬜ |

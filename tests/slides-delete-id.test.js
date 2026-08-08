@@ -311,7 +311,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         const resObj = await invokeHandler(req);
 
         assert.strictEqual(resObj.statusCode, 500);
-        assert.deepEqual(resObj.body, { error: 'delete constraint error' });
+        assert.deepEqual(resObj.body, { error: 'Slayt silinirken hata oluştu' });
         assert.deepEqual(sqlLog, [
             'BEGIN IMMEDIATE',
             'SELECT media_path, display_order FROM slides WHERE id = ?',
@@ -320,7 +320,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         ]);
         assert.ok(rollbackCompleted);
         assert.strictEqual(unlinkCalled, 0, 'No media cleanup on failure');
-        assert.strictEqual(errorLogCount, 0, 'No rollback error log since rollback succeeded');
+        assert.strictEqual(errorLogCount, 1, 'Primary database failure is logged even when rollback succeeds');
     });
 
     await t.test('5. Compaction failure triggers rollback and 500 response', async () => {
@@ -350,7 +350,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         const resObj = await invokeHandler(req);
 
         assert.strictEqual(resObj.statusCode, 500);
-        assert.deepEqual(resObj.body, { error: 'compaction error' });
+        assert.deepEqual(resObj.body, { error: 'Slayt silinirken hata oluştu' });
         assert.deepEqual(sqlLog, [
             'BEGIN IMMEDIATE',
             'SELECT media_path, display_order FROM slides WHERE id = ?',
@@ -389,7 +389,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         const resObj = await invokeHandler(req);
 
         assert.strictEqual(resObj.statusCode, 500);
-        assert.deepEqual(resObj.body, { error: 'commit error' });
+        assert.deepEqual(resObj.body, { error: 'Slayt silinirken hata oluştu' });
         assert.deepEqual(sqlLog, [
             'BEGIN IMMEDIATE',
             'SELECT media_path, display_order FROM slides WHERE id = ?',
@@ -422,11 +422,11 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
             }
         };
 
-        const req = { params: { id: '47' } };
+        const req = { params: { id: '47' }, requestId: 'req-rollback-failure' };
         const resObj = await invokeHandler(req);
 
         assert.strictEqual(resObj.statusCode, 500);
-        assert.deepEqual(resObj.body, { error: 'primary error' });
+        assert.deepEqual(resObj.body, { error: 'Slayt silinirken hata oluştu' });
         assert.deepEqual(sqlLog, [
             'BEGIN IMMEDIATE',
             'DELETE FROM slides WHERE id = ?',
@@ -436,7 +436,13 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         assert.strictEqual(errorLogArgs[0], COMPONENTS.DATABASE);
         assert.match(errorLogArgs[1], /Rollback failed/);
         assert.strictEqual(errorLogArgs[2].message, 'rollback catastrophe');
-        assert.deepEqual(errorLogArgs[3], { originalError: 'primary error' });
+        assert.deepEqual(errorLogArgs[3], {
+            slideId: 47,
+            requestId: 'req-rollback-failure',
+            stage: 'rollback',
+            originalStage: 'delete',
+            originalError: 'primary error'
+        });
     });
 
     await t.test('8. BEGIN IMMEDIATE failure', async () => {
@@ -466,7 +472,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         const resObj = await invokeHandler(req);
 
         assert.strictEqual(resObj.statusCode, 500);
-        assert.deepEqual(resObj.body, { error: 'begin transaction failed' });
+        assert.deepEqual(resObj.body, { error: 'Slayt silinirken hata oluştu' });
         assert.strictEqual(resObj.count, 1, 'Exactly one response sent');
         assert.strictEqual(getCalled, false, 'db.get must not be called');
         assert.deepEqual(sqlLog, ['BEGIN IMMEDIATE']);
@@ -497,7 +503,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         const resObj = await invokeHandler(req);
 
         assert.strictEqual(resObj.statusCode, 500);
-        assert.deepEqual(resObj.body, { error: 'select failed' });
+        assert.deepEqual(resObj.body, { error: 'Slayt silinirken hata oluştu' });
         assert.strictEqual(resObj.count, 1, 'Exactly one response sent');
         assert.deepEqual(sqlLog, ['BEGIN IMMEDIATE', 'ROLLBACK']);
         assert.ok(rollbackCompletedBeforeResponse, 'Error response not sent before rollback completes');

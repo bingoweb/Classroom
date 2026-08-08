@@ -347,7 +347,7 @@ test('Slides Delete Cache Tests (Atomic)', async (t) => {
         const result = await delRes.promise;
 
         assert.strictEqual(result.statusCode, 500);
-        assert.deepStrictEqual(result.body, { error: 'slide delete failed' });
+        assert.deepStrictEqual(result.body, { error: 'Slayt silinirken hata oluştu' });
         assert.strictEqual(result.responseCount, 1);
         assert.strictEqual(fsUnlinkSyncCount, 0);
         assert.strictEqual(fsExistsSyncCount, 0);
@@ -455,7 +455,7 @@ test('Slides Delete Cache Tests (Atomic)', async (t) => {
         const result = await delRes.promise;
 
         assert.strictEqual(result.statusCode, 500);
-        assert.deepStrictEqual(result.body, { error: 'compaction failed completely' });
+        assert.deepStrictEqual(result.body, { error: 'Slayt silinirken hata oluştu' });
         assert.strictEqual(result.responseCount, 1);
         assert.strictEqual(rollbackCalled, true);
 
@@ -520,7 +520,7 @@ test('Slides Delete Cache Tests (Atomic)', async (t) => {
         const result = await delRes.promise;
 
         assert.strictEqual(result.statusCode, 500);
-        assert.deepStrictEqual(result.body, { error: 'begin transaction failed' });
+        assert.deepStrictEqual(result.body, { error: 'Slayt silinirken hata oluştu' });
         assert.strictEqual(result.responseCount, 1);
         assert.strictEqual(getCalled, false, 'db.get never runs');
         assert.deepEqual(sqlLog, ['BEGIN IMMEDIATE']);
@@ -580,7 +580,7 @@ test('Slides Delete Cache Tests (Atomic)', async (t) => {
         const result = await delRes.promise;
 
         assert.strictEqual(result.statusCode, 500);
-        assert.deepStrictEqual(result.body, { error: 'select failed' });
+        assert.deepStrictEqual(result.body, { error: 'Slayt silinirken hata oluştu' });
         assert.strictEqual(result.responseCount, 1);
         assert.deepEqual(sqlLog, ['BEGIN IMMEDIATE', 'ROLLBACK']);
         assert.ok(rollbackCompletedBeforeResponse);

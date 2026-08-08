@@ -247,7 +247,7 @@ test('Slides Delete Real SQLite Transaction Verification', async (t) => {
         });
 
         assert.strictEqual(resObj.statusCode, 500);
-        assert.deepEqual(resObj.body, { error: 'SQLITE_CONSTRAINT: forced compaction failure' });
+        assert.deepEqual(resObj.body, { error: 'Slayt silinirken hata oluştu' });
 
         const postFailSlides = await getSlides();
         assert.strictEqual(postFailSlides.length, 3);
