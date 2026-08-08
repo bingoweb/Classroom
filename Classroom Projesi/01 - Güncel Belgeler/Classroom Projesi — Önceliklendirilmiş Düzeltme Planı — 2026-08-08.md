@@ -1793,59 +1793,190 @@ P1-4'te kanıtlanan kısmi yazma residual riski bu refactor ile kapatılmıştı
 
 # 11. P2-1 — SheetJS'i yerelleştir ve sürümü tekleştir
 
-**Öncelik:** P2  
-**Kullanıcı etkisi:** Excel import güvenilirliği / offline admin  
-**Risk:** Düşük-Orta  
-**Durum:** ⬜ Bekliyor
+**Öncelik:** P2
+**Kullanıcı etkisi:** Excel import güvenilirliği / offline admin
+**Risk:** Düşük-Orta
+**Durum:** 🟩 Tamamlandı ve doğrulandı — 8 Ağustos 2026
 
 ## 11.1 Sorun
 
-Package dependency:
+Backend/npm kaynağı:
 
-- SheetJS 0.20.3
+- SheetJS `0.20.3`
 
-Admin HTML runtime:
+Admin browser runtime:
 
-- CDN SheetJS 0.20.1
+- CDN SheetJS `0.20.1`
 
-Dolayısıyla:
+Bu nedenle aynı projede iki farklı sürüm vardı ve admin Excel ekranı dış `cdn.sheetjs.com` erişimine bağımlıydı.
 
-1. iki farklı sürüm vardır,
-2. admin Excel ekranı internet/CDN'e bağlıdır,
-3. backend'de yapılan paket güncellemesi browser'a yansımamıştır,
-4. kiosk offline olsa bile admin tamamen offline değildir.
+## 11.2 Uygulanan çözüm
 
-## 11.2 Seçilen çözüm
+İlk taslak planda browser bundle'ın `public/vendor/sheetjs/` altına kopyalanması düşünülüyordu. Kod incelemesinde bunun aynı 951 KB bundle'ın ikinci bir repo kopyasını yaratacağı ve zamanla package/vendor drift'i oluşturabileceği görüldü.
 
-`node_modules/xlsx` paketinin browser-ready minified dağıtımı build/vendor sürecinde:
+Bu nedenle daha sıkı tek-source-of-truth modeli seçildi:
 
-`public/vendor/sheetjs/`
+- backend ve browser aynı kurulu `xlsx` npm paketini kullanır,
+- browser bundle path'i `require.resolve('xlsx/dist/xlsx.full.min.js')` ile çözülür,
+- Express yalnız bu dosyayı dedicated local route üzerinden servis eder:
 
-altına pinli olarak konacaktır.
+`GET /vendor/sheetjs/xlsx.full.min.js`
 
-Admin:
+- admin HTML artık yalnız:
 
 ```html
-<script src="../vendor/...">
+<script src="/vendor/sheetjs/xlsx.full.min.js"></script>
 ```
 
-veya doğru absolute local path kullanacaktır.
+kullanır,
+- `cdn.sheetjs.com` tamamen kaldırıldı,
+- `public/vendor/` içine ikinci SheetJS kopyası eklenmedi.
 
-Harici CDN kaldırılacaktır.
+Böylece `package.json` / `package-lock.json` gerçek tek sürüm kaynağı olarak kaldı.
 
-## 11.3 Sürüm kaynağı
+## 11.3 Local asset HTTP sözleşmesi
 
-Tek source of truth `package.json` / lockfile olmalıdır.
+Gerçek temp Classroom server üzerinde:
 
-Aynı kütüphanenin HTML içinde elle başka sürümü pinlenmemelidir.
+- `GET /vendor/sheetjs/xlsx.full.min.js` → HTTP **200**,
+- `Content-Type: application/javascript; charset=utf-8`,
+- `Cache-Control: public, max-age=0, must-revalidate`,
+- `Content-Length: 951904`.
 
-## 11.4 Test
+Servis edilen dosyanın boyutu kurulu `node_modules/xlsx/dist/xlsx.full.min.js` ile aynıdır.
 
-1. admin HTML'de `cdn.sheetjs.com` yok.
-2. local vendor dosyası var.
-3. XLSX global'i browser'da yükleniyor.
-4. Excel preview/import testleri geçiyor.
-5. internet kapalı browser smoke testte admin Excel ekranı açılıyor.
+## 11.4 TDD kırmızı kanıtı
+
+Yeni test:
+
+`tests/admin-xlsx-local-runtime.test.js`
+
+İlk test harness denemesi SheetJS package `exports` kısıtı nedeniyle `require.resolve('xlsx/package.json')` üzerinde yanlış nedenle kırıldı. Bu sonuç ürün RED'i olarak kabul edilmedi; package root ana modül yolundan türetilerek test harness düzeltildi.
+
+Düzeltilmiş gerçek RED koşusu:
+
+- kurulu package/browser bundle `0.20.3` kontrolü geçti,
+- package source-of-truth kontrolü geçti,
+- admin HTML'de CDN bulunması nedeniyle local-runtime HTML testi kırıldı,
+- server'da local SheetJS route'u bulunmadığı için route source contract testi kırıldı.
+
+Özet:
+
+- **5 test**,
+- **2 pass**,
+- **3 fail**; bunun iki tanesi anlamlı alt davranış, biri suite aggregate.
+
+Bu, testin tam olarak mevcut CDN/local-route eksiklerini yakaladığını doğruladı.
+
+## 11.5 Hedef test sonucu
+
+Production değişikliğinden sonra:
+
+`tests/admin-xlsx-local-runtime.test.js` → **5 / 5 pass**.
+
+Kapsam:
+
+1. npm package version `0.20.3`,
+2. CommonJS backend `XLSX.version` ile package version eşitliği,
+3. browser-ready minified bundle VM içinde `window.XLSX.version === 0.20.3`,
+4. admin HTML'de SheetJS CDN yok,
+5. admin HTML'de tam bir local SheetJS script tag'i var,
+6. server bundle'ı kurulu package path'inden resolve ediyor,
+7. repoda ikinci `public/vendor/sheetjs/xlsx.full.min.js` kopyası yok,
+8. package ve lockfile aynı `0.20.3` kaynağını kullanıyor.
+
+Yeni test `test:core` içine dahil edildi.
+
+## 11.6 Komşu Excel/admin regresyonları
+
+Birlikte çalıştırıldı:
+
+- local runtime contract,
+- XLSX package smoke,
+- `.xlsx` / `.xls` round-trip,
+- Excel preview DOM/XSS safety,
+- student import error redaction,
+- admin simplification,
+- login form,
+- route auth,
+- notifications,
+- static cache policy.
+
+Sonuç:
+
+- **30 / 30 pass**,
+- **0 fail**.
+
+Türkçe öğrenci başlık ve değerleriyle `.xlsx` ve `.xls` yazma/okuma round-trip'i korunmuştur.
+
+## 11.7 Tam core sırasında yakalanan eski sözleşme
+
+İlk full `test:core` koşusunda:
+
+- toplam **1334**,
+- **1331 pass**,
+- **3 fail**.
+
+Üç kırmızının tamamı `tests/internet-requirement-copy.test.js` içindeki eski CDN kararından kaynaklandı:
+
+- test SheetJS CDN URL'sinin admin HTML'de tam bir kez bulunmasını şart koşuyordu,
+- eski CDN script tag'inin aynen korunmasını bekliyordu,
+- üçüncü fail suite aggregate idi.
+
+Bu testler silinmedi veya gevşetilmedi. Yeni güvenilirlik kararını savunacak şekilde çevrildi:
+
+- `cdn.sheetjs.com` bulunmamalı,
+- local `/vendor/sheetjs/xlsx.full.min.js` tam bir kez bulunmalı,
+- local SheetJS script'i `admin.js` öncesinde yüklenmeli.
+
+Diğer README/internet gereksinimi metin sözleşmelerine dokunulmadı.
+
+Güncelleme sonrası tam core:
+
+- `npm run test:core` → **1334 / 1334 pass**,
+- **0 fail**.
+
+## 11.8 Gerçek browser acceptance
+
+Ayrı temp SQLite DB ve ayrı portta gerçek Classroom server çalıştırıldı. Admin gerçek login formuyla açıldı.
+
+Browser sonucu:
+
+- `/admin/` başarıyla açıldı,
+- `window.XLSX.version` → **0.20.3**,
+- browser SheetJS script URL'si yalnız `http://127.0.0.1:<test-port>/vendor/sheetjs/xlsx.full.min.js`,
+- dış SheetJS script listesi boş.
+
+Chrome script network kaydı:
+
+- local SheetJS → **200**,
+- config/api-service/interval-manager/utils/logger/admin scriptleri → **200**,
+- `cdn.sheetjs.com` veya başka dış SheetJS request'i → **0**.
+
+## 11.9 Offline browser XLSX round-trip
+
+Admin sayfası ve local runtime yüklendikten sonra Chromium network emulation **Offline** yapıldı.
+
+Tarayıcı belleğinde:
+
+1. Türkçe başlıklı üç satırlık öğrenci verisi oluşturuldu,
+2. `XLSX.utils.aoa_to_sheet()` ile worksheet üretildi,
+3. `XLSX.write(..., { type: 'array', bookType: 'xlsx' })` ile gerçek XLSX byte array üretildi,
+4. `XLSX.read(..., { type: 'array' })` ile tekrar okundu,
+5. `sheet_to_json(..., { header: 1 })` çıktısı kaynak satırlarla karşılaştırıldı.
+
+Sonuç:
+
+- `XLSX.version = 0.20.3`,
+- XLSX byte length: `16237`,
+- Türkçe öğrenci verisi kaynakla **birebir eşit**,
+- dış ağ kapalıyken parse/write/read akışı başarılı.
+
+Bu test admin Excel runtime'ının artık SheetJS CDN erişimine ihtiyaç duymadığını gerçek browser üzerinde doğruladı.
+
+Temp browser context ve server kapatıldı; `/tmp` test dosyaları temizlendi. Asıl proje DB'sine dokunulmadı.
+
+P2-1 🟩 tamamlanmıştır.
 
 ---
 
@@ -2649,7 +2780,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 5 | Admin password fail-closed | P1 | 🟩 |
 | 6 | Slide delete error redaction | P1 | 🟩 |
 | 7 | Slide settings atomik tek-endpoint refactor | P2 | 🟩 |
-| 8 | SheetJS local + tek sürüm | P2 | ⬜ |
+| 8 | SheetJS local + tek sürüm | P2 | 🟩 |
 | 9 | npm dependency security turu | P2 | ⬜ |
 | 10 | GitHub CI son main run yeşil | P2 | ⬜ |
 | 11 | GSAP resize güvenilirliği | P2 | ⬜ |

@@ -19,6 +19,7 @@ const {
 } = require('./admin-session-cookie.js');
 const { createFailureRateLimiter, createRequestRateLimiter } = require('./request-rate-limiter.js');
 const {
+    REVALIDATE_PUBLIC,
     setPublicStaticCacheHeaders,
     setUploadStaticCacheHeaders
 } = require('./static-cache-policy.js');
@@ -99,6 +100,7 @@ function cleanupManagedPhoto(oldPhoto, uploadsDirectory) {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const XLSX_BROWSER_BUNDLE_PATH = require.resolve('xlsx/dist/xlsx.full.min.js');
 
 // Initialize logger
 const logger = new Logger();
@@ -144,6 +146,13 @@ const requireAdminWriteRateLimit = createRequestRateLimiter({
 });
 
 app.use('/admin', requireAdminSession);
+
+// Serve the browser SheetJS bundle from the same installed package used by the backend.
+app.get('/vendor/sheetjs/xlsx.full.min.js', (req, res) => {
+    res.set('Cache-Control', REVALIDATE_PUBLIC);
+    res.type('application/javascript');
+    res.sendFile(XLSX_BROWSER_BUNDLE_PATH);
+});
 
 // Serve static files from PUBLIC directory (Frontend)
 app.use(express.static(path.join(__dirname, '../public'), {

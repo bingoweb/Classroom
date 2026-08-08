@@ -40,18 +40,23 @@ test('Internet Requirement Copy Tests', async (t) => {
         assert.ok(!adminJsContent.includes('offline operation'), 'Admin JS contains "offline operation"');
     });
 
-    await t.test('7. The SheetJS CDN URL remains present exactly once in the admin HTML', () => {
-        const cdnUrl = 'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
-        const matchCount = (adminHtmlContent.match(new RegExp(cdnUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-        assert.strictEqual(matchCount, 1, 'Admin HTML must contain exactly one SheetJS CDN URL');
+    await t.test('7. The retired SheetJS CDN URL is absent from the admin HTML', () => {
+        assert.ok(!adminHtmlContent.includes('cdn.sheetjs.com'), 'Admin HTML still depends on the SheetJS CDN');
     });
 
-    await t.test('8. The admin HTML does not contain /vendor/xlsx.full.min.js', () => {
-        assert.ok(!adminHtmlContent.includes('/vendor/xlsx.full.min.js'), 'Admin HTML contains localized SheetJS path');
+    await t.test('8. The local SheetJS runtime URL appears exactly once in the admin HTML', () => {
+        const localUrl = '/vendor/sheetjs/xlsx.full.min.js';
+        const matchCount = (adminHtmlContent.match(new RegExp(localUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+        assert.strictEqual(matchCount, 1, 'Admin HTML must contain exactly one local SheetJS runtime URL');
     });
 
-    await t.test('9. No production behavior, script ordering or existing admin section structure is altered', () => {
-        assert.ok(adminHtmlContent.includes('<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>'), 'SheetJS script tag not intact');
-        assert.ok(adminHtmlContent.includes('<script src="admin.js"></script>'), 'admin.js script tag not intact');
+    await t.test('9. Local SheetJS still loads before admin.js without restoring retired admin structure', () => {
+        const xlsxTag = '<script src="/vendor/sheetjs/xlsx.full.min.js"></script>';
+        const adminTag = '<script src="admin.js"></script>';
+        const xlsxIndex = adminHtmlContent.indexOf(xlsxTag);
+        const adminIndex = adminHtmlContent.indexOf(adminTag);
+        assert.ok(xlsxIndex >= 0, 'Local SheetJS script tag not intact');
+        assert.ok(adminIndex >= 0, 'admin.js script tag not intact');
+        assert.ok(xlsxIndex < adminIndex, 'SheetJS must load before admin.js');
     });
 });
