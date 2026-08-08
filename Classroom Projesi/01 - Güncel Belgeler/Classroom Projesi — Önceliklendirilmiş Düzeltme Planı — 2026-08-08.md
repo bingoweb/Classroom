@@ -933,6 +933,14 @@ Açık P2 işi:
 
 P1-4 yalnız false-success / HTTP error handling problemi açısından 🟩 kapatılmıştır.
 
+### Commit ve GitHub kaydı
+
+- Commit: `4e4dc277edd9d0db7a1a2017d3caabc446d3838d`
+- Mesaj: `fix: handle slide settings HTTP failures`
+- Dal: `main`
+- Push: `main -> origin/main` başarılı.
+- Push sonrası yerel `HEAD` ile `origin/main` aynı SHA olarak doğrulandı.
+
 ---
 
 # 9. P1-5 — Admin parola modelini fail-closed yap
