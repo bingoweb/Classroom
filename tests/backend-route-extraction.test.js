@@ -10,6 +10,7 @@ const serverPath = path.join(root, 'backend', 'server.js');
 const settingsRoutesPath = path.join(root, 'backend', 'routes', 'settings-routes.js');
 const systemRoutesPath = path.join(root, 'backend', 'routes', 'system-routes.js');
 const scheduleRoutesPath = path.join(root, 'backend', 'routes', 'schedule-routes.js');
+const studentRoutesPath = path.join(root, 'backend', 'routes', 'student-routes.js');
 
 test('P3-5A1 extracts settings and system route registration from server.js', () => {
     assert.equal(
@@ -69,4 +70,30 @@ test('P3-5A2 extracts schedule route registration and readiness guard from serve
     assert.match(scheduleSource, /app\.put\(['"]\/api\/schedule\/normalized['"]/);
     assert.match(scheduleSource, /app\.get\(['"]\/api\/schedule['"]/);
     assert.match(scheduleSource, /app\.post\(['"]\/api\/schedule['"]/);
+});
+
+test('P3-5A3 extracts student route registration from server.js', () => {
+    assert.equal(
+        fs.existsSync(studentRoutesPath),
+        true,
+        'backend/routes/student-routes.js must exist'
+    );
+
+    const serverSource = fs.readFileSync(serverPath, 'utf8');
+    const studentSource = fs.readFileSync(studentRoutesPath, 'utf8');
+
+    assert.match(studentSource, /function\s+registerStudentRoutes\s*\(app,\s*deps\)/);
+    assert.match(serverSource, /registerStudentRoutes\s*\(app,/);
+
+    assert.doesNotMatch(serverSource, /app\.get\(['"]\/api\/students['"]/);
+    assert.doesNotMatch(serverSource, /app\.post\(['"]\/api\/students['"]/);
+    assert.doesNotMatch(serverSource, /app\.post\(['"]\/api\/students\/import['"]/);
+    assert.doesNotMatch(serverSource, /app\.delete\(['"]\/api\/students\/:id['"]/);
+    assert.doesNotMatch(serverSource, /app\.put\(['"]\/api\/students\/:id\/photo['"]/);
+
+    assert.match(studentSource, /app\.get\(['"]\/api\/students['"]/);
+    assert.match(studentSource, /app\.post\(['"]\/api\/students['"]/);
+    assert.match(studentSource, /app\.post\(['"]\/api\/students\/import['"]/);
+    assert.match(studentSource, /app\.delete\(['"]\/api\/students\/:id['"]/);
+    assert.match(studentSource, /app\.put\(['"]\/api\/students\/:id\/photo['"]/);
 });
