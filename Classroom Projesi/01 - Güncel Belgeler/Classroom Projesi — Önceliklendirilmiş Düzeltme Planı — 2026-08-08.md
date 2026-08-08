@@ -1992,7 +1992,7 @@ P2-1 🟩 tamamlanmıştır.
 
 **Öncelik:** P2 güvenlik/bakım
 **Risk:** Orta-Yüksek
-**Durum:** 🟨 Devam ediyor — Express/non-major güvenlik dalgası tamamlandı; sqlite3 major değerlendirmesi açık
+**Durum:** 🟨 Devam ediyor — Express/non-major ve sqlite3 6 güvenlik turları tamamlandı; Multer 2 major uyumluluk turu açık
 
 ## 12.1 Mevcut doğrulama
 
@@ -2086,9 +2086,13 @@ Yalnız “npm audit kırmızı” olduğu için üretim riskini abartmamak; fak
 - güncel core suite yeşil,
 - native sqlite smoke başarılı
 
+olmalıdır.
+
 ## 12.6 Tur A — Express/non-major remediation uygulama ve doğrulama kaydı — 8 Ağustos 2026
 
 **Durum:** 🟩 Tur A tamamlandı; P2-2 ana maddesi henüz tamamlanmadı.
+
+**Commit:** `1c5c8893accc0d4b4022c250400fbc5e7e6bd9e9` — `chore: harden non-major dependencies`
 
 Bu turda major framework/database geçişi yapılmadan, npm'in güvenli non-major çözümleyebildiği bağımlılıklar güncellendi.
 
@@ -2215,9 +2219,9 @@ P2-2 halen **🟨 devam ediyor**:
 
 Tur A'nın başarılı olması P2-2'nin tamamlandığı anlamına gelmez.
 
-olmalıdır.
+## 12.7 Tur A ek doğrulama ayrıntıları — 8 Ağustos 2026
 
-## 12.6 Tur A uygulama ve doğrulama kaydı — 8 Ağustos 2026
+Bu bölüm 12.6'daki Tur A sonucunu tamamlayan ek dry-run, lockfile ve bağımsız fresh-copy kanıtlarını korur; ayrı bir ikinci Tur A değildir.
 
 ### Başlangıç audit'i
 
@@ -2397,15 +2401,49 @@ Sonuç:
 
 Tur A bu kanıtlarla tamamlanmıştır.
 
-### P2-2 neden henüz 🟩 değil?
+### Tur A sonunda P2-2 neden henüz 🟩 değildi?
 
-`sqlite3@6.0.1` latest remediation yolu major değişikliktir ve resmi node-sqlite3 projesi artık deprecated/unmaintained durumundadır. Native binding, migration ve transaction yüzeyleri ayrı değerlendirilmeden bu yükseltme güvenli kabul edilmeyecektir.
+`sqlite3@6.0.1` remediation yolu major değişiklikti ve resmi node-sqlite3 projesi deprecated/unmaintained durumundaydı. Native binding, migration ve transaction yüzeyleri ayrı değerlendirilmeden bu yükseltme güvenli kabul edilmedi.
 
-Sıradaki iş **Tur B — sqlite3 6.0.1 izole compatibility + native install + migration/transaction/full-core + gerçek DB kopyası smoke** testidir.
+Bu nedenle sıradaki iş **Tur B — sqlite3 6.0.1 izole compatibility + native install + migration/transaction/full-core + gerçek DB kopyası smoke** olarak ayrıldı.
 
-P2-2 bu nedenle 🟨 açık kalır.
+## 12.8 Pre-commit kalite kapısında yakalanan slideshow family regresyonu
 
-## 12.7 Tur B — sqlite3 6.0.1 major güvenlik geçişi — 8 Ağustos 2026
+Tur A dependency değişikliği commit edilmeden önce tam `test:core` tekrar koşulduğunda dependency alanıyla doğrudan ilişkili olmayan bir slideshow testi kırmızı verdi. Bu kırılma "flaky test" denilerek geçilmedi.
+
+Kök neden:
+
+- random transition modu önce yakın geçmişte kullanılan efektleri havuzdan çıkarıyordu,
+- daralmış havuz bazı seçimlerde yalnız önceki transition ile aynı motion family'den efekt bırakabiliyordu,
+- `avoidConsecutiveTransitionFamily()` alternatif family göremediğinde aynı family tekrarına izin veriyordu.
+
+Deterministic regression `Math.random = () => 0` ile yeniden üretildi:
+
+- 8. seçimde `slide-up → slide-down`,
+- iki efekt de `directional` family,
+- test güvenilir biçimde kırmızı.
+
+Düzeltme:
+
+- recent-effect avoidance bir tercih olarak tutuldu,
+- fakat bu filtre yalnız önceki motion family'yi bırakırsa seçim tam profesyonel havuz üzerinden tekrar yapılıyor,
+- adjacent motion-family tekrarına karşı family kuralı öncelikli hale geldi.
+
+Doğrulama:
+
+- hedef transition paketi → **23 / 23 pass**,
+- aynı hedef paket art arda **25 / 25** kez geçti,
+- temiz `npm ci` worktree full core → **1340 / 1340 pass**,
+- ana checkout full core → **1340 / 1340 pass**.
+
+Bu düzeltme dependency commit'ine karıştırılmadı; ayrı commit/push yapıldı:
+
+- Commit: `6a5e0a9386ef6854645d9fe5a0e5c3edbc77ddfe`
+- Mesaj: `fix: prevent repeated slideshow motion families`
+
+Bu kayıt, "tam suite kırmızıyken düzeltmeyi kabul etmeme" kuralının gerçek bir ürün hatası yakaladığını belgeler.
+
+## 12.9 Tur B — sqlite3 6.0.1 major güvenlik geçişi — 8 Ağustos 2026
 
 **Durum:** 🟩 sqlite3 Tur B tamamlandı; P2-2 ana maddesi Multer 2.x turu nedeniyle henüz kapanmadı.
 
@@ -2415,7 +2453,7 @@ Tur A sonunda kalan yedi `npm audit` bulgusunun tamamı `sqlite3@5.1.7 → node-
 
 ### İzole `/tmp` compatibility turu
 
-Ana repodan bağımsız `/tmp/classroom-sqlite6-audit` kopyasında önce `sqlite3@6.0.1` kuruldu.
+Ana repodan bağımsız `/tmp/classroom-sqlite6-candidate` kopyasında önce `sqlite3@6.0.1` kuruldu.
 
 Doğrulanan runtime:
 
@@ -2432,11 +2470,21 @@ Doğrulanan runtime:
 - insert → başarılı,
 - readback → başarılı.
 
+İlk transaction smoke denemesinde önemli bir şüphe oluştu: `serialize()` callback'i içindeki bir `db.get()` callback'inden sonra ikinci transaction statement'ları yeniden queue edildiğinde sqlite3 6.0.1 üzerinde `ROLLBACK` sonrası count `2` görüldü; aynı zayıf test şekli sqlite3 5.1.7 üzerinde count `1` veriyordu. Bu sonuç **uyumluluk kanıtı olarak kabul edilmedi** ve Tur B durduruldu.
+
+İnceleme sonucunda ikinci transaction çağrılarının outer `serialize()` callback'i döndükten sonra async `db.get()` callback'i içinden queue edildiği, dolayısıyla testin production transaction modelimizi birebir temsil etmediği görüldü. Production kodundaki gibi her adımı bir önceki callback/Promise tamamlandıktan sonra zincirleyen smoke tekrarlandı:
+
+- COMMIT sonrası count → `1`,
+- ikinci transaction INSERT + ROLLBACK sonrası count → `1`,
+- DB close → başarılı.
+
+Bu nedenle ilk kırmızı "sqlite3 6 kesin bozuk" diye geçiştirilmedi; test modelinin kendisi düzeltilip gerçek Classroom transaction testleriyle ayrıca doğrulandı.
+
 ### İzole transaction regresyon turu
 
 Schedule, attendance, role, slide delete/reorder ve atomik slide-settings alanlarından oluşan transaction ağırlıklı paket çalıştırıldı:
 
-- **423 / 423 pass**
+- **457 / 457 pass**
 - **0 fail**
 
 Bu paket gerçek SQLite rollback/isolation testlerini de içeriyordu.
@@ -2445,8 +2493,8 @@ Bu paket gerçek SQLite rollback/isolation testlerini de içeriyordu.
 
 İzole sqlite6 kopyasında ilk `test:core`:
 
-- 1339 toplam test,
-- 1336 pass,
+- 1340 toplam test,
+- 1337 pass,
 - 3 fail
 
 verdi.
@@ -2459,7 +2507,7 @@ verdi.
 
 Bu eski guard hariç tüm işlevsel core testleri yeniden çalıştırıldı:
 
-- **1334 / 1334 pass**
+- **1335 / 1335 pass**
 - **0 fail**
 
 Dolayısıyla migration'ın gerçek uygulama davranışında regresyon üretmediği doğrulandı.
@@ -2484,9 +2532,9 @@ Eski sqlite3 5.x build zincirindeki `make-fetch-happen`, `cacache`, `http-proxy-
 
 Asıl `backend/classroom.db` değiştirilmedi. Dosya `/tmp` içine kopyalanarak sqlite6 server ile açıldı.
 
-Başlangıç schema SHA-256:
+Orijinal `backend/classroom.db` dosya SHA-256 değeri:
 
-`4369ba92708183c9c6c6926c368282f784deac08f37d7e9d13667bbf4ae8a1d9`
+`7b54675cd70deefeadb5160dfc8eca59b1c10c0383861af1fecf24a8ae8e1a0f`
 
 Başlangıç tablo sayımları:
 
@@ -2501,8 +2549,8 @@ Başlangıç tablo sayımları:
 
 Server açılışı, migration ve HTTP smoke sonrası:
 
-- schema SHA-256 **aynı kaldı**,
-- tablo sayımları **8,10,8,0,7,3,4,50 olarak aynı kaldı**,
+- orijinal proje DB SHA-256 değeri test öncesi/sonrası **aynı kaldı**,
+- temp kopyada tablo sayımları **8,10,8,0,7,3,4,50 olarak aynı kaldı**,
 - public read endpointleri 200,
 - admin login/session başarılı,
 - CSRF token 64 karakter,
@@ -2571,7 +2619,7 @@ Dependency baseline:
 
 Transaction paketi:
 
-- **423 / 423 pass**
+- **457 / 457 pass**
 
 ### Ana checkout tam regresyonu
 
@@ -2581,7 +2629,7 @@ Gerçek sqlite3 6.0.1 `node_modules` ağacı ile son:
 
 sonucu:
 
-- **1341 / 1341 pass**
+- **1344 / 1344 pass**
 - **0 fail**
 
 ### Ana checkout gerçek DB smoke
@@ -2596,10 +2644,13 @@ Doğrulananlar:
 - admin login 200,
 - session authenticated true,
 - CSRF 64 karakter,
-- atomik slide-settings aynı-değer write 200,
-- before/after ayarlar semantik olarak aynı,
-- schema hash değişmedi,
-- tablo satır sayıları değişmedi,
+- atomik slide-settings değiştirilmiş-değer write 200,
+- write sonrası `15000/random/1800` readback başarılı,
+- ilgisiz `default_announcement_duration` korundu,
+- ikinci atomik write ile eski `10000/auto/1000` değerleri geri yüklendi,
+- `PRAGMA quick_check = ok`,
+- orijinal DB SHA-256 değişmedi,
+- temp kopya tablo satır sayıları değişmedi,
 - server runtime error oluşmadı.
 
 Gerçek proje DB'si değiştirilmedi; yalnız `/tmp` kopya kullanıldı.
