@@ -4201,6 +4201,39 @@ Kesin mimari karar:
 
 P3-5'in yaşayan durum tablosundaki işi “refactor planı”dır. Bu plan artık tamamlanmıştır; gerçek kod extraction dalgaları yeni bağımsız işler olarak açılacaktır.
 
+### 21.0.1 9 Ağustos 2026 — P3-5A1 settings/system route extraction
+
+İlk gerçek backend refactor dalgası tamamlandı ve planlanan `registerXRoutes(app, deps)` kalıbı üretim kodunda doğrulandı.
+
+Uygulanan sınır:
+
+- `backend/routes/settings-routes.js`: `GET/POST /api/settings`
+- `backend/routes/system-routes.js`: `GET /api/network-info`, `GET /api/stats`
+- `backend/server.js`: eski göreli kayıt noktalarında `registerSettingsRoutes(...)` ve `registerSystemRoutes(...)`
+
+Korunan kritik sözleşmeler:
+
+- backend `/api/settings` ve SQLite `settings` altyapısı kaldırılmadı,
+- settings write middleware sırası auth → CSRF → write rate-limit olarak kaldı,
+- stats İstanbul tarihi `getIstanbulDateKey()` ile devam ediyor,
+- schedule ve attendance route kayıt sıraları değiştirilmedi,
+- yeni framework/router migration eklenmedi.
+
+Kanıtlar:
+
+- TDD extraction testi RED → GREEN,
+- odak route/security grubu 94/94,
+- tam core **1385/1385**,
+- system smoke PASS,
+- audit 0,
+- syntax ve diff check temiz,
+- Playwright + Chrome DevTools ile settings/stats/network-info HTTP 200,
+- browser console error/warn/issue 0,
+- exact milestone commit `8c2bf70f8b1f8dd0e1dc2ac87ee931c23b34e791`,
+- GitHub Actions run `31280357663`: Node 22 ve Node 24 PASS.
+
+`backend/server.js` 3064 → 2944 satıra indi. Sıradaki extraction dalgası **P3-5A2 — schedule** olacaktır. P2-6 gerçek 55\" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
 ## 21.1 `backend/server.js` — ~2800 satır
@@ -4497,6 +4530,8 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 16 | Legacy settings katmanı | P3 | 🟩 |
 | 17 | Orphan backend config/utils | P3 | 🟩 |
 | 18 | Büyük server/admin/CSS refactor planı | P3 | 🟩 |
+| 19 | P3-5A1 settings/system route extraction | P3 | 🟩 |
+| 20 | P3-5A2 schedule route extraction | P3 | ⬜ |
 
 Durum simgeleri:
 

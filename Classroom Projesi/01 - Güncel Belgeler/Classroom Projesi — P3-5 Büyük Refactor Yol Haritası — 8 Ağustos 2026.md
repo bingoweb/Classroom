@@ -158,7 +158,7 @@ Bu bölümdeki A1 → A8 sırası **uygulama/commit sırasıdır**. Mevcut Expre
 
 ### P3-5A — Backend route modülerleştirme
 
-**Durum:** Planlandı, henüz uygulanmadı.
+**Durum:** 🟨 Uygulanıyor — A1 tamamlandı ve doğrulandı; sıradaki dalga A2 schedule extraction.
 
 #### A0 — Contract baseline
 
@@ -175,6 +175,8 @@ git diff --check
 
 #### A1 — Küçük ve düşük riskli route grupları
 
+**Durum:** 🟩 9 Ağustos 2026 — tamamlandı ve doğrulandı.
+
 İlk extraction adayı:
 
 - settings
@@ -189,6 +191,49 @@ backend/routes/system-routes.js
 ```
 
 `/api/settings` davranışı ve SQLite `settings` tablosu kesinlikle kaldırılmayacaktır.
+
+##### A1 uygulama sonucu
+
+İlk gerçek backend extraction dalgası planlandığı sınırlar içinde uygulandı:
+
+- `backend/routes/settings-routes.js` oluşturuldu.
+- `backend/routes/system-routes.js` oluşturuldu.
+- `GET /api/settings` ve korumalı `POST /api/settings` settings route modülüne taşındı.
+- `GET /api/network-info` ve `GET /api/stats` system route modülüne taşındı.
+- `server.js` yeni modülleri `registerSettingsRoutes(app, deps)` ve `registerSystemRoutes(app, deps)` ile eski göreli kayıt noktalarında çağırmaya devam ediyor.
+- `POST /api/settings` middleware zinciri `requireAdminSession → requireCsrfToken → requireAdminWriteRateLimit` olarak aynen korundu.
+- SQLite `settings` tablosu ve backend settings uyumluluk sözleşmesi korunuyor.
+- `/api/stats` içindeki `Europe/Istanbul` gün anahtarı `getIstanbulDateKey()` bağımlılığı üzerinden korunuyor.
+- `networkInterfaces` ve `PORT` system route modülüne explicit dependency olarak aktarılıyor; yeni global/shared state eklenmedi.
+- `backend/server.js` 3064 satırdan 2944 satıra indi.
+
+TDD ve regresyon kanıtı:
+
+1. Yeni `tests/backend-route-extraction.test.js` önce route modülleri bulunmadığı için RED verdi.
+2. Modüller oluşturulduktan sonra extraction testi GREEN oldu.
+3. Eski source-contract testlerinden `backend-date-utils.test.js`, `cors-policy.test.js` ve `legacy-settings-cleanup.test.js` yalnız dosya yerleşimine bağlı literal `server.js` varsayımları nedeniyle kırıldı; runtime sözleşmeleri gevşetilmeden yeni modül konumlarını izleyecek şekilde güncellendi.
+4. Settings read/write, stats error redaction, admin auth, CORS ve rate-limit odak grubu 94/94 geçti.
+5. Tam `npm run test:core`: **1385/1385 pass**.
+6. `npm run test:system-smoke`: **SYSTEM_SMOKE_PASS**; temp settings write/readback PASS.
+7. `npm audit --omit=dev`: **0 vulnerability**.
+8. `node --check` üç backend dosyasında ve `git diff --check` temiz.
+
+Tarayıcı kanıtı, izole temp DB + ayrı port üzerinde:
+
+- Playwright: `/api/settings` 200, `/api/stats` 200, `/api/network-info` 200.
+- Chrome DevTools: aynı üç endpoint 200; console `error/warn/issue` **0**.
+- Kiosk yüklenmeye devam etti ve başlık `2/D Sihirli Pano` olarak kaldı.
+
+Kod/test milestone:
+
+- Commit: `8c2bf70f8b1f8dd0e1dc2ac87ee931c23b34e791`
+- GitHub Actions: `31280357663`
+- Node 22: PASS (29 sn)
+- Node 24: PASS (35 sn)
+
+Bilinen fresh-DB `error_logs` cleanup-order log gürültüsü bu refactor sırasında değiştirilmedi; A6 notunda belirtildiği gibi ayrı bugfix olarak kalıyor.
+
+**Sıradaki backend dalgası: A2 — Schedule.** `schedule-service.js`, `schedule-repository.js`, `schedule-schema.js` ve `requireScheduleStorageReady` davranışı korunarak ayrıca ele alınacaktır.
 
 #### A2 — Schedule
 
