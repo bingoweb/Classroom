@@ -1781,6 +1781,14 @@ Geçici browser context, Node server, trigger ve `/tmp` SQLite dosyaları kapat�
 
 P1-4'te kanıtlanan kısmi yazma residual riski bu refactor ile kapatılmıştır. P2-0 🟩 tamamlanmıştır.
 
+### Commit ve GitHub kaydı
+
+- Commit: `a4e7aa88234ad20c55581db936eabf5bc3e260a0`
+- Mesaj: `fix: make slide settings updates atomic`
+- Dal: `main`
+- Push: `main -> origin/main` başarılı.
+- Push sonrası yerel `HEAD` ile `origin/main` aynı SHA olarak doğrulandı.
+
 ---
 
 # 11. P2-1 — SheetJS'i yerelleştir ve sürümü tekleştir
