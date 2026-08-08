@@ -131,12 +131,34 @@ test('Admin Session API Tests', async (t) => {
         }
     });
 
-    await t.test('1. Missing password override falls back to the default credential safely', async () => {
+    await t.test('1. Missing password configuration fails closed with HTTP 503 and no session cookie', async () => {
         delete process.env.CLASSROOM_ADMIN_PASSWORD;
-        const res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { username: 'admin', password: 'wrong-password' });
-        assert.strictEqual(res.statusCode, 401);
-        assert.deepStrictEqual(res.body, { authenticated: false, message: 'Kullanıcı adı veya parola hatalı.' });
+        const res = await makeRequest(serverUrl, 'POST', '/api/admin/login', { 'Content-Type': 'application/json' }, { username: 'admin', password: 'any-candidate' });
+        assert.strictEqual(res.statusCode, 503);
+        assert.deepStrictEqual(res.body, { authenticated: false, message: 'Yönetici girişi yapılandırılmamış.' });
         assert.strictEqual(res.headers['set-cookie'], undefined);
+    });
+
+    await t.test('1a. Unconfigured login attempts do not consume the failed-login rate limit', async () => {
+        delete process.env.CLASSROOM_ADMIN_PASSWORD;
+
+        for (let attempt = 1; attempt <= 7; attempt++) {
+            const res = await makeRequest(
+                serverUrl,
+                'POST',
+                '/api/admin/login',
+                { 'Content-Type': 'application/json' },
+                { username: 'admin', password: `candidate-${attempt}` }
+            );
+
+            assert.strictEqual(res.statusCode, 503, `attempt ${attempt} should remain a configuration failure`);
+            assert.deepStrictEqual(res.body, {
+                authenticated: false,
+                message: 'Yönetici girişi yapılandırılmamış.'
+            });
+            assert.strictEqual(res.headers['set-cookie'], undefined);
+            assert.strictEqual(res.headers['retry-after'], undefined);
+        }
     });
 
     await t.test('2. Login fails with HTTP 400 when username or password has an invalid format', async () => {

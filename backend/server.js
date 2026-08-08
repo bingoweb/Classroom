@@ -10,7 +10,7 @@ const { normalizePath } = require('./utils');
 const { getIstanbulDateKey } = require('./date-utils');
 const { validateNormalizedSchedule, resolveScheduleDayKey, isValidDayKey } = require('./schedule-service');
 const { getNormalizedScheduleRows, replaceNormalizedSchedule } = require('./schedule-repository');
-const { matchesAdminCredentials } = require('./admin-auth-config.js');
+const { matchesAdminCredentials, readAdminPassword } = require('./admin-auth-config.js');
 const { createAdminSessionStore } = require('./admin-session-store.js');
 const {
     serializeAdminSessionCookie,
@@ -231,6 +231,17 @@ app.post('/api/admin/login', loginFailureLimiter.guard, (req, res) => {
         return res.status(400).json({
             authenticated: false,
             message: 'Geçersiz giriş bilgisi formatı.'
+        });
+    }
+
+    if (readAdminPassword() === null) {
+        logger.warn(
+            COMPONENTS.SYSTEM,
+            'Admin login is unavailable because CLASSROOM_ADMIN_PASSWORD is not configured'
+        );
+        return res.status(503).json({
+            authenticated: false,
+            message: 'Yönetici girişi yapılandırılmamış.'
         });
     }
 

@@ -1,17 +1,19 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
+const authConfig = require('../backend/admin-auth-config.js');
 const {
     ADMIN_USERNAME_ENV,
     ADMIN_PASSWORD_ENV,
     DEFAULT_ADMIN_USERNAME,
-    DEFAULT_ADMIN_PASSWORD_DIGEST_HEX,
     readAdminUsername,
     readAdminPassword,
     matchesAdminUsername,
     matchesAdminPassword,
     matchesAdminCredentials
-} = require('../backend/admin-auth-config.js');
+} = authConfig;
 
 test('1. Admin credential environment variables use the required names', () => {
     assert.strictEqual(ADMIN_USERNAME_ENV, 'CLASSROOM_ADMIN_USERNAME');
@@ -226,15 +228,28 @@ test('15. Password comparison reads process.env at call time and restores safely
     }
 });
 
-test('16. The committed default password is represented only by its SHA-256 digest', () => {
+test('16. No committed default password digest exists and unconfigured auth is fail-closed', () => {
     assert.strictEqual(
-        DEFAULT_ADMIN_PASSWORD_DIGEST_HEX,
-        'da19166e6ccc17da20921240a80d12c2e89e95450823d872a247dd77802374c1'
+        Object.prototype.hasOwnProperty.call(authConfig, 'DEFAULT_ADMIN_PASSWORD_DIGEST_HEX'),
+        false
     );
-    assert.match(DEFAULT_ADMIN_PASSWORD_DIGEST_HEX, /^[a-f0-9]{64}$/);
+
+    for (const candidate of ['admin', 'password', 'classroom', 'test-password', 'öğretmen-🔐']) {
+        assert.strictEqual(matchesAdminPassword(candidate, {}), false);
+        assert.strictEqual(
+            matchesAdminCredentials('admin', candidate, {}),
+            false
+        );
+    }
 });
 
-test('17. Username and password must both match', () => {
+test('17. Auth source contains no fallback password digest contract', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../backend/admin-auth-config.js'), 'utf8');
+    assert.doesNotMatch(source, /DEFAULT_ADMIN_PASSWORD_DIGEST_HEX/);
+    assert.doesNotMatch(source, /configuredPassword\s*===\s*null[\s\S]{0,160}Buffer\.from/);
+});
+
+test('18. Username and password must both match', () => {
     const env = {
         CLASSROOM_ADMIN_USERNAME: 'admin',
         CLASSROOM_ADMIN_PASSWORD: 'sinif-parolasi'

@@ -949,7 +949,8 @@ P1-4 yalnız false-success / HTTP error handling problemi açısından 🟩 kapa
 **Kullanıcı etkisi:** Yönetici erişimi  
 **Risk:** Orta-Yüksek  
 **Bağımlılık:** Admin kullanım akışları düzeldikten sonra  
-**Durum:** ⬜ Bekliyor
+**Durum:** 🟩 Tamamlandı ve doğrulandı — 8 Ağustos 2026
+**Operasyonel not:** Admin kullanımı için çalışma ortamında `CLASSROOM_ADMIN_PASSWORD` açıkça sağlanmalıdır.
 
 ## 9.1 Sorun
 
@@ -1048,6 +1049,169 @@ Yeni contract:
 ## 9.7 Kapanış kriteri
 
 `CLASSROOM_ADMIN_PASSWORD` bilinçli olarak kaldırılmış test server'ında bilinen hiçbir parola ile admin session açılamamalıdır.
+
+## 9.8 Uygulama ve doğrulama kaydı — 8 Ağustos 2026
+
+### Kök neden
+
+`backend/admin-auth-config.js`, `CLASSROOM_ADMIN_PASSWORD` eksik veya boş olduğunda `null` üretmesine rağmen parola karşılaştırmasında commit edilmiş sabit bir SHA-256 digest'i fallback credential olarak kullanıyordu. Bu nedenle deployment yanlış yapılandırılmış olsa bile uygulama gerçek anlamda fail-closed değildi.
+
+Login endpoint'i de yapılandırma eksikliğini ayırt etmiyor, normal yanlış parola gibi `401` davranışına sokuyordu.
+
+### Uygulanan çözüm
+
+- Commit edilmiş default admin password digest sabiti üretim kodundan tamamen kaldırıldı.
+- `matchesAdminPassword()` artık:
+  - configured password `null` ise koşulsuz `false`,
+  - candidate string değilse `false`,
+  - configured password varsa mevcut SHA-256 sabit uzunluk digest + `crypto.timingSafeEqual()` karşılaştırmasını kullanıyor.
+- `matchesAdminCredentials()` mevcut username + password sözleşmesini koruyor.
+- `POST /api/admin/login` valid gövdede önce parola konfigürasyonunu kontrol ediyor.
+- `CLASSROOM_ADMIN_PASSWORD` yok/boş ise:
+  - HTTP `503`,
+  - `{ authenticated: false, message: 'Yönetici girişi yapılandırılmamış.' }`,
+  - session cookie yok,
+  - failed-login sayacı artırılmıyor,
+  - server tarafında config warning loglanıyor.
+- Parola configured ise:
+  - yanlış credential yine `401`,
+  - doğru credential yine session üretip `200` döndürüyor.
+- Public kiosk/read endpointleri admin config eksikliğinden etkilenmiyor.
+
+### TDD kırmızı kanıtı
+
+Üretim değişikliğinden önce `admin-auth-config` ve `admin-session-api` sözleşmeleri fail-closed beklentisine çevrildi.
+
+İlk kırmızı koşu:
+
+- toplam test: **33**,
+- pass: **30**,
+- fail: **3** (iki anlamlı alt test + suite aggregate failure).
+
+Anlamlı kırılmalar:
+
+1. üretim modülü hâlâ fallback digest export ediyordu,
+2. parola env'i yokken login beklenen `503` yerine `401` dönüyordu.
+
+Bu, testin mevcut eski davranışı gerçekten yakaladığını doğruladı.
+
+### Hedef ve genişletilmiş güvenlik testleri
+
+İlk düzeltme sonrası hedef paket:
+
+- **33 / 33 pass**.
+
+Ardından kabul standardı güçlendirildi:
+
+- yapılandırılmamış durumda **7 ardışık** valid-format login denemesi yapıldı,
+- yedisi de `503` kalmalı,
+- hiçbirinde `Set-Cookie` olmamalı,
+- hiçbirinde `Retry-After` olmamalı,
+- config hatası failed-login rate-limit kotasını tüketmemeli.
+
+Ayrıca source-level negatif guard eklendi:
+
+- auth production source içinde fallback digest sembolü bulunmamalı,
+- unconfigured branch'te `Buffer.from(..., 'hex')` benzeri fallback yolu bulunmamalı.
+
+Admin auth config, login form, route auth, login/write rate limit, session store, session API ve session error-redaction komşu paketi:
+
+- **59 / 59 pass**,
+- **0 fail**.
+
+### Secret-hygiene doğrulaması
+
+Production `backend/` taramasında:
+
+- fallback digest sembolü yok,
+- `backend/admin-auth-config.js` içinde commit edilmiş 64-hex credential materyali yok.
+
+Test dosyasındaki fallback sembolü yalnız **negatif regression assertion** olarak bulunuyor; credential değeri testte tutulmuyor.
+
+Repo `.gitignore` zaten şunları dışlıyor:
+
+- `.env`,
+- `.env.local`,
+- `.env.production`.
+
+Repo kökünde doğrulama anında `.env` bulunmuyordu. Otomasyon tarafından yeni bir gerçek parola üretilip repo veya belgeye yazılmadı.
+
+### Gerçek HTTP — unconfigured sunucu
+
+Asıl DB yerine ayrı `/tmp` SQLite DB ve ayrı port kullanıldı. `CLASSROOM_ADMIN_PASSWORD` bilinçli olarak boş verilerek gerçek Node/Express sunucusu başlatıldı.
+
+Aynı IP'den 7 ayrı valid-format login denemesi:
+
+- 1 → `503`, cookie 0, Retry-After 0,
+- 2 → `503`, cookie 0, Retry-After 0,
+- 3 → `503`, cookie 0, Retry-After 0,
+- 4 → `503`, cookie 0, Retry-After 0,
+- 5 → `503`, cookie 0, Retry-After 0,
+- 6 → `503`, cookie 0, Retry-After 0,
+- 7 → `503`, cookie 0, Retry-After 0.
+
+Aynı sunucuda:
+
+- `GET /api/slides` → **200**,
+- `/admin-login.html` → **200**.
+
+Böylece admin fail-closed olurken kiosk/public uygulamanın çalışmaya devam ettiği gerçek HTTP üzerinde doğrulandı.
+
+### Gerçek browser — unconfigured login
+
+Chromium login sayfasında gerçek form submit yapıldı.
+
+Sonuç:
+
+- sayfa `/admin-login.html` üzerinde kaldı,
+- görünür mesaj: `Yönetici girişi yapılandırılmamış.`,
+- submit butonu tekrar aktif hale geldi,
+- buton metni tekrar `Giriş Yap` oldu,
+- password input submit sonrasında temizlendi.
+
+### Gerçek HTTP — configured sunucu
+
+Ayrı temp DB/sunucu bu kez yalnız test süreci için bir parola environment değeri ile açıldı.
+
+Sonuç:
+
+- yanlış parola → **401**, cookie yok,
+- doğru parola → **200**, session cookie var,
+- cookie ile `GET /api/admin/session` → **200**, `{ authenticated: true }`,
+- `GET /api/slides` → **200**.
+
+### Gerçek browser — configured login
+
+Ayrı Chromium context'inde gerçek login formu doğru configured credential ile submit edildi ve browser:
+
+- `/admin-login.html` → `/admin/`
+
+navigasyonunu başarıyla yaptı.
+
+### Tam çekirdek kabul kapısı
+
+Commit edilecek çalışma ağacında:
+
+- `node --check backend/admin-auth-config.js` → pass,
+- `node --check backend/server.js` → pass,
+- `git diff --check` → temiz,
+- `npm run test:core` → **1308 / 1308 pass**, **0 fail**.
+
+### Operasyonel durum / deployment gereksinimi
+
+Kodun güvenlik hedefi gereği `CLASSROOM_ADMIN_PASSWORD` olmadan admin erişimi **bilinçli olarak kapalıdır**. Mevcut checkout'ta kalıcı `.env` bulunmadığından normal `npm start` / `start.sh` çalıştırmasında public kiosk açılır ancak admin login `503` verir.
+
+Admin'in gerçek kullanım ortamında açılması için parola repo dışından sağlanmalıdır. Uygun yollar:
+
+- process environment,
+- Git tarafından ignore edilen yerel `.env`,
+- servis/daemon environment konfigürasyonu.
+
+Gerçek secret değeri **repo'ya, bu MD dosyasına veya client koduna yazılmayacaktır**.
+
+Bu operasyonel prerequisite güvenlik davranışının bir parçasıdır; sabit fallback credential geri getirilmeyecektir.
+
+P1-5 fail-closed güvenlik sözleşmesi açısından 🟩 kapatılmıştır.
 
 ---
 
@@ -1972,7 +2136,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 2 | Admin görünür feedback | P1 | 🟩 |
 | 3 | Admin İstanbul “Bugün” tarihi | P1 | 🟩 |
 | 4 | Slide settings HTTP hata kontrolü | P1 | 🟩 |
-| 5 | Admin password fail-closed | P1 | ⬜ |
+| 5 | Admin password fail-closed | P1 | 🟩 |
 | 6 | Slide delete error redaction | P1 | ⬜ |
 | 7 | Slide settings atomik tek-endpoint refactor | P2 | ⬜ |
 | 8 | SheetJS local + tek sürüm | P2 | ⬜ |

@@ -5,7 +5,6 @@ const crypto = require('node:crypto');
 const ADMIN_USERNAME_ENV = 'CLASSROOM_ADMIN_USERNAME';
 const ADMIN_PASSWORD_ENV = 'CLASSROOM_ADMIN_PASSWORD';
 const DEFAULT_ADMIN_USERNAME = 'admin';
-const DEFAULT_ADMIN_PASSWORD_DIGEST_HEX = 'da19166e6ccc17da20921240a80d12c2e89e95450823d872a247dd77802374c1';
 
 function readAdminUsername(env = process.env) {
     if (env && typeof env === 'object') {
@@ -53,13 +52,11 @@ function matchesAdminUsername(candidate, env = process.env) {
 function matchesAdminPassword(candidate, env = process.env) {
     const configuredPassword = readAdminPassword(env);
 
-    if (typeof candidate !== 'string') {
+    if (configuredPassword === null || typeof candidate !== 'string') {
         return false;
     }
 
-    const configuredDigest = configuredPassword === null
-        ? Buffer.from(DEFAULT_ADMIN_PASSWORD_DIGEST_HEX, 'hex')
-        : digestCredential(configuredPassword);
+    const configuredDigest = digestCredential(configuredPassword);
     const candidateDigest = digestCredential(candidate);
 
     return crypto.timingSafeEqual(configuredDigest, candidateDigest);
@@ -73,7 +70,6 @@ module.exports = {
     ADMIN_USERNAME_ENV,
     ADMIN_PASSWORD_ENV,
     DEFAULT_ADMIN_USERNAME,
-    DEFAULT_ADMIN_PASSWORD_DIGEST_HEX,
     readAdminUsername,
     readAdminPassword,
     matchesAdminUsername,
