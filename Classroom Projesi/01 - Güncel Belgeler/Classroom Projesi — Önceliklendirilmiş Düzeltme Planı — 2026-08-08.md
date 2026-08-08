@@ -1978,6 +1978,14 @@ Temp browser context ve server kapatıldı; `/tmp` test dosyaları temizlendi. A
 
 P2-1 🟩 tamamlanmıştır.
 
+### Commit ve GitHub kaydı
+
+- Commit: `75bfa9366ce64a1fd449469f0993bbf419882965`
+- Mesaj: `fix: serve SheetJS locally from pinned package`
+- Dal: `main`
+- Push: `main -> origin/main` başarılı.
+- Push sonrası yerel `HEAD` ile `origin/main` aynı SHA olarak doğrulandı.
+
 ---
 
 # 12. P2-2 — npm audit bulgularını kontrollü kapat
