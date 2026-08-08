@@ -4011,7 +4011,7 @@ Yeni dokümantasyon ise yalnız `.md` olacaktır.
 # 19. P3-3 — Legacy frontend settings/display-mode katmanını kaldır
 
 **Öncelik:** P3  
-**Durum:** 🟨 Yerel kabul kapıları yeşil; commit/push/CI bekliyor
+**Durum:** 🟩 Tamamlandı ve doğrulandı
 
 `settings-loader.js` hâlâ:
 
@@ -4099,12 +4099,15 @@ Playwright, gerçek Express uygulaması ve ayrı temp SQLite DB ile doğrulandı
 
 P2-6 gerçek **55\" 4K TV fiziksel kabul testi** bu browser kabulünden bağımsız olarak açık kalite kapısı olmaya devam eder.
 
-## 19.5 Kapanış için kalanlar
+## 19.5 Commit / CI kapanış kanıtı
 
-- kontrollü staging ve P3-3 commit,
-- `origin/main` push,
-- exact commit SHA için GitHub Actions Node 22 ve Node 24 başarı doğrulaması,
-- bu bölümün son CI kanıtıyla 🟩 durumuna geçirilmesi.
+- P3-3 milestone commit: `ae4753cf4ae02a074ad50cc06b07ab6022bd540b` — `refactor: remove legacy frontend settings layer`.
+- Commit `origin/main` üzerine push edildi.
+- GitHub Actions `Core Tests` run: `31273344970`.
+- exact milestone SHA üzerinde **Node 22** → `npm run test:core` PASS.
+- exact milestone SHA üzerinde **Node 24** → `npm run test:core` PASS.
+
+Bu kanıtlarla P3-3 kapanmıştır. P2-6 fiziksel 55\" 4K TV kabulü ayrı açık kalite kapısı olarak kalır.
 
 ---
 
@@ -4431,7 +4434,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 13 | Fiziksel 4K kabul | P2 | 🟨 |
 | 14 | Stale bakım scriptleri | P3 | ⬜ |
 | 15 | README/context/docs güncelleme | P3 | ⬜ |
-| 16 | Legacy settings katmanı | P3 | 🟨 |
+| 16 | Legacy settings katmanı | P3 | 🟩 |
 | 17 | Orphan backend config/utils | P3 | ⬜ |
 | 18 | Büyük server/admin/CSS refactor planı | P3 | ⬜ |
 
