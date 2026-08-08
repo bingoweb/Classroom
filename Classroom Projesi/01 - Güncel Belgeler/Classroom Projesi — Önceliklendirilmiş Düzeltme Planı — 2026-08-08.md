@@ -2405,6 +2405,227 @@ Sıradaki iş **Tur B — sqlite3 6.0.1 izole compatibility + native install + m
 
 P2-2 bu nedenle 🟨 açık kalır.
 
+## 12.7 Tur B — sqlite3 6.0.1 major güvenlik geçişi — 8 Ağustos 2026
+
+**Durum:** 🟩 sqlite3 Tur B tamamlandı; P2-2 ana maddesi Multer 2.x turu nedeniyle henüz kapanmadı.
+
+### Neden ayrı tur yapıldı?
+
+Tur A sonunda kalan yedi `npm audit` bulgusunun tamamı `sqlite3@5.1.7 → node-gyp/tar` zincirine bağlıydı ve npm'in önerdiği çözüm `sqlite3@6.0.1` major yükseltmesiydi. Native SQLite binding ve transaction davranışı projenin veri bütünlüğü açısından kritik olduğu için bu yükseltme doğrudan ana checkout'ta yapılmadı.
+
+### İzole `/tmp` compatibility turu
+
+Ana repodan bağımsız `/tmp/classroom-sqlite6-audit` kopyasında önce `sqlite3@6.0.1` kuruldu.
+
+Doğrulanan runtime:
+
+- Node: `22.23.1`
+- sqlite3 package: `6.0.1`
+- SQLite native library: `3.52.0`
+- node-gyp: `12.4.0`
+- tar: `7.5.22`
+
+İlk in-memory native smoke:
+
+- database open → başarılı,
+- table create → başarılı,
+- insert → başarılı,
+- readback → başarılı.
+
+### İzole transaction regresyon turu
+
+Schedule, attendance, role, slide delete/reorder ve atomik slide-settings alanlarından oluşan transaction ağırlıklı paket çalıştırıldı:
+
+- **423 / 423 pass**
+- **0 fail**
+
+Bu paket gerçek SQLite rollback/isolation testlerini de içeriyordu.
+
+### İlk full-core sonucunun teşhisi
+
+İzole sqlite6 kopyasında ilk `test:core`:
+
+- 1339 toplam test,
+- 1336 pass,
+- 3 fail
+
+verdi.
+
+Üç kırmızının sqlite6 işlev hatası olmadığı ayrı olarak teşhis edildi. Kırılan tek dosya, Tur A için bilinçli olarak yazılmış eski `dependency-security-baseline` guard'ıydı:
+
+- `sqlite3` hâlâ 5.x olmalı beklentisi,
+- eski 5.x build-chain transitive paketlerinin lock'ta bulunması beklentisi,
+- bunların parent suite sonucu.
+
+Bu eski guard hariç tüm işlevsel core testleri yeniden çalıştırıldı:
+
+- **1334 / 1334 pass**
+- **0 fail**
+
+Dolayısıyla migration'ın gerçek uygulama davranışında regresyon üretmediği doğrulandı.
+
+### İzole audit sonucu
+
+sqlite3 6.0.1 graph'ı ile:
+
+`npm audit --omit=dev`
+
+sonucu:
+
+- critical: 0
+- high: 0
+- moderate: 0
+- low: 0
+- **total: 0**
+
+Eski sqlite3 5.x build zincirindeki `make-fetch-happen`, `cacache`, `http-proxy-agent` ve `@tootallnate/once` artık aktif lock graph'ında yoktur.
+
+### Gerçek DB kopyası üzerinde migration smoke
+
+Asıl `backend/classroom.db` değiştirilmedi. Dosya `/tmp` içine kopyalanarak sqlite6 server ile açıldı.
+
+Başlangıç schema SHA-256:
+
+`4369ba92708183c9c6c6926c368282f784deac08f37d7e9d13667bbf4ae8a1d9`
+
+Başlangıç tablo sayımları:
+
+- students: 8
+- roles: 10
+- attendance: 8
+- schedule: 0
+- slides: 7
+- settings: 3
+- slide_settings: 4
+- error_logs: 50
+
+Server açılışı, migration ve HTTP smoke sonrası:
+
+- schema SHA-256 **aynı kaldı**,
+- tablo sayımları **8,10,8,0,7,3,4,50 olarak aynı kaldı**,
+- public read endpointleri 200,
+- admin login/session başarılı,
+- CSRF token 64 karakter,
+- atomik `PUT /api/slide-settings` 200,
+- server runtime error görülmedi.
+
+İlk smoke çalışmasında aynı-değer ayar write sonrası shell string kontrolü `settings_equal=no` üretmişti. Bu sonuç kabul edilmedi. Test ayrı yeniden çalıştırıldı ve gerçek before/after JSON değerleri yazdırıldı:
+
+- before ve after değerleri birebir aynı,
+- semantic comparison → `true`,
+- SQLite `typeof(value)` → tüm ilgili ayarlarda `text`.
+
+Böylece ilk ölçümün uygulama veri değişimi değil test karşılaştırma artefaktı olduğu doğrulandı.
+
+### Ana checkout'a kontrollü aktarım
+
+Doğrulanmış sqlite6 lock graph'ı ana checkout'a aktarıldı. Lock aktarımı yalnız JSON parse ile değil canonical JSON SHA-256 ile temp kabul lock'una karşılaştırıldı.
+
+Her iki canonical lock hash'i:
+
+`aa249952d7d6f541b29300c720beec4054f11ad7e9b128a43551229c30776381`
+
+Hash birebir eşleşmeden `npm ci` çalıştırılmadı.
+
+Ana checkout'ta temiz `npm ci` sonrası gerçek runtime:
+
+- Express 4.22.2
+- sqlite3 6.0.1
+- node-gyp 12.4.0
+- tar 7.5.22
+- Multer 1.4.5-lts.2
+
+ve `npm audit --omit=dev` tekrar **0 vulnerability** verdi.
+
+### Kalıcı regresyon guard'ları
+
+`tests/dependency-security-baseline.test.js` sqlite6 son durumuna güncellendi. Artık:
+
+- Express güvenli baseline'ını,
+- sqlite3 exact `6.0.1` pin'ini,
+- node-gyp 12.4.0 / tar 7.5.22 toolchain'ini,
+- eski vulnerable sqlite3 5.x build-chain paketlerinin lock'a geri dönmemesini
+
+test ediyor.
+
+Ayrıca yeni:
+
+`tests/sqlite-native-smoke.test.js`
+
+eklendi ve `test:core` içine bağlandı. Bu test:
+
+- sqlite3 package `6.0.1`,
+- native SQLite `3.52.0`,
+- gerçek file-backed DB üzerinde BEGIN/COMMIT,
+- gerçek BEGIN/ROLLBACK
+
+semantiğini kalıcı olarak doğrular.
+
+Native hedef test:
+
+- **3 / 3 pass**
+
+Dependency baseline:
+
+- **6 / 6 pass**
+
+Transaction paketi:
+
+- **423 / 423 pass**
+
+### Ana checkout tam regresyonu
+
+Gerçek sqlite3 6.0.1 `node_modules` ağacı ile son:
+
+`npm run test:core`
+
+sonucu:
+
+- **1341 / 1341 pass**
+- **0 fail**
+
+### Ana checkout gerçek DB smoke
+
+İzole temp turundan sonra test ana checkout'un kendi `node_modules` ağacıyla tekrarlandı.
+
+Doğrulananlar:
+
+- sqlite3 package 6.0.1,
+- SQLite library 3.52.0,
+- kiosk/public endpointleri 200,
+- admin login 200,
+- session authenticated true,
+- CSRF 64 karakter,
+- atomik slide-settings aynı-değer write 200,
+- before/after ayarlar semantik olarak aynı,
+- schema hash değişmedi,
+- tablo satır sayıları değişmedi,
+- server runtime error oluşmadı.
+
+Gerçek proje DB'si değiştirilmedi; yalnız `/tmp` kopya kullanıldı.
+
+### Commit ve GitHub kaydı
+
+- Commit: `eeb302618d0e8787470dbeaf6c585669f5ee07ea`
+- Mesaj: `chore: upgrade sqlite3 security baseline`
+- Dal: `main`
+- Push: başarılı
+- Push sonrası `HEAD == origin/main` doğrulandı.
+
+### P2-2 neden hâlâ 🟨?
+
+`npm audit` artık **0** olmasına rağmen temiz kurulum şu uyarıyı veriyor:
+
+- `multer@1.4.5-lts.2` 1.x serisi deprecated,
+- npm package metadata 2.x'e yükseltmeyi öneriyor,
+- güncel major hedef `multer@2.2.0`.
+
+Multer öğrenci fotoğrafı, Excel importu ve slayt medya upload yüzeylerinde bulunduğu için 2.x major geçişi ayrı izole upload compatibility turu olmadan kabul edilmeyecektir.
+
+**Sıradaki iş: Tur C — Multer 2.2.0 upload compatibility + gerçek multipart smoke + full core.**
+
+P2-2 bu nedenle 🟨 açık kalır.
+
 ---
 
 # 13. P2-3 — GitHub Actions kırmızı push koşusunu temizle
