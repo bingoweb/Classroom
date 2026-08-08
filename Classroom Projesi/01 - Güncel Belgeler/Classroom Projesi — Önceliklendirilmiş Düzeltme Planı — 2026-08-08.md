@@ -3305,60 +3305,403 @@ Düzeltme yalnız source-level testle değil, geçmişte bozulduğu ölçülen g
 
 **Öncelik:** P2  
 **Risk:** Orta  
-**Durum:** ⬜ Bekliyor
+**Durum:** 🟩 Tamamlandı — yedi Atatürk fallback slaytı canonical system-owned startup safety seti haline getirildi
 
-## 15.1 Sorun
+## 15.1 Düzeltme öncesi doğrulanan sorun
 
-Fallback seti “kalıcı güvenli içerik” amacı taşıyor.
+Fallback seti kiosk'un kalıcı güvenli içerik katmanı olarak tasarlanmıştı; fakat önceki model gerçekte system-owned değildi.
 
-Fakat bugün:
+Düzeltme öncesinde:
 
-- normal slide satırı gibi DB'de,
-- admin listesine gelebiliyor,
-- normal delete/update mekanizmasına girebiliyor,
-- seed marker yalnız ilk seed'i çalıştırıyor.
+- fallback satırları normal `slides` kayıtları gibi admin listesine geliyordu,
+- doğrudan API ile update edilebiliyordu,
+- `is_active = 0` yapılabiliyordu,
+- reorder edilebiliyordu,
+- delete edilebiliyordu,
+- DB seed'i `fallback_ataturk_slides_seeded_v1` marker'ı nedeniyle yalnız ilk kurulumda çalışıyordu,
+- marker kaldığı halde bir fallback silinirse restart onu geri getirmiyordu,
+- fallback satırının canonical alanları doğrudan değiştirilirse restart bu bozulmayı onarmıyordu.
 
-Admin fallback satırını silerse marker kaldığı için restart onu geri getirmeyebilir.
+Bu durum “teacher content yoksa her zaman güvenli Atatürk setine düş” ürün sözleşmesiyle çelişiyordu.
 
-## 15.2 Önce ürün kararı
+## 15.2 Kesin ürün kararı
 
-Fallback slaytlarının rolü net tanımlanmalı:
+Fallback slaytlarının rolü şu şekilde sabitlendi:
 
-> Bunlar öğretmen içerikleri değil, kiosk'un sistem güvenlik ağıdır.
+> Atatürk fallback slaytları öğretmenin yönettiği içerik değildir; kiosk'un **system-owned güvenlik ağıdır**.
 
-Bu kabul edilirse davranış şu olmalıdır:
+Buna göre yeni sözleşme:
 
-- sistem-owned,
-- read-only veya çok sınırlı yönetilebilir,
+- her startup'ta canonical reconciliation,
+- tam **7** bilinen `fallback_key`,
+- eksik kayıt otomatik geri gelir,
+- bozulmuş/deactivate edilmiş sistem kaydı canonical aktif değerlere döner,
+- duplicate oluşmaz,
+- admin management listesinde görünmez,
+- admin API ile update edilemez,
 - delete edilemez,
-- accidental deactivate ile tüm fallback kaybolamaz,
-- startup reconciliation ile eksik sistem kayıtları geri gelir.
+- reorder edilemez,
+- active teacher slide varsa kiosk yalnız teacher content gösterir,
+- aktif teacher slide kalmazsa kiosk otomatik yedi system fallback'e döner.
 
-## 15.3 Önerilen uygulama
+## 15.3 TDD kırmızı aşaması
 
-### Admin
+Üretim koduna dokunmadan önce iki yeni gerçek SQLite/HTTP testi yazıldı.
 
-Fallback slaytları ayrı “Sistem Slaytları” etiketiyle gösterilebilir veya normal yönetim listesinden gizlenebilir.
+### `tests/slides-fallback-reconciliation.test.js`
 
-Sil/Düzenle/Aktif-Pasif butonu normal teacher slide davranışıyla aynı olmamalıdır.
+Gerçek temp SQLite DB ile:
 
-### Backend
+1. ilk startup'ta yedi canonical fallback,
+2. `ataturk-science` satırını fiziksel olarak silme,
+3. `ataturk-education` satırını title/media/text/duration/transition/order/active/fallback alanlarıyla bozma,
+4. DB'yi kapatıp aynı DB path ile gerçek module restart,
+5. eksik slide restore,
+6. bozulmuş slide canonical repair,
+7. üçüncü restart'ta duplicate oluşmaması
 
-`is_fallback = 1` satırlar için delete/update policy açıkça kontrol edilir.
+sözleşmelerini test eder.
 
-### Database init
+### `tests/slides-fallback-system-owned.test.js`
 
-Tek seferlik marker yerine idempotent reconciliation:
+Gerçek temp DB + Express server + gerçek admin login/session/CSRF ile:
 
-her `fallback_key` için `INSERT OR IGNORE` veya eşdeğer sistem-owned reconciliation.
+- admin management listesinde teacher slide var ama fallback yok,
+- fallback update → 403,
+- fallback reorder → 403,
+- fallback delete → 403,
+- teacher-owned slide normal update/deactivate/delete akışını koruyor,
+- doğrudan multipart-style fallback update denemesinde oluşmuş geçici upload dosyası 403 dönmeden önce siliniyor.
 
-## 15.4 Test
+İlk kırmızı koşu:
 
-1. eksik fallback → startup geri ekler.
-2. mevcut fallback duplicate olmaz.
-3. teacher slide varsa active endpoint teacher slide seçer.
-4. teacher slide yoksa fallback görünür.
-5. admin delete fallback policy doğru uygulanır.
+- toplam kontrol: **11**,
+- pass: **2**,
+- fail: **9**.
+
+Kırılmalar tam olarak beklenen eski davranışlardı:
+
+- restart eksik fallback'i restore etmiyordu,
+- bozulmuş fallback canonical hale gelmiyordu,
+- admin fallback'leri listeliyordu,
+- update/reorder/delete 200 dönüyordu.
+
+Teacher-owned normal CRUD başlangıçtan beri yeşil kaldı.
+
+## 15.4 Uygulanan database reconciliation
+
+Dosya:
+
+`backend/database.js`
+
+Eski marker-gated `INSERT OR IGNORE ... WHERE NOT EXISTS(settings marker)` modeli kaldırıldı.
+
+Yerine her startup'ta yedi canonical kayıt için:
+
+```sql
+INSERT INTO slides (..., is_active, expires_at, priority,
+                    is_poster, is_fallback, fallback_key)
+VALUES (..., 1, NULL, 5, 0, 1, ?)
+ON CONFLICT(fallback_key) DO UPDATE SET
+    ...canonical fields...,
+    is_active = 1,
+    expires_at = NULL,
+    priority = 5,
+    is_poster = 0,
+    is_fallback = 1
+```
+
+modeli getirildi.
+
+Böylece startup reconciliation artık:
+
+- olmayan fallback'i insert eder,
+- aynı `fallback_key` varsa duplicate oluşturmaz,
+- title/content/media/text/duration/transition/order gibi canonical alanları geri yükler,
+- `is_active` değerini tekrar 1 yapar,
+- `expires_at` değerini temizler,
+- `is_fallback` değerini tekrar 1 yapar.
+
+Eski `fallback_ataturk_slides_seeded_v1` setting'i backward compatibility/tarihsel metadata amacıyla bırakıldı ancak artık reconciliation'ı **gate etmez**.
+
+## 15.5 Canonical system set
+
+Startup her zaman şu yedi key'i korur:
+
+1. `ataturk-education`
+2. `ataturk-children`
+3. `ataturk-sovereignty`
+4. `ataturk-youth`
+5. `ataturk-science`
+6. `ataturk-love`
+7. `ataturk-future`
+
+Canonical ortak davranış:
+
+- content type: `rule`,
+- media type: `image`,
+- süre: 12000 ms,
+- transition: `fade`,
+- transition duration: 1000 ms,
+- transition mode: `auto`,
+- active: 1,
+- expires_at: NULL,
+- priority: 5,
+- poster: 0,
+- fallback: 1,
+- display order: 1..7.
+
+Her key kendi canonical başlık, Atatürk WebP görseli ve metnine geri reconcile edilir.
+
+## 15.6 Admin management sınırı
+
+`GET /api/admin/slides` artık yalnız teacher-owned satırları döndürür:
+
+```sql
+WHERE COALESCE(is_fallback, 0) = 0
+```
+
+Sonuç:
+
+- öğretmen admin panelinde yalnız kendi içeriklerini yönetir,
+- system fallback satırları normal slide card'ı olarak görünmez,
+- accidental UI mutation yüzeyi ortadan kalkar.
+
+Public kiosk read sözleşmesine dokunulmadı.
+
+## 15.7 Backend system-owned mutasyon korumaları
+
+### Update
+
+`PUT /api/slides/:id` lookup artık `is_fallback` de okur.
+
+Fallback için:
+
+- HTTP **403**,
+- `{ "error": "Sistem slaytları düzenlenemez" }`,
+- DB update yapılmaz,
+- request ile fiziksel upload gelmişse geçici dosya silinir.
+
+### Delete
+
+Isolated transaction lookup artık `is_fallback` okur.
+
+Fallback için:
+
+- transaction rollback,
+- HTTP **403**,
+- `{ "error": "Sistem slaytları silinemez" }`,
+- kayıt DB'de kalır,
+- media cleanup çalışmaz.
+
+### Reorder
+
+Mevcut `BEGIN IMMEDIATE` transaction içinde update statement hazırlanmasından önce bütün requested slide ID'leri için ownership precheck yapılır.
+
+Fallback ID bulunursa:
+
+- rollback,
+- connection close,
+- HTTP **403**,
+- `{ "error": "Sistem slaytları yeniden sıralanamaz" }`.
+
+Ownership precheck DB hatası ise generic 500 + rollback sözleşmesi korunur.
+
+Teacher-owned reorder'ın mevcut transaction/cache davranışı değiştirilmedi.
+
+## 15.8 Eski regresyon testlerinin semantik güncellemesi
+
+Yeni ownership lookup/precheck nedeniyle mevcut test doubles güncellendi; eski success/rollback beklentileri gevşetilmedi.
+
+Güncellenen ana testler:
+
+- `slides-delete-id.test.js`,
+- `slides-update-id.test.js`,
+- `slides-update-cache.test.js`,
+- `slides-reorder-route.test.js`,
+- `slides-reorder-cache.test.js`.
+
+Bu testler artık `is_fallback` lookup alanını ve reorder ownership precheck'ini modellerken eski:
+
+- transaction order,
+- rollback,
+- commit,
+- cache preservation/invalidation,
+- gerçek SQLite atomicity
+
+assertion'larını korur.
+
+Eski `slides-fallback-seed.test.js` içindeki tarihsel “fallback editable” DB assertion'ı kaldırıldı. Test adı da system-owned politika ile uyumlu hale getirildi. Doğrudan DB corruption'ın startup'ta onarılması artık daha güçlü gerçek restart testi tarafından kapsanıyor.
+
+## 15.9 Otomatik regresyon sonuçları
+
+Yeni P2-5 target testleri düzeltme sonrası tamamen yeşil oldu.
+
+Yeni upload-cleanup alt testiyle beraber system-owned/reconciliation hedefleri de geçti.
+
+Geniş slayt komşu paketi:
+
+- fallback seed,
+- reconciliation,
+- system-owned mutation,
+- admin slide list/management,
+- update ID/cache,
+- delete ID/redaction/transaction/cache,
+- reorder route/cache,
+- real SQLite reorder atomicity,
+- active read redaction,
+- create cache
+
+birlikte:
+
+- **173 / 173 pass**,
+- **0 fail**.
+
+İki yeni test kalıcı `test:core` kapısına eklendi.
+
+Son local:
+
+`npm run test:core`
+
+- **1367 / 1367 pass**,
+- **0 fail**.
+
+Ayrıca:
+
+- `git diff --check` temiz,
+- ilgili JS dosyaları `node --check` temiz,
+- `npm audit --omit=dev` → **0 vulnerability**.
+
+## 15.10 Gerçek `classroom.db` kopyası ile bozulma/restart kabul testi
+
+Asıl `backend/classroom.db` değiştirilmedi; `/tmp` kopyası kullanıldı.
+
+Test başlamadan kopya üzerinde bilinçli olarak:
+
+- `ataturk-science` silindi,
+- `ataturk-education` title/media/text/duration/transition/order alanları bozuldu,
+- `is_active = 0`,
+- `is_fallback = 0`
+
+yapıldı.
+
+Ayrıca gerçek active teacher content davranışını sınamak için ayrı teacher-owned slide eklendi.
+
+Bozulma sonrası:
+
+- fallback_key bulunan satır: 6,
+- `is_fallback = 1` satır: 5.
+
+### Gerçek server startup sonrası
+
+Aynı bozulmuş DB kopyası yeni kodla açıldığında:
+
+- fallback_key sayısı: **7**,
+- aktif fallback sayısı: **7**,
+- silinen `ataturk-science`: tekrar mevcut,
+- bozulmuş `ataturk-education`: tamamen canonical,
+- title/media/duration/transition/order/active/fallback değerleri restore edildi.
+
+Active teacher slide bulunduğunda:
+
+- `/api/slides/active` count: **1**,
+- dönen içerik teacher slide,
+- fallback count: **0**.
+
+## 15.11 Gerçek HTTP ownership kabul testi
+
+Aynı temp server'da gerçek admin login/session/CSRF kullanıldı.
+
+Admin management listesi:
+
+- teacher slide present: true,
+- fallback count: **0**.
+
+System fallback update:
+
+- HTTP **403**,
+- before/after DB aynı.
+
+System fallback reorder:
+
+- HTTP **403**,
+- canonical display order aynı.
+
+System fallback delete:
+
+- HTTP **403**,
+- row count aynı.
+
+Teacher slide `is_active = 0` yapıldığında:
+
+- update HTTP 200,
+- `/api/slides/active` count: **7**,
+- fallback count: **7**.
+
+Yani teacher content kaybolduğu anda kiosk güvenlik ağı gerçekten otomatik devraldı.
+
+## 15.12 İkinci restart / idempotency kabulü
+
+Aynı temp DB bir kez daha server restart'tan geçirildi.
+
+Sonuç:
+
+- fallback_key rows: **7**,
+- unique fallback_key rows: **7**,
+- duplicate key group: **0**,
+- active fallback rows: **7**,
+- inactive teacher satırı DB'de korunuyor,
+- active endpoint yine 7 fallback döndürüyor,
+- server runtime error logu yok.
+
+Bu test startup reconciliation'ın yalnız ilk onarımda değil tekrarlı startup'ta da idempotent olduğunu doğruladı.
+
+## 15.13 Commit ve GitHub CI
+
+Kod/test commit'i:
+
+- SHA: `f314dca0c921e1e30dcad71dd8574577b6dc4cbc`
+- Mesaj: `fix: make fallback slides system owned`
+- Push: başarılı
+- Push sonrası `HEAD == origin/main`.
+
+GitHub Actions Core Tests:
+
+- Run ID: `31268609230`
+- event: push
+- overall: **success**
+
+Node 22:
+
+- checkout success,
+- setup-node success,
+- `npm ci` success,
+- `npm run test:core` success,
+- job conclusion **success**.
+
+Node 24:
+
+- checkout success,
+- setup-node success,
+- `npm ci` success,
+- `npm run test:core` success,
+- job conclusion **success**.
+
+## 15.14 Kapanış kararı
+
+Fallback modeli artık “ilk kez seed edilen normal editable slide satırları” değildir.
+
+Bugünkü sözleşme:
+
+- canonical,
+- restart self-healing,
+- duplicate-safe,
+- system-owned,
+- admin listesinden ayrı,
+- API mutation'a kapalı,
+- teacher content yokken otomatik aktif güvenlik ağıdır.
+
+**P2-5 🟩 Tamamlandı.**
 
 ---
 
@@ -3900,7 +4243,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 9 | npm dependency security turu | P2 | 🟩 |
 | 10 | GitHub CI son main run yeşil | P2 | 🟩 |
 | 11 | GSAP resize güvenilirliği | P2 | 🟩 |
-| 12 | Fallback slide sistem sahipliği | P2 | ⬜ |
+| 12 | Fallback slide sistem sahipliği | P2 | 🟩 |
 | 13 | Fiziksel 4K kabul | P2 | ⬜ |
 | 14 | Stale bakım scriptleri | P3 | ⬜ |
 | 15 | README/context/docs güncelleme | P3 | ⬜ |
