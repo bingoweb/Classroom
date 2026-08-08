@@ -27,6 +27,23 @@ test('Dependency security baseline', async (t) => {
         assert.equal(lockedVersion('side-channel-list'), '1.0.1');
     });
 
+    await t.test('Multer is pinned to the validated 2.2.0 upload runtime', () => {
+        assert.equal(packageJson.dependencies.multer, '2.2.0');
+        assert.equal(lockJson.packages[''].dependencies.multer, '2.2.0');
+        assert.equal(lockedVersion('multer'), '2.2.0');
+        assert.equal(lockedVersion('concat-stream'), '2.0.0');
+        assert.equal(lockedVersion('readable-stream'), '3.6.2');
+    });
+
+    await t.test('Multer 1.x-only dependency baggage does not return', () => {
+        assert.equal(lockedVersion('mkdirp'), undefined);
+        assert.equal(lockedVersion('object-assign'), undefined);
+        assert.equal(lockedVersion('xtend'), undefined);
+        assert.equal(lockedVersion('process-nextick-args'), undefined);
+        assert.equal(lockedVersion('core-util-is'), undefined);
+        assert.equal(lockedVersion('isarray'), undefined);
+    });
+
     await t.test('sqlite3 is pinned to the validated 6.0.1 major migration', () => {
         assert.equal(packageJson.dependencies.sqlite3, '6.0.1');
         assert.equal(lockJson.packages[''].dependencies.sqlite3, '6.0.1');
