@@ -391,6 +391,14 @@ Smoke sonucu:
 
 Bu nedenle P1-1 kapanış kriterlerinin tamamı karşılandı.
 
+### Commit ve GitHub kaydı
+
+- Commit: `eb52bcb8fb4814ee8e99762d624fab1812cf12ec`
+- Mesaj: `fix: complete slide activation management`
+- Dal: `main`
+- Push: `main -> origin/main` başarılı.
+- Push sonrası `git fetch --prune origin` ile yerel `HEAD` ve `origin/main` aynı SHA olarak doğrulandı.
+
 ---
 
 # 6. P1-2 — Admin başarı/hata geri bildirimini görünür yap
@@ -399,7 +407,7 @@ Bu nedenle P1-1 kapanış kriterlerinin tamamı karşılandı.
 **Kullanıcı etkisi:** Yüksek  
 **Risk:** Düşük-Orta  
 **Bağımlılık:** Slayt toggle düzeltmesinden hemen sonra  
-**Durum:** ⬜ Bekliyor
+**Durum:** 🟩 Tamamlandı — 8 Ağustos 2026
 
 ## 6.1 Sorun
 
@@ -486,6 +494,76 @@ Mobil:
 ## 6.6 Kapanış kriteri
 
 Öğrenci, rol, slayt ve yoklama alanlarında en az birer başarılı ve başarısız işlem gerçek admin browser'ında denenip görünür sonuç vermelidir.
+
+## 6.7 Uygulama ve doğrulama kaydı — 8 Ağustos 2026
+
+Bu madde tamamlandı.
+
+### Kök neden
+
+Admin tarafında mevcut kodda **15 adet `Utils.showSuccess()` ve 41 adet `Utils.showError()` çağrısı**, yani toplam **56 mevcut geri bildirim çağrı noktası** bulunuyordu. Ancak ortak `public/js/utils.js` katmanında:
+
+- `showSuccess()` hiçbir kullanıcı arayüzü üretmiyordu,
+- `showError()` yalnız logger'a yazıyordu,
+- `public/admin/index.html` içinde bildirimlerin gösterileceği bir live region bulunmuyordu.
+
+Bu nedenle tek tek 56 işlem handler'ını değiştirmek yerine ortak sözleşme düzeltildi.
+
+### Uygulanan mimari
+
+- `public/admin/index.html` içine tek bir `#adminNotificationRegion` eklendi.
+- Region `aria-live="polite"` ve `aria-atomic="true"` kullanıyor.
+- `public/js/utils.js` içine ortak admin notification katmanı eklendi.
+- Success bildirimi `role="status"`, error bildirimi `role="alert"` kullanıyor.
+- Mesajlar HTML olarak yorumlanmıyor; yalnız `textContent` ile DOM'a yazılıyor.
+- Aynı anda yalnız bir bildirim tutuluyor; yeni bildirim önceki timer'ı temizleyip eski bildirimin yerini alıyor.
+- Bildirim kullanıcı tarafından tıklanarak veya 5 saniye sonra otomatik kapatılabiliyor.
+- `showError()` mevcut logger davranışını aynen koruyor.
+- Notification region bulunmayan kiosk sayfalarında ortak `Utils` hiçbir görsel UI oluşturmuyor ve exception üretmiyor.
+- DOM test/mimari uyumluluğu için `replaceChildren()` bulunmayan minimal DOM ortamlarında güvenli fallback eklendi.
+- `public/admin/style.css` içine sabit sağ-üst konumlu, responsive success/error notification stilleri ve keyboard focus görünümü eklendi.
+
+### TDD ve otomatik test kanıtı
+
+Yeni test:
+
+`tests/admin-notifications.test.js`
+
+Üretim kodu değiştirilmeden önce test çalıştırıldı. Kırmızı aşamada yalnız “notification region yoksa UI üretme” davranışı mevcut kodda geçti; görünür success/error, erişilebilir region, güvenli text render, timer/replacement ve CSS sözleşmeleri beklenen şekilde kırıldı.
+
+Düzeltme sonrası:
+
+- hedef notification testi: **8 / 8 pass**,
+- komşu admin/frontend/kiosk regresyon seti: **53 / 53 pass**,
+- yeni test `package.json` içindeki `test:core` kapısına kalıcı olarak eklendi,
+- son tam `npm run test:core`: **1290 / 1290 pass, 0 fail**,
+- `public/js/utils.js` syntax kontrolü başarılı.
+
+### Gerçek browser kabul testi
+
+Asıl `classroom.db` dosyasına dokunmamak için geçici bir ortam kullanıldı:
+
+- geçici HTTP portu: `3317`,
+- geçici DB: `/tmp/classroom-notification-browser.db`,
+- test sonunda geçici browser sekmesi, sunucu süreci ve DB dosyaları kapatılıp silindi.
+
+Gerçek Chromium admin sayfasında doğrudan görsel contract doğrulandı:
+
+- success: yeşil bildirim, beyaz metin, `role="status"`, fixed notification region,
+- error: kırmızı bildirim, beyaz metin, `role="alert"`.
+
+Gerçek admin işlem akışlarıyla kabul turu:
+
+1. **Öğrenci başarı:** gerçek öğrenci formu gönderildi → `Öğrenci başarıyla eklendi!` görünür `status` bildirimi ve DB kaydı doğrulandı.
+2. **Öğrenci hata:** boş ad ile form gönderildi → `Öğrenci adı gereklidir` görünür `alert` bildirimi.
+3. **Görev başarı:** gerçek başkan atama akışı çalıştırıldı → `Rol başarıyla atandı` görünür `status` bildirimi ve `/api/roles` kaydı doğrulandı.
+4. **Görev hata:** öğrenci seçmeden atama denendi → `Lütfen bir öğrenci seçin.` görünür `alert` bildirimi.
+5. **Slayt başarı:** gerçek `toggleSlideActive()` akışı çalıştırıldı → slayt DB durumu `1 -> 0` değişti ve `Slayt durumu başarıyla güncellendi!` görünür `status` bildirimi.
+6. **Slayt hata:** aynı gerçek frontend handler'ına kontrollü HTTP 500 cevabı verildi → backend hata metni `Smoke slide failure` görünür `alert` olarak gösterildi.
+7. **Yoklama hata:** tarih seçmeden yoklama yükleme denendi → `Lütfen bir tarih seçin.` görünür `alert` bildirimi.
+8. **Yoklama başarı:** `2026-08-08` için gerçek yoklama yükle/kaydet akışı çalıştırıldı → bir `present` kaydı API'den geri okundu ve `Yoklama başarıyla kaydedildi!` görünür `status` bildirimi doğrulandı.
+
+Böylece P1-2'nin gerçek browser kabul kriterlerinin tamamı karşılandı.
 
 ---
 
@@ -1647,7 +1725,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 |---:|---|---|---|
 | 0 | Başlangıç baseline / test disiplini | Zorunlu | ⬜ |
 | 1 | Slayt Aktif/Pasif yönetimi | P1 | 🟩 |
-| 2 | Admin görünür feedback | P1 | ⬜ |
+| 2 | Admin görünür feedback | P1 | 🟩 |
 | 3 | Admin İstanbul “Bugün” tarihi | P1 | ⬜ |
 | 4 | Slide settings HTTP hata kontrolü | P1 | ⬜ |
 | 5 | Admin password fail-closed | P1 | ⬜ |

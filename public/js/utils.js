@@ -62,17 +62,76 @@ function getTimeDifferenceInMinutes(currentHour, currentMinute, targetHour, targ
     return targetTimeVal - currentTimeVal;
 }
 
+let adminNotificationTimer = null;
+
+function replaceAdminNotificationRegion(region, notice = null) {
+    if (typeof region.replaceChildren === 'function') {
+        region.replaceChildren(...(notice ? [notice] : []));
+        return;
+    }
+
+    if ('innerHTML' in region) {
+        region.innerHTML = '';
+    }
+    if (notice && typeof region.appendChild === 'function') {
+        region.appendChild(notice);
+    }
+}
+
+function showAdminNotification(message, type) {
+    if (typeof document === 'undefined' || typeof document.getElementById !== 'function') {
+        return;
+    }
+
+    const region = document.getElementById('adminNotificationRegion');
+    if (!region || typeof document.createElement !== 'function') {
+        return;
+    }
+
+    if (adminNotificationTimer !== null && typeof clearTimeout === 'function') {
+        clearTimeout(adminNotificationTimer);
+        adminNotificationTimer = null;
+    }
+
+    const notice = document.createElement('div');
+    notice.className = `admin-notification admin-notification--${type}`;
+    notice.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    notice.setAttribute('tabindex', '0');
+    notice.textContent = String(message ?? '');
+
+    const dismiss = () => {
+        if (notice.parentNode === region || typeof region.replaceChildren !== 'function') {
+            replaceAdminNotificationRegion(region);
+        }
+        if (adminNotificationTimer !== null && typeof clearTimeout === 'function') {
+            clearTimeout(adminNotificationTimer);
+            adminNotificationTimer = null;
+        }
+    };
+
+    notice.addEventListener('click', dismiss);
+    replaceAdminNotificationRegion(region, notice);
+
+    if (typeof setTimeout === 'function') {
+        adminNotificationTimer = setTimeout(() => {
+            if (notice.parentNode === region || typeof region.replaceChildren !== 'function') {
+                replaceAdminNotificationRegion(region);
+            }
+            adminNotificationTimer = null;
+        }, 5000);
+    }
+}
+
 /**
  * Show error message to user
  * @param {string} message - Error message
  * @param {Error} error - Error object (optional)
  */
 function showError(message, error = null) {
-    // Use logger if available, otherwise silent
     if (typeof logger !== 'undefined') {
         logger.error(COMPONENTS.SYSTEM, message, error);
     }
-    // You can extend this to show toast notifications or modal dialogs
+    showAdminNotification(message, 'error');
 }
 
 /**
@@ -80,10 +139,7 @@ function showError(message, error = null) {
  * @param {string} message - Success message
  */
 function showSuccess(message) {
-    // Silent in production, can be extended for toast notifications
-    // if (typeof alert !== 'undefined') {
-    //     alert(message);
-    // }
+    showAdminNotification(message, 'success');
 }
 
 /**

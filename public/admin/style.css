@@ -102,6 +102,53 @@ h1 {
     background: var(--danger);
 }
 
+/* Admin notifications */
+.admin-notification-region {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 2200;
+    width: min(420px, calc(100vw - 32px));
+    pointer-events: none;
+}
+
+.admin-notification {
+    pointer-events: auto;
+    padding: 14px 16px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 700;
+    line-height: 1.4;
+    cursor: pointer;
+    box-shadow: 0 12px 30px rgba(45, 52, 54, 0.22);
+    animation: adminNotificationIn 0.18s ease-out;
+}
+
+.admin-notification--success {
+    background: #1f8f5f;
+}
+
+.admin-notification--error {
+    background: #c0392b;
+}
+
+.admin-notification:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.95);
+    outline-offset: 2px;
+}
+
+@keyframes adminNotificationIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Tabs */
 .tabs {
     display: flex;
