@@ -3709,9 +3709,9 @@ Bugünkü sözleşme:
 
 **Öncelik:** P2 ürün kalite kapısı  
 **Kod değişikliği:** Önce hayır  
-**Durum:** ⬜ Bekliyor
+**Durum:** 🟨 Browser/otomatik ön-kabul tamamlandı — gerçek 55" 4K TV fiziksel kabulü bekliyor
 
-Browser emülasyonu fiziksel 55" TV'nin yerini tutmaz.
+Browser emülasyonu fiziksel 55" TV'nin yerini tutmaz. Bu nedenle aşağıdaki otomatik/browser kanıtlar başarılı olsa da P2-6, gerçek donanım görülmeden 🟩 kapatılmayacaktır.
 
 ## 16.1 Ana hedef
 
@@ -3771,9 +3771,131 @@ Time simulator ile:
 - browser refresh
 - fullscreen/kiosk yeniden açılış
 
-## 16.3 Kabul kriteri
+## 16.3 Browser/otomatik ön-kabul kaydı — 8 Ağustos 2026
+
+Asıl `backend/classroom.db` değiştirilmedi. DB `/tmp` içine kopyalanarak gerçek Express server + Chromium üzerinde kiosk açıldı.
+
+### Çözünürlük matrisi
+
+Aynı güncel HEAD ile şu viewport'lar gerçek browser layout ölçümüyle kontrol edildi:
+
+- 3840×2160,
+- 2560×1440,
+- 1920×1080,
+- 1366×768.
+
+Her çözünürlükte:
+
+- bento stage viewport'a tam oturdu,
+- sekiz ana kartın hiçbiri stage dışına çıkmadı,
+- kart scroll overflow sayısı 0,
+- titlebar overflow sayısı 0,
+- document scroll width/height viewport ile aynı kaldı.
+
+Bu sonuçlar P2-4'teki canlı resize/fullscreen regresyon turundan bağımsız fresh kabul kontrolüdür.
+
+### Uzun öğrenci adı / rol yoğunluğu
+
+Temp DB'deki rol fixture'ında:
+
+- 1 başkan,
+- 2 yardımcı,
+- 4 nöbetçi,
+- 3 yıldız
+
+aynı anda render edildi.
+
+Nöbetçi isimlerinden biri **29 karakter** uzunluğundaydı ve `duty-name-long` sınıfını kullandı.
+
+1366×768 en dar hedef viewport'ta:
+
+- dört nöbetçi isminin tamamında scroll overflow 0,
+- uzun isim iki satıra güvenli biçimde yerleşti,
+- başkan/yardımcı isimlerinde overflow 0,
+- yıldız isimlerinde overflow 0.
+
+### Fallback slideshow runtime
+
+Gerçek kiosk DOM'unda:
+
+- toplam slide: 7,
+- aktif slide: 1,
+- yedi slide'ın tamamı Atatürk fallback image setiydi,
+- görünür slide tekil kaldı,
+- caption gerçek DOM'da render edildi.
+
+P2-5'te teacher slide → fallback davranışı ayrıca gerçek HTTP/DB ile doğrulanmıştır.
+
+### Backend restart dayanıklılığı
+
+Kiosk browser sayfası açıkken temp backend fiziksel olarak durduruldu.
+
+Backend kapalıyken:
+
+- mevcut render DOM'da kaldı,
+- roller kaybolmadı,
+- mevcut slideshow DOM'u korunmaya devam etti.
+
+Aynı DB ile backend yeniden başlatıldıktan ve polling intervali beklendikten sonra:
+
+- rol DOM öğeleri tekrar güncel durumda kaldı,
+- slideshow 7 slide ile çalışmaya devam etti,
+- titlebar overflow 0,
+- document scroll hedef viewport ile aynı.
+
+Yani kısa backend restart'ı kiosk'u kalıcı boş/bozuk state'e sokmadı.
+
+### Browser refresh
+
+Backend restart sonrasında gerçek browser reload yapıldı.
+
+1366×768 fresh render:
+
+- roller yeniden yüklendi,
+- 7 fallback slide yeniden kuruldu,
+- titlebar overflow 0,
+- document scroll 1366×768.
+
+### Daha önce aynı HEAD ailesinde doğrulanan dayanıklılık
+
+P2-4 gerçek browser kabulünde ayrıca:
+
+- 3840↔1920 canlı resize,
+- 2560→1366 canlı resize,
+- reduced-motion,
+- gerçek DOM Fullscreen API enter/exit
+
+sırasında titlebar overflow 0 ve body scroll yok sonucu alınmıştır.
+
+### Otomatik kalite zemini
+
+P2-5 son kod commit'inde:
+
+- local core: **1367 / 1367 pass**,
+- GitHub Node 22: success,
+- GitHub Node 24: success,
+- npm audit: 0 vulnerability.
+
+## 16.4 Fiziksel donanımda hâlâ yapılması gerekenler
+
+Aşağıdaki maddeler browser emülasyonu veya mevcut araçlarla dürüstçe tamamlanamaz:
+
+1. gerçek **55" 3840×2160 TV** üzerinde izleme mesafesinden font okunabilirliği,
+2. TV overscan / HDMI scaling / cihaz pixel mapping,
+3. gerçek sınıf ışığında kontrast ve 3D ikon okunabilirliği,
+4. gerçek kiosk Chromium boot/fullscreen davranışı,
+5. gerçek sınıf mikrofonuyla sessiz/dikkat/gürültü kalibrasyonu,
+6. mikrofon izin reddi ve fiziksel cihaz değişimi,
+7. gerçek GIF/video/portrait/landscape medya karma setiyle uzun süreli görsel kabul,
+8. gerçek ağ kesintisi ve cihaz reboot sonrası otomatik kiosk geri dönüşü.
+
+Bu nedenle fiziksel TV kabulü bir **donanım kalite kapısı** olarak açık kalır.
+
+## 16.5 Kabul kriteri
 
 Fiziksel ekranda öğretmenin günlük kullanımını bozacak görsel veya işlevsel kusur kalmamalıdır.
+
+**P2-6 şu anda 🟨:** otomatik/browser ön-kabul başarılı; fiziksel 55" TV kabulü kullanıcı/donanım erişimi gerektiriyor. Bu blok repo içindeki diğer bakım işlerinin ilerlemesini engellemez.
 
 ---
 
@@ -4244,7 +4366,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 10 | GitHub CI son main run yeşil | P2 | 🟩 |
 | 11 | GSAP resize güvenilirliği | P2 | 🟩 |
 | 12 | Fallback slide sistem sahipliği | P2 | 🟩 |
-| 13 | Fiziksel 4K kabul | P2 | ⬜ |
+| 13 | Fiziksel 4K kabul | P2 | 🟨 |
 | 14 | Stale bakım scriptleri | P3 | ⬜ |
 | 15 | README/context/docs güncelleme | P3 | ⬜ |
 | 16 | Legacy settings katmanı | P3 | ⬜ |
