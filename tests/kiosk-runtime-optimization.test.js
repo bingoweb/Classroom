@@ -5,6 +5,7 @@ const test = require('node:test');
 
 const script = fs.readFileSync(path.join(__dirname, '../public/js/script.js'), 'utf8');
 const kioskHtml = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+const adminHtml = fs.readFileSync(path.join(__dirname, '../public/admin/index.html'), 'utf8');
 
 test('dashboard refresh avoids request waterfalls and duplicate settings polling', () => {
     assert.match(script, /const \[roles, stats\] = await Promise\.all\(\[/);
@@ -28,4 +29,8 @@ test('kiosk declares a small pinned favicon instead of triggering a missing icon
     assert.strictEqual(favicon.readUInt32BE(16), 64);
     assert.strictEqual(favicon.readUInt32BE(20), 64);
     assert.ok(favicon.length < 10 * 1024);
+});
+
+test('admin reuses the pinned local favicon instead of requesting /favicon.ico', () => {
+    assert.match(adminHtml, /<link rel="icon" href="\/assets\/favicon\.png" type="image\/png" sizes="64x64">/);
 });

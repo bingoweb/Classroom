@@ -52,18 +52,6 @@ async function fetchRoles() {
     }
 }
 
-async function fetchSettings() {
-    try {
-        const res = await fetch(`${CONFIG.API_URL}/settings`);
-        const settings = await res.json();
-        // Settings loaded
-    } catch (e) {
-        if (typeof logger !== 'undefined') {
-            logger.error(COMPONENTS.ADMIN, 'Error fetching settings', e);
-        }
-    }
-}
-
 // Fetch Word of the Day
 // fetchWord removed - Word of the Day feature deprecated
 
@@ -377,33 +365,6 @@ window.removeRole = async function (roleId) {
             logger.error(COMPONENTS.ADMIN, 'Error removing role', e, { roleId });
         }
         Utils.showError('Rol kaldırılırken hata oluştu.');
-    }
-};
-
-// Save Settings
-window.saveSetting = async function (key) {
-    let value;
-    if (key === 'message') value = document.getElementById('messageInput').value;
-    // City setting removed
-
-    try {
-        const response = await fetch(`${CONFIG.API_URL}/settings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key, value })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            Utils.showError(data.error || 'Ayarlar kaydedilirken hata oluştu');
-            return;
-        }
-
-        Utils.showSuccess('Ayarlar başarıyla kaydedildi!');
-    } catch (e) {
-        if (typeof logger !== 'undefined') { logger.error(COMPONENTS.ADMIN, 'Error saving settings', e); }
-        Utils.showError('Ayarlar kaydedilirken hata oluştu.');
     }
 };
 
@@ -930,7 +891,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     fetchStudents();
     fetchRoles();
-    fetchSettings();
     // fetchWord(); - removed, feature deprecated
     fetchSlides();
     fetchSlideSettings();

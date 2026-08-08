@@ -16,6 +16,12 @@ const packageJson = JSON.parse(read('package.json'));
 const livingPlanName = 'Classroom Projesi — Önceliklendirilmiş Düzeltme Planı — 2026-08-08.md';
 const tomographyName = 'CLASSROOM_PROJE_TOMOGRAFISI_2026-08-08.md';
 
+function markdownVersionPattern(name, version) {
+    const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`${escapedName}\\s+(?:\\*\\*|__|\\x60)?${escapedVersion}(?:\\*\\*|__|\\x60)?`, 'i');
+}
+
 function assertNoLegacyActiveClaims(text, label) {
     assert.doesNotMatch(text, /daily_word/i, `${label} must not present removed daily_word as current`);
     assert.doesNotMatch(text, /OpenMeteo|open-meteo/i, `${label} must not present removed weather integration as current`);
@@ -36,10 +42,10 @@ test('current documentation source-of-truth contract', async (t) => {
         assert.match(readme, /Yoklama/);
         assert.match(readme, /Slaytlar/);
         assert.match(readme, /CLASSROOM_ADMIN_PASSWORD/);
-        assert.match(readme, /Express\s+4\.22\.2/i);
-        assert.match(readme, /sqlite3\s+6\.0\.1/i);
-        assert.match(readme, /Multer\s+2\.2\.0/i);
-        assert.match(readme, /SheetJS\s+0\.20\.3/i);
+        assert.match(readme, markdownVersionPattern('Express', '4.22.2'));
+        assert.match(readme, markdownVersionPattern('sqlite3', '6.0.1'));
+        assert.match(readme, markdownVersionPattern('Multer', '2.2.0'));
+        assert.match(readme, markdownVersionPattern('SheetJS', '0.20.3'));
         assert.doesNotMatch(readme, /cdn\.sheetjs\.com|cdnjs|unpkg\.com/i);
         assert.match(readme, new RegExp(tomographyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
         assert.match(readme, /Önceliklendirilmiş Düzeltme Planı/);
@@ -71,9 +77,9 @@ test('current documentation source-of-truth contract', async (t) => {
         assert.match(projectSummary, /SameSite=Strict/i);
         assert.match(projectSummary, /Europe\/Istanbul/i);
         assert.match(projectSummary, /system-owned|sistem[- ]owned|sistem sahipli/i);
-        assert.match(projectSummary, /sqlite3\s+6\.0\.1/i);
-        assert.match(projectSummary, /Multer\s+2\.2\.0/i);
-        assert.match(projectSummary, /SheetJS\s+0\.20\.3/i);
+        assert.match(projectSummary, markdownVersionPattern('sqlite3', '6.0.1'));
+        assert.match(projectSummary, markdownVersionPattern('Multer', '2.2.0'));
+        assert.match(projectSummary, markdownVersionPattern('SheetJS', '0.20.3'));
         assert.match(projectSummary, /Önceliklendirilmiş Düzeltme Planı/);
         assert.match(projectSummary, new RegExp(tomographyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
         assertNoLegacyActiveClaims(projectSummary, 'PROJE_OZETI');

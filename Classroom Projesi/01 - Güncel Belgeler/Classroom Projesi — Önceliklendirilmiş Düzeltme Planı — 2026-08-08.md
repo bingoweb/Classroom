@@ -4008,10 +4008,10 @@ Yeni dokümantasyon ise yalnız `.md` olacaktır.
 
 ---
 
-# 19. P3-3 — Legacy settings/display-mode katmanını değerlendir
+# 19. P3-3 — Legacy frontend settings/display-mode katmanını kaldır
 
 **Öncelik:** P3  
-**Durum:** ⬜ Bekliyor
+**Durum:** 🟨 Yerel kabul kapıları yeşil; commit/push/CI bekliyor
 
 `settings-loader.js` hâlâ:
 
@@ -4024,25 +4024,87 @@ gibi eski settings key'lerini bilir.
 
 Admin bunları artık yönetmiyor.
 
-Bu iki olasılıktan biri seçilmelidir:
+## 19.1 Karar
 
-### Gerçek ürün özelliği olacaksa
+Sade admin ve kiosk mimarisi korunarak **legacy frontend settings katmanı kaldırılacaktır**.
 
-- admin UI geri gelmeli,
-- settings key'leri belgelenmeli,
-- test edilmeli.
+Bu karar yalnız frontend dead-code kapsamındadır. Aşağıdaki yaşayan backend sözleşmeleri korunacaktır:
 
-### Ürün özelliği olmayacaksa
+- `GET /api/settings`
+- korumalı `POST /api/settings`
+- SQLite `settings` tablosu
+- `APIService.ENDPOINTS.SETTINGS` uyumluluğu
+- `start.sh` içindeki `--kiosk --app=http://localhost:3000` fullscreen sorumluluğu
 
-- loader'daki dead branch'ler kaldırılmalı,
-- `display-mode-manager.js` gerçekten başka yerde kullanılmıyorsa kaldırılmalı,
-- DB'deki legacy key'ler migration/cleanup ile değerlendirilmeli.
+DB key migration/cleanup bu işin kapsamına alınmamıştır.
 
-### Tercih
+## 19.2 Uygulanan temizlik
 
-Bugünkü sade admin vizyonu düşünüldüğünde **kaldırma yönü** daha tutarlıdır.
+- `public/index.html` artık `settings-loader.js` veya `display-mode-manager.js` import etmiyor.
+- `public/js/settings-loader.js` fiziksel olarak kaldırıldı.
+- `public/js/display-mode-manager.js` fiziksel olarak kaldırıldı.
+- Admin `fetchSettings()` ve startup çağrısı kaldırıldı.
+- Dead `window.saveSetting()` kaldırıldı.
+- `tests/legacy-settings-cleanup.test.js` fiziksel dosya yokluğunu ve korunan backend/kiosk sınırlarını regression testiyle kilitliyor.
+- `test:legacy-settings-cleanup` scripti eklendi ve test `test:core` kalite kapısına bağlandı.
 
-Ama bu temizlik P1/P2 işler bitmeden yapılmamalıdır.
+## 19.3 TDD ve regresyon kanıtı — 8 Ağustos 2026
+
+İlk RED koşusu:
+
+- `node --test tests/legacy-settings-cleanup.test.js`
+- beklenen nedenle kırmızı: iki legacy JS dosyası hâlâ fiziksel olarak mevcuttu.
+- aynı koşuda backend `/api/settings` ve `start.sh` koruma kontrolleri yeşildi.
+
+Frontend dosyaları fiziksel olarak kaldırıldıktan sonra:
+
+- `npm run test:legacy-settings-cleanup` → **5/5 pass**.
+- komşu settings/admin/kiosk grubu → **69/69 pass**.
+
+Tam core ilk koşuda P3-3 dışındaki daha önce commit edilmiş P3-2 dokümantasyon kontratı uyumsuzluklarını görünür hale getirdi. `a4be245` README'yi bilinçli olarak local-first modele taşımışken eski internet requirement testi zorunlu internet beklemeye devam ediyordu; ayrıca yeni dokümantasyon testi Markdown kalın sürüm yazımını (`Express **4.22.2**` gibi) reddediyordu. Güncel mimari geri çevrilmeden test kontratları source-of-truth ile hizalandı:
+
+- `tests/documentation-current-state.test.js` Markdown sürüm biçimini doğru kabul ediyor.
+- `tests/internet-requirement-copy.test.js` local-first + local SheetJS modelini doğruluyor.
+- izole dokümantasyon testleri → **15/15 pass**.
+
+Browser smoke sırasında admin sayfasının otomatik `/favicon.ico` isteği tek console 404 olarak yakalandı. Kiosk'taki mevcut yerel `assets/favicon.png` admin tarafından da kullanılacak şekilde TDD ile düzeltildi:
+
+- favicon regression RED → **3 pass / 1 fail**.
+- düzeltme sonrası `tests/kiosk-runtime-optimization.test.js` → **4/4 pass**.
+
+Son yerel kalite kapıları:
+
+- `npm run test:core` → **1381/1381 pass, 0 fail**.
+- `npm run test:system-smoke` → **SYSTEM_SMOKE_PASS**; temp DB üzerinde `/api/settings` write/readback ayrıca PASS.
+- `npm audit --omit=dev` → **0 vulnerability**.
+- `git diff --check` → temiz.
+- değişen JS test/admin dosyalarında `node --check` → temiz.
+
+## 19.4 Temp-DB gerçek browser kabulü
+
+Playwright, gerçek Express uygulaması ve ayrı temp SQLite DB ile doğrulandı:
+
+- kiosk `3840×2160` → document/viewport tam eşleşti, yatay/dikey overflow **0**.
+- kiosk `1366×768` → document/viewport tam eşleşti, yatay/dikey overflow **0**.
+- kiosk başlangıcında `/api/settings` request → **0**.
+- aynı kiosk sayfasında **12 saniye** beklendikten sonra `/api/settings` request → **0**.
+- `window.settingsLoader` → yok.
+- `window.displayModeManager` → yok.
+- kiosk console error/warning → **0**.
+- authenticated admin başlangıcında `/api/settings` request → **0**.
+- `window.saveSetting` → `undefined`.
+- legacy `messageInput` → yok.
+- admin console error/warning → **0**.
+- admin HTTP 4xx/5xx resource failure → **0**.
+
+P2-6 gerçek **55\" 4K TV fiziksel kabul testi** bu browser kabulünden bağımsız olarak açık kalite kapısı olmaya devam eder.
+
+## 19.5 Kapanış için kalanlar
+
+- kontrollü staging ve P3-3 commit,
+- `origin/main` push,
+- exact commit SHA için GitHub Actions Node 22 ve Node 24 başarı doğrulaması,
+- bu bölümün son CI kanıtıyla 🟩 durumuna geçirilmesi.
 
 ---
 
@@ -4369,7 +4431,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 13 | Fiziksel 4K kabul | P2 | 🟨 |
 | 14 | Stale bakım scriptleri | P3 | ⬜ |
 | 15 | README/context/docs güncelleme | P3 | ⬜ |
-| 16 | Legacy settings katmanı | P3 | ⬜ |
+| 16 | Legacy settings katmanı | P3 | 🟨 |
 | 17 | Orphan backend config/utils | P3 | ⬜ |
 | 18 | Büyük server/admin/CSS refactor planı | P3 | ⬜ |
 

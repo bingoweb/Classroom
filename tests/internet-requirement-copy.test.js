@@ -16,13 +16,18 @@ test('Internet Requirement Copy Tests', async (t) => {
         assert.ok(!readmeContent.includes('offline çalışabilen'), 'README contains stale "offline çalışabilen"');
     });
 
-    await t.test('2. README.md clearly states internet-connected operation', () => {
-        assert.ok(readmeContent.includes('internet bağlantısı ile çalışan'), 'README missing internet connection statement');
+    await t.test('2. README.md clearly states the current local-first operating model', () => {
+        assert.ok(readmeContent.includes('yerel-first'), 'README missing local-first operating model');
+        assert.ok(
+            readmeContent.includes("dış CDN'e bağımlı değildir"),
+            'README must explain that the admin Excel runtime is local rather than CDN-dependent'
+        );
     });
 
-    await t.test('3. The requirements section contains exactly one "Aktif internet bağlantısı"', () => {
+    await t.test('3. The requirements section no longer claims active internet is mandatory', () => {
         const matchCount = (readmeContent.match(/Aktif internet bağlantısı/g) || []).length;
-        assert.strictEqual(matchCount, 1, 'README must contain exactly one "Aktif internet bağlantısı"');
+        assert.strictEqual(matchCount, 0, 'README must not claim active internet is a runtime requirement');
+        assert.ok(readmeContent.includes('Node.js >=22 <25'), 'README must retain the actual Node runtime requirement');
     });
 
     await t.test('4. public/admin/index.html no longer contains "İnternet bağlantısı gerekmez"', () => {
