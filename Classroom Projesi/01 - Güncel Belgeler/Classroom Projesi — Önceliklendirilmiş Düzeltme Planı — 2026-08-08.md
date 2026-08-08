@@ -4355,6 +4355,47 @@ Kanıtlar:
 
 `backend/server.js` 2210 → 1853 satıra indi; `backend/routes/role-routes.js` 380 satır. Bilinen fresh-DB `error_logs` cleanup-order logu değiştirilmedi. Sıradaki extraction dalgası **P3-5A5 — attendance** olacaktır. P2-6 gerçek 55\" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
+### 21.0.5 9 Ağustos 2026 — P3-5A5 attendance route extraction
+
+Beşinci backend refactor dalgası tamamlandı. Attendance today/date read, bulk replacement ve single-record update yüzeyi tek domain kayıt modülüne taşındı; Istanbul tarih hesabı, validation ve transaction davranışları yeniden tasarlanmadı.
+
+Uygulanan sınır:
+
+- `backend/routes/attendance-routes.js`: attendance today/date GET + bulk POST + single PUT route'ları,
+- `backend/server.js`: eski göreli konumda `registerAttendanceRoutes(app, deps)`,
+- `tests/backend-route-extraction.test.js`: A5 fiziksel extraction ve çift-kayıt önleme sözleşmesi,
+- `tests/backend-date-utils.test.js`: literal `server.js` konumu yerine gerçek attendance registration/modülünü izleyen source-contract.
+
+Korunan kritik sözleşmeler:
+
+- `/api/attendance/today` için `Europe/Istanbul` gün anahtarı,
+- auth → CSRF → write rate-limit sırası,
+- bulk replacement için isolated connection + `BEGIN IMMEDIATE → DELETE → INSERT... → COMMIT`,
+- begin/delete/insert/commit failure rollback ve connection-close yolları,
+- empty-list atomik temizleme davranışı,
+- strict gerçek takvim tarihi validation'ı ve leap-year hesabı,
+- strict positive safe-integer ID ve duplicate normalized student ID reddi,
+- yalnız `present` / `absent` status sözleşmesi,
+- read/update hata ayrıntılarının HTTP response'a sızmaması.
+
+Kanıtlar:
+
+- TDD extraction testi RED → GREEN,
+- extraction **5/5**,
+- attendance/date/auth/rate-limit/CORS odak grubu **193/193**,
+- gerçek SQLite rollback/replacement/empty-list/isolation senaryoları PASS,
+- tam core **1405/1405**,
+- system smoke PASS,
+- audit 0,
+- syntax ve diff check temiz,
+- Playwright public `GET /api/attendance/today` 200 + fresh DB `[]`,
+- izole temp DB HTTP smoke: admin login/session 200 + CSRF 64, iki öğrenci create 200/200, bulk attendance 200, today/date GET 200, single update 200, ikinci bulk replacement 200, empty cleanup 200,
+- Chrome DevTools temiz kiosk reload console error/warn/issue 0 ve normal kiosk XHR/fetch trafiği 200/304,
+- exact milestone commit `84ad2ee1986d55a05182c542365b216e2bb469d8`,
+- GitHub Actions run `31282429187`: ilk koşuda Node 24 runner transient biçimde takıldığı için kontrollü rerun; aynı exact SHA rerun'ında Node 22 PASS (25 sn), Node 24 PASS (24 sn).
+
+`backend/server.js` 1853 → 1617 satıra indi; `backend/routes/attendance-routes.js` 262 satır. Bilinen fresh-DB `error_logs` cleanup-order logu değiştirilmedi. Sıradaki extraction dalgası **P3-5A6 — logs** olacaktır. P2-6 gerçek 55\" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
 ## 21.1 `backend/server.js` — ~2800 satır
@@ -4655,7 +4696,8 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 20 | P3-5A2 schedule route extraction | P3 | 🟩 |
 | 21 | P3-5A3 students route extraction | P3 | 🟩 |
 | 22 | P3-5A4 roles route extraction | P3 | 🟩 |
-| 23 | P3-5A5 attendance route extraction | P3 | ⬜ |
+| 23 | P3-5A5 attendance route extraction | P3 | 🟩 |
+| 24 | P3-5A6 logs route extraction | P3 | ⬜ |
 
 Durum simgeleri:
 

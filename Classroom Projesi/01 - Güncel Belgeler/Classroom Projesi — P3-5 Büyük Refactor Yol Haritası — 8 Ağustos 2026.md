@@ -158,7 +158,7 @@ Bu bölümdeki A1 → A8 sırası **uygulama/commit sırasıdır**. Mevcut Expre
 
 ### P3-5A — Backend route modülerleştirme
 
-**Durum:** 🟨 Uygulanıyor — A1, A2, A3 ve A4 tamamlandı ve doğrulandı; sıradaki dalga A5 attendance extraction.
+**Durum:** 🟨 Uygulanıyor — A1, A2, A3, A4 ve A5 tamamlandı ve doğrulandı; sıradaki dalga A6 logs extraction.
 
 #### A0 — Contract baseline
 
@@ -440,6 +440,8 @@ Bilinen fresh-DB `error_logs` cleanup-order log gürültüsü bu refactor sıras
 
 #### A5 — Attendance
 
+**Durum:** 🟩 9 Ağustos 2026 — tamamlandı ve doğrulandı.
+
 Önerilen dosya:
 
 ```text
@@ -447,6 +449,66 @@ backend/routes/attendance-routes.js
 ```
 
 `Europe/Istanbul` date key ve bulk attendance transaction sözleşmeleri korunmalıdır.
+
+##### A5 uygulama sonucu
+
+Attendance route yüzeyi mevcut tarih, validation ve transaction davranışları korunarak tek domain kayıt modülüne ayrıldı:
+
+- `backend/routes/attendance-routes.js` oluşturuldu.
+- `GET /api/attendance/today` yeni modüle taşındı.
+- `GET /api/attendance/:date` yeni modüle taşındı.
+- korumalı bulk `POST /api/attendance` yeni modüle taşındı.
+- korumalı single-record `PUT /api/attendance/:id` yeni modüle taşındı.
+- `server.js`, `registerAttendanceRoutes(app, deps)` çağrısını system route'larından sonra ve slides route'larından önce, eski attendance bloğunun göreli kayıt noktasında yapıyor.
+- `getIstanbulDateKey`, DB, logger ve admin write middleware'leri explicit dependency olarak aktarılıyor.
+- `backend/server.js` 1853 satırdan 1617 satıra indi; yeni `backend/routes/attendance-routes.js` 262 satır.
+
+Korunan kritik sözleşmeler:
+
+- `/api/attendance/today` için `Europe/Istanbul` gün anahtarı,
+- bulk write middleware sırası `requireAdminSession → requireCsrfToken → requireAdminWriteRateLimit`,
+- isolated connection + `BEGIN IMMEDIATE → DELETE → INSERT... → COMMIT` replacement transaction akışı,
+- begin/delete/insert/commit failure rollback ve connection-close yolları,
+- boş listeyle günün attendance kayıtlarını atomik biçimde temizleme,
+- strict `YYYY-MM-DD`, gerçek ay/gün ve leap-year validation,
+- strict positive safe-integer student/attendance ID doğrulaması,
+- yalnız `present` / `absent` status değerleri,
+- duplicate normalized student ID reddi,
+- read/update database error ayrıntılarının HTTP response'a sızmaması.
+
+TDD ve regresyon kanıtı:
+
+1. `tests/backend-route-extraction.test.js` içine A5 sözleşmesi önce eklendi ve `backend/routes/attendance-routes.js must exist` nedeniyle RED verdi.
+2. Extraction sonrası A1–A5 structural testleri **5/5 pass** verdi.
+3. Attendance bulk/read/update + Istanbul date + admin auth/rate-limit + CORS odak grubu **193/193 pass** verdi.
+4. Bulk suite içindeki gerçek SQLite rollback, successful replacement, empty-list replacement ve shared-connection isolation kanıtları yeni modül üzerinden geçti.
+5. `backend-date-utils.test.js` yalnız fiziksel dosya konumuna bağlı eski `server.js` varsayımından yeni gerçek attendance modülünü izleyecek şekilde güncellendi; tarih davranışı gevşetilmedi.
+6. Tam `npm run test:core`: **1405/1405 pass**.
+7. `npm run test:system-smoke`: **SYSTEM_SMOKE_PASS**.
+8. `npm audit --omit=dev`: **0 vulnerability**.
+9. `node --check` iki backend dosyasında ve `git diff --check` temiz.
+
+Tarayıcı ve gerçek HTTP kanıtı, izole temp DB + ayrı port üzerinde:
+
+- Playwright: public `GET /api/attendance/today` **200** ve fresh DB için `[]`.
+- Admin login **200**, authenticated session **200**, CSRF token uzunluğu **64**.
+- İki temp öğrenci create **200/200**.
+- İlk bulk attendance **200**; date GET ve today GET **200**, iki kayıt görüldü.
+- Single attendance update **200** ve güncellenen status `absent` olarak geri okundu.
+- İkinci bulk write **200** ve aynı gün için önceki iki kayıt tek yeni kayıtla atomik olarak değiştirildi.
+- Empty-list cleanup **200**; temp öğrenciler **200/200** ile temizlendi.
+- Chrome DevTools temiz kiosk reload: console error/warn/issue **0**; normal kiosk XHR/fetch trafiği 200/304.
+
+Kod/test milestone:
+
+- Commit: `84ad2ee1986d55a05182c542365b216e2bb469d8`
+- GitHub Actions: `31282429187`
+- İlk koşuda Node 22 PASS olurken Node 24 runner `test:core` adımında transient biçimde takıldı; run kontrollü olarak iptal edilip aynı exact SHA üzerinde rerun edildi.
+- Exact-SHA rerun: Node 22 PASS (25 sn), Node 24 PASS (24 sn).
+
+Bilinen fresh-DB `error_logs` cleanup-order log gürültüsü bu refactor sırasında yine değiştirilmedi.
+
+**Sıradaki backend dalgası: A6 — Logs.** Error redaction ve cleanup validation davranışları korunacak; startup `error_logs` cleanup-order problemi extraction ile karıştırılmayacaktır.
 
 #### A6 — Logs
 
