@@ -108,7 +108,14 @@ test('Slides Reorder Cache Tests', async (t) => {
                 serialize: (...args) => db.serialize(...args),
                 prepare: (...args) => db.prepare(...args),
                 run: (...args) => db.run(...args),
-                get: (...args) => db.get(...args),
+                get: (sql, params, cb) => {
+                    const actualCb = typeof params === 'function' ? params : cb;
+                    const actualParams = typeof params === 'function' ? [] : params;
+                    if (typeof sql === 'string' && sql.includes('WHERE is_fallback = 1 AND id IN')) {
+                        return actualCb(null, null);
+                    }
+                    return db.get(sql, actualParams, actualCb);
+                },
                 all: (...args) => db.all(...args),
                 close: (closeCb) => { if (closeCb) closeCb(null); }
             };

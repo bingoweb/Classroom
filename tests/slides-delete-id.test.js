@@ -228,7 +228,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
 
         assert.strictEqual(resObj.statusCode, 404);
         assert.deepEqual(resObj.body, { error: 'Slayt bulunamadı' });
-        assert.strictEqual(getSql, "SELECT media_path, display_order FROM slides WHERE id = ?");
+        assert.strictEqual(getSql, "SELECT media_path, display_order, is_fallback FROM slides WHERE id = ?");
         assert.deepEqual(getParams, [47]);
         assert.deepEqual(runCalls, ['BEGIN IMMEDIATE', 'ROLLBACK']);
         assert.ok(rollbackCompletedBeforeResponse);
@@ -268,7 +268,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         assert.deepEqual(resObj.body, { message: 'Slayt başarıyla silindi', changes: 1 });
         assert.deepEqual(sqlLog, [
             'BEGIN IMMEDIATE',
-            'SELECT media_path, display_order FROM slides WHERE id = ?',
+            'SELECT media_path, display_order, is_fallback FROM slides WHERE id = ?',
             'DELETE FROM slides WHERE id = ?',
             'UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?',
             'COMMIT'
@@ -314,7 +314,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         assert.deepEqual(resObj.body, { error: 'Slayt silinirken hata oluştu' });
         assert.deepEqual(sqlLog, [
             'BEGIN IMMEDIATE',
-            'SELECT media_path, display_order FROM slides WHERE id = ?',
+            'SELECT media_path, display_order, is_fallback FROM slides WHERE id = ?',
             'DELETE FROM slides WHERE id = ?',
             'ROLLBACK'
         ]);
@@ -353,7 +353,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         assert.deepEqual(resObj.body, { error: 'Slayt silinirken hata oluştu' });
         assert.deepEqual(sqlLog, [
             'BEGIN IMMEDIATE',
-            'SELECT media_path, display_order FROM slides WHERE id = ?',
+            'SELECT media_path, display_order, is_fallback FROM slides WHERE id = ?',
             'DELETE FROM slides WHERE id = ?',
             'UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?',
             'ROLLBACK'
@@ -392,7 +392,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         assert.deepEqual(resObj.body, { error: 'Slayt silinirken hata oluştu' });
         assert.deepEqual(sqlLog, [
             'BEGIN IMMEDIATE',
-            'SELECT media_path, display_order FROM slides WHERE id = ?',
+            'SELECT media_path, display_order, is_fallback FROM slides WHERE id = ?',
             'DELETE FROM slides WHERE id = ?',
             'UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?',
             'COMMIT',
@@ -542,7 +542,7 @@ test('Slides Delete Route ID Validation and Atomic Flow', async (t) => {
         assert.strictEqual(resObj.count, 1, 'Exactly one response sent');
         assert.deepEqual(sqlLog, [
             'BEGIN IMMEDIATE',
-            'SELECT media_path, display_order FROM slides WHERE id = ?',
+            'SELECT media_path, display_order, is_fallback FROM slides WHERE id = ?',
             'DELETE FROM slides WHERE id = ?',
             'UPDATE slides SET display_order = display_order - 1 WHERE display_order > ?',
             'COMMIT'

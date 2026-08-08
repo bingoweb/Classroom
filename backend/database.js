@@ -172,9 +172,11 @@ function initDatabase() {
         });
         db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_slides_fallback_key ON slides(fallback_key)`);
 
-        // Keep a permanent, editable fallback set in SQLite. These rows are seeded
-        // once, remain hidden while an admin-created slide is active, and return
-        // automatically when the last admin-created slide is removed.
+        // Keep a canonical, system-owned fallback set in SQLite. These rows are
+        // reconciled on every startup, remain hidden while an admin-created slide
+        // is active, and return automatically when the last admin slide is inactive.
+        // The legacy marker is retained only as historical metadata; it no longer
+        // gates reconciliation.
         const fallbackSeedMarker = 'fallback_ataturk_slides_seeded_v1';
         const fallbackSlides = [
             {
@@ -221,26 +223,40 @@ function initDatabase() {
             }
         ];
 
-        const fallbackInsertSql = `
-            INSERT OR IGNORE INTO slides (
+        const fallbackUpsertSql = `
+            INSERT INTO slides (
                 title, content_type, media_type, media_path, text_content,
                 display_duration, video_auto_advance, transition_type,
                 transition_duration, transition_mode, display_order,
-                is_active, priority, is_poster, is_fallback, fallback_key
-            )
-            SELECT ?, 'rule', 'image', ?, ?, 12000, 0, 'fade', 1000,
-                   'auto', ?, 1, 5, 0, 1, ?
-            WHERE NOT EXISTS (SELECT 1 FROM settings WHERE key = ?)
+                is_active, expires_at, priority, is_poster, is_fallback, fallback_key
+            ) VALUES (?, 'rule', 'image', ?, ?, 12000, 0, 'fade', 1000,
+                      'auto', ?, 1, NULL, 5, 0, 1, ?)
+            ON CONFLICT(fallback_key) DO UPDATE SET
+                title = excluded.title,
+                content_type = excluded.content_type,
+                media_type = excluded.media_type,
+                media_path = excluded.media_path,
+                text_content = excluded.text_content,
+                display_duration = excluded.display_duration,
+                video_auto_advance = excluded.video_auto_advance,
+                transition_type = excluded.transition_type,
+                transition_duration = excluded.transition_duration,
+                transition_mode = excluded.transition_mode,
+                display_order = excluded.display_order,
+                is_active = 1,
+                expires_at = NULL,
+                priority = excluded.priority,
+                is_poster = excluded.is_poster,
+                is_fallback = 1
         `;
 
         fallbackSlides.forEach((slide, index) => {
-            db.run(fallbackInsertSql, [
+            db.run(fallbackUpsertSql, [
                 slide.title,
                 slide.mediaPath,
                 slide.text,
                 index + 1,
-                slide.key,
-                fallbackSeedMarker
+                slide.key
             ]);
         });
         db.run(

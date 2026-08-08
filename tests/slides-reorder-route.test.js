@@ -118,7 +118,14 @@ test('Slides Reorder Route Tests', async (t) => {
                 serialize: (...args) => db.serialize(...args),
                 prepare: (...args) => db.prepare(...args),
                 run: (...args) => db.run(...args),
-                get: (...args) => db.get(...args),
+                get: (sql, params, cb) => {
+                    const actualCb = typeof params === 'function' ? params : cb;
+                    const actualParams = typeof params === 'function' ? [] : params;
+                    if (typeof sql === 'string' && sql.includes('WHERE is_fallback = 1 AND id IN')) {
+                        return actualCb(null, null);
+                    }
+                    return db.get(sql, actualParams, actualCb);
+                },
                 all: (...args) => db.all(...args),
                 close: (closeCb) => { if (closeCb) closeCb(null); }
             };
@@ -380,7 +387,7 @@ test('Slides Reorder Route Tests', async (t) => {
             changes: 1
         });
 
-        assert.ok(getSql.includes('SELECT media_path FROM slides WHERE id = ?'));
+        assert.ok(getSql.includes('SELECT media_path, is_fallback FROM slides WHERE id = ?'));
         assert.deepEqual(getParams, [47]);
         assert.strictEqual(typeof getParams[0], 'number');
         assert.ok(runSql.includes('UPDATE slides SET'));

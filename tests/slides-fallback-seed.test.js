@@ -48,7 +48,7 @@ function invoke(handler) {
     });
 }
 
-test('permanent Atatürk slides yield to admin content and return afterwards', async (t) => {
+test('system Atatürk fallback slides yield to teacher content and return afterwards', async (t) => {
     t.after(async () => {
         await new Promise((resolve, reject) => db.close(err => err ? reject(err) : resolve()));
         fs.rmSync(tempDir, { recursive: true, force: true });
@@ -106,13 +106,4 @@ test('permanent Atatürk slides yield to admin content and return afterwards', a
 
     assert.equal(afterAdminDeletion.body.length, 7);
     assert.ok(afterAdminDeletion.body.every(row => row.is_fallback === 1));
-
-    await run(
-        `UPDATE slides SET text_content = ? WHERE fallback_key = 'ataturk-science'`,
-        ['Düzenlenmiş söz']
-    );
-    const edited = await all(
-        `SELECT text_content FROM slides WHERE fallback_key = 'ataturk-science'`
-    );
-    assert.equal(edited[0].text_content, 'Düzenlenmiş söz');
 });

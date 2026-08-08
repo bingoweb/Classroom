@@ -284,7 +284,7 @@ test('Slides Update Route ID Validation', async (t) => {
             assert.strictEqual(resObj.statusCode, 404);
             assert.deepEqual(resObj.body, { error: 'Slayt bulunamadı' });
             assert.strictEqual(resObj.count, 1);
-            assert.strictEqual(getSql, "SELECT media_path FROM slides WHERE id = ?");
+            assert.strictEqual(getSql, "SELECT media_path, is_fallback FROM slides WHERE id = ?");
             assert.deepEqual(getParams, [item.numeric]);
             assert.strictEqual(typeof getParams[0], 'number');
             assert.strictEqual(runCalled, 0);
@@ -354,7 +354,7 @@ test('Slides Update Route ID Validation', async (t) => {
 
         assert.ok(!JSON.stringify(resObj.body).includes('SLIDE_LOOKUP_SECRET_DO_NOT_EXPOSE'));
 
-        assert.strictEqual(getSql, "SELECT media_path FROM slides WHERE id = ?");
+        assert.strictEqual(getSql, "SELECT media_path, is_fallback FROM slides WHERE id = ?");
         assert.deepEqual(getParams, [47]);
         assert.strictEqual(typeof getParams[0], 'number');
         assert.strictEqual(runCalled, 0);
@@ -367,7 +367,7 @@ test('Slides Update Route ID Validation', async (t) => {
         assert.strictEqual(loggedContext.endpoint, '/api/slides/:id');
         assert.strictEqual(loggedContext.requestId, 'test-req-id-123');
         assert.strictEqual(loggedContext.slideId, 47);
-        assert.strictEqual(loggedContext.query, "SELECT media_path FROM slides WHERE id = ?");
+        assert.strictEqual(loggedContext.query, "SELECT media_path, is_fallback FROM slides WHERE id = ?");
         assert.strictEqual(loggedContext.params, getParams);
     });
 
@@ -429,7 +429,7 @@ test('Slides Update Route ID Validation', async (t) => {
         assert.strictEqual(loggedContext.endpoint, '/api/slides/:id');
         assert.strictEqual(loggedContext.requestId, 'test-req-id-456');
         assert.strictEqual(loggedContext.slideId, 47);
-        assert.strictEqual(loggedContext.query, "SELECT media_path FROM slides WHERE id = ?");
+        assert.strictEqual(loggedContext.query, "SELECT media_path, is_fallback FROM slides WHERE id = ?");
         assert.strictEqual(loggedContext.params, getParams);
 
         assert.strictEqual(getParams[0], 47);
@@ -561,7 +561,7 @@ test('Slides Update Route ID Validation', async (t) => {
 
         assert.deepEqual(order, ['lookup', 'update']);
 
-        assert.strictEqual(getSql, "SELECT media_path FROM slides WHERE id = ?");
+        assert.strictEqual(getSql, "SELECT media_path, is_fallback FROM slides WHERE id = ?");
         assert.deepEqual(getParams, [47]);
         
         assert.strictEqual(runSql, "UPDATE slides SET title = ? WHERE id = ?");

@@ -1938,7 +1938,7 @@ app.get('/api/slides', (req, res, next) => {
 
 // Get all slides for authenticated admin management (active + inactive)
 app.get('/api/admin/slides', requireAdminSession, (req, res) => {
-    const sql = "SELECT * FROM slides ORDER BY display_order ASC";
+    const sql = "SELECT * FROM slides WHERE COALESCE(is_fallback, 0) = 0 ORDER BY display_order ASC";
     const params = [];
 
     db.all(sql, params, (err, rows) => {
@@ -2196,9 +2196,31 @@ app.put('/api/slides/reorder', requireAdminSession, requireCsrfToken, requireAdm
                 });
             }
 
-            let stmt;
-            try {
-                stmt = isolatedDb.prepare("UPDATE slides SET display_order = ? WHERE id = ?", function (prepErr) {
+            const slideIds = [...new Set(slideOrders.map(item => item.id))];
+            const fallbackPlaceholders = slideIds.map(() => '?').join(', ');
+            const fallbackOwnershipSql = `SELECT id FROM slides WHERE is_fallback = 1 AND id IN (${fallbackPlaceholders}) LIMIT 1`;
+
+            isolatedDb.get(fallbackOwnershipSql, slideIds, (ownershipErr, systemSlide) => {
+                if (ownershipErr) {
+                    logger.error(COMPONENTS.API, 'Error checking system-owned slides before reorder', ownershipErr, { requestId: req.requestId });
+                    return isolatedDb.run("ROLLBACK", () => {
+                        isolatedDb.close(() => {
+                            res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                        });
+                    });
+                }
+
+                if (systemSlide) {
+                    return isolatedDb.run("ROLLBACK", () => {
+                        isolatedDb.close(() => {
+                            res.status(403).json({ error: 'Sistem slaytları yeniden sıralanamaz' });
+                        });
+                    });
+                }
+
+                let stmt;
+                try {
+                    stmt = isolatedDb.prepare("UPDATE slides SET display_order = ? WHERE id = ?", function (prepErr) {
                     if (prepErr) {
                         logger.error(COMPONENTS.API, 'Error preparing statement for slides reorder', prepErr, { requestId: req.requestId });
                         return isolatedDb.run("ROLLBACK", () => {
@@ -2274,14 +2296,15 @@ app.put('/api/slides/reorder', requireAdminSession, requireCsrfToken, requireAdm
 
                     nextUpdate();
                 });
-            } catch (prepErr) {
-                logger.error(COMPONENTS.API, 'Error preparing statement for slides reorder', prepErr, { requestId: req.requestId });
-                return isolatedDb.run("ROLLBACK", () => {
-                    isolatedDb.close(() => {
-                        res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                } catch (prepErr) {
+                    logger.error(COMPONENTS.API, 'Error preparing statement for slides reorder', prepErr, { requestId: req.requestId });
+                    return isolatedDb.run("ROLLBACK", () => {
+                        isolatedDb.close(() => {
+                            res.status(500).json({ error: 'Sıralama güncellenirken bazı kayıtlarda hata oluştu' });
+                        });
                     });
-                });
-            }
+                }
+            });
         });
     });
 });
@@ -2343,7 +2366,7 @@ app.put('/api/slides/:id', requireAdminSession, requireCsrfToken, requireAdminWr
         normalizedIsActive = isBoolean ? (is_active ? 1 : 0) : is_active;
     }
 
-    const lookupSql = 'SELECT media_path FROM slides WHERE id = ?';
+    const lookupSql = 'SELECT media_path, is_fallback FROM slides WHERE id = ?';
     const lookupParams = [slideId];
 
     // Get existing slide
@@ -2362,6 +2385,12 @@ app.put('/api/slides/:id', requireAdminSession, requireCsrfToken, requireAdminWr
         if (!row) {
             if (req.file) fs.unlinkSync(req.file.path);
             return res.status(404).json({ error: 'Slayt bulunamadı' });
+        }
+        if (row.is_fallback === 1) {
+            if (req.file) {
+                try { fs.unlinkSync(req.file.path); } catch (unlinkErr) { }
+            }
+            return res.status(403).json({ error: 'Sistem slaytları düzenlenemez' });
         }
 
         const oldMediaPath = row.media_path;
@@ -2518,9 +2547,12 @@ app.delete('/api/slides/:id', requireAdminSession, requireCsrfToken, requireAdmi
                 });
             };
 
-            isolatedDb.get("SELECT media_path, display_order FROM slides WHERE id = ?", [slideId], (lookupErr, row) => {
+            isolatedDb.get("SELECT media_path, display_order, is_fallback FROM slides WHERE id = ?", [slideId], (lookupErr, row) => {
                 if (lookupErr) return rollbackAndRespond(lookupErr, 500, slideDeleteInternalError, 'lookup');
                 if (!row) return rollbackAndRespond(null, 404, 'Slayt bulunamadı', 'missing');
+                if (row.is_fallback === 1) {
+                    return rollbackAndRespond(null, 403, 'Sistem slaytları silinemez', 'system-owned');
+                }
 
                 const mediaPath = row.media_path;
                 const displayOrder = row.display_order;

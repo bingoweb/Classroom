@@ -184,7 +184,7 @@ test('Slides Update Cache Tests', async (t) => {
         const putRes = createMockRes();
         putHandler(putReq, putRes);
 
-        assert.strictEqual(capturedLookupSql, 'SELECT media_path FROM slides WHERE id = ?');
+        assert.strictEqual(capturedLookupSql, 'SELECT media_path, is_fallback FROM slides WHERE id = ?');
         assert.deepStrictEqual(capturedLookupParams, [47]);
         assert.strictEqual(capturedUpdateSql, 'UPDATE slides SET title = ? WHERE id = ?');
         assert.deepStrictEqual(capturedUpdateParams, ['Yeni başlık', 47]);
