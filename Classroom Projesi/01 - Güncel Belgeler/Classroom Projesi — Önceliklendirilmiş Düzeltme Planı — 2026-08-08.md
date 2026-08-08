@@ -2984,32 +2984,75 @@ Bu gözlem kaybolmamalı; backend error UX/hardening sırasında ayrı düzeltme
 
 **Öncelik:** P2 CI güvenilirliği  
 **Kod riski:** Düşük  
-**Durum:** ⬜ Bekliyor
+**Durum:** 🟩 Tamamlandı — güncel `main` push Core Tests matrisi Node 22 ve Node 24 üzerinde yeşil
 
-## 13.1 Mevcut durum
+## 13.1 Tarihsel sorun
 
-Aynı `6865630` SHA'sı için:
+Eski `6865630` SHA'sında:
 
-- manual Node 22 → success
-- manual Node 24 → success
+- manual Node 22 → success,
+- manual Node 24 → success,
+- fakat bir push run kırmızı görünmüştü.
 
-fakat son push run kırmızı.
+O kırmızı run test assertion failure değildi. GitHub Actions annotation'ı hosted runner job'unun acquire edilemediğini gösteriyordu. Yani o tarihsel kırmızı durum kod/test regresyonu değil runner provisioning altyapı olayıydı.
 
-Annotation test failure değil:
+## 13.2 Güncel doğrulama — 8 Ağustos 2026
 
-> hosted runner job'u acquire edilemedi.
+Dependency-security Tur C sonrası iki ardışık güncel `main` push'u GitHub Actions üzerinde kontrol edildi.
 
-## 13.2 Yapılacak
+### Multer 2 kod commit'i
 
-Kod değişikliği gerekmeyebilir.
+SHA:
 
-- failed run rerun edilir,
-- Node 22/24 yeniden yeşil olursa altyapı olayı kapanır,
-- tekrar runner acquire sorunu olursa GitHub Actions availability/queue durumu ayrı incelenir.
+`174760a90b3f15a8bf39f1598bcf021fc00dd3c1`
 
-## 13.3 Kapanış kriteri
+Core Tests push run sonucu:
 
-`main` son commit için visible Core Tests check yeşil olmalıdır.
+- overall → **success**,
+- Node 22 → **success**,
+- Node 24 → **success**.
+
+### En güncel belge/main commit'i
+
+SHA:
+
+`97203eda9d4954973920125f8e5ded998ee0073e`
+
+GitHub Actions run ID:
+
+`31267211753`
+
+Run, beklenerek senkron biçimde tamamlandı ve `--exit-status` ile success doğrulandı.
+
+Node 22 job:
+
+- checkout → success,
+- setup-node 22 → success,
+- `npm ci` → success,
+- `npm run test:core` → success,
+- job conclusion → **success**.
+
+Node 24 job:
+
+- checkout → success,
+- setup-node 24 → success,
+- `npm ci` → success,
+- `npm run test:core` → success,
+- job conclusion → **success**.
+
+Overall run conclusion:
+
+**success**
+
+Böylece güncel lockfile içindeki Express 4.22.2 + sqlite3 6.0.1 + Multer 2.2.0 bağımlılık ağacının yalnız yerel Node 22 ortamında değil, GitHub hosted runner üzerinde hem Node 22 hem Node 24 ile temiz `npm ci` sonrası tüm core suite'i geçtiği doğrulanmıştır.
+
+## 13.3 Kapanış kararı
+
+Eski runner-acquisition failure artık güncel `main` sağlık durumunu temsil etmiyor. Daha yeni birden fazla push run yeşildir ve `main` son doğrulanmış SHA'sında visible Core Tests matrisi yeşildir.
+
+**P2-3 🟩 Tamamlandı.**
+
+Bu kapanış kaydının kendisi push edildiğinde oluşacak yeni docs-only Core Tests run'ı da ayrıca beklenip kontrol edilecektir; bunun sonucu yeni bir doküman commit'i üretmeden oturum kanıtı olarak doğrulanacaktır.
 
 ---
 
@@ -3680,7 +3723,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 7 | Slide settings atomik tek-endpoint refactor | P2 | 🟩 |
 | 8 | SheetJS local + tek sürüm | P2 | 🟩 |
 | 9 | npm dependency security turu | P2 | 🟩 |
-| 10 | GitHub CI son main run yeşil | P2 | ⬜ |
+| 10 | GitHub CI son main run yeşil | P2 | 🟩 |
 | 11 | GSAP resize güvenilirliği | P2 | ⬜ |
 | 12 | Fallback slide sistem sahipliği | P2 | ⬜ |
 | 13 | Fiziksel 4K kabul | P2 | ⬜ |
