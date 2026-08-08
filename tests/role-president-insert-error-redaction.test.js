@@ -137,23 +137,23 @@ test('Role President Insert Error Redaction Tests', async (t) => {
         return res;
     }
 
-    const serverSource = fs.readFileSync(
-        path.join(__dirname, '../backend/server.js'),
+    const roleRoutesSource = fs.readFileSync(
+        path.join(__dirname, '../backend/routes/role-routes.js'),
         'utf8'
     );
 
     await t.test('Production source contains no request-ID bypass', async () => {
         assert.ok(
-            !serverSource.includes("Rol atanırken hata oluştu: ' + (err.message || 'Bilinmeyen hata')"),
-            'Production server source must not contain the rejected raw unknown-classification response'
+            !roleRoutesSource.includes("Rol atanırken hata oluştu: ' + (err.message || 'Bilinmeyen hata')"),
+            'Production role route source must not contain the rejected raw unknown-classification response'
         );
         assert.ok(
-            serverSource.includes("const insertSql = \"INSERT INTO roles (student_id, role_type) VALUES (?, ?)\";"),
-            'Production server source must define named insertSql'
+            roleRoutesSource.includes("const insertSql = \"INSERT INTO roles (student_id, role_type) VALUES (?, ?)\";"),
+            'Production role route source must define named insertSql'
         );
         assert.ok(
-            serverSource.includes("const insertParams = [studentId, role_type];"),
-            'Production server source must define named insertParams'
+            roleRoutesSource.includes("const insertParams = [studentId, role_type];"),
+            'Production role route source must define named insertParams'
         );
     });
 

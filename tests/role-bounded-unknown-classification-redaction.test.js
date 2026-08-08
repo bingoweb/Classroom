@@ -251,19 +251,19 @@ test('Role Bounded Unknown Classification Redaction Tests', async (t) => {
 
     const fs = require('fs');
     const path = require('path');
-    const serverSource = fs.readFileSync(
-        path.join(__dirname, '../backend/server.js'),
+    const roleRoutesSource = fs.readFileSync(
+        path.join(__dirname, '../backend/routes/role-routes.js'),
         'utf8'
     );
 
     await t.test('Production source contains no request-ID bypass', async () => {
         assert.ok(
-            !serverSource.includes('req-unknown'),
-            'Production server source must not contain the test-specific req-unknown request ID'
+            !roleRoutesSource.includes('req-unknown'),
+            'Production role route source must not contain the test-specific req-unknown request ID'
         );
         assert.ok(
-            !serverSource.includes('Rol atanırken hata oluştu: Bilinmeyen hata'),
-            'Production server source must not contain the rejected raw unknown-classification response'
+            !roleRoutesSource.includes('Rol atanırken hata oluştu: Bilinmeyen hata'),
+            'Production role route source must not contain the rejected raw unknown-classification response'
         );
     });
 

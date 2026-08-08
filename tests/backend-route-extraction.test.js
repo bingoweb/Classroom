@@ -11,6 +11,7 @@ const settingsRoutesPath = path.join(root, 'backend', 'routes', 'settings-routes
 const systemRoutesPath = path.join(root, 'backend', 'routes', 'system-routes.js');
 const scheduleRoutesPath = path.join(root, 'backend', 'routes', 'schedule-routes.js');
 const studentRoutesPath = path.join(root, 'backend', 'routes', 'student-routes.js');
+const roleRoutesPath = path.join(root, 'backend', 'routes', 'role-routes.js');
 
 test('P3-5A1 extracts settings and system route registration from server.js', () => {
     assert.equal(
@@ -96,4 +97,26 @@ test('P3-5A3 extracts student route registration from server.js', () => {
     assert.match(studentSource, /app\.post\(['"]\/api\/students\/import['"]/);
     assert.match(studentSource, /app\.delete\(['"]\/api\/students\/:id['"]/);
     assert.match(studentSource, /app\.put\(['"]\/api\/students\/:id\/photo['"]/);
+});
+
+test('P3-5A4 extracts role route registration from server.js', () => {
+    assert.equal(
+        fs.existsSync(roleRoutesPath),
+        true,
+        'backend/routes/role-routes.js must exist'
+    );
+
+    const serverSource = fs.readFileSync(serverPath, 'utf8');
+    const roleSource = fs.readFileSync(roleRoutesPath, 'utf8');
+
+    assert.match(roleSource, /function\s+registerRoleRoutes\s*\(app,\s*deps\)/);
+    assert.match(serverSource, /registerRoleRoutes\s*\(app,/);
+
+    assert.doesNotMatch(serverSource, /app\.get\(['"]\/api\/roles['"]/);
+    assert.doesNotMatch(serverSource, /app\.post\(['"]\/api\/roles['"]/);
+    assert.doesNotMatch(serverSource, /app\.delete\(['"]\/api\/roles\/:id['"]/);
+
+    assert.match(roleSource, /app\.get\(['"]\/api\/roles['"]/);
+    assert.match(roleSource, /app\.post\(['"]\/api\/roles['"]/);
+    assert.match(roleSource, /app\.delete\(['"]\/api\/roles\/:id['"]/);
 });
