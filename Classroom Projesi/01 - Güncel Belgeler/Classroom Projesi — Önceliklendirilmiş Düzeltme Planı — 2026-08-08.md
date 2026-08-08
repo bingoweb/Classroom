@@ -1514,6 +1514,14 @@ Geçici Chromium context, Node server, SQLite DB, trigger ve `/tmp` test dosyala
 
 P1-6 yalnız hata metnini değiştirme değil; client redaction + transaction preservation + server diagnostics + real request correlation birlikte doğrulandığı için 🟩 kapatılmıştır.
 
+### Commit ve GitHub kaydı
+
+- Commit: `288d98101766eb87391bd890b6d5ff4ba2f970c3`
+- Mesaj: `fix: redact slide delete database errors`
+- Dal: `main`
+- Push: `main -> origin/main` başarılı.
+- Push sonrası yerel `HEAD` ile `origin/main` aynı SHA olarak doğrulandı.
+
 ---
 
 # 11. P2-1 — SheetJS'i yerelleştir ve sürümü tekleştir
