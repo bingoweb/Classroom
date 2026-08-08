@@ -4172,7 +4172,34 @@ Bu kanıtlarla P3-4 kapanmıştır. P2-6 fiziksel 55\" 4K TV kabulü ayrı açı
 # 21. P3-5 — Büyük refactor işleri yalnız stabilizasyondan sonra
 
 **Öncelik:** P3 / son  
-**Durum:** ⬜ Bekliyor
+**Durum:** 🟩 Refactor yol haritası tamamlandı; gerçek extraction işleri ayrı gelecekteki dalgalar olarak uygulanacak
+
+### 21.0 8 Ağustos 2026 planlama sonucu
+
+P3-5 kapsamında büyük dosyalar **hemen refactor edilmedi**. Önce gerçek HEAD envanteri çıkarıldı ve güvenli uygulama sırası ayrı yaşayan Markdown yol haritasına bağlandı:
+
+`Classroom Projesi/01 - Güncel Belgeler/Classroom Projesi — P3-5 Büyük Refactor Yol Haritası — 8 Ağustos 2026.md`
+
+Doğrulanan güncel büyüklükler:
+
+- `backend/server.js`: 3064 satır
+- `public/admin/admin.js`: 1804 satır
+- `public/css/style.css`: 4740 satır
+- `public/css/kiosk-magic-park.css`: 1433 satır
+- `public/admin/style.css`: 389 satır
+- admin HTML: yaklaşık 195 statik inline style attribute
+- admin JS template'leri: yaklaşık 103 inline style fragment
+
+Kesin mimari karar:
+
+1. Backend önce `registerXRoutes(app, deps)` modeliyle domain bazında küçük extraction'lara ayrılacak; büyük-bang `express.Router()` dönüşümü yapılmayacak.
+2. Admin JS klasik script/domain modüllerine ayrılacak; mevcut inline handler global'leri geçici adaptörlerle korunacak.
+3. Admin inline CSS temizliği görsel redesign olmadan ayrı dalga olacak.
+4. Kiosk CSS dead-style/agresif temizlik **P2-6 gerçek 55\" 4K fiziksel kabulü tamamlanmadan uygulanmayacak**.
+5. Backend extraction sırası düşük riskten yükseğe: settings/system → schedule → students → roles → attendance → logs → slides; auth/session ayrı güvenlik turu olarak en son değerlendirilecek.
+6. Slides route ve admin slides modülü kendi alanlarında en son taşınacak; cache, fallback, transaction ve media path sözleşmeleri aynı committe yeniden tasarlanmayacak.
+
+P3-5'in yaşayan durum tablosundaki işi “refactor planı”dır. Bu plan artık tamamlanmıştır; gerçek kod extraction dalgaları yeni bağımsız işler olarak açılacaktır.
 
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
@@ -4469,7 +4496,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 15 | README/context/docs güncelleme | P3 | ⬜ |
 | 16 | Legacy settings katmanı | P3 | 🟩 |
 | 17 | Orphan backend config/utils | P3 | 🟩 |
-| 18 | Büyük server/admin/CSS refactor planı | P3 | ⬜ |
+| 18 | Büyük server/admin/CSS refactor planı | P3 | 🟩 |
 
 Durum simgeleri:
 
