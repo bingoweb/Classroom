@@ -461,7 +461,76 @@ test('Slides Update Route ID Validation', async (t) => {
         assert.strictEqual(unlinkCalled, 0);
     });
 
-    await t.test('8. Mandatory successful text update test', async () => {
+    await t.test('8. is_active accepts only boolean or integer 0/1 and normalizes to SQLite 0/1', async () => {
+        const validCases = [
+            { input: 0, expected: 0 },
+            { input: 1, expected: 1 },
+            { input: false, expected: 0 },
+            { input: true, expected: 1 }
+        ];
+
+        for (const testCase of validCases) {
+            let runSql = null;
+            let runParams = null;
+
+            db.get = (sql, params, cb) => {
+                cb(null, { media_path: 'uploads/existing.jpg' });
+            };
+            db.run = function(sql, params, cb) {
+                runSql = sql;
+                runParams = params;
+                this.changes = 1;
+                cb.call(this, null);
+            };
+            fs.existsSync = () => false;
+            fs.unlinkSync = () => {};
+
+            const req = {
+                params: { id: '47' },
+                body: { is_active: testCase.input },
+                file: undefined,
+                requestId: 'slide-active-valid'
+            };
+            const resObj = await invokeHandler(req);
+
+            assert.strictEqual(resObj.statusCode, 200);
+            assert.deepEqual(resObj.body, { message: 'Slayt başarıyla güncellendi', changes: 1 });
+            assert.strictEqual(runSql, 'UPDATE slides SET is_active = ? WHERE id = ?');
+            assert.deepEqual(runParams, [testCase.expected, 47]);
+        }
+    });
+
+    await t.test('8b. is_active rejects strings, out-of-range numbers, null, arrays, and objects', async () => {
+        const invalidValues = ['1', '0', 2, -1, null, [], {}, 'true', 'false'];
+
+        for (const value of invalidValues) {
+            let getCalled = 0;
+            let runCalled = 0;
+
+            db.get = (sql, params, cb) => {
+                getCalled++;
+                cb(null, { media_path: 'uploads/existing.jpg' });
+            };
+            db.run = () => { runCalled++; };
+            fs.existsSync = () => false;
+            fs.unlinkSync = () => {};
+
+            const req = {
+                params: { id: '47' },
+                body: { is_active: value },
+                file: undefined,
+                requestId: 'slide-active-invalid'
+            };
+            const resObj = await invokeHandler(req);
+
+            assert.strictEqual(resObj.statusCode, 400);
+            assert.deepEqual(resObj.body, { error: 'Geçersiz slayt aktiflik değeri' });
+            assert.strictEqual(getCalled, 0);
+            assert.strictEqual(runCalled, 0);
+        }
+    });
+
+    await t.test('9. Mandatory successful text update test', async () => {
         let getSql, getParams;
         let runSql, runParams;
         let existsCalled = 0, unlinkCalled = 0;
@@ -503,7 +572,7 @@ test('Slides Update Route ID Validation', async (t) => {
         assert.strictEqual(unlinkCalled, 0);
     });
 
-    await t.test('9. Mandatory update-error uploaded-file cleanup test', async () => {
+    await t.test('10. Mandatory update-error uploaded-file cleanup test', async () => {
         let getParams, runParams;
         let existsCalled = 0, unlinkCalled = 0;
         let unlinkPath = null;
@@ -535,7 +604,7 @@ test('Slides Update Route ID Validation', async (t) => {
         assert.strictEqual(unlinkPath, '/tmp/failed-slide-update.jpg');
     });
 
-    await t.test('10. Mandatory valid media-replacement preservation test', async () => {
+    await t.test('11. Mandatory valid media-replacement preservation test', async () => {
         let getParams, runSql, runParams;
         let existsCalled = 0, unlinkCalled = 0;
         let unlinkPath = null;
@@ -583,7 +652,7 @@ test('Slides Update Route ID Validation', async (t) => {
         assert.notStrictEqual(unlinkPath, req.file.path);
     });
 
-    await t.test('11. Source guard against err.message in lookup error path', () => {
+    await t.test('12. Source guard against err.message in lookup error path', () => {
         const sourcePath = path.join(__dirname, '../backend/server.js');
         const sourceCode = fs.readFileSync(sourcePath, 'utf8');
 

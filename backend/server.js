@@ -1916,6 +1916,33 @@ app.get('/api/slides', (req, res, next) => {
     });
 });
 
+// Get all slides for authenticated admin management (active + inactive)
+app.get('/api/admin/slides', requireAdminSession, (req, res) => {
+    const sql = "SELECT * FROM slides ORDER BY display_order ASC";
+    const params = [];
+
+    db.all(sql, params, (err, rows) => {
+        if (err) {
+            logger.error(COMPONENTS.API, 'Error fetching admin slides', err, {
+                endpoint: '/api/admin/slides',
+                requestId: req.requestId,
+                query: sql,
+                params
+            });
+            return res.status(500).json({ error: 'Slayt bilgileri alınırken hata oluştu' });
+        }
+
+        const normalizedRows = rows.map(row => {
+            if (row.media_path) {
+                row.media_path = resolvePublicSlideMediaUrl(row.media_path);
+            }
+            return row;
+        });
+
+        res.json(normalizedRows);
+    });
+});
+
 // Get single slide
 app.get('/api/slides/:id', (req, res) => {
     const rawSlideId = req.params.id;
@@ -2268,7 +2295,33 @@ app.put('/api/slides/:id', requireAdminSession, requireCsrfToken, requireAdminWr
         });
     }
 
-    const { title, content_type, media_type, text_content, display_duration, video_auto_advance, transition_type, transition_duration, transition_mode } = req.body;
+    const {
+        title,
+        content_type,
+        media_type,
+        text_content,
+        display_duration,
+        video_auto_advance,
+        transition_type,
+        transition_duration,
+        transition_mode,
+        is_active
+    } = req.body;
+
+    let normalizedIsActive;
+    if (is_active !== undefined) {
+        const isBoolean = typeof is_active === 'boolean';
+        const isIntegerFlag = Number.isInteger(is_active) && (is_active === 0 || is_active === 1);
+
+        if (!isBoolean && !isIntegerFlag) {
+            if (req.file) {
+                try { fs.unlinkSync(req.file.path); } catch (e) { }
+            }
+            return res.status(400).json({ error: 'Geçersiz slayt aktiflik değeri' });
+        }
+
+        normalizedIsActive = isBoolean ? (is_active ? 1 : 0) : is_active;
+    }
 
     const lookupSql = 'SELECT media_path FROM slides WHERE id = ?';
     const lookupParams = [slideId];
@@ -2320,6 +2373,7 @@ app.put('/api/slides/:id', requireAdminSession, requireCsrfToken, requireAdminWr
         if (transition_type !== undefined) { updates.push('transition_type = ?'); values.push(transition_type || null); }
         if (transition_duration !== undefined) { updates.push('transition_duration = ?'); values.push(transition_duration ? parseInt(transition_duration) * 1000 : null); }
         if (transition_mode !== undefined) { updates.push('transition_mode = ?'); values.push(transition_mode || null); }
+        if (normalizedIsActive !== undefined) { updates.push('is_active = ?'); values.push(normalizedIsActive); }
 
         if (updates.length === 0) {
             if (req.file) fs.unlinkSync(req.file.path);

@@ -971,7 +971,7 @@ let currentEditingSlide = null;
 async function fetchSlides() {
     try {
         logger.debug(COMPONENTS.ADMIN, 'Fetching slides', null);
-        const res = await fetch(`${CONFIG.API_URL}/slides`);
+        const res = await fetch(`${CONFIG.API_URL}/admin/slides`);
         if (!res.ok) {
             const error = new Error(`HTTP ${res.status}: ${res.statusText}`);
             logger.error(COMPONENTS.ADMIN, 'Failed to fetch slides', error, {
@@ -1046,8 +1046,10 @@ function renderSlides(slides) {
             mediaPath = Utils.normalizePath(mediaPath, true);
         }
 
+        const isActive = slide.is_active === 1 || slide.is_active === true;
+
         return `
-            <div class="slide-item" data-id="${slide.id}" data-order="${slide.display_order}" draggable="true" style="display: flex; align-items: center; gap: 15px; padding: 15px; margin-bottom: 10px; background: white; border-radius: 8px; border: 1px solid #ddd; cursor: move;">
+            <div class="slide-item${isActive ? '' : ' is-inactive'}" data-id="${slide.id}" data-order="${slide.display_order}" draggable="true" style="display: flex; align-items: center; gap: 15px; padding: 15px; margin-bottom: 10px; background: white; border-radius: 8px; border: 1px solid #ddd; cursor: move;">
                 <div style="font-size: 1.5rem; cursor: move;">☰</div>
                 ${mediaPath ? `
                     <div style="flex-shrink: 0; width: 80px; height: 60px; border-radius: 5px; overflow: hidden; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
@@ -1065,13 +1067,13 @@ function renderSlides(slides) {
                         <span style="font-size: 1.2rem;">${mediaTypeIcons[slide.media_type] || '📄'}</span>
                         ${slide.title ? `<span style="font-weight: bold;">${slide.title}</span>` : ''}
                         <span style="color: #666; font-size: 0.9rem;">${transitionLabels[slide.transition_mode] || 'Varsayılan'}</span>
-                        ${slide.is_active ? '<span style="color: green;">✓ Aktif</span>' : '<span style="color: red;">✗ Pasif</span>'}
+                        ${isActive ? '<span style="color: green;">✓ Aktif</span>' : '<span style="color: red;">✗ Pasif</span>'}
                     </div>
                     ${slide.text_content ? `<div style="color: #666; font-size: 0.9rem; margin-top: 5px;">${slide.text_content.substring(0, 50)}${slide.text_content.length > 50 ? '...' : ''}</div>` : ''}
                 </div>
                 <div style="display: flex; gap: 5px;">
                     <button onclick="editSlide(${slide.id})" style="padding: 5px 10px; background: var(--secondary); color: white; border: none; border-radius: 4px; cursor: pointer;">Düzenle</button>
-                    <button onclick="toggleSlideActive(${slide.id})" style="padding: 5px 10px; background: ${slide.is_active ? '#ff9800' : '#4caf50'}; color: white; border: none; border-radius: 4px; cursor: pointer;">${slide.is_active ? 'Pasif' : 'Aktif'}</button>
+                    <button onclick="toggleSlideActive(${slide.id})" style="padding: 5px 10px; background: ${isActive ? '#ff9800' : '#4caf50'}; color: white; border: none; border-radius: 4px; cursor: pointer;">${isActive ? 'Pasif Yap' : 'Aktif Yap'}</button>
                     <button onclick="deleteSlide(${slide.id})" style="padding: 5px 10px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">Sil</button>
                 </div>
             </div>

@@ -303,4 +303,57 @@ test('Slides Update Cache Tests', async (t) => {
         assert.strictEqual(dbAllCount, 1);
         assert.deepStrictEqual(getRes2.body, activeSlidesRow);
     });
+
+    await t.test('F. Successful is_active update invalidates the populated active-slide cache', async () => {
+        mockTime += 5 * 60 * 1000 + 1000;
+
+        let dbAllCount = 0;
+        let activeSlidesRow = [
+            { id: 47, title: 'Toggle slide', media_path: '/uploads/slides/toggle.png', is_active: 1 }
+        ];
+
+        db.all = function(sql, params, cb) {
+            const actualCb = cb || params;
+            dbAllCount++;
+            actualCb(null, activeSlidesRow);
+        };
+
+        const getRes1 = createMockRes();
+        activeHandler({ requestId: 'req-toggle-1' }, getRes1);
+        assert.strictEqual(dbAllCount, 1);
+
+        db.get = function(sql, params, cb) {
+            cb(null, { media_path: '/uploads/slides/toggle.png' });
+        };
+
+        let capturedSql = null;
+        let capturedParams = null;
+        db.run = function(sql, params, cb) {
+            capturedSql = sql;
+            capturedParams = params;
+            this.changes = 1;
+            cb.call(this, null);
+        };
+
+        const putReq = {
+            params: { id: '47' },
+            body: { is_active: 0 },
+            file: undefined,
+            requestId: 'req-toggle-2'
+        };
+        const putRes = createMockRes();
+        putHandler(putReq, putRes);
+
+        assert.strictEqual(putRes.statusCode, 200);
+        assert.deepStrictEqual(putRes.body, { message: 'Slayt başarıyla güncellendi', changes: 1 });
+        assert.strictEqual(capturedSql, 'UPDATE slides SET is_active = ? WHERE id = ?');
+        assert.deepStrictEqual(capturedParams, [0, 47]);
+
+        activeSlidesRow = [];
+        const getRes2 = createMockRes();
+        activeHandler({ requestId: 'req-toggle-3' }, getRes2);
+
+        assert.strictEqual(dbAllCount, 2, 'active cache should be invalidated after is_active update');
+        assert.deepStrictEqual(getRes2.body, []);
+    });
 });
