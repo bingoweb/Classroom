@@ -1682,7 +1682,7 @@ let allStudentsForAttendance = [];
 let currentAttendanceDate = '';
 
 window.setTodayDate = function () {
-    const today = new Date().toISOString().split('T')[0];
+    const today = Utils.getIstanbulDateKey();
     document.getElementById('attendanceDate').value = today;
     loadAttendanceForDate();
 };

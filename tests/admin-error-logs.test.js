@@ -105,7 +105,8 @@ test('Admin Error Logs Tests', async (t) => {
             CONFIG: { API_URL: 'http://localhost/api' },
             Utils: {
                 showError: (msg) => { sandbox.lastError = msg; },
-                showSuccess: (msg) => { sandbox.lastSuccess = msg; }
+                showSuccess: (msg) => { sandbox.lastSuccess = msg; },
+                getIstanbulDateKey: () => '2026-08-08'
             },
             COMPONENTS: { ADMIN: 'ADMIN' },
             logger: {

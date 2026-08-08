@@ -565,6 +565,14 @@ Gerçek admin işlem akışlarıyla kabul turu:
 
 Böylece P1-2'nin gerçek browser kabul kriterlerinin tamamı karşılandı.
 
+### Commit ve GitHub kaydı
+
+- Commit: `43249e861c753e82f28c5b1edf9a5a6969b3a3e1`
+- Mesaj: `fix: show admin operation feedback`
+- Dal: `main`
+- Push: `main -> origin/main` başarılı.
+- Push sonrası yerel `HEAD` ile `origin/main` aynı SHA olarak doğrulandı.
+
 ---
 
 # 7. P1-3 — Admin “Bugün” tarihini İstanbul saatine bağla
@@ -572,7 +580,7 @@ Böylece P1-2'nin gerçek browser kabul kriterlerinin tamamı karşılandı.
 **Öncelik:** P1  
 **Kullanıcı etkisi:** Orta-Yüksek  
 **Risk:** Düşük  
-**Durum:** ⬜ Bekliyor
+**Durum:** 🟩 Tamamlandı — 8 Ağustos 2026
 
 ## 7.1 Sorun
 
@@ -626,6 +634,66 @@ Admin helper İstanbul tarihini vermelidir.
 ## 7.5 Kapanış kriteri
 
 Backend date-utils testi ile frontend today helper aynı örnek zaman için aynı `YYYY-MM-DD` değerini vermelidir.
+
+## 7.6 Uygulama ve doğrulama kaydı — 8 Ağustos 2026
+
+Bu madde tamamlandı.
+
+### Kök neden
+
+Backend daha önce `backend/date-utils.js` içindeki `getIstanbulDateKey()` ile `Europe/Istanbul` takvim gününe geçirilmişti. Admin ise `setTodayDate()` içinde hâlâ:
+
+```js
+new Date().toISOString().split('T')[0]
+```
+
+kullanıyordu. `toISOString()` UTC günü verdiği için Türkiye'de özellikle **00:00–02:59** aralığında admin “Bugün” butonu backend'in “bugün” kavramından bir gün geride kalabiliyordu.
+
+### Uygulanan çözüm
+
+- `public/js/utils.js` içine frontend için `getIstanbulDateKey(date = new Date())` eklendi.
+- Helper backend ile aynı temel sözleşmeyi kullanıyor:
+  - timezone: `Europe/Istanbul`,
+  - Gregorian calendar,
+  - Latin rakamları,
+  - `Intl.DateTimeFormat(...).formatToParts()` ile yıl/ay/gün ayrıştırma,
+  - çıktı: strict `YYYY-MM-DD`,
+  - invalid/non-Date giriş için `TypeError`.
+- Helper hem Node test export'una hem browser `window.Utils` export'una eklendi.
+- `public/admin/admin.js` içindeki `setTodayDate()` artık doğrudan `Utils.getIstanbulDateKey()` kullanıyor.
+- Admin tarafındaki UTC `toISOString()` today üretimi kaldırıldı.
+- `admin-error-logs.test.js` içindeki eski minimal `Utils` test double'ı yeni shared sözleşmeye uygun hale getirildi; üretim koduna UTC fallback eklenmedi.
+
+### TDD kanıtı
+
+Yeni test:
+
+`tests/admin-istanbul-date.test.js`
+
+Üretim kodu değiştirilmeden önce kırmızı koşuda:
+
+- `Utils.getIstanbulDateKey` mevcut değildi,
+- `2026-08-08T21:30:00.000Z` anında İstanbul tarihi `2026-08-09` olması gerekirken admin `2026-08-08` üretiyordu,
+- `setTodayDate()` hâlâ `toISOString()` kullanıyordu.
+
+Düzeltme sonrası P1-3 + backend date-utils + notification + attendance komşu seti:
+
+- **192 / 192 pass**.
+
+Özellikle sınır testleri:
+
+- `2026-08-08T20:59:59.999Z` → İstanbul `2026-08-08`,
+- `2026-08-08T21:30:00.000Z` → İstanbul `2026-08-09`,
+- `2026-12-31T21:15:00.000Z` → İstanbul `2027-01-01`.
+
+İlk tam core koşusunda tek hata, `admin-error-logs.test.js` içindeki eski `Utils` mock'unun yeni `getIstanbulDateKey()` metodunu taşımamasından kaynaklandı. Bu üretim hatası değildi; test double gerçek shared sözleşmeye güncellendi ve tam paket yeniden çalıştırıldı.
+
+Son tam `npm run test:core`:
+
+- **1298 / 1298 pass**,
+- **0 fail**.
+
+Böylece frontend “Bugün” ve backend “bugün” aynı `Europe/Istanbul` takvim günü sözleşmesine bağlandı.
 
 ---
 
@@ -1726,7 +1794,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 0 | Başlangıç baseline / test disiplini | Zorunlu | ⬜ |
 | 1 | Slayt Aktif/Pasif yönetimi | P1 | 🟩 |
 | 2 | Admin görünür feedback | P1 | 🟩 |
-| 3 | Admin İstanbul “Bugün” tarihi | P1 | ⬜ |
+| 3 | Admin İstanbul “Bugün” tarihi | P1 | 🟩 |
 | 4 | Slide settings HTTP hata kontrolü | P1 | ⬜ |
 | 5 | Admin password fail-closed | P1 | ⬜ |
 | 6 | Slide delete error redaction | P1 | ⬜ |
