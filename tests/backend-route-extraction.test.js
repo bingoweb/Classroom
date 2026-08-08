@@ -12,6 +12,7 @@ const systemRoutesPath = path.join(root, 'backend', 'routes', 'system-routes.js'
 const scheduleRoutesPath = path.join(root, 'backend', 'routes', 'schedule-routes.js');
 const studentRoutesPath = path.join(root, 'backend', 'routes', 'student-routes.js');
 const roleRoutesPath = path.join(root, 'backend', 'routes', 'role-routes.js');
+const attendanceRoutesPath = path.join(root, 'backend', 'routes', 'attendance-routes.js');
 
 test('P3-5A1 extracts settings and system route registration from server.js', () => {
     assert.equal(
@@ -119,4 +120,28 @@ test('P3-5A4 extracts role route registration from server.js', () => {
     assert.match(roleSource, /app\.get\(['"]\/api\/roles['"]/);
     assert.match(roleSource, /app\.post\(['"]\/api\/roles['"]/);
     assert.match(roleSource, /app\.delete\(['"]\/api\/roles\/:id['"]/);
+});
+
+test('P3-5A5 extracts attendance route registration from server.js', () => {
+    assert.equal(
+        fs.existsSync(attendanceRoutesPath),
+        true,
+        'backend/routes/attendance-routes.js must exist'
+    );
+
+    const serverSource = fs.readFileSync(serverPath, 'utf8');
+    const attendanceSource = fs.readFileSync(attendanceRoutesPath, 'utf8');
+
+    assert.match(attendanceSource, /function\s+registerAttendanceRoutes\s*\(app,\s*deps\)/);
+    assert.match(serverSource, /registerAttendanceRoutes\s*\(app,/);
+
+    assert.doesNotMatch(serverSource, /app\.get\(['"]\/api\/attendance\/today['"]/);
+    assert.doesNotMatch(serverSource, /app\.get\(['"]\/api\/attendance\/:date['"]/);
+    assert.doesNotMatch(serverSource, /app\.post\(['"]\/api\/attendance['"]/);
+    assert.doesNotMatch(serverSource, /app\.put\(['"]\/api\/attendance\/:id['"]/);
+
+    assert.match(attendanceSource, /app\.get\(['"]\/api\/attendance\/today['"]/);
+    assert.match(attendanceSource, /app\.get\(['"]\/api\/attendance\/:date['"]/);
+    assert.match(attendanceSource, /app\.post\(['"]\/api\/attendance['"]/);
+    assert.match(attendanceSource, /app\.put\(['"]\/api\/attendance\/:id['"]/);
 });

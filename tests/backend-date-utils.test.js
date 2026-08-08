@@ -141,11 +141,14 @@ test('19. /api/stats is wired to getIstanbulDateKey()', () => {
 
 test('20. /api/attendance/today is wired to getIstanbulDateKey()', () => {
     const serverJsPath = path.resolve(__dirname, '../backend/server.js');
+    const attendanceRoutesPath = path.resolve(__dirname, '../backend/routes/attendance-routes.js');
     const systemRoutesPath = path.resolve(__dirname, '../backend/routes/system-routes.js');
     const serverContent = fs.readFileSync(serverJsPath, 'utf8');
+    const attendanceRoutesContent = fs.readFileSync(attendanceRoutesPath, 'utf8');
     const systemRoutesContent = fs.readFileSync(systemRoutesPath, 'utf8');
 
-    const attendanceMatches = serverContent.match(/const today = getIstanbulDateKey\(\);/g) || [];
+    assert.match(serverContent, /registerAttendanceRoutes\(app,\s*\{[\s\S]*?getIstanbulDateKey[\s\S]*?\}\);/);
+    const attendanceMatches = attendanceRoutesContent.match(/const today = getIstanbulDateKey\(\);/g) || [];
     const statsMatches = systemRoutesContent.match(/const today = getIstanbulDateKey\(\);/g) || [];
 
     assert.strictEqual(attendanceMatches.length, 1);
