@@ -1524,6 +1524,265 @@ P1-6 yalnız hata metnini değiştirme değil; client redaction + transaction pr
 
 ---
 
+# 10A. P2-0 — Slide settings'i tek atomik endpoint'e geçir
+
+**Öncelik:** P2
+**Kullanıcı etkisi:** Orta-Yüksek
+**Risk:** Orta
+**Kaynak:** P1-4 gerçek browser/SQLite acceptance turunda kanıtlanan kısmi yazma riski
+**Durum:** 🟩 Tamamlandı ve doğrulandı — 8 Ağustos 2026
+
+## 10A.1 Neden P2 sırasının başına alındı?
+
+P1-4 yanlış success mesajını ve HTTP hatasından sonra gereksiz devamı kapattı. Ancak admin formu üç ayrı `POST /api/slide-settings` kullandığı için ikinci veya üçüncü yazma başarısız olduğunda önceki başarılı yazmalar DB'de kalabiliyordu.
+
+Bu risk P1-4 gerçek SQLite testinde gözlendiği için SheetJS ve diğer P2 bakım işlerinden önce ele alındı.
+
+Hedef yalnız request sayısını azaltmak değil, şu sözleşmeyi sağlamaktır:
+
+> Üç admin slayt ayarı ya birlikte commit olur ya da hiçbirisi değişmez.
+
+## 10A.2 Yeni API sözleşmesi
+
+Yeni korumalı endpoint:
+
+`PUT /api/slide-settings`
+
+Middleware sırası:
+
+1. `requireAdminSession`
+2. `requireCsrfToken`
+3. `requireAdminWriteRateLimit`
+4. route handler
+
+Body tam olarak üç alan taşır:
+
+```json
+{
+  "default_duration": 10000,
+  "default_transition_mode": "auto",
+  "default_transition_duration": 1200
+}
+```
+
+Validation:
+
+- body plain object olmalı,
+- üç alanın tamamı zorunlu,
+- bilinmeyen ek key reddedilir,
+- `default_duration`: integer `1000–60000` ms,
+- `default_transition_mode`: yalnız `auto | random | manual`,
+- `default_transition_duration`: integer `500–3000` ms,
+- transition duration 100 ms adımlı olmalı.
+
+Invalid payload DB bağlantısı/transaction açılmadan `400` döner.
+
+Mevcut `POST /api/slide-settings` backward compatibility amacıyla şimdilik korunmuştur. Admin UI artık POST endpoint'ini kullanmaz.
+
+## 10A.3 Backend atomiklik modeli
+
+Backend ayrı SQLite connection kullanır:
+
+1. `BEGIN IMMEDIATE`
+2. `default_duration` upsert
+3. `default_transition_mode` upsert
+4. `default_transition_duration` upsert
+5. `COMMIT`
+
+Herhangi bir upsert veya commit hatasında:
+
+- `ROLLBACK` denenir,
+- client'a yalnız `Slayt ayarları güncellenirken hata oluştu` verilir,
+- iç SQLite ayrıntısı client'a sızmaz,
+- özgün Error server log'da korunur,
+- `requestId`, `stage` ve gerektiğinde `settingKey` log context'ine yazılır.
+
+Gerçek HTTP request'te requestId yoksa route `crypto.randomUUID()` ile UUID v4 üretir.
+
+Rollback kendisi de hata verirse secondary hata ayrıca loglanır; client contract değişmez.
+
+## 10A.4 Frontend değişikliği
+
+`public/admin/admin.js` içindeki `handleSlideSettingsSubmit()` artık üç POST döngüsü yapmaz.
+
+Tek request:
+
+- method: `PUT`,
+- endpoint: `/api/slide-settings`,
+- üç ayar tek JSON body içinde.
+
+Success notification yalnız tek atomik PUT `2xx` olduğunda gösterilir.
+
+400/500/malformed response ve network exception davranışlarında P1-4'te kurulan güvenli görünür feedback korunmuştur.
+
+## 10A.5 TDD kırmızı kanıtı
+
+Production kodu değiştirilmeden önce birlikte çalıştırıldı:
+
+- `tests/slide-settings-atomic.test.js`
+- `tests/admin-slide-settings-submit.test.js`
+- `tests/admin-route-auth.test.js`
+
+İlk RED sonucu:
+
+- toplam **20 test**,
+- **4 pass**,
+- **16 fail**.
+
+Beklenen kırılmalar doğrulandı:
+
+- `PUT /api/slide-settings` route'u yoktu,
+- auth testi PUT için `404` görüyordu,
+- frontend bir request yerine **3 POST** gönderiyordu,
+- source contract'ta PUT bulunmuyordu.
+
+Bu nedenle yeni testlerin mevcut eski davranışı gerçekten yakaladığı doğrulandı.
+
+## 10A.6 Yeni atomiklik test kapsamı
+
+Yeni dosya:
+
+`tests/slide-settings-atomic.test.js`
+
+Kapsam:
+
+- structural validation,
+- eksik field,
+- bilinmeyen field,
+- type/range/enum/100 ms-step validation,
+- successful exact SQL/order/params,
+- requestId UUID fallback,
+- connection failure,
+- BEGIN failure,
+- 1., 2. ve 3. upsert failure,
+- COMMIT failure,
+- rollback failure,
+- client error redaction,
+- real SQLite trigger rollback,
+- real SQLite success commit,
+- ilgisiz `default_announcement_duration` değerinin korunması.
+
+İlk production değişikliği sonrası hedef paket:
+
+- **20 / 20 pass**.
+
+## 10A.7 Komşu regresyonlar
+
+Atomik settings, frontend submit, legacy settings POST, settings GET redaction, admin notification, route auth, session, error-redaction, rate-limit ve admin simplification birlikte çalıştırıldı.
+
+İlk komşu turda yalnız eski write-route sayacı kırıldı:
+
+- yeni PUT nedeniyle actual `19`, eski assertion `18`.
+
+Test yalnız sayı olarak güncellenmedi. Yeni PUT için özel olarak şu middleware sırası assertion'a eklendi:
+
+`requireAdminSession → requireCsrfToken → write-rate-limit middleware`
+
+Tekrar koşu sonucu:
+
+- **109 / 109 pass**,
+- **0 fail**.
+
+Legacy `POST /api/slide-settings` testleri de yeşil kaldı; geriye uyumluluk bozulmadı.
+
+## 10A.8 Tam çekirdek kabul kapısı
+
+Yeni atomik test `test:core` içine dahil edilmiş halde:
+
+- `node --check backend/server.js` → pass,
+- `node --check public/admin/admin.js` → pass,
+- `git diff --check` → temiz,
+- `npm run test:core` → **1329 / 1329 pass**,
+- **0 fail**.
+
+## 10A.9 Gerçek browser + gerçek SQLite rollback acceptance
+
+Asıl proje DB'sine dokunulmadı. Ayrı `/tmp` SQLite DB, ayrı port ve yalnız test sürecine ait admin environment credential ile gerçek Classroom server çalıştırıldı.
+
+Baseline:
+
+- `default_duration = 10000`,
+- `default_transition_mode = auto`,
+- `default_transition_duration = 1000`,
+- ilgisiz `default_announcement_duration = 7`.
+
+Temp SQLite'a `default_transition_mode` upsert'inde bilerek internal constraint üreten trigger eklendi.
+
+Gerçek Chromium admin formunda:
+
+- süre `15 s`,
+- mode `random`,
+- transition `1.8 s`
+
+seçilip gerçek form submit edildi.
+
+Network sonucu:
+
+- tam **1 adet** `PUT /api/slide-settings`,
+- HTTP **500**,
+- eski `POST /api/slide-settings` **yok**.
+
+Admin UI:
+
+- success yok,
+- görünür error notification,
+- `role="alert"`.
+
+DB rollback sonrası:
+
+- `10000 / auto / 1000` aynen korundu,
+- `default_announcement_duration = 7` aynen korundu.
+
+Server log:
+
+- internal SQLite marker yalnız server tarafında kaldı,
+- `stage: update`,
+- `settingKey: default_transition_mode`,
+- UUID v4 `requestId` mevcut.
+
+İç SQLite ayrıntısı client notification/response'a çıkmadı.
+
+## 10A.10 Gerçek browser + gerçek SQLite success acceptance
+
+Trigger kaldırıldı ve aynı gerçek admin form tekrar submit edildi.
+
+Network:
+
+- tam **1 adet** yeni `PUT /api/slide-settings`,
+- HTTP **200**.
+
+UI:
+
+- `Ayarlar başarıyla kaydedildi!`,
+- `role="status"`.
+
+GET `/api/slide-settings` ve doğrudan temp SQLite okuması birlikte doğruladı:
+
+- `default_duration = 15000`,
+- `default_transition_mode = random`,
+- `default_transition_duration = 1800`,
+- ilgisiz `default_announcement_duration = 7`.
+
+Yani üç yönetilen ayar birlikte commit olurken dördüncü ilgisiz ayar değişmedi.
+
+## 10A.11 Gerçek HTTP validation acceptance
+
+Authenticated gerçek browser context'inden invalid mode (`smart`) ile PUT gönderildi.
+
+Sonuç:
+
+- HTTP **400**,
+- `Geçiş modu geçersiz`,
+- request öncesi ve sonrası DB değerleri birebir aynı.
+
+Validation transaction açmadan mutation'ı engelliyor.
+
+Geçici browser context, Node server, trigger ve `/tmp` SQLite dosyaları kapatılıp temizlendi.
+
+P1-4'te kanıtlanan kısmi yazma residual riski bu refactor ile kapatılmıştır. P2-0 🟩 tamamlanmıştır.
+
+---
+
 # 11. P2-1 — SheetJS'i yerelleştir ve sürümü tekleştir
 
 **Öncelik:** P2  
@@ -2381,7 +2640,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 4 | Slide settings HTTP hata kontrolü | P1 | 🟩 |
 | 5 | Admin password fail-closed | P1 | 🟩 |
 | 6 | Slide delete error redaction | P1 | 🟩 |
-| 7 | Slide settings atomik tek-endpoint refactor | P2 | ⬜ |
+| 7 | Slide settings atomik tek-endpoint refactor | P2 | 🟩 |
 | 8 | SheetJS local + tek sürüm | P2 | ⬜ |
 | 9 | npm dependency security turu | P2 | ⬜ |
 | 10 | GitHub CI son main run yeşil | P2 | ⬜ |

@@ -98,12 +98,8 @@ function submitEvent() {
     return { preventDefault() {} };
 }
 
-function parsedBodies(calls) {
-    return calls.map(call => JSON.parse(call.options.body));
-}
-
-test('Admin slide settings submit HTTP handling', async (t) => {
-    await t.test('all three successful writes show one success and send exact normalized payloads', async () => {
+test('Admin slide settings atomic submit', async (t) => {
+    await t.test('successful save uses exactly one PUT with the three normalized settings', async () => {
         const calls = [];
         const { sandbox, notifications } = loadAdminSandbox(async (url, options) => {
             calls.push({ url, options });
@@ -112,22 +108,19 @@ test('Admin slide settings submit HTTP handling', async (t) => {
 
         await sandbox.handleSlideSettingsSubmit(submitEvent());
 
-        assert.equal(calls.length, 3);
-        assert.deepEqual(calls.map(call => call.url), [
-            '/api/slide-settings',
-            '/api/slide-settings',
-            '/api/slide-settings'
-        ]);
-        assert.deepEqual(parsedBodies(calls), [
-            { key: 'default_duration', value: '10000' },
-            { key: 'default_transition_mode', value: 'auto' },
-            { key: 'default_transition_duration', value: '1200' }
-        ]);
+        assert.equal(calls.length, 1, 'settings must be persisted with one atomic HTTP request');
+        assert.equal(calls[0].url, '/api/slide-settings');
+        assert.equal(calls[0].options.method, 'PUT');
+        assert.deepEqual(JSON.parse(calls[0].options.body), {
+            default_duration: 10000,
+            default_transition_mode: 'auto',
+            default_transition_duration: 1200
+        });
         assert.deepEqual(notifications.error, []);
         assert.deepEqual(notifications.success, ['Ayarlar başarıyla kaydedildi!']);
     });
 
-    await t.test('first HTTP 500 stops the chain and shows the safe server error instead of success', async () => {
+    await t.test('HTTP 500 shows the safe server error and never shows success', async () => {
         const calls = [];
         const { sandbox, notifications } = loadAdminSandbox(async (url, options) => {
             calls.push({ url, options });
@@ -141,66 +134,61 @@ test('Admin slide settings submit HTTP handling', async (t) => {
 
         await sandbox.handleSlideSettingsSubmit(submitEvent());
 
-        assert.equal(calls.length, 1, 'no later setting write should run after the first failure');
+        assert.equal(calls.length, 1);
+        assert.equal(calls[0].options.method, 'PUT');
         assert.deepEqual(notifications.success, []);
         assert.deepEqual(notifications.error, ['Slayt ayarları güncellenirken hata oluştu']);
     });
 
-    await t.test('second HTTP 400 stops before the third write and never shows success', async () => {
+    await t.test('HTTP 400 validation error is surfaced and no success appears', async () => {
         const calls = [];
-        const responses = [
-            makeResponse({ ok: true, jsonValue: { message: 'ok' } }),
-            makeResponse({ ok: false, status: 400, statusText: 'Bad Request', jsonValue: { error: 'Geçiş modu geçersiz' } })
-        ];
         const { sandbox, notifications } = loadAdminSandbox(async (url, options) => {
             calls.push({ url, options });
-            return responses.shift();
+            return makeResponse({
+                ok: false,
+                status: 400,
+                statusText: 'Bad Request',
+                jsonValue: { error: 'Geçiş modu geçersiz' }
+            });
         });
 
         await sandbox.handleSlideSettingsSubmit(submitEvent());
 
-        assert.equal(calls.length, 2, 'third write must not run after second write fails');
+        assert.equal(calls.length, 1);
         assert.deepEqual(notifications.success, []);
         assert.deepEqual(notifications.error, ['Geçiş modu geçersiz']);
     });
 
-    await t.test('third HTTP 503 with malformed JSON uses a bounded generic HTTP error and no success', async () => {
+    await t.test('malformed 503 response uses a bounded generic HTTP error and no success', async () => {
         const calls = [];
-        const responses = [
-            makeResponse({ ok: true }),
-            makeResponse({ ok: true }),
-            makeResponse({
+        const { sandbox, notifications } = loadAdminSandbox(async (url, options) => {
+            calls.push({ url, options });
+            return makeResponse({
                 ok: false,
                 status: 503,
                 statusText: 'Service Unavailable',
                 jsonValue: new Error('malformed-json')
-            })
-        ];
-        const { sandbox, notifications } = loadAdminSandbox(async (url, options) => {
-            calls.push({ url, options });
-            return responses.shift();
+            });
         });
 
         await sandbox.handleSlideSettingsSubmit(submitEvent());
 
-        assert.equal(calls.length, 3);
+        assert.equal(calls.length, 1);
         assert.deepEqual(notifications.success, []);
         assert.deepEqual(notifications.error, ['Ayarlar kaydedilirken hata oluştu (503 Service Unavailable).']);
     });
 
-    await t.test('network failure stops immediately, logs the error, and shows only the generic user message', async () => {
+    await t.test('network failure logs diagnostics and shows only the generic user message', async () => {
         const calls = [];
         const networkError = new Error('ECONNRESET internal detail');
-        const responses = [makeResponse({ ok: true })];
         const { sandbox, notifications, logErrors } = loadAdminSandbox(async (url, options) => {
             calls.push({ url, options });
-            if (calls.length === 2) throw networkError;
-            return responses.shift();
+            throw networkError;
         });
 
         await sandbox.handleSlideSettingsSubmit(submitEvent());
 
-        assert.equal(calls.length, 2);
+        assert.equal(calls.length, 1);
         assert.deepEqual(notifications.success, []);
         assert.deepEqual(notifications.error, ['Ayarlar kaydedilirken hata oluştu.']);
         assert.ok(logErrors.some(args => args.includes(networkError)), 'network error should remain in logger diagnostics');
@@ -209,26 +197,33 @@ test('Admin slide settings submit HTTP handling', async (t) => {
 
     await t.test('non-string or blank server error does not become a user-facing message', async () => {
         for (const serverError of [null, '', '   ', 42, { detail: 'internal' }]) {
-            const { sandbox, notifications } = loadAdminSandbox(async () => makeResponse({
-                ok: false,
-                status: 500,
-                statusText: 'Internal Server Error',
-                jsonValue: { error: serverError }
-            }));
+            const calls = [];
+            const { sandbox, notifications } = loadAdminSandbox(async (url, options) => {
+                calls.push({ url, options });
+                return makeResponse({
+                    ok: false,
+                    status: 500,
+                    statusText: 'Internal Server Error',
+                    jsonValue: { error: serverError }
+                });
+            });
 
             await sandbox.handleSlideSettingsSubmit(submitEvent());
+            assert.equal(calls.length, 1);
             assert.deepEqual(notifications.success, []);
             assert.deepEqual(notifications.error, ['Ayarlar kaydedilirken hata oluştu (500 Internal Server Error).']);
         }
     });
 
-    await t.test('source no longer ignores response.ok for slide setting writes', () => {
+    await t.test('source contract contains a single PUT and no per-setting POST loop', () => {
         const source = fs.readFileSync(path.join(__dirname, '../public/admin/admin.js'), 'utf8');
         const start = source.indexOf('async function handleSlideSettingsSubmit');
         const end = source.indexOf('// Attendance Functions', start);
         const fnSource = source.slice(start, end);
 
         assert.ok(start >= 0 && end > start, 'slide settings submit function should exist');
-        assert.match(fnSource, /response\.ok|\.ok/);
+        assert.match(fnSource, /method:\s*['"]PUT['"]/);
+        assert.doesNotMatch(fnSource, /updateSetting\s*\(/);
+        assert.doesNotMatch(fnSource, /method:\s*['"]POST['"]/);
     });
 });

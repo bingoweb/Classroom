@@ -232,7 +232,17 @@ test('Admin Rate Limit Tests', async (t) => {
                 (r.methods.post || r.methods.put || r.methods.delete)
             );
 
-            assert.strictEqual(writeRoutes.length, 18);
+            assert.strictEqual(writeRoutes.length, 19);
+
+            const atomicSlideSettingsRoute = writeRoutes.find(
+                r => r.path === '/api/slide-settings' && r.methods.put
+            );
+            assert.ok(atomicSlideSettingsRoute, 'PUT /api/slide-settings must be a protected write route');
+            assert.deepStrictEqual(
+                atomicSlideSettingsRoute.stack.slice(0, 3).map(layer => layer.name),
+                ['requireAdminSession', 'requireCsrfToken', 'middleware'],
+                'PUT /api/slide-settings must use session -> CSRF -> write-rate-limit middleware order'
+            );
 
             const logReadRoute = protectedRoutes.find(r => r.path === '/api/logs' && r.methods.get);
             assert.ok(logReadRoute, 'GET /api/logs must be a protected read route');

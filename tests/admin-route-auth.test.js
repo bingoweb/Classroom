@@ -185,7 +185,7 @@ test('Admin Route Auth Test', async (t) => {
         const sessionCookie2 = setCookie2.split(';')[0];
         const sessionId2 = sessionCookie2.split('=')[1];
 
-        // 7. Exactly 18 routes
+        // 7. Exactly 19 routes
         const writeRoutes = [
             { m: 'POST', p: '/api/students' },
             { m: 'POST', p: '/api/students/import' },
@@ -203,14 +203,15 @@ test('Admin Route Auth Test', async (t) => {
             { m: 'PUT', p: '/api/slides/1' },
             { m: 'DELETE', p: '/api/slides/1' },
             { m: 'POST', p: '/api/slide-settings' },
+            { m: 'PUT', p: '/api/slide-settings' },
             { m: 'POST', p: '/api/logs' },
             { m: 'DELETE', p: '/api/logs/cleanup' }
         ];
 
-        // Deduplicate to ensure 18 unique method/path pairs
+        // Deduplicate to ensure 19 unique method/path pairs
         const uniqueRoutes = new Set(writeRoutes.map(r => r.m + ' ' + r.p));
-        assert.strictEqual(uniqueRoutes.size, 18, 'writeRoutes array must contain exactly 18 unique method/path pairs');
-        assert.strictEqual(writeRoutes.length, 18);
+        assert.strictEqual(uniqueRoutes.size, 19, 'writeRoutes array must contain exactly 19 unique method/path pairs');
+        assert.strictEqual(writeRoutes.length, 19);
 
         // Capture logs during protected routes checks
         process.stdout.write = captureLog;

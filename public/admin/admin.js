@@ -1651,38 +1651,34 @@ async function handleSlideSettingsSubmit(e) {
     const transitionMode = document.getElementById('defaultTransitionMode').value;
     const transitionDuration = document.getElementById('defaultTransitionDuration').value;
 
-    async function updateSetting(key, value) {
+    try {
         const response = await fetch(`${CONFIG.API_URL}/slide-settings`, {
-            method: 'POST',
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key, value })
+            body: JSON.stringify({
+                default_duration: Number(duration) * 1000,
+                default_transition_mode: transitionMode,
+                default_transition_duration: Number(transitionDuration) * 1000
+            })
         });
 
-        if (response.ok) {
-            return;
-        }
+        if (!response.ok) {
+            const statusLabel = `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
+            let userMessage = `Ayarlar kaydedilirken hata oluştu (${statusLabel}).`;
 
-        const statusLabel = `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
-        let userMessage = `Ayarlar kaydedilirken hata oluştu (${statusLabel}).`;
-
-        try {
-            const errorData = await response.json();
-            if (errorData && typeof errorData.error === 'string' && errorData.error.trim()) {
-                userMessage = errorData.error.trim();
+            try {
+                const errorData = await response.json();
+                if (errorData && typeof errorData.error === 'string' && errorData.error.trim()) {
+                    userMessage = errorData.error.trim();
+                }
+            } catch (parseError) {
+                // Fall back to the bounded HTTP status message above.
             }
-        } catch (parseError) {
-            // Fall back to the bounded HTTP status message above.
+
+            const requestError = new Error(`Atomic slide settings update failed with HTTP ${statusLabel}`);
+            requestError.userMessage = userMessage;
+            throw requestError;
         }
-
-        const requestError = new Error(`Slide setting update failed with HTTP ${statusLabel}`);
-        requestError.userMessage = userMessage;
-        throw requestError;
-    }
-
-    try {
-        await updateSetting('default_duration', (parseInt(duration) * 1000).toString());
-        await updateSetting('default_transition_mode', transitionMode);
-        await updateSetting('default_transition_duration', (parseFloat(transitionDuration) * 1000).toString());
 
         Utils.showSuccess('Ayarlar başarıyla kaydedildi!');
     } catch (error) {

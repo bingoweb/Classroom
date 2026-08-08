@@ -2669,6 +2669,130 @@ app.post('/api/slide-settings', requireAdminSession, requireCsrfToken, requireAd
     });
 });
 
+// Atomically update the three admin-managed slide settings.
+app.put('/api/slide-settings', requireAdminSession, requireCsrfToken, requireAdminWriteRateLimit, (req, res) => {
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        return res.status(400).json({ error: 'Geçersiz slayt ayarları' });
+    }
+
+    const requiredKeys = [
+        'default_duration',
+        'default_transition_mode',
+        'default_transition_duration'
+    ];
+    const bodyKeys = Object.keys(req.body);
+    const unknownKey = bodyKeys.find(key => !requiredKeys.includes(key));
+
+    if (unknownKey) {
+        return res.status(400).json({ error: 'Bilinmeyen slayt ayarı' });
+    }
+
+    if (!requiredKeys.every(key => Object.prototype.hasOwnProperty.call(req.body, key))) {
+        return res.status(400).json({ error: 'Tüm slayt ayarları gereklidir' });
+    }
+
+    const {
+        default_duration: defaultDuration,
+        default_transition_mode: defaultTransitionMode,
+        default_transition_duration: defaultTransitionDuration
+    } = req.body;
+
+    if (!Number.isInteger(defaultDuration) || defaultDuration < 1000 || defaultDuration > 60000) {
+        return res.status(400).json({ error: 'Varsayılan gösterim süresi geçersiz' });
+    }
+
+    if (!['auto', 'random', 'manual'].includes(defaultTransitionMode)) {
+        return res.status(400).json({ error: 'Geçiş modu geçersiz' });
+    }
+
+    if (
+        !Number.isInteger(defaultTransitionDuration) ||
+        defaultTransitionDuration < 500 ||
+        defaultTransitionDuration > 3000 ||
+        defaultTransitionDuration % 100 !== 0
+    ) {
+        return res.status(400).json({ error: 'Varsayılan geçiş süresi geçersiz' });
+    }
+
+    if (typeof req.requestId !== 'string' || req.requestId.trim() === '') {
+        req.requestId = crypto.randomUUID();
+    }
+
+    const genericError = 'Slayt ayarları güncellenirken hata oluştu';
+    const updates = [
+        ['default_duration', String(defaultDuration)],
+        ['default_transition_mode', defaultTransitionMode],
+        ['default_transition_duration', String(defaultTransitionDuration)]
+    ];
+    const upsertQuery = 'INSERT OR REPLACE INTO slide_settings (key, value) VALUES (?, ?)';
+
+    const logFailure = (stage, error, extraContext = {}) => {
+        logger.error(COMPONENTS.DATABASE, 'Error updating slide settings atomically', error, {
+            requestId: req.requestId,
+            stage,
+            ...extraContext
+        });
+    };
+
+    db.createIsolatedConnection((connectionErr, isolatedDb) => {
+        if (connectionErr) {
+            logFailure('connection', connectionErr);
+            return res.status(500).json({ error: genericError });
+        }
+
+        isolatedDb.run('BEGIN IMMEDIATE', (beginErr) => {
+            if (beginErr) {
+                logFailure('begin', beginErr);
+                return isolatedDb.close(() => {
+                    res.status(500).json({ error: genericError });
+                });
+            }
+
+            const rollbackAndRespond = (originalErr, stage, extraContext = {}) => {
+                logFailure(stage, originalErr, extraContext);
+                isolatedDb.run('ROLLBACK', (rollbackErr) => {
+                    if (rollbackErr) {
+                        logger.error(COMPONENTS.DATABASE, 'Rollback failed after atomic slide settings error', rollbackErr, {
+                            requestId: req.requestId,
+                            stage: 'rollback',
+                            originalStage: stage,
+                            originalError: originalErr ? originalErr.message : null
+                        });
+                    }
+                    isolatedDb.close(() => {
+                        res.status(500).json({ error: genericError });
+                    });
+                });
+            };
+
+            let updateIndex = 0;
+            const writeNextSetting = () => {
+                if (updateIndex >= updates.length) {
+                    return isolatedDb.run('COMMIT', (commitErr) => {
+                        if (commitErr) {
+                            return rollbackAndRespond(commitErr, 'commit');
+                        }
+                        isolatedDb.close(() => {
+                            res.json({ message: 'Slayt ayarları başarıyla güncellendi' });
+                        });
+                    });
+                }
+
+                const [settingKey, settingValue] = updates[updateIndex];
+                isolatedDb.run(upsertQuery, [settingKey, settingValue], (updateErr) => {
+                    if (updateErr) {
+                        return rollbackAndRespond(updateErr, 'update', { settingKey });
+                    }
+                    updateIndex += 1;
+                    writeNextSetting();
+                });
+            };
+
+            writeNextSetting();
+        });
+    });
+});
+
 // ===== ERROR LOGGING API ENDPOINTS =====
 
 // Receive log from client
