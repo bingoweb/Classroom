@@ -3061,68 +3061,243 @@ Bu kapanış kaydının kendisi push edildiğinde oluşacak yeni docs-only Core 
 **Öncelik:** P2 kiosk dayanıklılığı  
 **Sabit kiosk etkisi:** Düşük  
 **Responsive/dev/hotplug etkisi:** Orta  
-**Durum:** ⬜ Bekliyor
+**Durum:** 🟩 Tamamlandı — GSAP entrance sonrası layout transform sahipliği CSS'e geri verildi ve canlı resize/fullscreen matrisi doğrulandı
 
-## 14.1 Doğrulanan davranış
+## 14.1 Düzeltme öncesi güncel HEAD üzerinde yeniden üretim
 
-Fresh load:
+Geçmiş tomografi bulgusu tek başına kabul edilmedi. P2-4 başlangıcında güncel `main` kodu temp DB ve gerçek Chromium ile yeniden çalıştırıldı.
 
-- 3840×2160 → düzgün
-- 1366×768 → düzgün
+Fresh 3840×2160 yüklemede sekiz titlebar doğru görünüyordu. Ancak entrance animasyonu bittikten sonra ilk beş titlebar üzerinde GSAP inline transform bırakıyordu:
 
-Fakat sayfa bir viewport'ta yüklendikten sonra canlı resize edilirse ilk beş titlebar'ın CSS merkezleme transformu GSAP tarafından piksel inline transform olarak kalabiliyor.
+- sol kolon başlıkları yaklaşık `translate(-518.398px, 0px)`,
+- merkez kolon başlıkları yaklaşık `translate(-912.438px, 0px)`.
 
-Sonuç titlebar kendi kart merkezinden kayabilir.
+Bu değerler o anki `%50` merkezlemenin piksel karşılığıydı.
+
+Aynı sayfa reload edilmeden 3840×2160 → 1920×1080 küçültüldüğünde:
+
+- ilk üç titlebar kart merkezinden **−259 px** kaydı,
+- sonraki iki merkez titlebar yaklaşık **−456 px** kaydı,
+- bu beş elementin tamamı kendi kart sınırı açısından overflow durumuna geçti,
+- sağ sütundaki üç titlebar yüzde tabanlı transform'u koruduğu için düzgün kaldı.
+
+Body scroll yine viewport sınırındaydı; yani problem grid değil, titlebar transform sahipliğiydi.
 
 ## 14.2 Kök neden
 
-Titlebar CSS konumlandırması:
+Titlebar layout'u CSS tarafından:
 
-- `left: 50%`
+- `left: 50%`,
 - `transform: translateX(-50%)`
 
-mantığına dayanıyor.
+ile merkezleniyor.
 
-GSAP entrance animasyonu aynı `transform` property üzerinde çalışınca computed yüzde değer piksel transformuna dönüşüyor.
+Full-motion entrance timeline aynı element üzerinde `y` ve `scale` animasyonu yaptığı için GSAP bazı titlebar'ların mevcut yüzde transformunu computed piksel transform olarak inline style'a materialize ediyordu.
 
-Viewport değişince CSS yüzdesi yeniden hesaplanırken inline piksel transform sabit kalabiliyor.
+Animasyon tamamlandığında bu inline transform temizlenmediği için viewport değişiminde:
 
-## 14.3 Seçilen düzeltme yaklaşımı
+- kart genişliği değişiyor,
+- CSS `50%` doğal olarak yeni genişliğe uyarlanmak istiyor,
+- fakat inline piksel transform CSS transformunu override ederek eski genişliğin yarısını kullanmaya devam ediyordu.
 
-İlk tercih:
+### Kök neden deneysel doğrulaması
 
-**Layout transform ile animation transform'u aynı elementte paylaşmamak.**
+Bozuk 1920×1080 durumda production kod değiştirilmeden DevTools içinden yalnız:
 
-İki seçenek:
+```js
+gsap.set('.card-titlebar', {
+  clearProps: 'transform,translate,rotate,scale'
+})
+```
 
-### Seçenek A — Minimal ve güvenli
+uygulandı.
 
-Entrance animasyonu bitince GSAP inline transform property'lerini `clearProps` ile temizler; CSS merkezleme tekrar source of truth olur.
+Sonuç:
 
-### Seçenek B — Uzun vadede daha temiz
+- sekiz titlebar'ın tamamı anında kart merkezine döndü,
+- inline motion style boşaldı,
+- overflow 0 oldu,
+- CSS computed transform yeni kart genişliğine göre yeniden hesaplandı.
 
-Titlebar'ın sabit layout elementini hiç animate etme; içindeki ayrı bir wrapper/text elementini `y/opacity` ile animate et.
+Bu deney Seçenek A'nın doğrudan kök nedene dokunduğunu doğruladı.
 
-Bu durumda layout transform ve motion transform tamamen ayrılır.
+## 14.3 TDD kırmızı testi
 
-### Tercih
+Üretim koduna dokunmadan önce yeni test yazıldı:
 
-Önce A ile düşük riskli düzeltme denenmeli. Test sonucu sağlam değilse B'ye geçilmeli.
+`tests/kiosk-titlebar-resize.test.js`
 
-## 14.4 Test matrisi
+Test harness gerçek `kiosk-motion.js` dosyasını VM içinde sahte GSAP/document ile çalıştırır ve şu sözleşmeleri korur:
 
-1. fresh 3840×2160
-2. 3840 → 1920 resize
-3. 1920 → 3840 resize
-4. 2560 → 1366 resize
-5. reduced-motion
-6. browser fullscreen enter/exit
+1. full-motion entrance timeline tamamlandığında titlebar motion transformları temizlenmeli,
+2. mevcut titlebar `y/scale` entrance animasyonu korunmalı,
+3. reduced-motion branch mevcut `clearProps: all` davranışını korumalı.
 
-Her durumda:
+İlk kırmızı koşu:
 
-- titlebar left/right kart sınırıyla uyumlu,
-- body scroll yok,
-- DOM overflow yok.
+- test toplamı: 4,
+- pass: 2,
+- fail: 2,
+- failure: entrance timeline config üzerinde `onComplete` yoktu.
+
+Bu kırmızı sonuç tam olarak canlı tarayıcıda görülen eksik cleanup davranışını yakaladı.
+
+## 14.4 Uygulanan minimal düzeltme
+
+Dosya:
+
+`public/js/kiosk-motion.js`
+
+Full-motion entrance timeline'a yalnız bir `onComplete` callback eklendi:
+
+```js
+onComplete: () => {
+    gsap.set('.card-titlebar', {
+        clearProps: 'transform,translate,rotate,scale'
+    });
+}
+```
+
+Böylece:
+
+- entrance animasyonu aynen çalışmaya devam eder,
+- animasyon sırasında GSAP transform'u yönetebilir,
+- timeline tamamlanınca layout ile ilgili inline transform/individual transform property'leri temizlenir,
+- `left:50% + translateX(-50%)` yeniden tek source of truth olur.
+
+Titlebar wrapper mimarisi değiştirilmedi; Seçenek B'ye ihtiyaç kalmadı.
+
+## 14.5 Otomatik test sonucu
+
+Hedef regression testi düzeltme sonrası:
+
+- **4 / 4 pass**.
+
+Komşu kiosk paketi:
+
+- Magic Park,
+- icon system,
+- kiosk runtime optimization,
+- interval lifecycle,
+- titlebar resize regression
+
+birlikte:
+
+- **20 / 20 pass**.
+
+Yeni script:
+
+`npm run test:kiosk-titlebar-resize`
+
+ve test dosyası kalıcı `test:core` kapısına eklendi.
+
+Son local tam core:
+
+- **1355 / 1355 pass**,
+- **0 fail**.
+
+## 14.6 Gerçek Chromium kabul matrisi
+
+Asıl `classroom.db` değiştirilmedi. DB `/tmp` içine kopyalanarak gerçek server + Chromium DevTools ile test edildi.
+
+### Fresh 3840×2160
+
+Entrance tamamlandıktan sonra:
+
+- titlebar inline style sayısı: **0**,
+- overflow: **0 / 8**,
+- document scroll: **3840×2160**,
+- computed yüzde merkezleme CSS tarafından doğru uygulandı.
+
+### 3840×2160 → 1920×1080 canlı resize
+
+Reload yapılmadan:
+
+- overflow: **0 / 8**,
+- sekiz titlebar kart merkeziyle hizalı,
+- inline titlebar motion style: boş,
+- document scroll: **1920×1080**.
+
+Bu, düzeltme öncesinde ilk beş titlebar'ın −259/−456 px kaydığı doğrudan regresyon senaryosudur.
+
+### 1920×1080 → 3840×2160 canlı resize
+
+Aynı sayfada geri büyütme:
+
+- overflow: **0 / 8**,
+- body scroll yok.
+
+Ayrıca ayrı bir **fresh 1920×1080 load → 3840×2160** zinciri de çalıştırıldı:
+
+- fresh 1920 overflow 0,
+- inline style 0,
+- 3840'e canlı resize sonrası overflow yine 0.
+
+### Fresh 2560×1440 → 1366×768
+
+- fresh 2560 overflow: 0,
+- inline titlebar style: 0,
+- 1366×768 canlı resize sonrası overflow: **0 / 8**,
+- sekiz titlebar için left/right kart sınırı sapması 0,
+- document scroll: **1366×768**.
+
+### Reduced-motion
+
+Sayfa navigasyon öncesi `matchMedia('(prefers-reduced-motion: reduce)')` koşulu gerçek motion bootstrap'tan önce emüle edildi.
+
+Sonuç:
+
+- reduced-motion branch aktif,
+- titlebar inline motion style sayısı 0,
+- overflow 0,
+- scroll viewport ile birebir.
+
+Otomatik VM testi reduced-motion cleanup sözleşmesini ayrıca korur.
+
+### Gerçek DOM Fullscreen API enter/exit
+
+1920×1080 sayfada `document.documentElement.requestFullscreen()` gerçekten başarılı oldu.
+
+Fullscreen enter:
+
+- `document.fullscreenElement` aktif,
+- overflow 0,
+- body scroll yok.
+
+`document.exitFullscreen()` sonrası:
+
+- fullscreen state kapandı,
+- overflow yine 0,
+- layout aynı kaldı.
+
+### Console
+
+Normal-motion fresh 1920→3840 kabul zinciri sonunda Chromium console:
+
+- error: 0,
+- warn: 0.
+
+## 14.7 Commit ve GitHub CI
+
+Kod/test commit'i:
+
+- SHA: `7f6d79e8179cec12630d9e6de7055c213dd3c90e`
+- Mesaj: `fix: preserve kiosk titlebar centering on resize`
+- Push: başarılı
+- Push sonrası `HEAD == origin/main` doğrulandı.
+
+GitHub Actions Core Tests run:
+
+- Run ID: `31267691850`
+- overall: **success**
+- Node 22: `npm ci` + `npm run test:core` → **success**
+- Node 24: `npm ci` + `npm run test:core` → **success**
+
+## 14.8 Kapanış kararı
+
+Düzeltme yalnız source-level testle değil, geçmişte bozulduğu ölçülen gerçek viewport geçişlerinin tamamıyla doğrulandı. GSAP artık entrance bittikten sonra CSS layout transformunu override etmiyor.
+
+**P2-4 🟩 Tamamlandı.**
 
 ---
 
@@ -3724,7 +3899,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 8 | SheetJS local + tek sürüm | P2 | 🟩 |
 | 9 | npm dependency security turu | P2 | 🟩 |
 | 10 | GitHub CI son main run yeşil | P2 | 🟩 |
-| 11 | GSAP resize güvenilirliği | P2 | ⬜ |
+| 11 | GSAP resize güvenilirliği | P2 | 🟩 |
 | 12 | Fallback slide sistem sahipliği | P2 | ⬜ |
 | 13 | Fiziksel 4K kabul | P2 | ⬜ |
 | 14 | Stale bakım scriptleri | P3 | ⬜ |
