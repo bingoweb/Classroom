@@ -4312,6 +4312,49 @@ Kanıtlar:
 
 `backend/server.js` 2725 → 2210 satıra indi. Sıradaki extraction dalgası **P3-5A4 — roles** olacaktır. P2-6 gerçek 55\" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
+### 21.0.4 9 Ağustos 2026 — P3-5A4 roles route extraction
+
+Dördüncü backend refactor dalgası tamamlandı. Role listeleme/create/delete yüzeyi tek domain kayıt modülüne taşındı; president transaction, bounded role SQL ve HTTP davranışları yeniden tasarlanmadı.
+
+Uygulanan sınır:
+
+- `backend/routes/role-routes.js`: role GET/create/delete route'ları,
+- `backend/server.js`: eski göreli konumda `registerRoleRoutes(app, deps)`,
+- `tests/backend-route-extraction.test.js`: A4 fiziksel extraction ve çift-kayıt önleme sözleşmesi,
+- president ve bounded unknown-classification source-contract testleri gerçek yeni üretim modülünü izleyecek şekilde güncellendi,
+- daha önce mevcut olup core listesinde olmayan `tests/role-bounded-duplicate-error-redaction.test.js` `test:core` kapısına eklendi.
+
+Korunan kritik sözleşmeler:
+
+- auth → CSRF → write rate-limit sırası,
+- president replacement için isolated connection + `BEGIN IMMEDIATE → DELETE → INSERT → COMMIT` ve rollback hata yolları,
+- VP max 2 / duty max 4 bounded tek-statement insert,
+- bounded zero-change classification: limit → duplicate → student → unknown-state,
+- star duplicate-prevention ve duplicate response,
+- role/student strict positive safe-integer ID doğrulaması,
+- database ayrıntılarının HTTP hata response'una sızmaması.
+
+Kanıtlar:
+
+- TDD extraction testi RED → GREEN,
+- extraction **4/4**,
+- role odak paketi **238/238**,
+- tam core **1404/1404**,
+- system smoke PASS,
+- audit 0,
+- syntax, package JSON parse ve diff check temiz,
+- Playwright public `GET /api/roles` 200 + fresh DB `[]`,
+- Chrome DevTools temiz kiosk reload console error/warn/issue 0 ve `/api/roles` dahil kiosk API çağrıları 200/304,
+- izole temp DB HTTP smoke: admin login 200 + authenticated session + CSRF 64,
+- president create/replacement 200/200 ve replacement sonrası tek doğru president,
+- VP create/create/limit **200/200/400**,
+- star create/duplicate **200/400**,
+- dört role delete **200**, final role listesi `[]`, dört temp öğrenci cleanup **200**,
+- exact milestone commit `ec16dcc9e2c0990d6215a674c4b7b3f49a2445a0`,
+- GitHub Actions run `31281933728`: Node 24 PASS (27 sn), Node 22 PASS (31 sn).
+
+`backend/server.js` 2210 → 1853 satıra indi; `backend/routes/role-routes.js` 380 satır. Bilinen fresh-DB `error_logs` cleanup-order logu değiştirilmedi. Sıradaki extraction dalgası **P3-5A5 — attendance** olacaktır. P2-6 gerçek 55\" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
 ## 21.1 `backend/server.js` — ~2800 satır
@@ -4611,7 +4654,8 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 19 | P3-5A1 settings/system route extraction | P3 | 🟩 |
 | 20 | P3-5A2 schedule route extraction | P3 | 🟩 |
 | 21 | P3-5A3 students route extraction | P3 | 🟩 |
-| 22 | P3-5A4 roles route extraction | P3 | ⬜ |
+| 22 | P3-5A4 roles route extraction | P3 | 🟩 |
+| 23 | P3-5A5 attendance route extraction | P3 | ⬜ |
 
 Durum simgeleri:
 

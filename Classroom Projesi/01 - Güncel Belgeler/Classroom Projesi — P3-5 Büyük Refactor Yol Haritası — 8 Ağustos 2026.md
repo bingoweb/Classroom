@@ -158,7 +158,7 @@ Bu bölümdeki A1 → A8 sırası **uygulama/commit sırasıdır**. Mevcut Expre
 
 ### P3-5A — Backend route modülerleştirme
 
-**Durum:** 🟨 Uygulanıyor — A1, A2 ve A3 tamamlandı ve doğrulandı; sıradaki dalga A4 roles extraction.
+**Durum:** 🟨 Uygulanıyor — A1, A2, A3 ve A4 tamamlandı ve doğrulandı; sıradaki dalga A5 attendance extraction.
 
 #### A0 — Contract baseline
 
@@ -364,9 +364,11 @@ Kod/test milestone:
 
 Bilinen fresh-DB `error_logs` cleanup-order log gürültüsü bu refactor sırasında yine değiştirilmedi.
 
-**Sıradaki backend dalgası: A4 — Roles.** President replacement transaction ile VP/duty bounded SQL sözleşmeleri mevcut testlerle korunarak ayrıca ele alınacaktır.
+**A3 sonrası sıradaki backend dalgası A4 — Roles idi.** Bu dalga aşağıdaki A4 kanıtlarıyla tamamlandı.
 
 #### A4 — Roles
+
+**Durum:** 🟩 9 Ağustos 2026 — tamamlandı ve doğrulandı.
 
 Önerilen dosya:
 
@@ -375,6 +377,66 @@ backend/routes/role-routes.js
 ```
 
 President replacement transaction ile VP/duty bounded SQL davranışı aynı kalmalıdır.
+
+##### A4 uygulama sonucu
+
+Role route yüzeyi mevcut transaction, bounded-insert ve response sözleşmeleri korunarak tek domain kayıt modülüne ayrıldı:
+
+- `backend/routes/role-routes.js` oluşturuldu.
+- `GET /api/roles`, korumalı `POST /api/roles` ve korumalı `DELETE /api/roles/:id` yeni modüle taşındı.
+- `server.js`, `registerRoleRoutes(app, deps)` çağrısını eski göreli konumda student route'larından sonra ve settings route'larından önce yapmaya devam ediyor.
+- `db`, `logger`, `COMPONENTS`, admin session, CSRF ve write-rate-limit middleware'leri explicit dependency olarak aktarılıyor.
+- President replacement için mevcut isolated SQLite connection + `BEGIN IMMEDIATE → DELETE → INSERT → COMMIT` akışı yeniden tasarlanmadı.
+- Vice-president ve duty rollerinin tek-statement bounded `INSERT ... SELECT` SQL'i ile zero-change classification akışı aynı kaldı.
+- Star rolündeki duplicate-prevention insert ve role delete ID doğrulaması aynı kaldı.
+- `backend/server.js` 2210 satırdan 1853 satıra indi; yeni `backend/routes/role-routes.js` 380 satır.
+
+Korunan kritik sözleşmeler:
+
+- role write middleware sırası `requireAdminSession → requireCsrfToken → requireAdminWriteRateLimit`,
+- president değişiminde eski başkanın silinmesi ile yeni başkanın eklenmesinin aynı transaction içinde olması,
+- president insert/commit/delete hata yollarında rollback + redacted HTTP response,
+- VP için en fazla 2, duty için en fazla 4 kişi sınırı,
+- bounded insert içinde student-exists + duplicate-not-exists + count-limit kontrollerinin atomik SQL içinde kalması,
+- zero-change classification sırası: limit → duplicate → student existence → unknown-state redaction,
+- star duplicate mesajı ve foreign-key hata sınıflandırması,
+- strict positive safe-integer role/student ID davranışı,
+- raw SQLite/error ayrıntılarının HTTP response'a sızmaması.
+
+TDD ve regresyon kanıtı:
+
+1. `tests/backend-route-extraction.test.js` içine A4 sözleşmesi önce eklendi ve `backend/routes/role-routes.js must exist` nedeniyle RED verdi.
+2. Extraction sonrası A1 + A2 + A3 + A4 testi **4/4 pass** verdi.
+3. Role create/delete/atomicity/read + president + star + bounded count/create/duplicate/student/unknown redaction odak paketi **238/238 pass** verdi.
+4. İki eski source-contract testi yalnız `backend/server.js` konumuna bağlıydı; güvenlik beklentileri gevşetilmeden `backend/routes/role-routes.js` üretim kaynağını izleyecek şekilde güncellendi.
+5. Daha önce var olup `test:core` listesine dahil olmayan `role-bounded-duplicate-error-redaction.test.js` core kapısına eklendi.
+6. Tam `npm run test:core`: **1404/1404 pass**.
+7. `npm run test:system-smoke`: **SYSTEM_SMOKE_PASS**.
+8. `npm audit --omit=dev`: **0 vulnerability**.
+9. `node --check backend/server.js`, `node --check backend/routes/role-routes.js`, package JSON parse ve `git diff --check` temiz.
+
+Browser/HTTP kanıtı, izole temp DB + ayrı port üzerinde:
+
+- Playwright: public `GET /api/roles` **200** ve fresh DB için `[]`.
+- Chrome DevTools temiz kiosk reload: console `error/warn/issue` **0**; `/api/roles` dahil normal kiosk fetch/XHR çağrıları 200/304.
+- Credential içeren DevTools `evaluate` çağrısı araç güvenlik katmanı tarafından engellendiği için admin mutation smoke aynı izole sunucuya cookie + CSRF kullanan doğrudan HTTP istemcisiyle tamamlandı.
+- Admin login **200**, session authenticated ve CSRF uzunluğu **64**.
+- Dört temp öğrenci create işlemi **200**.
+- President atama 1 → **200**, president replacement → **200**; replacement sonrasında tam **1** president kaldı ve yeni öğrenciye ait olduğu doğrulandı.
+- VP atamaları **200, 200, 400**; üçüncü atama `En fazla 2 başkan yardımcısı olabilir` sözleşmesini döndürdü.
+- Star atama **200**, aynı öğrenciye duplicate star **400** ve `Bu öğrenci zaten haftanın yıldızı`.
+- Dört oluşmuş rolün delete işlemleri **200**; final role listesi `[]`; dört temp öğrenci de **200** ile temizlendi.
+
+Kod/test milestone:
+
+- Commit: `ec16dcc9e2c0990d6215a674c4b7b3f49a2445a0`
+- GitHub Actions: `31281933728`
+- Node 24: PASS (27 sn)
+- Node 22: PASS (31 sn)
+
+Bilinen fresh-DB `error_logs` cleanup-order log gürültüsü bu refactor sırasında yine değiştirilmedi.
+
+**Sıradaki backend dalgası: A5 — Attendance.** `Europe/Istanbul` gün anahtarı ve bulk attendance transaction davranışı mevcut test sözleşmeleriyle korunarak ayrıca ele alınacaktır.
 
 #### A5 — Attendance
 
