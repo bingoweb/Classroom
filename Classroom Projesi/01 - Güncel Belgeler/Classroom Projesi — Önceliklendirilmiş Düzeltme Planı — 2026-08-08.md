@@ -1213,6 +1213,14 @@ Bu operasyonel prerequisite güvenlik davranışının bir parçasıdır; sabit 
 
 P1-5 fail-closed güvenlik sözleşmesi açısından 🟩 kapatılmıştır.
 
+### Commit ve GitHub kaydı
+
+- Commit: `b599b743ab96ac55574d5c38f6f47ca72ae809e3`
+- Mesaj: `fix: fail closed when admin password is unset`
+- Dal: `main`
+- Push: `main -> origin/main` başarılı.
+- Push sonrası yerel `HEAD` ile `origin/main` aynı SHA olarak doğrulandı.
+
 ---
 
 # 10. P1-6 — Slide delete ham DB hata sızıntısını kapat
