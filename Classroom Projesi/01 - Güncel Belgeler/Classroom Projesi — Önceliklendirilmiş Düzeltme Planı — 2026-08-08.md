@@ -1990,9 +1990,9 @@ P2-1 🟩 tamamlanmıştır.
 
 # 12. P2-2 — npm audit bulgularını kontrollü kapat
 
-**Öncelik:** P2 güvenlik/bakım  
-**Risk:** Orta-Yüksek  
-**Durum:** ⬜ Bekliyor
+**Öncelik:** P2 güvenlik/bakım
+**Risk:** Orta-Yüksek
+**Durum:** 🟨 Devam ediyor — Express/non-major güvenlik dalgası tamamlandı; sqlite3 major değerlendirmesi açık
 
 ## 12.1 Mevcut doğrulama
 
@@ -2083,10 +2083,327 @@ Yalnız “npm audit kırmızı” olduğu için üretim riskini abartmamak; fak
 
 - `npm audit --omit=dev` sonucu anlamlı ölçüde temizlenmiş,
 - kabul edilen kalan bulgu varsa gerekçesi bu belgeye yazılmış,
-- 1270+ core suite yeşil,
+- güncel core suite yeşil,
 - native sqlite smoke başarılı
 
+## 12.6 Tur A — Express/non-major remediation uygulama ve doğrulama kaydı — 8 Ağustos 2026
+
+**Durum:** 🟩 Tur A tamamlandı; P2-2 ana maddesi henüz tamamlanmadı.
+
+Bu turda major framework/database geçişi yapılmadan, npm'in güvenli non-major çözümleyebildiği bağımlılıklar güncellendi.
+
+### Uygulanan sürüm değişiklikleri
+
+- `express`: `4.21.2` → `4.22.2`
+- `body-parser`: `1.20.3` → `1.20.6`
+- `qs`: `6.13.0` → `6.15.3`
+- `path-to-regexp`: `0.1.12` → `0.1.13`
+- `raw-body`: `2.5.2` → `2.5.3`
+- `brace-expansion`: `1.1.12` → `1.1.18`
+- `minimatch`: `3.1.2` → `3.1.5`
+- `ip-address`: `10.1.0` → `10.4.0`
+- `side-channel`: `1.1.0` → `1.1.1`
+- `side-channel-list`: `1.0.0` → `1.0.1`
+
+`sqlite3` bu turda bilinçli olarak `5.1.7` üzerinde bırakıldı. `Express 5`, `sqlite3 6` ve `Multer 2` aynı değişiklik setine karıştırılmadı.
+
+### Dependency baseline regresyon testi
+
+Yeni test:
+
+`tests/dependency-security-baseline.test.js`
+
+Bu test:
+
+- root `package.json` ile lock root Express aralığının aynı kalmasını,
+- gerçek lock sürümünün `express@4.22.2` olmasını,
+- Express parser/routing alt zincirinin düzeltilmiş sürümlerde kalmasını,
+- non-major transitive güvenlik sürümlerinin lock içinde sabitlenmesini,
+- `sqlite3 6.x` major geçişinin bu dalgaya yanlışlıkla karıştırılmamasını
+
+doğrular.
+
+Hedef test sonucu:
+
+- **5 / 5 pass**.
+
+### Temiz kurulum doğrulaması
+
+`npm ci` ile `node_modules` lock dosyasından sıfırdan yeniden kuruldu. Bu adım önemliydi; ilk kontrolde `package.json/package-lock` güncel olmasına rağmen çalışma `node_modules` ağacında eski `express@4.21.2` kalmıştı. Temiz kurulumdan sonra runtime sürümleri yeniden doğrulandı:
+
+- Express 4.22.2
+- body-parser 1.20.6
+- qs 6.15.3
+- path-to-regexp 0.1.13
+- raw-body 2.5.3
+- sqlite3 5.1.7
+
+### Audit sonucu
+
+Tomografi başlangıcındaki üretim audit'i:
+
+- **14 total**
+- 1 critical
+- 9 high
+- 2 moderate
+- 2 low
+
+Tur A sonrası `npm audit --omit=dev`:
+
+- **7 total**
+- 1 critical
+- 4 high
+- 0 moderate
+- 2 low
+
+Express/body-parser/qs/path-to-regexp zinciri artık audit bulgularında yer almıyor.
+
+Kalan **7 bulgunun tamamı** npm tarafından `sqlite3@5.1.7 → sqlite3@6.0.1` semver-major çözümüne bağlanıyor. Kalan zincir:
+
+`sqlite3 → node-gyp → make-fetch-happen/cacache/tar/http-proxy-agent/@tootallnate/once`
+
+Özellikle `tar` alt zinciri critical advisory taşıdığı için P2-2 kapatılmayacaktır; sqlite3 major geçişi ayrı test turuyla ele alınacaktır.
+
+### Multer notu
+
+Temiz kurulum sırasında npm ayrıca `multer@1.4.5-lts.2` için 1.x serisinin deprecated olduğunu ve 2.x'e yükseltilmesini önerdi. `npm outdated` güncel major hedefini `2.2.0` olarak gösterdi.
+
+Bu paket mevcut 7 audit kaydının içinde görünmese de upload yüzeyinde kullanıldığı için **Multer 2 major uyumluluk turu ayrıca yapılmalıdır**. sqlite3 major ile aynı commit'e karıştırılmayacaktır.
+
+### Tam regresyon sonucu
+
+Güncellenmiş gerçek `node_modules` ağacı ile:
+
+`npm run test:core`
+
+sonucu:
+
+- **1339 / 1339 pass**
+- **0 fail**
+
+Test çıktısındaki bilinen izole test DB startup/teardown log gürültüsü devam etmektedir; yeni dependency dalgasına ait assertion failure oluşmamıştır.
+
+### Gerçek HTTP smoke testi
+
+Asıl `classroom.db` değiştirilmeden `/tmp` DB kopyası ve geçici admin parolası ile gerçek Express 4.22.2 server çalıştırıldı.
+
+Doğrulananlar:
+
+- `/` → 200
+- `/admin-login.html` → 200
+- `/api/students` → 200
+- `/api/slides/active` → 200
+- `/api/stats` → 200
+- `/api/schedule/normalized` → 200
+- yanlış admin parolası → 401
+- doğru admin parolası → 200 + session cookie
+- `/api/admin/session` → authenticated true + 64 karakter CSRF token
+- `/api/admin/slides` → 200
+- CSRF korumalı temp `POST /api/settings` → 200
+- temp DB readback → yazılan değer gerçekten persisted
+- server logunda yeni runtime `ERROR`, `TypeError`, `ReferenceError` veya unhandled hata görülmedi
+
+Temp server ve temp DB test sonunda kaldırıldı.
+
+### Kalan işler
+
+P2-2 halen **🟨 devam ediyor**:
+
+1. `sqlite3@6.0.1` major compatibility/migration turu.
+2. Multer 2.x upload compatibility turu.
+3. Bu major değişikliklerden sonra yeniden audit + full core + gerçek upload/database smoke.
+
+Tur A'nın başarılı olması P2-2'nin tamamlandığı anlamına gelmez.
+
 olmalıdır.
+
+## 12.6 Tur A uygulama ve doğrulama kaydı — 8 Ağustos 2026
+
+### Başlangıç audit'i
+
+`npm audit --omit=dev` yeniden çalıştırıldı:
+
+- total: **14**,
+- critical: **1**,
+- high: **9**,
+- moderate: **2**,
+- low: **2**.
+
+Direct runtime tarafında:
+
+- `express@4.21.2`,
+- `sqlite3@5.1.7`.
+
+### Güncel 4.x Express yolu
+
+Paket metadata ve resmi Express release hattı kontrol edildi. 5.x major'a geçmeden kullanılabilecek güncel 4.x sürümün `4.22.2` olduğu doğrulandı.
+
+İlk `npm install express@4.22.2 --dry-run --ignore-scripts` gerçek çalışma ağacında hiçbir dosya değiştirmeden çalıştırıldı.
+
+Dry-run öngörüsü:
+
+- `express 4.21.2 → 4.22.2`,
+- `body-parser 1.20.3 → 1.20.6`,
+- `qs 6.13.0 → 6.15.3`,
+- `raw-body 2.5.2 → 2.5.3`,
+- ilgili küçük yardımcı paket yükseltmeleri.
+
+Dry-run sonrası source Git ağacı temiz kaldı.
+
+### İzole lock üretimi
+
+Asıl checkout'ta package manager ile dosya değiştirilmedi. Repo `/tmp` altında izole kopyalandı ve yalnız temp kopyada:
+
+1. Express 4.22.2 lock güncellemesi,
+2. force kullanmadan `npm audit fix --package-lock-only --omit=dev`,
+3. audit yeniden değerlendirmesi
+
+yapıldı.
+
+Express-only ilk tur audit sonucu:
+
+- **14 → 11**.
+
+Force'suz semver-uyumlu transitif güvenlik turu sonrası:
+
+- **14 → 7**.
+
+Temizlenen ana zincirler:
+
+- `express`,
+- `body-parser`,
+- `qs`,
+- `path-to-regexp`,
+- `brace-expansion`,
+- `minimatch`,
+- `ip-address`.
+
+Yeni lock sürümleri arasında:
+
+- Express `4.22.2`,
+- body-parser `1.20.6`,
+- qs `6.15.3`,
+- path-to-regexp `0.1.13`,
+- raw-body `2.5.3`,
+- brace-expansion `1.1.18`,
+- minimatch `3.1.5`,
+- ip-address `10.4.0`,
+- side-channel `1.1.1`,
+- side-channel-list `1.0.1`.
+
+### Kalan 7 audit bulgusu
+
+Güvenli dalga sonrası kalanlar:
+
+- `@tootallnate/once`,
+- `cacache`,
+- `http-proxy-agent`,
+- `make-fetch-happen`,
+- `node-gyp`,
+- `sqlite3`,
+- `tar`.
+
+Audit bu yedi bulgunun tamamı için aynı remediation yolunu veriyor:
+
+`sqlite3 5.1.7 → 6.0.1` **major**.
+
+Bu nedenle Tur A commit'ine sqlite3 major karıştırılmadı.
+
+### İlk temiz npm ci kabul turu
+
+İzole temp tree'de node_modules tamamen silinip lockfile'dan sıfırdan `npm ci` yapıldı.
+
+Kurulu kritik sürümler doğrulandı ve hedef Express/auth middleware smoke testleri çalıştırıldı.
+
+Ardından tam core:
+
+- **1334 / 1334 pass**,
+- **0 fail**.
+
+Clean-install audit:
+
+- total **7**,
+- critical **1**,
+- high **4**,
+- moderate **0**,
+- low **2**.
+
+### Gerçek HTTP smoke — Express 4.22.2
+
+Aynı temiz temp `npm ci` kurulumu gerçek Node server olarak ayrı port/temp DB ile çalıştırıldı.
+
+Doğrulamalar:
+
+- runtime Express version → `4.22.2`,
+- admin login page → **200**,
+- public slides → **200**,
+- local SheetJS asset → **200**,
+- yanlış login → **401**,
+- doğru login → **200**,
+- session cookie ile `/api/admin/session` → **200** + `{ authenticated: true }`.
+
+Temp server kapatılıp DB/cookie/log dosyaları temizlendi.
+
+### Gerçek repoya taşıma ve lock doğrulaması
+
+Temp'te test edilen package/lock farkı gerçek repoya yalnız kontrollü file edit ile uygulandı.
+
+İlk equality kapısı manuel taşıma sırasında `side-channel-list` bloğunda eksik bir JSON virgülü yakaladı. Bu nedenle değişiklik kabul edilmedi; `npm audit` da geçersiz lockfile nedeniyle çalışmadı.
+
+Virgül düzeltildikten sonra:
+
+- `package-lock.json` temp test lockfile'ı ile **byte-for-byte exact match**,
+- `package.json` temp package dosyası ile exact dependency match,
+- package-lock JSON parse → pass,
+- `git diff --check` → temiz,
+- source lock audit → **7** kalan bulgu.
+
+### Kalıcı regression guard
+
+Yeni test:
+
+`tests/dependency-security-baseline.test.js`
+
+Bu test:
+
+- Express 4.22.2 baseline'ını,
+- parser/routing transitif güvenli sürümleri,
+- non-major audit fix sürümlerini,
+- sqlite3 major'ın bu dalgaya karışmadığını
+
+kilitler.
+
+Test `test:core` içine dahil edildi.
+
+### İkinci bağımsız fresh-copy kabul turu
+
+Önceki temp kuruluma güvenilmedi. **Güncel gerçek çalışma ağacından** yeni `/tmp` kopya oluşturuldu ve sıfırdan:
+
+- `npm ci`,
+- dependency baseline testi,
+- auth/rate-limit/JSON/CORS/session hedef paketi,
+- tam `test:core`,
+- `npm audit --omit=dev`
+
+çalıştırıldı.
+
+Sonuç:
+
+- Express runtime → `4.22.2`,
+- sqlite3 → `5.1.7`,
+- tam core → **1339 / 1339 pass**,
+- **0 fail**,
+- audit → **7** kalan bulgu.
+
+Tur A bu kanıtlarla tamamlanmıştır.
+
+### P2-2 neden henüz 🟩 değil?
+
+`sqlite3@6.0.1` latest remediation yolu major değişikliktir ve resmi node-sqlite3 projesi artık deprecated/unmaintained durumundadır. Native binding, migration ve transaction yüzeyleri ayrı değerlendirilmeden bu yükseltme güvenli kabul edilmeyecektir.
+
+Sıradaki iş **Tur B — sqlite3 6.0.1 izole compatibility + native install + migration/transaction/full-core + gerçek DB kopyası smoke** testidir.
+
+P2-2 bu nedenle 🟨 açık kalır.
 
 ---
 
@@ -2789,7 +3106,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 6 | Slide delete error redaction | P1 | 🟩 |
 | 7 | Slide settings atomik tek-endpoint refactor | P2 | 🟩 |
 | 8 | SheetJS local + tek sürüm | P2 | 🟩 |
-| 9 | npm dependency security turu | P2 | ⬜ |
+| 9 | npm dependency security turu | P2 | 🟨 |
 | 10 | GitHub CI son main run yeşil | P2 | ⬜ |
 | 11 | GSAP resize güvenilirliği | P2 | ⬜ |
 | 12 | Fallback slide sistem sahipliği | P2 | ⬜ |
