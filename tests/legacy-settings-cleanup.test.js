@@ -9,11 +9,13 @@ const adminSourcePath = path.join(root, 'public/admin/admin.js');
 const settingsLoaderPath = path.join(root, 'public/js/settings-loader.js');
 const displayModeManagerPath = path.join(root, 'public/js/display-mode-manager.js');
 const serverSourcePath = path.join(root, 'backend/server.js');
+const settingsRoutesSourcePath = path.join(root, 'backend/routes/settings-routes.js');
 const startScriptPath = path.join(root, 'start.sh');
 
 const kioskHtml = fs.readFileSync(kioskHtmlPath, 'utf8');
 const adminSource = fs.readFileSync(adminSourcePath, 'utf8');
 const serverSource = fs.readFileSync(serverSourcePath, 'utf8');
+const settingsRoutesSource = fs.readFileSync(settingsRoutesSourcePath, 'utf8');
 const startScript = fs.readFileSync(startScriptPath, 'utf8');
 
 test('legacy browser settings layer is removed without deleting backend settings support', async (t) => {
@@ -31,9 +33,10 @@ test('legacy browser settings layer is removed without deleting backend settings
     });
 
     await t.test('backend settings API remains an explicit protected compatibility contract', () => {
-        assert.match(serverSource, /app\.get\('\/api\/settings'/);
+        assert.match(serverSource, /registerSettingsRoutes\(app,/);
+        assert.match(settingsRoutesSource, /app\.get\('\/api\/settings'/);
         assert.match(
-            serverSource,
+            settingsRoutesSource,
             /app\.post\('\/api\/settings', requireAdminSession, requireCsrfToken, requireAdminWriteRateLimit/
         );
     });

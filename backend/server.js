@@ -23,6 +23,9 @@ const {
     setPublicStaticCacheHeaders,
     setUploadStaticCacheHeaders
 } = require('./static-cache-policy.js');
+const { registerSettingsRoutes } = require('./routes/settings-routes.js');
+const { registerSystemRoutes } = require('./routes/system-routes.js');
+const { networkInterfaces } = require('os');
 
 const crypto = require('crypto');
 const csrfSecret = crypto.randomBytes(32);
@@ -1158,59 +1161,13 @@ app.delete('/api/roles/:id', requireAdminSession, requireCsrfToken, requireAdmin
     });
 });
 
-// Get Settings
-app.get('/api/settings', (req, res) => {
-    const query = "SELECT * FROM settings";
-    const params = [];
-
-    db.all(query, params, (err, rows) => {
-        if (err) {
-            logger.error(
-                COMPONENTS.API,
-                'Error fetching settings',
-                err,
-                { query, params }
-            );
-
-            return res.status(500).json({
-                error: 'Ayarlar alınırken hata oluştu'
-            });
-        }
-
-        const settings = {};
-        rows.forEach(row => settings[row.key] = row.value);
-        res.json(settings);
-    });
-});
-
-// Update Settings
-app.post('/api/settings', requireAdminSession, requireCsrfToken, requireAdminWriteRateLimit, (req, res) => {
-    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
-        return res.status(400).json({ error: 'Ayar anahtarı gereklidir' });
-    }
-
-    const { key, value } = req.body;
-
-    // Input validation
-    if (typeof key !== 'string' || !key.trim()) {
-        return res.status(400).json({ error: 'Ayar anahtarı gereklidir' });
-    }
-    if (value === undefined || value === null) {
-        return res.status(400).json({ error: 'Ayar değeri gereklidir' });
-    }
-
-    const normalizedKey = key.trim();
-
-    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [normalizedKey, value], function (err) {
-        if (err) {
-            logger.error(COMPONENTS.API, 'Error updating settings', err, {
-                key: key,
-                value: value
-            });
-            return res.status(500).json({ error: 'Ayarlar güncellenirken hata oluştu' });
-        }
-        res.json({ message: "Ayarlar güncellendi" });
-    });
+registerSettingsRoutes(app, {
+    db,
+    logger,
+    COMPONENTS,
+    requireAdminSession,
+    requireCsrfToken,
+    requireAdminWriteRateLimit
 });
 
 async function requireScheduleStorageReady(req, res, next) {
@@ -1446,90 +1403,13 @@ app.post('/api/schedule', requireAdminSession, requireCsrfToken, requireAdminWri
     });
 });
 
-// Get Network Info (Local IP)
-app.get('/api/network-info', (req, res) => {
-    const { networkInterfaces } = require('os');
-    const nets = networkInterfaces();
-    const results = {};
-
-    for (const name of Object.keys(nets)) {
-        for (const net of nets[name]) {
-            // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
-            if (net.family === 'IPv4' && !net.internal) {
-                if (!results[name]) {
-                    results[name] = [];
-                }
-                results[name].push(net.address);
-            }
-        }
-    }
-
-    // Just return the first found IP
-    const ip = Object.values(results).flat()[0] || 'localhost';
-    res.json({ ip, port: PORT });
-});
-
-// Get Class Statistics
-app.get('/api/stats', (req, res) => {
-    const totalQuery = "SELECT COUNT(*) as total FROM students";
-    const totalParams = [];
-    db.get(totalQuery, totalParams, (err, totalRow) => {
-        if (err) {
-            logger.error(COMPONENTS.API, 'Error fetching total student count', err, { query: totalQuery, params: totalParams });
-            return res.status(500).json({ error: 'Sınıf istatistikleri alınırken hata oluştu' });
-        }
-
-        const femaleQuery = "SELECT COUNT(*) as girls FROM students WHERE gender = 'F'";
-        const femaleParams = [];
-        db.get(femaleQuery, femaleParams, (err, girlsRow) => {
-            if (err) {
-                logger.error(COMPONENTS.API, 'Error fetching female student count', err, { query: femaleQuery, params: femaleParams });
-                return res.status(500).json({ error: 'Sınıf istatistikleri alınırken hata oluştu' });
-            }
-
-            const maleQuery = "SELECT COUNT(*) as boys FROM students WHERE gender = 'M'";
-            const maleParams = [];
-            db.get(maleQuery, maleParams, (err, boysRow) => {
-                if (err) {
-                    logger.error(COMPONENTS.API, 'Error fetching male student count', err, { query: maleQuery, params: maleParams });
-                    return res.status(500).json({ error: 'Sınıf istatistikleri alınırken hata oluştu' });
-                }
-
-                const today = getIstanbulDateKey();
-                const presentQuery = "SELECT COUNT(*) as present FROM attendance WHERE date = ? AND status = 'present'";
-                const presentParams = [today];
-                db.get(presentQuery, presentParams, (err, presentRow) => {
-                    if (err) {
-                        logger.error(COMPONENTS.API, 'Error fetching present student count', err, { query: presentQuery, params: presentParams });
-                        return res.status(500).json({ error: 'Sınıf istatistikleri alınırken hata oluştu' });
-                    }
-
-                    // Fetch absent students with details for avatars
-                    const absentQuery = "SELECT students.id, students.name, students.photo, students.gender FROM attendance JOIN students ON attendance.student_id = students.id WHERE attendance.date = ? AND attendance.status = 'absent'";
-                    const absentParams = [today];
-                    db.all(absentQuery, absentParams, (err, absentRows) => {
-                        if (err) {
-                            logger.error(COMPONENTS.API, 'Error fetching absent student details', err, { query: absentQuery, params: absentParams });
-                            return res.status(500).json({ error: 'Sınıf istatistikleri alınırken hata oluştu' });
-                        }
-
-                        const absentCount = absentRows.length;
-                        // Return full student objects instead of just names
-                        const absentStudents = absentRows;
-
-                        res.json({
-                            total: totalRow.total,
-                            girls: girlsRow.girls,
-                            boys: boysRow.boys,
-                            todayPresent: presentRow.present || 0,
-                            todayAbsent: absentCount,
-                            absentStudents: absentStudents
-                        });
-                    });
-                });
-            });
-        });
-    });
+registerSystemRoutes(app, {
+    db,
+    logger,
+    COMPONENTS,
+    getIstanbulDateKey,
+    networkInterfaces,
+    PORT
 });
 
 // Get Today's Attendance

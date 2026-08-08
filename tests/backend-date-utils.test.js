@@ -129,19 +129,25 @@ test('18. backend/server.js no longer contains new Date().toISOString().split(\\
 
 test('19. /api/stats is wired to getIstanbulDateKey()', () => {
     const serverJsPath = path.resolve(__dirname, '../backend/server.js');
-    const content = fs.readFileSync(serverJsPath, 'utf8');
-    // We expect it to be used in /api/stats. A simple regex or includes is enough.
-    // Ensure the import exists
-    assert.ok(content.includes("const { getIstanbulDateKey } = require('./date-utils');"));
-    // Ensure it's used
-    assert.ok(content.includes("getIstanbulDateKey()"));
+    const systemRoutesPath = path.resolve(__dirname, '../backend/routes/system-routes.js');
+    const serverContent = fs.readFileSync(serverJsPath, 'utf8');
+    const systemRoutesContent = fs.readFileSync(systemRoutesPath, 'utf8');
+
+    assert.ok(serverContent.includes("const { getIstanbulDateKey } = require('./date-utils');"));
+    assert.match(serverContent, /registerSystemRoutes\(app,\s*\{[\s\S]*?getIstanbulDateKey[\s\S]*?\}\);/);
+    assert.ok(systemRoutesContent.includes("app.get('/api/stats', "));
+    assert.ok(systemRoutesContent.includes('const today = getIstanbulDateKey();'));
 });
 
 test('20. /api/attendance/today is wired to getIstanbulDateKey()', () => {
-    // Tested by the above, as both will be replaced.
     const serverJsPath = path.resolve(__dirname, '../backend/server.js');
-    const content = fs.readFileSync(serverJsPath, 'utf8');
-    // Ensure getIstanbulDateKey is used exactly twice for assignments
-    const matches = content.match(/const today = getIstanbulDateKey\(\);/g);
-    assert.strictEqual(matches.length, 2);
+    const systemRoutesPath = path.resolve(__dirname, '../backend/routes/system-routes.js');
+    const serverContent = fs.readFileSync(serverJsPath, 'utf8');
+    const systemRoutesContent = fs.readFileSync(systemRoutesPath, 'utf8');
+
+    const attendanceMatches = serverContent.match(/const today = getIstanbulDateKey\(\);/g) || [];
+    const statsMatches = systemRoutesContent.match(/const today = getIstanbulDateKey\(\);/g) || [];
+
+    assert.strictEqual(attendanceMatches.length, 1);
+    assert.strictEqual(statsMatches.length, 1);
 });

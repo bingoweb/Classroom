@@ -110,6 +110,7 @@ test('CORS Policy Security Tests', async (t) => {
 
         await t.test('E. Middleware registration stays clean', async () => {
             const serverSource = fs.readFileSync(path.join(backendPath, 'server.js'), 'utf8');
+            const settingsRoutesSource = fs.readFileSync(path.join(backendPath, 'routes', 'settings-routes.js'), 'utf8');
             
             // unrestricted CORS middleware is no longer registered
             assert.ok(!serverSource.includes('app.use(cors())'), 'cors() should not be registered globally');
@@ -121,7 +122,8 @@ test('CORS Policy Security Tests', async (t) => {
 
             // existing API routes remain registered
             assert.ok(serverSource.includes("app.get('/api/students', "), 'API routes must remain registered');
-            assert.ok(serverSource.includes("app.get('/api/settings', "), 'API routes must remain registered');
+            assert.ok(serverSource.includes('registerSettingsRoutes(app, {'), 'Settings route module must remain registered');
+            assert.ok(settingsRoutesSource.includes("app.get('/api/settings', "), 'Settings API route must remain registered');
         });
 
     } finally {
