@@ -4271,6 +4271,47 @@ Kanıtlar:
 
 `backend/server.js` 2944 → 2725 satıra indi. Sıradaki extraction dalgası **P3-5A3 — students** olacaktır. P2-6 gerçek 55\" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
+### 21.0.3 9 Ağustos 2026 — P3-5A3 students route extraction
+
+Üçüncü backend refactor dalgası tamamlandı. Student listeleme/create/import/delete/photo-update yüzeyi tek domain kayıt modülüne taşındı; upload, dosya cleanup ve HTTP davranışları yeniden tasarlanmadı.
+
+Uygulanan sınır:
+
+- `backend/routes/student-routes.js`: student GET/create/Excel import/delete/photo update route'ları,
+- `backend/server.js`: eski göreli konumda `registerStudentRoutes(app, deps)`,
+- student validation + `safeDeleteFile` + managed-photo cleanup helper'ları student domaini içinde,
+- `tests/backend-route-extraction.test.js`: A3 fiziksel extraction ve çift-kayıt önleme sözleşmesi,
+- `tests/cors-policy.test.js`: literal `server.js` konumu yerine gerçek student registration modülünü izleyen source-contract.
+
+Korunan kritik sözleşmeler:
+
+- auth → CSRF → write rate-limit → Multer sırası,
+- JPEG/JPG/PNG/GIF/WEBP ve 5 MB fotoğraf sınırı,
+- yalnız `/uploads/<safe-filename>` web-path persistence,
+- default görsellerin ve traversal/nested/uploads-dışı yolların silinmemesi,
+- managed eski fotoğraf cleanup'ının yalnız başarılı DB işleminden sonra yapılması,
+- Excel temp-file cleanup, E-okul parsing ve gender normalization,
+- student ID strict positive safe-integer doğrulaması,
+- database/parser ayrıntılarının HTTP hata response'una sızmaması.
+
+Kanıtlar:
+
+- TDD extraction testi RED → GREEN,
+- extraction **3/3**,
+- student/auth/rate-limit odak grubu **141/141**,
+- CORS source-contract düzeltmesi sonrası **6/6**,
+- tam core **1387/1387**,
+- system smoke PASS,
+- audit 0,
+- syntax ve diff check temiz,
+- Playwright public `GET /api/students` 200 + fresh DB `[]`,
+- Chrome DevTools admin login 200 + CSRF 64 + student create 200 + listede görünme + delete 200 + final liste `[]`,
+- temiz kiosk reload console error/warn/issue 0,
+- exact milestone commit `894e9504d4436abc871877c9bc845e8cc15981a5`,
+- GitHub Actions run `31281322228`: Node 22 ve Node 24 PASS.
+
+`backend/server.js` 2725 → 2210 satıra indi. Sıradaki extraction dalgası **P3-5A4 — roles** olacaktır. P2-6 gerçek 55\" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
 ## 21.1 `backend/server.js` — ~2800 satır
@@ -4569,7 +4610,8 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 18 | Büyük server/admin/CSS refactor planı | P3 | 🟩 |
 | 19 | P3-5A1 settings/system route extraction | P3 | 🟩 |
 | 20 | P3-5A2 schedule route extraction | P3 | 🟩 |
-| 21 | P3-5A3 students route extraction | P3 | ⬜ |
+| 21 | P3-5A3 students route extraction | P3 | 🟩 |
+| 22 | P3-5A4 roles route extraction | P3 | ⬜ |
 
 Durum simgeleri:
 

@@ -158,7 +158,7 @@ Bu bölümdeki A1 → A8 sırası **uygulama/commit sırasıdır**. Mevcut Expre
 
 ### P3-5A — Backend route modülerleştirme
 
-**Durum:** 🟨 Uygulanıyor — A1 ve A2 tamamlandı ve doğrulandı; sıradaki dalga A3 students extraction.
+**Durum:** 🟨 Uygulanıyor — A1, A2 ve A3 tamamlandı ve doğrulandı; sıradaki dalga A4 roles extraction.
 
 #### A0 — Contract baseline
 
@@ -287,9 +287,11 @@ Kod/test milestone:
 
 Bilinen fresh-DB `error_logs` cleanup-order log gürültüsü bu refactor sırasında yine değiştirilmedi.
 
-**Sıradaki backend dalgası: A3 — Students.** Student CRUD/import/photo cleanup ve upload güvenliği mevcut test sözleşmeleriyle korunarak ayrıca ele alınacaktır.
+**A2 sonrası sıradaki backend dalgası A3 — Students idi.** Bu dalga aşağıdaki A3 kanıtlarıyla tamamlandı.
 
 #### A3 — Students
+
+**Durum:** 🟩 9 Ağustos 2026 — tamamlandı ve doğrulandı.
 
 Önerilen dosya:
 
@@ -306,6 +308,63 @@ Taşınacak alanlar:
 - photo update
 
 Managed photo cleanup ve upload path güvenliği davranışı değiştirilmemelidir.
+
+##### A3 uygulama sonucu
+
+Student route yüzeyi mevcut HTTP ve dosya yaşam döngüsü davranışları korunarak tek domain kayıt modülüne ayrıldı:
+
+- `backend/routes/student-routes.js` oluşturuldu.
+- `GET /api/students` yeni modüle taşındı.
+- korumalı `POST /api/students` + `upload.single('photo')` yeni modüle taşındı.
+- korumalı `POST /api/students/import` + `upload.single('excel')` yeni modüle taşındı.
+- korumalı `DELETE /api/students/:id` yeni modüle taşındı.
+- korumalı `PUT /api/students/:id/photo` + `upload.single('photo')` yeni modüle taşındı.
+- `validateStudentInput`, `safeDeleteFile` ve `cleanupManagedPhoto` student domaini içinde tutuldu; helper davranışları yeniden tasarlanmadı.
+- `server.js`, `registerStudentRoutes(app, deps)` çağrısını eski student route bloğunun göreli konumunda, roles route'larından önce yapmaya devam ediyor.
+- `upload` ve `uploadsDir` explicit dependency olarak aktarılıyor; slide upload storage/runtime akışı değiştirilmedi.
+- `backend/server.js` 2725 satırdan 2210 satıra indi; yeni `backend/routes/student-routes.js` 496 satır.
+
+Korunan kritik sözleşmeler:
+
+- student write middleware sırası `requireAdminSession → requireCsrfToken → requireAdminWriteRateLimit → Multer`,
+- öğrenci create/photo update için JPEG/JPG/PNG/GIF/WEBP MIME listesi,
+- tam 5 MB kabul / 5 MB üstü ret sınırı,
+- kaydedilen fotoğraf yolunun yalnız `/uploads/<safe-filename>` biçiminde olması,
+- default boy/girl görsellerinin ve uploads dışı/nested/traversal yolların silinmemesi,
+- eski managed fotoğrafın yalnız başarılı DB update/delete sonrasında temizlenmesi,
+- Excel temp dosya cleanup davranışı,
+- E-okul başlık/cinsiyet parsing ve öğrenci sıralama davranışı,
+- Excel/database hata ayrıntılarının HTTP response'a sızmaması,
+- strict positive safe-integer student ID doğrulaması.
+
+TDD ve regresyon kanıtı:
+
+1. `tests/backend-route-extraction.test.js` içine A3 sözleşmesi önce eklendi ve `backend/routes/student-routes.js must exist` nedeniyle RED verdi.
+2. Student extraction sonrası A1 + A2 + A3 extraction testi **3/3 pass** verdi.
+3. Student create/body/photo/import/read/delete + admin auth/rate-limit odak grubu **141/141 pass** verdi.
+4. Eski `cors-policy.test.js` yalnız `server.js` içinde literal student route aradığı için RED verdi; CORS davranışı gevşetilmeden test yeni registration modülünü izleyecek şekilde güncellendi ve **6/6 pass** verdi.
+5. Tam `npm run test:core`: **1387/1387 pass**.
+6. `npm run test:system-smoke`: **SYSTEM_SMOKE_PASS**.
+7. `npm audit --omit=dev`: **0 vulnerability**.
+8. `node --check backend/server.js`, `node --check backend/routes/student-routes.js` ve `git diff --check` temiz.
+
+Tarayıcı kanıtı, izole temp DB + ayrı port üzerinde:
+
+- Playwright: `GET /api/students` **200** ve fresh DB için `[]`.
+- Chrome DevTools: admin login **200**, session authenticated, CSRF uzunluğu **64**.
+- Aynı browser session'da student create **200**, public listede yeni öğrenci görüldü, student delete **200**, final liste yeniden `[]` oldu.
+- Temiz kiosk reload sonrası Chrome console `error/warn/issue` **0**; normal kiosk fetch/XHR trafiği 200/304 kaldı.
+
+Kod/test milestone:
+
+- Commit: `894e9504d4436abc871877c9bc845e8cc15981a5`
+- GitHub Actions: `31281322228`
+- Node 24: PASS (yaklaşık 27 sn)
+- Node 22: PASS (yaklaşık 31 sn)
+
+Bilinen fresh-DB `error_logs` cleanup-order log gürültüsü bu refactor sırasında yine değiştirilmedi.
+
+**Sıradaki backend dalgası: A4 — Roles.** President replacement transaction ile VP/duty bounded SQL sözleşmeleri mevcut testlerle korunarak ayrıca ele alınacaktır.
 
 #### A4 — Roles
 
