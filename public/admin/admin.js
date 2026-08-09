@@ -69,7 +69,7 @@ window.showQRCode = async function () {
             </div>
         `;
     } catch(e) {
-        const url = window.location.href.replace('/admin/index.html', '/index.html');
+        const url = new URL('/index.html', window.location.origin).href;
         document.getElementById('qrcode').innerHTML = `
             <div style="text-align: center; padding: 20px;">
                 <p style="font-size: 1.2rem; margin-bottom: 15px; font-weight: bold;">Ana Ekran Adresi:</p>
