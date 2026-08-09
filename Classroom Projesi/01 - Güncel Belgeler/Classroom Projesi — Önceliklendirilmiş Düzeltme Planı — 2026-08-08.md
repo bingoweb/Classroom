@@ -4615,6 +4615,49 @@ Kanıtlar:
 
 `public/admin/admin.js` **1052 → 897 satıra** indi; yeni `public/admin/js/attendance.js` **161 satır**. Bilinen fresh-DB `error_logs` cleanup-order bug'ı değiştirilmedi; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. Sıradaki admin JS dalgası **P3-5B4 — Slides** olacaktır.
 
+### 21.0.11 9 Ağustos 2026 — P3-5B4.1 admin slides read/render extraction
+
+B4 Slides big-bang yapılmadan ilk alt dalga tamamlandı. Bu adım yalnız management-list read/render ownership'ini ayırdı; active toggle, drag/reorder, form/edit state, media preview, CRUD ve slide settings sonraki alt dalgalara bırakıldı.
+
+Uygulanan sınır:
+
+- `public/admin/js/slides.js`: slide management list render, empty state, active/passive görünüm/etiketleri ve media-path preview normalizasyonu,
+- `public/admin/admin.js`: `fetchSlides()` shell bridge olarak kaldı ve `AdminSlides.renderSlides(allSlides)` çağırıyor; drag/drop implementation, toggle, form/media, CRUD ve settings hâlâ burada,
+- `AdminSlides.init({ setupDragAndDrop })`: render sonrasındaki mevcut drag binding'ini B4.3'e kadar shell callback'i olarak koruyor,
+- `public/admin/index.html`: `js/slides.js`, `js/attendance.js` sonrasında ve `admin.js` öncesinde,
+- `tests/admin-slide-module.test.js`: B4.1 extraction/script sırası/namespace/shell sınırı ve B4.2–B4.7 davranışlarının erken taşınmaması,
+- mevcut slide-management/DOM-safety/error-log/Excel VM harness'leri gerçek script zincirini izleyecek şekilde güncellendi; güvenlik assertion'ları korunuyor.
+
+Korunan kritik sözleşmeler:
+
+- authenticated `/api/admin/slides` management list kullanımı,
+- pasif slaytların listede görünmesi ve `Aktif Yap` etiketi,
+- aktif slaytların `Pasif Yap` etiketi,
+- `Utils.normalizePath(mediaPath, true)` preview normalizasyonu,
+- empty-list davranışı,
+- render sonrası drag/drop wiring,
+- public permanent fallback seti ile teacher-managed admin list ayrımı,
+- classic script/global inline callback düzeni,
+- B4.1 dışındaki slide write/state davranışlarının shell'de kalması.
+
+Kanıtlar:
+
+- extraction öncesi baseline **51/51**,
+- TDD structural test beklenen `public/admin/js/slides.js must exist` RED → **1/1 GREEN**,
+- ilk modular geniş koşuda yalnız yeni scripti yüklemeyen stale VM harness'leri bulundu; production sözleşmesi değiştirilmeden gerçek script zincirine geçirildi,
+- commit öncesi geniş focused kapı **52/52**,
+- tam core **1411/1411**,
+- system smoke PASS,
+- npm audit 0 vulnerability,
+- `slides.js` + `admin.js` + ilgili test syntax ve diff check temiz,
+- izole temp DB/browser: public fallback list **7**, authenticated teacher-management list **1 pasif smoke slaytı**; pasif item görünür ve `Aktif Yap` doğru,
+- Playwright: `/admin/js/slides.js` 200, `/admin/admin.js` 200, `/api/admin/slides` 200; clean reload console error/warn 0 + page error 0; 1366×768 ve 1920×1080 horizontal overflow 0,
+- Chrome DevTools: aynı script/API zinciri 200; cache-bypass reload console error/warn 0; yalnız önceden var olan form label/autocomplete issue kayıtları,
+- exact product/test commit `338802d4df09accf73c14a5f35146a6f1b1ca497`,
+- GitHub Actions run `31317816068`: Node 22 PASS (26 sn), Node 24 PASS (29 sn).
+
+`public/admin/admin.js` **897 → 827 satıra** indi; yeni `public/admin/js/slides.js` **85 satır**. Bilinen fresh-DB `error_logs` cleanup-order bug'ı değiştirilmedi; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B4 henüz tamamlanmadı; sıradaki alt dalga B4.2 — active toggle** olacaktır.
+
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
 ## 21.1 `backend/server.js` — A1–A7 sonrası 416 satır
@@ -4631,16 +4674,20 @@ Domain route extraction tamamlandı:
 
 Admin auth/session composition root içinde kalır. Bu sınır sırf dosya daha da küçülsün diye taşınmayacak; A8 ancak ayrı security regression turuyla değerlendirilecektir.
 
-## 21.2 `public/admin/admin.js` — B3 sonrası 897 satır
+## 21.2 `public/admin/admin.js` — B4.1 sonrası 827 satır
 
-B1 ile students domaini `public/admin/js/students.js`, B2 ile roles domaini `public/admin/js/roles.js`, B3 ile attendance domaini `public/admin/js/attendance.js` içine ayrıldı. `fetchStudents()` ve `fetchRoles()` shell bridge olarak `admin.js` içinde kalır ve domain modüllerine veri fan-out'u yapar.
+B1 ile students domaini `public/admin/js/students.js`, B2 ile roles domaini `public/admin/js/roles.js`, B3 ile attendance domaini `public/admin/js/attendance.js` içine ayrıldı. B4.1 ile slide management read/render ownership'i `public/admin/js/slides.js` içine ayrıldı. `fetchStudents()`, `fetchRoles()` ve `fetchSlides()` ilgili domain modüllerine veri taşıyan shell bridge'ler olarak `admin.js` içinde kalır.
 
-Kalan alan modülleri:
+Slides tarafında sıradaki kontrollü extraction alanları:
 
-- slides
-- system/logs
+- B4.2 active toggle,
+- B4.3 drag/reorder,
+- B4.4 form open/close/edit,
+- B4.5 media preview,
+- B4.6 create/update/delete,
+- B4.7 slide settings.
 
-olarak ayrılabilir. Sıradaki aktif dalga **B4 Slides**'dır.
+System/logs tarafında mevcut `error-logs.js` ayrımı korunur. Sıradaki aktif dalga **B4.2 active toggle**'dır; B4 tek seferde taşınmayacaktır.
 
 ## 21.3 Admin inline CSS
 
@@ -4920,7 +4967,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 26 | P3-5B1 admin students module extraction | P3 | 🟩 |
 | 27 | P3-5B2 admin roles module extraction | P3 | 🟩 |
 | 28 | P3-5B3 admin attendance module extraction | P3 | 🟩 |
-| 29 | P3-5B4 admin slides module extraction | P3 | ⬜ |
+| 29 | P3-5B4 admin slides module extraction — B4.1 read/render tamamlandı, B4.2 sırada | P3 | 🟨 |
 
 Durum simgeleri:
 
