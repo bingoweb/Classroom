@@ -653,7 +653,7 @@ Kod/test milestone:
 
 Bilinen fresh-DB `error_logs` cleanup-order bug'ı A7 sırasında kasıtlı olarak değiştirilmedi. P2-6 gerçek 55" 4K fiziksel kabul kapısı da ayrı biçimde açık kalır.
 
-**Backend domain extraction A1–A7 ve P3-5B Admin JavaScript modülerleştirme tamamlandı/doğrulandı.** A8 auth/session ancak ayrı security regression turuyla değerlendirilecektir. **P3-5C — Admin inline CSS temizliği uygulanıyor; C1 ve C2 tamamlandı, C3 Slides template styles sırada.** P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+**Backend domain extraction A1–A7 ve P3-5B Admin JavaScript modülerleştirme tamamlandı/doğrulandı.** A8 auth/session ancak ayrı security regression turuyla değerlendirilecektir. **P3-5C — Admin inline CSS temizliği uygulanıyor; C1, C2 ve C3 tamamlandı, C4 Attendance template styles sırada.** C3 sırasında tespit edilen stored slide admin XSS, fresh-DB `error_logs` cleanup-order ve admin-login favicon 404 hataları ayrı bugfix commit'iyle düzeltilip doğrulandı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
 #### A8 — Admin auth/session — ayrıca ve en son değerlendir
 
@@ -1077,18 +1077,18 @@ TDD ve regresyon kanıtı:
 
 Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B4.7 sırasında değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
-**P3-5B tamamlandı ve doğrulandı.** B1 Students, B2 Roles, B3 Attendance ve B4 Slides B4.1–B4.7 artık 🟩 durumundadır. **P3-5C başladı; C1 `index.html` ve C2 Students template static styles tamamlandı, C3 Slides template styles sıradadır.** Fiziksel 55" 4K kabul kapısı bu refactor kapanışından bağımsız olarak açık kalır.
+**P3-5B tamamlandı ve doğrulandı.** B1 Students, B2 Roles, B3 Attendance ve B4 Slides B4.1–B4.7 artık 🟩 durumundadır. **P3-5C başladı; C1 `index.html`, C2 Students ve C3 Slides template static styles tamamlandı, C4 Attendance template styles sıradadır.** Fiziksel 55" 4K kabul kapısı bu refactor kapanışından bağımsız olarak açık kalır.
 
 ## 8. P3-5C — Admin inline CSS temizliği
 
-**Durum:** 🟨 9 Ağustos 2026 — uygulanıyor. C1 `index.html` ve C2 Students template static inline CSS extraction tamamlandı/doğrulandı; sıradaki kontrollü dalga C3 Slides template static styles.
+**Durum:** 🟨 9 Ağustos 2026 — uygulanıyor. C1 `index.html`, C2 Students ve C3 Slides template static inline CSS extraction tamamlandı/doğrulandı; sıradaki kontrollü dalga C4 Attendance template static styles.
 
 Amaç görsel redesign değildir. Amaç mevcut görünümü class tabanlı hale getirmektir.
 
 Sıra:
 
 1. `public/admin/index.html` içindeki statik inline stilleri domain bazında CSS class'larına taşı — 🟩 **C1 tamamlandı**.
-2. JS template string içindeki statik inline stilleri domain bazında küçük dalgalarla taşı — 🟩 **C2 Students tamamlandı**; sıradaki **C3 Slides**, ardından Attendance → admin shell.
+2. JS template string içindeki statik inline stilleri domain bazında küçük dalgalarla taşı — 🟩 **C2 Students tamamlandı**, 🟩 **C3 Slides tamamlandı**; sıradaki **C4 Attendance**, ardından admin shell.
 3. Runtime'a bağlı `display`, progress width, media preview state, hover state gibi dinamik stilleri ilk turda koru.
 4. Daha sonra yalnız davranış testi ve browser kanıtı varsa state class modeline geçir.
 
@@ -1152,9 +1152,48 @@ TDD ve regresyon kanıtı:
 14. Playwright MCP `/admin/` auth redirect'i post-change tekrar PASS verdi. Login sayfasında C2 öncesi baseline'da da bulunan `/favicon.ico` **404** tek console error olarak kaldı; authenticated admin Chrome yüzeyinde bu hata yok ve C2 ile ilişkili değildir.
 15. Product/test commit `cc742990210b8db14d01985a0b87a4cc53e88a07` exact SHA'sında GitHub Actions `31323998676`: Node 22 **PASS (26 sn)**, Node 24 **PASS (30 sn)**.
 
-Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı C2 sırasında değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+Fresh-DB `error_logs` startup cleanup-order bug'ı C2 sırasında henüz açıktı; **bu tarihsel durum C3 sırasında aşağıdaki ayrı bugfix dalgasıyla kapatılmıştır.** Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
-**P3-5C tamamlanmış değildir. Sıradaki dalga C3 — `slides.js` template static style extraction'dır.** Dinamik media/progress/display state yazımları ilk turda korunacak; yalnız ayrı TDD + browser kanıtıyla state class modeline alınacaktır.
+### C3 sırasında tespit edilen runtime hataları — ayrı bugfix sonucu
+
+C3 hazırlığı ve gerçek browser kontrolleri sırasında üç gerçek runtime kusur tespit edildi; kullanıcı talebi gereği refactor kapsamının dışında bırakılmadan ayrı TDD döngüsüyle düzeltildi:
+
+1. **Admin slide list stored-XSS:** `title`, `text_content`, bilinmeyen `content_type` fallback'i ve manuel `transition_type` doğrudan `innerHTML` içine yazılıyordu. `tests/admin-slide-dom-safety.test.js` ilk RED'de gerçek `<img onerror=...>` markup'ını üretti. `renderSlides()` artık bu metinsel alanları `Utils.escapeHtml()` ile kaçırıyor. Gerçek temp-DB malicious kayıt Chrome'da metin olarak render edildi; enjekte edilmiş element **0**, `globalThis.__slideXss = 0`.
+2. **Fresh DB `error_logs` cleanup-order:** startup `cleanupOldLogs()` çağrısı tablo kurulmadan DELETE kuyruğa alıyordu. `db.errorLogsReadyPromise` eklendi; `CREATE TABLE IF NOT EXISTS error_logs` callback'i readiness'i çözüyor ve server startup cleanup yalnız bu promise sonrasında çalışıyor. Brand-new SQLite server yeniden başlatmasında artık `no such table: error_logs` yok.
+3. **Admin login favicon 404:** `admin-login.html` favicon ilan etmediği için browser `/favicon.ico` istiyordu. Mevcut `/assets/favicon.png` açık `<link rel="icon">` ile bağlandı; Chrome ve Playwright login yüzeyinde final warning/error **0**.
+
+Bugfix doğrulaması:
+
+- slide XSS regression **1/1**, slide module **40/40**, startup-order **2/2** ve ilgili auth/backend extraction testleri PASS,
+- full core **1460/1460 pass**, system smoke PASS, `npm audit --omit=dev` **0 vulnerability**, syntax/diff temiz,
+- fresh DB startup console'u temiz; Chrome + Playwright login warning/error **0**,
+- bugfix commit `5a31414ad08ea48e79b860fad5753e02819209d3`, GitHub Actions `31324588354`: Node 22 **PASS (26 sn)**, Node 24 **PASS (30 sn)**.
+
+### C3 — `slides.js` template static CSS uygulama sonucu
+
+Slides domainindeki statik template presentation C3 ile class tabanlı hale getirildi; gerçek runtime state yazımları ve B4 davranış sözleşmeleri korunarak redesign yapılmadı.
+
+- `public/admin/js/slides.js` template `style="..."` attribute sayısı **35 → 0** oldu.
+- Empty state, active/passive slide card, drag handle, media/no-media preview, metadata, text, action button'ları ve edit/new media preview child markup'ı `admin-slide-*` class'larına taşındı.
+- Active/passive durum ve toggle button renkleri açık modifier class'larla temsil ediliyor; mevcut `.slide-item.is-inactive` opacity/filter/dashed-border davranışı korunuyor.
+- C3 sonrası `slides.js` **749 satır**, `style.css` **1740 satır**. `slides.js` içindeki **21 adet** gerçek runtime `.style.*` state yazımı (drag opacity, modal/display, form visibility, upload progress display/width) bilinçli olarak yerinde kaldı.
+- Admin template inline-style envanteri artık **15** attribute: `index.html` **0**, `students.js` **0**, `slides.js` **0**, `attendance.js` **7**, `admin.js` **8**.
+
+TDD ve browser doğrulaması:
+
+1. `tests/admin-slide-style-refactor.test.js` production değişikliğinden önce RED verdi: **35 inline style** ve eksik active/passive modifier class'ları yakalandı; runtime-state koruma testi baştan PASS kaldı.
+2. Minimal extraction sonrası C3 style **3/3**, slide module **40/40**, stored-XSS **1/1**, C1 CSS **3/3**; geniş slide/settings/notification/DOM-safety komşu grubu **45/45 pass**.
+3. `test:core` zincirine C3 testi eklendi; final full core **1463/1463 pass**, **0 fail**.
+4. `npm run test:system-smoke` PASS ve fresh-DB startup artık cleanup-order error üretmiyor; `npm audit --omit=dev` **0 vulnerability**; syntax, package parse ve `git diff --check` temiz.
+5. Chrome pre/post computed-style karşılaştırmasında active/passive card, drag handle, media/no-media yüzeyi, metadata, status, text ve edit/activate/deactivate/delete button değerleri birebir aynı kaldı; slide-card subtree inline style **0**.
+6. Existing ve yeni File/DataTransfer media preview'larında max-size/radius/shadow/caption/current-link baseline değerleri aynı kaldı ve preview subtree inline style **0**.
+7. Gerçek browser CRUD: POST/PUT/DELETE **200**; UI MutationObserver ile sırasıyla `Slayt başarıyla eklendi!`, `Slayt başarıyla güncellendi!`, `Slayt başarıyla silindi!` görüldü. Geçici uploaded file delete sonrası filesystem'den de kaldırıldı.
+8. Active toggle active→passive→active ve reorder `20/21 → 21/20 → 20/21` gerçek API **200** ile doğrulandı. Drag handler inline opacity `0.5`/`1` yazıyor; mevcut 0.2 sn transition sonrası computed değerler doğru settle oluyor.
+9. Chrome 1366×768 ve 1920-wide kontrollerinde horizontal overflow **0**; empty-state class presentation baseline ile aynı. Final authenticated console warning/error **0**, ilgili static/API network istekleri **200/304**.
+10. Playwright final `/admin/` auth redirect PASS ve login console warning/error **0**.
+11. Product/test commit `31fd5cf00d823bdf7d125ad60a9e8165ab6cc01f`, GitHub Actions `31324982438`: Node 22 **PASS (24 sn)**, Node 24 **PASS (28 sn)**.
+
+**P3-5C tamamlanmış değildir. Sıradaki dalga C4 — `attendance.js` template static style extraction'dır.** `admin.js` shell template styles C4 sonrasında ele alınacaktır; dinamik state-class dönüşümü ancak ayrı TDD + browser kanıtıyla yapılacaktır.
 
 Her görsel dalgada en az:
 

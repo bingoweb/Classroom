@@ -4888,11 +4888,11 @@ Kanıtlar:
 - exact product/test commit `d9376fee556470124ff0c1f4ab13e8cd58f959ee`,
 - GitHub Actions `31321996082`: Node 22 PASS (29 sn), Node 24 PASS (29 sn).
 
-Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B tamamlandı/doğrulandı; P3-5C uygulanıyor, C1 HTML ve C2 Students template static CSS tamamlandı; C3 Slides template styles sıradadır.**
+Bu B4.7 kapanışında fresh-DB `error_logs` startup cleanup-order bug'ı henüz açıktı; **C3 hazırlığı sırasında ayrı bugfix olarak kapatıldı**. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B tamamlandı/doğrulandı; P3-5C uygulanıyor, C1 HTML + C2 Students + C3 Slides static CSS tamamlandı; C4 Attendance template styles sıradadır.**
 
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
-## 21.1 `backend/server.js` — A1–A7 sonrası 416 satır
+## 21.1 `backend/server.js` — A1–A7 ve C3 runtime bugfix sonrası 420 satır
 
 Domain route extraction tamamlandı:
 
@@ -4906,6 +4906,8 @@ Domain route extraction tamamlandı:
 
 Admin auth/session composition root içinde kalır. Bu sınır sırf dosya daha da küçülsün diye taşınmayacak; A8 ancak ayrı security regression turuyla değerlendirilecektir.
 
+C3 sırasında tespit edilen fresh-DB `error_logs` cleanup-order hatası için server startup cleanup artık `db.errorLogsReadyPromise` sonrasında çalışır. Bu değişiklik route extraction sınırını bozmaz; yalnız schema readiness sırasını güvenli hale getirir.
+
 ## 21.2 `public/admin/admin.js` — P3-5B tamamlandıktan sonra 171 satır
 
 B1 ile students domaini `public/admin/js/students.js`, B2 ile roles domaini `public/admin/js/roles.js`, B3 ile attendance domaini `public/admin/js/attendance.js` içine ayrıldı. B4.1–B4.7 ile slide management read/render, active toggle, drag/reorder, form/edit state, media preview, create/update/delete ve slide settings ownership'i `public/admin/js/slides.js` içine ayrıldı. `fetchStudents()`, `fetchRoles()` ve `fetchSlides()` ilgili domain modüllerine veri taşıyan shell bridge'ler olarak `admin.js` içinde kalır; `AdminSlides.fetchSlideSettings()` bootstrap çağrısı da composition root'ta açıkça başlatılır.
@@ -4917,9 +4919,9 @@ P3-5B sonunda `admin.js` ortak/shell sorumluluklarına yaklaşmıştır:
 - tab navigation,
 - QR/modal gibi ortak admin yüzeyleri.
 
-System/logs tarafında mevcut `error-logs.js` ayrımı korunur. **P3-5B tamamlanmıştır. P3-5C Admin inline CSS temizliği uygulanıyor; C1 HTML ve C2 Students template static CSS tamamlandı, sıradaki dalga C3 Slides template styles**dir.
+System/logs tarafında mevcut `error-logs.js` ayrımı korunur. **P3-5B tamamlanmıştır. P3-5C Admin inline CSS temizliği uygulanıyor; C1 HTML, C2 Students ve C3 Slides template static CSS tamamlandı, sıradaki dalga C4 Attendance template styles**dir.
 
-## 21.3 Admin inline CSS — C2 sonrası
+## 21.3 Admin inline CSS — C3 sonrası
 
 `public/admin/index.html` içindeki statik presentation C1 ile class tabanlı hale getirildi:
 
@@ -4976,16 +4978,49 @@ TDD/browser doğrulaması:
 - Playwright `/admin/` auth redirect PASS; login sayfasındaki pre-existing `/favicon.ico` 404 C2 öncesi baseline'da da vardı ve authenticated admin Chrome yüzeyinde yok,
 - product/test commit `cc742990210b8db14d01985a0b87a4cc53e88a07`, GitHub Actions `31323998676`: Node 22 PASS (26 sn), Node 24 PASS (30 sn).
 
-Admin JS template tarafında kalan inline-style envanteri **50** attribute'tur:
+### C3 sırasında kapatılan gerçek runtime kusurları
+
+C3 öncesi gerçek browser/runtime kontrolünde üç kusur bulundu ve refactor devam etmeden ayrı TDD bugfix dalgasıyla kapatıldı:
+
+- admin slide listesinde stored `title`, `text_content`, unknown `content_type` ve manual `transition_type` değerleri `innerHTML` içine escape edilmeden yazılıyordu; yeni DOM-safety RED testi gerçek `<img onerror>` üretti. `Utils.escapeHtml()` ile düzeltildi ve malicious temp-DB kaydında injected DOM **0** / global flag **0** doğrulandı,
+- fresh SQLite başlangıcında `cleanupOldLogs()` tablo kurulmadan çalışıp `no such table: error_logs` üretiyordu; `db.errorLogsReadyPromise` ile schema-ready gate eklendi ve sıfır DB server startup artık temiz,
+- admin login favicon bildirmediği için `/favicon.ico` 404 oluşuyordu; mevcut `/assets/favicon.png` bağlandı ve Chrome/Playwright login console warning/error **0** oldu.
+
+Bugfix kanıtı: full core **1460/1460**, system smoke PASS, audit **0**, commit `5a31414ad08ea48e79b860fad5753e02819209d3`, GitHub Actions `31324588354` Node 22 PASS (26 sn) / Node 24 PASS (30 sn).
+
+### C3 — Slides template static CSS sonucu
+
+`public/admin/js/slides.js` içindeki statik template presentation C3 ile class tabanlı hale getirildi:
+
+- template `style="..."` attribute sayısı **35 → 0**,
+- active/passive list card, drag handle, media/no-media yüzeyi, metadata/status/text/action button'ları ve edit/new media preview child markup `admin-slide-*` class'larına taşındı,
+- `is-inactive` opacity/filter/dashed-border ve active/passive toggle renkleri modifier class'larla aynı computed-style değerlerini koruyor,
+- gerçek runtime `.style.*` yazımları **21 adet** olarak korundu: drag opacity, modal/display, conditional form visibility ve upload progress display/width,
+- `slides.js` **749 satır**, `style.css` **1740 satır**.
+
+TDD/browser kanıtı:
+
+- C3 RED: **35 inline-style attribute** + eksik active/passive modifier class'ları; runtime-state preservation testi baştan PASS,
+- final C3 style **3/3**, slide module **40/40**, slide DOM-safety **1/1**, C1 CSS **3/3**,
+- geniş slide/settings/notification/DOM-safety komşu grubu **45/45**,
+- full core **1463/1463**, system smoke PASS, audit **0**, syntax/package/diff temiz,
+- Chrome active/passive/media/no-media/edit-preview pre/post computed-style karşılaştırması birebir; slide subtree inline style **0**, 1366×768 ve 1920-wide overflow **0**,
+- File/DataTransfer yeni media preview PASS; content/video/manual visibility state'leri doğru,
+- gerçek CRUD POST/PUT/DELETE **200** ve UI feedback sırasıyla `eklendi → güncellendi → silindi`; temporary uploaded file delete sonrası diskten temiz,
+- active toggle ve reorder gerçek API **200**; drag opacity mevcut transition sonrası `0.5 → 1` doğru settle oluyor,
+- Chrome final warning/error **0**, network ilgili çağrılar **200/304**; Playwright auth redirect + warning/error **0**,
+- product/test commit `31fd5cf00d823bdf7d125ad60a9e8165ab6cc01f`, GitHub Actions `31324982438`: Node 22 PASS (24 sn), Node 24 PASS (28 sn).
+
+Admin JS template tarafında kalan inline-style envanteri **15** attribute'tur:
 
 - `public/admin/js/students.js`: **0** template attribute (+ ayrı tutulan 1 runtime `style.cssText`),
-- `public/admin/js/slides.js`: **35**,
+- `public/admin/js/slides.js`: **0** template attribute (+ ayrı tutulan 21 runtime `.style.*` state yazımı),
 - `public/admin/js/attendance.js`: **7**,
 - `public/admin/admin.js`: **8**.
 
-Sıradaki aktif kontrollü dalga **P3-5C3 — Slides template static style extraction** olacaktır. Media/progress/display gibi runtime state yazımları ilk turda korunacak; state-class dönüşümü ancak ayrı davranış testi + browser kanıtıyla yapılacaktır.
+Sıradaki aktif kontrollü dalga **P3-5C4 — Attendance template static style extraction** olacaktır. Ardından `admin.js` shell template static styles ele alınacaktır; runtime state-class dönüşümü ancak ayrı davranış testi + browser kanıtıyla yapılacaktır.
 
-Bilinen fresh-DB `error_logs` cleanup-order mesajı kapsam dışıdır. P2-6 fiziksel 55\" 4K kabul kapısı açık kalır.
+Fresh-DB `error_logs` cleanup-order hatası **C3 sırasında kapatıldı ve regression test + fresh server startup ile doğrulandı**. P2-6 fiziksel 55\" 4K kabul kapısı açık kalır.
 
 ## 21.4 Kiosk CSS
 
@@ -5260,7 +5295,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 27 | P3-5B2 admin roles module extraction | P3 | 🟩 |
 | 28 | P3-5B3 admin attendance module extraction | P3 | 🟩 |
 | 29 | P3-5B4 admin slides module extraction — B4.1–B4.7 tamamlandı ve doğrulandı; P3-5B kapandı | P3 | 🟩 |
-| 30 | P3-5C admin inline CSS — C1 index.html + C2 Students template styles tamamlandı; C3 Slides template styles sırada | P3 | 🟨 |
+| 30 | P3-5C admin inline CSS — C1 index.html + C2 Students + C3 Slides template styles tamamlandı; C4 Attendance sırada | P3 | 🟨 |
 
 Durum simgeleri:
 
