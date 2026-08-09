@@ -5287,7 +5287,25 @@ Sonuç:
 - Playwright auth redirect PASS,
 - product/test commit `6084b62a4804f92f9178fcb2bcf458c1dd1695e4`, GitHub Actions `31332670604`: Node 24 PASS (26 sn), Node 22 PASS (30 sn).
 
-**P3-5E devam ediyor. Sıradaki kontrollü dalga E4 — Slides inline event handler ownership'idir.**
+### 21.5.4 E4 — Slides — 🟩
+
+Slides domainindeki **6 inline event handler → 0** oldu. Form aç/kapat kontrolleri explicit listener'lara; rendered edit/toggle/delete aksiyonları `data-slide-action` + `data-slide-id` delegation'a; broken preview fallback ise capture-phase delegated `error` ownership'ine taşındı. Drag/drop, CRUD API'leri, modal form ve medya iş mantığı değiştirilmedi.
+
+Sonuç:
+
+- index Slides handler'ları **2 → 0**,
+- `slides.js` **4 → 0**,
+- toplam admin inline handler **14 → 8**,
+- E4 RED **0/3** → focused **3/3**,
+- Slide komşu regresyonu **333/333**,
+- geniş admin **190/190**, full core **1499/1499**, lifecycle/lock **NONE**,
+- system smoke PASS, audit **0**, syntax/package/diff temiz,
+- Chrome form open/close, delegated edit/delete confirm ve broken-image fallback PASS; kalıcı slide verisi değiştirilmedi,
+- 1366×768 + 1920-wide overflow **0**, tab smoke PASS, final console issue **0**,
+- Playwright auth redirect PASS,
+- product/test commit `ef0a620b76a098e20927924dc59909186b870014`, GitHub Actions `31333134976`: Node 22 PASS (28 sn), Node 24 PASS (29 sn).
+
+**P3-5E devam ediyor. Sıradaki kontrollü dalga E5 — Error Logs + kalan modal/domain handler ownership'idir.**
 
 ---
 
@@ -5552,7 +5570,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 30 | P3-5C admin inline CSS — C1–C5 tamamlandı; admin statik inline-style envanteri 0, runtime state yazımları behavior-owned | P3 | 🟩 |
 | 31 | P3-5D0 kiosk CSS analiz/baseline hazırlığı — analyzer + duplicate/override/unused aday raporu + 4 viewport browser baseline; CSS değişikliği 0 | P3 | 🟩 |
 | 32 | P3-5A8 admin auth/session security refactor değerlendirmesi — no-extraction kararı; mevcut composition root korunuyor | P3 | 🟩 |
-| 33 | P3-5E admin inline event handler cleanup — E1 + E2 + E3 tamamlandı; 41 → 14, sıradaki E4 Slides | P3 | 🟨 |
+| 33 | P3-5E admin inline event handler cleanup — E1 + E2 + E3 + E4 tamamlandı; 41 → 8, sıradaki E5 Error Logs + kalan modal/domain handler'ları | P3 | 🟨 |
 
 Durum simgeleri:
 

@@ -1329,7 +1329,7 @@ TDD ve browser doğrulaması:
 
 ## 8.1 P3-5E — Admin inline event handler temizliği
 
-**Durum:** 🟨 9 Ağustos 2026 — uygulanıyor. E1 shell/navigation/QR/logout, E2 Students ve E3 Roles + Attendance handler temizliği tamamlandı/doğrulandı; sıradaki kontrollü dalga **E4 Slides**.
+**Durum:** 🟨 9 Ağustos 2026 — uygulanıyor. E1 shell/navigation/QR/logout, E2 Students, E3 Roles + Attendance ve E4 Slides handler temizliği tamamlandı/doğrulandı; sıradaki kontrollü dalga **E5 Error Logs + kalan modal/domain handler'ları**.
 
 Bu faz P3-5B sırasında geçici uyumluluk için korunan inline HTML/template event handler'larını domain bazında kaldırır. Amaç framework değişimi veya behavior redesign değildir; mevcut classic-script davranışı açık `addEventListener` / event-delegation ownership'ine taşınacaktır.
 
@@ -1348,8 +1348,8 @@ Dalga sırası küçük tutulacaktır:
 1. **E1 shell/navigation/QR/logout — 🟩 tamamlandı**,
 2. **E2 Students — 🟩 tamamlandı**,
 3. **E3 Roles + Attendance — 🟩 tamamlandı**,
-4. **E4 Slides — sıradaki**,
-5. Error Logs ve kalan modal/domain handler'ları.
+4. **E4 Slides — 🟩 tamamlandı**,
+5. **E5 Error Logs + kalan modal/domain handler'ları — sıradaki**.
 
 Runtime hover/state davranışları yalnız mevcut computed-style/interaction sözleşmesi test + browser kanıtıyla korunabiliyorsa inline handler dışına taşınacaktır; E fazı runtime `.style.*` state ownership'ini otomatik olarak CSS refactor kapsamına almaz.
 
@@ -1462,6 +1462,41 @@ TDD / regresyon / browser kanıtı:
 9. Chrome final cache-bypass: 1366×768 ve 1920-wide (inner 1920×863) horizontal overflow **0**; Students → Roles → Attendance → Slides → Sistem → Students smoke PASS; final console error/warn/issue **0**.
 10. Playwright `/admin/` → `/admin-login.html?next=/admin/` ve `Yönetici Girişi` title PASS.
 11. Product/test commit `6084b62a4804f92f9178fcb2bcf458c1dd1695e4`; GitHub Actions `31332670604`: Node 24 **PASS (26 sn)**, Node 22 **PASS (30 sn)**.
+
+### E4 — Slides inline event handler ownership uygulama sonucu
+
+E4 Slides domainine ait **6** inline event handler'ı kaldırdı:
+
+- `index.html` Yeni Slayt Ekle + modal İptal `onclick`: **2 → 0**,
+- `slides.js` edit/toggle/delete `onclick`: **3 → 0**,
+- `slides.js` list preview image fallback `onerror`: **1 → 0**.
+
+Davranış ownership'i classic-script yapısı korunarak açık listener/delegation modeline taşındı:
+
+- form open/close → `data-slide-action="show-form|close-form"` + explicit button listeners,
+- rendered edit/toggle/delete → `data-slide-action="edit|toggle-active|delete"` + `data-slide-id` + `slidesList` delegated click,
+- broken list image preview → capture-phase delegated `error`; önceki sonuçla aynı `admin-slide-item__media-empty` / “Görsel yok” fallback markup'ı korunuyor.
+
+E4 sonunda:
+
+- Slides-owned inline handler: **6 → 0**,
+- `public/admin/js/slides.js`: **4 → 0**,
+- `public/admin/index.html`: **10 → 8**,
+- toplam admin inline handler envanteri: **14 → 8**.
+
+TDD / regresyon / browser kanıtı:
+
+1. `tests/admin-slide-event-handler-refactor.test.js` production değişikliğinden önce **0/3 PASS RED** verdi; form data action hook'ları, rendered action delegation ve image error delegation henüz yoktu.
+2. Minimal ownership değişikliği sonrası focused E4 **3/3 PASS**; Slide module/DOM-safety/style/settings/CRUD/reorder komşu paketi **333/333 PASS**.
+3. E4 regression testi `test:admin-slide-events` olarak `test:core` zincirine eklendi.
+4. Geniş admin regresyonu **190/190 PASS**; fresh full core **1499/1499 PASS**, SQLite lifecycle/lock taraması **NONE**.
+5. `npm run test:system-smoke` PASS; `npm audit --omit=dev` **0 vulnerability**; syntax/package/diff temiz.
+6. Chrome form baseline/post: Yeni Slayt Ekle modalı açıldı ve İptal ile kapandı; post-change ilgili inline event attribute sayısı **0**.
+7. Veritabanına dokunmayan sentetik slide render'ında edit/toggle/delete üç data action hook'u doğru id'yi taşıdı; inline handler **0**; broken image yine “Görsel yok” fallback'ine döndü.
+8. Delegated edit click sentetik `987654` id ile mevcut “Slayt Düzenle” modal akışını açtı; delete click mevcut confirm dialogunu açtı ve testte **iptal edildi**, kalıcı veri değişmedi.
+9. Chrome final cache-bypass: 1366×768 ve 1920-wide (inner 1920×863) horizontal overflow **0**; Students → Roles → Attendance → Slides → Sistem → Students smoke PASS; final console error/warn/issue **0**.
+10. Playwright `/admin/` → `/admin-login.html?next=/admin/` ve `Yönetici Girişi` title PASS.
+11. Product/test commit `ef0a620b76a098e20927924dc59909186b870014`; GitHub Actions `31333134976`: Node 22 **PASS (28 sn)**, Node 24 **PASS (29 sn)**.
 
 Her görsel dalgada en az:
 
