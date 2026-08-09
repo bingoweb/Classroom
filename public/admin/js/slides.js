@@ -1,7 +1,12 @@
 (function () {
     let getSlidesHandler = () => [];
     let refreshSlidesHandler = () => {};
+    let prepareMediaFormHandler = () => {};
+    let resetMediaFormHandler = () => {};
+    let syncContentTypeHandler = () => {};
+    let syncTransitionModeHandler = () => {};
     let draggedElement = null;
+    let currentEditingSlide = null;
 
     function renderSlides(slides) {
         const container = document.getElementById('slidesList');
@@ -192,6 +197,59 @@
         }
     }
 
+    function showSlideForm(slideId = null) {
+        currentEditingSlide = slideId;
+        const modal = document.getElementById('slideFormModal');
+        const formTitle = document.getElementById('slideFormTitle');
+        const form = document.getElementById('slideForm');
+
+        if (slideId) {
+            formTitle.textContent = 'Slayt Düzenle';
+            const slide = getSlidesHandler().find(s => s.id === slideId);
+            if (slide) {
+                document.getElementById('slideId').value = slide.id;
+                document.getElementById('slideTitle').value = slide.title || '';
+                document.getElementById('slideContentType').value = slide.content_type;
+                document.getElementById('slideTextContent').value = slide.text_content || '';
+                document.getElementById('slideDisplayDuration').value = slide.display_duration ? slide.display_duration / 1000 : '';
+                document.getElementById('slideVideoAutoAdvance').checked = slide.video_auto_advance === 1;
+                document.getElementById('slideTransitionMode').value = slide.transition_mode || 'auto';
+                document.getElementById('slideTransitionType').value = slide.transition_type || '';
+                document.getElementById('slideTransitionDuration').value = slide.transition_duration ? slide.transition_duration / 1000 : '';
+
+                prepareMediaFormHandler(slide);
+                syncContentTypeHandler();
+                syncTransitionModeHandler();
+            }
+        } else {
+            formTitle.textContent = 'Yeni Slayt Ekle';
+            form.reset();
+            document.getElementById('slideId').value = '';
+            prepareMediaFormHandler(null);
+            syncContentTypeHandler();
+            syncTransitionModeHandler();
+        }
+
+        modal.style.display = 'flex';
+    }
+
+    function closeSlideForm() {
+        const modal = document.getElementById('slideFormModal');
+        modal.style.display = 'none';
+        currentEditingSlide = null;
+        document.getElementById('slideForm').reset();
+        document.getElementById('slideId').value = '';
+        resetMediaFormHandler();
+    }
+
+    function editSlide(id) {
+        showSlideForm(id);
+    }
+
+    function getCurrentEditingSlideId() {
+        return currentEditingSlide;
+    }
+
     async function toggleSlideActive(id) {
         const slide = getSlidesHandler().find(s => s.id === id);
         if (!slide) {
@@ -242,12 +300,31 @@
         }
     }
 
-    function init({ getSlides, refreshSlides } = {}) {
+    function init({
+        getSlides,
+        refreshSlides,
+        prepareMediaForm,
+        resetMediaForm,
+        syncContentType,
+        syncTransitionMode
+    } = {}) {
         if (typeof getSlides === 'function') {
             getSlidesHandler = getSlides;
         }
         if (typeof refreshSlides === 'function') {
             refreshSlidesHandler = refreshSlides;
+        }
+        if (typeof prepareMediaForm === 'function') {
+            prepareMediaFormHandler = prepareMediaForm;
+        }
+        if (typeof resetMediaForm === 'function') {
+            resetMediaFormHandler = resetMediaForm;
+        }
+        if (typeof syncContentType === 'function') {
+            syncContentTypeHandler = syncContentType;
+        }
+        if (typeof syncTransitionMode === 'function') {
+            syncTransitionModeHandler = syncTransitionMode;
         }
     }
 
@@ -256,7 +333,14 @@
         renderSlides,
         toggleSlideActive,
         setupDragAndDrop,
-        reorderSlides
+        reorderSlides,
+        showSlideForm,
+        closeSlideForm,
+        editSlide,
+        getCurrentEditingSlideId
     };
     window.toggleSlideActive = toggleSlideActive;
+    window.showSlideForm = showSlideForm;
+    window.closeSlideForm = closeSlideForm;
+    window.editSlide = editSlide;
 })();

@@ -47,8 +47,7 @@ test('P3-5B4.1 extracts admin slide read/render behavior into a classic-script m
     assert.match(adminSource, /AdminSlides\.renderSlides\(allSlides\)/);
     assert.doesNotMatch(adminSource, /function renderSlides\(slides\)/);
 
-    // B4.1-B4.3 are cumulative. Later slide behaviors stay in the shell for their own sub-waves.
-    assert.match(adminSource, /window\.showSlideForm\s*=/);
+    // B4.1-B4.4 are cumulative. Later slide behaviors stay in the shell for their own sub-waves.
     assert.match(adminSource, /window\.deleteSlide\s*=/);
     assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
 
@@ -80,8 +79,7 @@ test('P3-5B4.2 extracts active toggle ownership with explicit slide state and re
     );
     assert.doesNotMatch(adminSource, /window\.toggleSlideActive\s*=/);
 
-    // B4.4-B4.7 remain intentionally owned by admin.js.
-    assert.match(adminSource, /window\.showSlideForm\s*=/);
+    // B4.5-B4.7 remain intentionally owned by admin.js.
     assert.match(adminSource, /window\.deleteSlide\s*=/);
     assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
 });
@@ -101,13 +99,48 @@ test('P3-5B4.3 extracts drag/reorder ownership into slides.js without shell call
     assert.doesNotMatch(adminSource, /async function reorderSlides\(/);
     assert.doesNotMatch(adminSource, /setupDragAndDrop\s*[,}]/);
 
-    // B4.4-B4.7 still belong to the shell after this sub-wave.
-    assert.match(adminSource, /window\.showSlideForm\s*=/);
+    // B4.5-B4.7 still belong to the shell after this sub-wave.
     assert.match(adminSource, /window\.deleteSlide\s*=/);
     assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
 });
 
-function loadSlidesModule({ slides, fetchImpl, documentImpl }) {
+test('P3-5B4.4 extracts slide form open/close/edit ownership while media preview stays in the shell', () => {
+    const adminSource = fs.readFileSync(adminPath, 'utf8');
+    const slidesSource = fs.readFileSync(slidesPath, 'utf8');
+
+    assert.match(slidesSource, /let currentEditingSlide = null/);
+    assert.match(slidesSource, /function showSlideForm\(slideId = null\)/);
+    assert.match(slidesSource, /function closeSlideForm\(\)/);
+    assert.match(slidesSource, /function editSlide\(id\)/);
+    assert.match(slidesSource, /function getCurrentEditingSlideId\(\)/);
+    assert.match(slidesSource, /window\.showSlideForm\s*=\s*showSlideForm/);
+    assert.match(slidesSource, /window\.closeSlideForm\s*=\s*closeSlideForm/);
+    assert.match(slidesSource, /window\.editSlide\s*=\s*editSlide/);
+
+    assert.doesNotMatch(adminSource, /let currentEditingSlide\s*=/);
+    assert.doesNotMatch(adminSource, /window\.showSlideForm\s*=/);
+    assert.doesNotMatch(adminSource, /window\.closeSlideForm\s*=/);
+    assert.doesNotMatch(adminSource, /window\.editSlide\s*=/);
+
+    // B4.5 media preview and B4.6-B4.7 write/settings behavior remain shell-owned.
+    assert.match(adminSource, /function prepareSlideMediaForm\(slide\)/);
+    assert.match(adminSource, /function resetSlideMediaForm\(\)/);
+    assert.match(adminSource, /function handleSlideMediaChange\(e\)/);
+    assert.match(adminSource, /async function handleSlideSubmit\(e\)/);
+    assert.match(adminSource, /window\.deleteSlide\s*=/);
+    assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
+    assert.match(adminSource, /AdminSlides\.getCurrentEditingSlideId\(\)/);
+});
+
+function loadSlidesModule({
+    slides,
+    fetchImpl,
+    documentImpl,
+    prepareMediaForm,
+    resetMediaForm,
+    syncContentType,
+    syncTransitionMode
+}) {
     const calls = {
         fetch: [],
         refresh: 0,
@@ -151,11 +184,156 @@ function loadSlidesModule({ slides, fetchImpl, documentImpl }) {
         getSlides: () => slides,
         refreshSlides: () => {
             calls.refresh += 1;
-        }
+        },
+        prepareMediaForm,
+        resetMediaForm,
+        syncContentType,
+        syncTransitionMode
     });
 
     return { context, calls };
 }
+
+function createSlideFormDocument() {
+    const elements = new Map();
+    const ids = [
+        'slideFormModal',
+        'slideFormTitle',
+        'slideForm',
+        'slideId',
+        'slideTitle',
+        'slideContentType',
+        'slideTextContent',
+        'slideDisplayDuration',
+        'slideVideoAutoAdvance',
+        'slideTransitionMode',
+        'slideTransitionType',
+        'slideTransitionDuration'
+    ];
+
+    ids.forEach((id) => {
+        elements.set(id, {
+            id,
+            value: '',
+            checked: false,
+            textContent: '',
+            style: {},
+            resetCount: 0,
+            reset() {
+                this.resetCount += 1;
+            }
+        });
+    });
+
+    return {
+        elements,
+        document: {
+            getElementById(id) {
+                return elements.get(id) || null;
+            }
+        }
+    };
+}
+
+test('P3-5B4.4 form ownership preserves add/edit/close state and delegates media-only work', async (t) => {
+    await t.test('new slide opens a reset form, delegates new-media preparation and keeps editing state null', () => {
+        const { elements, document } = createSlideFormDocument();
+        elements.get('slideId').value = 88;
+        const mediaCalls = [];
+        let contentSync = 0;
+        let transitionSync = 0;
+        const { context } = loadSlidesModule({
+            slides: [],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            documentImpl: document,
+            prepareMediaForm(slide) { mediaCalls.push(slide); },
+            resetMediaForm() {},
+            syncContentType() { contentSync += 1; },
+            syncTransitionMode() { transitionSync += 1; }
+        });
+
+        context.window.showSlideForm();
+
+        assert.strictEqual(elements.get('slideFormTitle').textContent, 'Yeni Slayt Ekle');
+        assert.strictEqual(elements.get('slideForm').resetCount, 1);
+        assert.strictEqual(elements.get('slideFormModal').style.display, 'flex');
+        assert.strictEqual(elements.get('slideId').value, '');
+        assert.strictEqual(context.window.AdminSlides.getCurrentEditingSlideId(), null);
+        assert.deepStrictEqual(mediaCalls, [null]);
+        assert.strictEqual(contentSync, 1);
+        assert.strictEqual(transitionSync, 1);
+    });
+
+    await t.test('editing a slide populates non-media fields, normalizes durations and delegates media preview', () => {
+        const { elements, document } = createSlideFormDocument();
+        const slide = {
+            id: 47,
+            title: 'Düzenlenecek Slayt',
+            content_type: 'rule',
+            text_content: 'Kural metni',
+            display_duration: 12500,
+            video_auto_advance: 1,
+            transition_mode: 'manual',
+            transition_type: 'fade',
+            transition_duration: 1750,
+            media_type: 'image',
+            media_path: 'assets/default_boy.png'
+        };
+        const mediaCalls = [];
+        let contentSync = 0;
+        let transitionSync = 0;
+        const { context } = loadSlidesModule({
+            slides: [slide],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            documentImpl: document,
+            prepareMediaForm(value) { mediaCalls.push(value); },
+            resetMediaForm() {},
+            syncContentType() { contentSync += 1; },
+            syncTransitionMode() { transitionSync += 1; }
+        });
+
+        context.window.editSlide(47);
+
+        assert.strictEqual(context.window.AdminSlides.getCurrentEditingSlideId(), 47);
+        assert.strictEqual(elements.get('slideFormTitle').textContent, 'Slayt Düzenle');
+        assert.strictEqual(elements.get('slideId').value, 47);
+        assert.strictEqual(elements.get('slideTitle').value, 'Düzenlenecek Slayt');
+        assert.strictEqual(elements.get('slideContentType').value, 'rule');
+        assert.strictEqual(elements.get('slideTextContent').value, 'Kural metni');
+        assert.strictEqual(elements.get('slideDisplayDuration').value, 12.5);
+        assert.strictEqual(elements.get('slideVideoAutoAdvance').checked, true);
+        assert.strictEqual(elements.get('slideTransitionMode').value, 'manual');
+        assert.strictEqual(elements.get('slideTransitionType').value, 'fade');
+        assert.strictEqual(elements.get('slideTransitionDuration').value, 1.75);
+        assert.strictEqual(elements.get('slideFormModal').style.display, 'flex');
+        assert.deepStrictEqual(mediaCalls, [slide]);
+        assert.strictEqual(contentSync, 1);
+        assert.strictEqual(transitionSync, 1);
+    });
+
+    await t.test('close clears editing state, resets the form and delegates media cleanup', () => {
+        const { elements, document } = createSlideFormDocument();
+        let mediaReset = 0;
+        const { context } = loadSlidesModule({
+            slides: [{ id: 51, title: 'Close test' }],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            documentImpl: document,
+            prepareMediaForm() {},
+            resetMediaForm() { mediaReset += 1; },
+            syncContentType() {},
+            syncTransitionMode() {}
+        });
+
+        context.window.showSlideForm(51);
+        context.window.closeSlideForm();
+
+        assert.strictEqual(elements.get('slideFormModal').style.display, 'none');
+        assert.strictEqual(elements.get('slideForm').resetCount, 1);
+        assert.strictEqual(elements.get('slideId').value, '');
+        assert.strictEqual(context.window.AdminSlides.getCurrentEditingSlideId(), null);
+        assert.strictEqual(mediaReset, 1);
+    });
+});
 
 test('P3-5B4.3 drag/reorder preserves binding, swap payload, feedback, logger and refresh behavior', async (t) => {
     await t.test('setupDragAndDrop binds the four existing handlers and dragend restores opacity', () => {
