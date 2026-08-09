@@ -1329,7 +1329,7 @@ TDD ve browser doğrulaması:
 
 ## 8.1 P3-5E — Admin inline event handler temizliği
 
-**Durum:** 🟨 9 Ağustos 2026 — uygulanıyor. E1 shell/navigation/QR/logout handler temizliği tamamlandı ve doğrulandı; sıradaki kontrollü dalga **E2 Students**.
+**Durum:** 🟨 9 Ağustos 2026 — uygulanıyor. E1 shell/navigation/QR/logout ve E2 Students handler temizliği tamamlandı/doğrulandı; sıradaki kontrollü dalga **E3 Roles + Attendance**.
 
 Bu faz P3-5B sırasında geçici uyumluluk için korunan inline HTML/template event handler'larını domain bazında kaldırır. Amaç framework değişimi veya behavior redesign değildir; mevcut classic-script davranışı açık `addEventListener` / event-delegation ownership'ine taşınacaktır.
 
@@ -1346,8 +1346,8 @@ E fazı başlangıç envanteri:
 Dalga sırası küçük tutulacaktır:
 
 1. **E1 shell/navigation/QR/logout — 🟩 tamamlandı**,
-2. **E2 Students — sıradaki**,
-3. Roles + Attendance,
+2. **E2 Students — 🟩 tamamlandı**,
+3. **E3 Roles + Attendance — sıradaki**,
 4. Slides,
 5. Error Logs ve kalan modal/domain handler'ları.
 
@@ -1386,6 +1386,47 @@ TDD / regresyon / browser kanıtı:
 8. Chrome MCP Sistem post-check sırasında tek geçici upstream **502 tool-side** hata verdi; servis yeniden erişilebilir olduğunda aynı kontroller başarıyla tamamlandı ve production etkilenmedi.
 9. Playwright pre/post `/admin/` auth redirect + `Yönetici Girişi` title PASS; post-change snapshot çağrısında bilinen tool-side `about:blank` davranışı tekrarlandı.
 10. Product/test commit `46485e067c0e79c15d37f6add656f9ca9816c0d6`; GitHub Actions `31331183368`: Node 22 **PASS (24 sn)**, Node 24 **PASS (28 sn)**.
+
+### E2 — Students inline event handler ownership uygulama sonucu
+
+E2 Students domainine ait **11** inline event handler'ı kaldırdı:
+
+- `index.html` student search `onkeyup` + gender filter `onchange`: **2 → 0**,
+- `students.js` kart hover `onmouseover/onmouseout`: **2 → 0**,
+- avatar fallback `onerror`: **1 → 0**,
+- photo/delete action hover: **4 → 0**,
+- dinamik Excel ve fotoğraf “Temizle” `onclick`: **2 → 0**.
+
+Davranış ownership'i framework veya CSS redesign yapılmadan açık JS event modeline taşındı:
+
+- search → `keyup` listener,
+- gender filter → `change` listener,
+- student card/button hover → `studentList` üzerinde delegated `mouseover/mouseout`; önceki runtime `.style.*` değerleri aynen korunuyor,
+- avatar fallback → capture-phase delegated `error` + `data-default-avatar`; fallback attribute'u fallback src uygulanmadan önce kaldırılarak eski `this.onerror=null` tek-seferlik davranışı korunuyor,
+- dinamik Excel/photo clear butonları → `data-student-action` + delegated click.
+
+E2 sonunda:
+
+- Students-owned inline handler: **11 → 0**,
+- `public/admin/js/students.js`: **9 → 0**,
+- `public/admin/index.html`: **19 → 17**,
+- toplam admin inline handler envanteri: **33 → 22**.
+
+TDD / regresyon / browser kanıtı:
+
+1. E2 sırasında aynı checkout'a eşzamanlı gelen Students delegated-handler değişiklikleri user/external work olarak korunup önce hash/timestamp stabilitesiyle ayrıştırıldı; reset/overwrite yapılmadı. Mevcut aday focused/style/module/DOM-safety paketlerinde yeşil doğrulandıktan sonra E2 tabanı olarak devralındı.
+2. `tests/admin-student-event-handler-refactor.test.js` mevcut Students template delegation sözleşmelerinde **3/3 PASS** idi; henüz taşınmamış search/filter için eklenen yeni test production değişikliğinden önce **3 PASS / 1 FAIL RED** verdi ve doğru nedenle `studentSearch onkeyup` üzerinde kırıldı.
+3. Search/filter module listener'a taşındıktan sonra E2 focused **4/4 PASS**; student style **3/3**, module **1/1**, Student/Excel DOM-safety **14/14**.
+4. E2 testi `test:admin-student-events` olarak `test:core` zincirine eklendi.
+5. E2 browser baseline'ı iki temp öğrenciyle gerçek authenticated Chrome'da alındı. Pre/post card hover aynı: `translateY(-4px)`, `0 4px 16px rgba(0,0,0,0.15)`, primary border; action hover opacity **0.9**. Leave sonrası eski runtime normal state değerleri korunuyor.
+6. Search `Kız` → yalnız kız öğrenci; gender `M` → yalnız erkek öğrenci; resetlerde iki kart geri geldi. Post-change kontrol elementlerinde inline handler sayısı **0**.
+7. Avatar missing-src probunda post-change delegated fallback `../assets/default_boy.png` ile **1024×1024** natural image'a döndü; `data-default-avatar` fallback öncesi kaldırıldı ve retry loop oluşmadı.
+8. Gerçek browser sentetik File/DataTransfer smoke: Excel clear **1 file → 0**, result `block → none`; photo preview clear **1 file → 0**, preview **var → yok**. İki dinamik clear butonda inline `onclick` **null**.
+9. Chrome cache-bypass final: 1366×768 ve 1920-wide horizontal overflow **0**, 2 temp öğrenci doğru; final console error/warn/issue **0**, ilgili admin scripts/API'ler **200/304**.
+10. Playwright `/admin/` → login redirect + `Yönetici Girişi` title PASS, warning/error **0**.
+11. Aynı checkout'ta E2 dışında ortaya çıkan Attendance avatar-path işi E2 stage'ine alınmadı; ayrı commit `191c061ed0a030ba0333e93343fb00e3db34c2da` base'e geldi. E2 yalnız kendi Students dosya/test sınırında commitlendi.
+12. Local full core dış Attendance testini de içeren ağaçta **1493/1493 PASS**, lifecycle/lock **NONE**; system smoke PASS, audit **0**, syntax/package/diff temiz.
+13. Product/test commit `f5997f8d88b168b33fe9eb370b5216bf86a9cb2e`; GitHub Actions `31332151627`: Node 24 **PASS (25 sn)**, Node 22 **PASS (41 sn)**.
 
 Her görsel dalgada en az:
 

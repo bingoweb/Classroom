@@ -5252,7 +5252,24 @@ Sonuç:
 - Playwright auth redirect PASS; bilinen snapshot `about:blank` tool-side davranışı tekrarlandı,
 - product/test commit `46485e067c0e79c15d37f6add656f9ca9816c0d6`, GitHub Actions `31331183368`: Node 22 PASS (24 sn), Node 24 PASS (28 sn).
 
-**P3-5E devam ediyor. Sıradaki kontrollü dalga E2 — Students inline event handler ownership'idir.** Students hover/state davranışları görünüm değişmeden korunmalı; gerekirse E2 alt dalgalara ayrılmalıdır.
+### 21.5.2 E2 — Students — 🟩
+
+Students domainindeki **11 inline event handler → 0** oldu. Search/filter listener'ları module init'e, card/action hover runtime state'i delegated `mouseover/mouseout` ownership'ine, avatar fallback capture-phase delegated `error` modeline ve dinamik Excel/photo clear aksiyonları `data-student-action` click delegation'a taşındı. Runtime hover `.style.*` değerleri C2'de kilitlenen davranışla aynı tutuldu; CSS redesign yapılmadı.
+
+Sonuç:
+
+- `students.js` **9 → 0** inline event attribute,
+- index Students search/filter **2 → 0**,
+- toplam admin inline handler **33 → 22**,
+- E2 search/filter RED **3 pass / 1 fail** → final focused **4/4**,
+- style **3/3**, module **1/1**, Student/Excel DOM-safety **14/14**,
+- Chrome gerçek hover/fallback/search/filter/Excel clear/photo clear davranışları pre/post eşleşti,
+- 1366×768 + 1920-wide overflow **0**, final console issue **0**,
+- Playwright auth redirect PASS, warning/error **0**,
+- local full core **1493/1493**, lifecycle/lock **NONE**, system smoke PASS, audit **0**,
+- product/test commit `f5997f8d88b168b33fe9eb370b5216bf86a9cb2e`, GitHub Actions `31332151627`: Node 24 PASS (25 sn), Node 22 PASS (41 sn).
+
+**P3-5E devam ediyor. Sıradaki kontrollü dalga E3 — Roles + Attendance inline event handler ownership'idir.**
 
 ---
 
@@ -5517,7 +5534,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 30 | P3-5C admin inline CSS — C1–C5 tamamlandı; admin statik inline-style envanteri 0, runtime state yazımları behavior-owned | P3 | 🟩 |
 | 31 | P3-5D0 kiosk CSS analiz/baseline hazırlığı — analyzer + duplicate/override/unused aday raporu + 4 viewport browser baseline; CSS değişikliği 0 | P3 | 🟩 |
 | 32 | P3-5A8 admin auth/session security refactor değerlendirmesi — no-extraction kararı; mevcut composition root korunuyor | P3 | 🟩 |
-| 33 | P3-5E admin inline event handler cleanup — E1 shell tamamlandı; 41 → 33, sıradaki E2 Students | P3 | 🟨 |
+| 33 | P3-5E admin inline event handler cleanup — E1 + E2 tamamlandı; 41 → 22, sıradaki E3 Roles + Attendance | P3 | 🟨 |
 
 Durum simgeleri:
 
