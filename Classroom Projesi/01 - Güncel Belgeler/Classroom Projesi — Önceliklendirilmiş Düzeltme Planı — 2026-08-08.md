@@ -4900,7 +4900,7 @@ Kanıtlar:
 - exact product/test commit `d9376fee556470124ff0c1f4ab13e8cd58f959ee`,
 - GitHub Actions `31321996082`: Node 22 PASS (29 sn), Node 24 PASS (29 sn).
 
-Bu B4.7 kapanışında fresh-DB `error_logs` startup cleanup-order bug'ı henüz açıktı; **C3 hazırlığı sırasında ayrı bugfix olarak kapatıldı**. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B tamamlandı/doğrulandı; P3-5C uygulanıyor, C1 HTML + C2 Students + C3 Slides static CSS tamamlandı; C4 Attendance template styles sıradadır.**
+Bu B4.7 kapanışında fresh-DB `error_logs` startup cleanup-order bug'ı henüz açıktı; **C3 hazırlığı sırasında ayrı bugfix olarak kapatıldı**. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B tamamlandı/doğrulandı; P3-5C uygulanıyor, C1 HTML + C2 Students + C3 Slides + C4 Attendance static CSS tamamlandı; sıradaki kontrollü dalga C5 `admin.js` shell template styles.**
 
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
@@ -4931,7 +4931,7 @@ P3-5B sonunda `admin.js` ortak/shell sorumluluklarına yaklaşmıştır:
 - tab navigation,
 - QR/modal gibi ortak admin yüzeyleri.
 
-System/logs tarafında mevcut `error-logs.js` ayrımı korunur. **P3-5B tamamlanmıştır. P3-5C Admin inline CSS temizliği uygulanıyor; C1 HTML, C2 Students ve C3 Slides template static CSS tamamlandı, sıradaki dalga C4 Attendance template styles**dir.
+System/logs tarafında mevcut `error-logs.js` ayrımı korunur. **P3-5B tamamlanmıştır. P3-5C Admin inline CSS temizliği uygulanıyor; C1 HTML, C2 Students, C3 Slides ve C4 Attendance template static CSS tamamlandı, sıradaki dalga C5 `admin.js` shell template styles**dir.
 
 ## 21.3 Admin inline CSS — C3 sonrası
 
@@ -5023,14 +5023,44 @@ TDD/browser kanıtı:
 - Chrome final warning/error **0**, network ilgili çağrılar **200/304**; Playwright auth redirect + warning/error **0**,
 - product/test commit `31fd5cf00d823bdf7d125ad60a9e8165ab6cc01f`, GitHub Actions `31324982438`: Node 22 PASS (24 sn), Node 24 PASS (28 sn).
 
-Admin JS template tarafında kalan inline-style envanteri **15** attribute'tur:
+### C4 sırasında kapatılan admin form accessibility kusurları
+
+C4 gerçek browser doğrulaması sırasında Chrome DevTools **19 label association issue + 1 autocomplete issue** raporladı. Yeni bağlayıcı operasyon kuralına göre C4 durduruldu ve kusur ayrı bugfix dalgasıyla kapatıldı:
+
+- 19 mevcut görünür label kendi input/select/textarea kontrolüne `for/id` ile programatik olarak bağlandı; Students add formundaki name/gender/photo kontrollerine stabil ID verildi,
+- student-name input'una `autocomplete="name"` eklendi,
+- yeni `tests/admin-form-accessibility.test.js` ilk RED'de **0/2**, final focused **2/2**; ilgili admin komşu grubu **82/82 pass**,
+- Chrome final issue taraması **0 error / 0 warning / 0 issue**, Playwright auth redirect warning/error **0**,
+- bugfix commit `8be0c1114c15e7adabab2ad6fd85af0e4c56f2fa`, GitHub Actions `31325940938`: Node 22 PASS (1 dk 5 sn), Node 24 PASS (28 sn).
+
+### C4 — Attendance template static CSS sonucu
+
+`public/admin/js/attendance.js` içindeki statik template presentation C4 ile class tabanlı hale getirildi:
+
+- template `style="..."` attribute sayısı **7 → 0**,
+- student row/avatar/name/radio choice ve present/absent summary renkleri `admin-attendance-*` class'larına taşındı,
+- mevcut `.student-item` / `.student-thumb`, radio `name/value/data-student-id`, `Utils.escapeHtml(s.name)` ve bulk save/load davranışları korunuyor,
+- `attendance.js` içinde runtime `.style.*` yazımı yok; yalnız static presentation ownership değişti,
+- `attendance.js` **161 satır**, `style.css` **1776 satır**.
+
+TDD/browser kanıtı:
+
+- C4 RED **0/3**; final C4 focused **3/3**, ilk C4+B3+DOM-safety GREEN **11/11**, geniş komşu grup **39/39**,
+- full core **1468/1468**, system smoke PASS, audit **0**, syntax/package/diff temiz,
+- Chrome 1366×768 pre/post attendance computed-style birebir; subtree inline style **0**, overflow **0**,
+- gerçek radio state change + save UI feedback `Yoklama başarıyla kaydedildi!`; attendance API readback seçilen durumlarla eşleşti,
+- dört ana tab smoke PASS; 1920-wide Sistem/Error Logs görünür ve overflow **0**,
+- Chrome final error/warn/issue **0**, ilgili API request'leri **200/304**; Playwright auth redirect warning/error **0**,
+- product/test commit `e3f189256d81d8b1c09c2613b7cb470436754e46`, GitHub Actions `31326122652`: Node 22 PASS (27 sn), Node 24 PASS (34 sn).
+
+Admin JS template tarafında kalan inline-style envanteri **8** attribute'tur:
 
 - `public/admin/js/students.js`: **0** template attribute (+ ayrı tutulan 1 runtime `style.cssText`),
 - `public/admin/js/slides.js`: **0** template attribute (+ ayrı tutulan 21 runtime `.style.*` state yazımı),
-- `public/admin/js/attendance.js`: **7**,
+- `public/admin/js/attendance.js`: **0**,
 - `public/admin/admin.js`: **8**.
 
-Sıradaki aktif kontrollü dalga **P3-5C4 — Attendance template static style extraction** olacaktır. Ardından `admin.js` shell template static styles ele alınacaktır; runtime state-class dönüşümü ancak ayrı davranış testi + browser kanıtıyla yapılacaktır.
+Sıradaki aktif kontrollü dalga **P3-5C5 — `admin.js` shell template static style extraction** olacaktır. Runtime state-class dönüşümü ancak ayrı davranış testi + browser kanıtıyla yapılacaktır.
 
 Fresh-DB `error_logs` cleanup-order hatası **C3 sırasında kapatıldı ve regression test + fresh server startup ile doğrulandı**. P2-6 fiziksel 55\" 4K kabul kapısı açık kalır.
 
@@ -5307,7 +5337,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 27 | P3-5B2 admin roles module extraction | P3 | 🟩 |
 | 28 | P3-5B3 admin attendance module extraction | P3 | 🟩 |
 | 29 | P3-5B4 admin slides module extraction — B4.1–B4.7 tamamlandı ve doğrulandı; P3-5B kapandı | P3 | 🟩 |
-| 30 | P3-5C admin inline CSS — C1 index.html + C2 Students + C3 Slides template styles tamamlandı; C4 Attendance sırada | P3 | 🟨 |
+| 30 | P3-5C admin inline CSS — C1 index.html + C2 Students + C3 Slides + C4 Attendance template styles tamamlandı; C5 admin shell sırada | P3 | 🟨 |
 
 Durum simgeleri:
 

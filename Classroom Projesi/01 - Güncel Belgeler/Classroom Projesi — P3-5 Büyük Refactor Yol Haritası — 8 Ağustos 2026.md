@@ -654,7 +654,7 @@ Kod/test milestone:
 
 Bilinen fresh-DB `error_logs` cleanup-order bug'ı A7 sırasında kasıtlı olarak değiştirilmedi. P2-6 gerçek 55" 4K fiziksel kabul kapısı da ayrı biçimde açık kalır.
 
-**Backend domain extraction A1–A7 ve P3-5B Admin JavaScript modülerleştirme tamamlandı/doğrulandı.** A8 auth/session ancak ayrı security regression turuyla değerlendirilecektir. **P3-5C — Admin inline CSS temizliği uygulanıyor; C1, C2 ve C3 tamamlandı, C4 Attendance template styles sırada.** C3 sırasında tespit edilen stored slide admin XSS, fresh-DB `error_logs` cleanup-order ve admin-login favicon 404 hataları ayrı bugfix commit'iyle düzeltilip doğrulandı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+**Backend domain extraction A1–A7 ve P3-5B Admin JavaScript modülerleştirme tamamlandı/doğrulandı.** A8 auth/session ancak ayrı security regression turuyla değerlendirilecektir. **P3-5C — Admin inline CSS temizliği uygulanıyor; C1, C2, C3 ve C4 tamamlandı, sıradaki kontrollü dalga C5 `admin.js` shell template static styles.** C3 sırasında tespit edilen stored slide admin XSS, fresh-DB `error_logs` cleanup-order ve admin-login favicon 404; C4 sırasında tespit edilen admin form label/autocomplete erişilebilirlik kusurları ayrı bugfix commit'leriyle düzeltilip doğrulandı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
 #### A8 — Admin auth/session — ayrıca ve en son değerlendir
 
@@ -1078,18 +1078,18 @@ TDD ve regresyon kanıtı:
 
 Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B4.7 sırasında değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
-**P3-5B tamamlandı ve doğrulandı.** B1 Students, B2 Roles, B3 Attendance ve B4 Slides B4.1–B4.7 artık 🟩 durumundadır. **P3-5C başladı; C1 `index.html`, C2 Students ve C3 Slides template static styles tamamlandı, C4 Attendance template styles sıradadır.** Fiziksel 55" 4K kabul kapısı bu refactor kapanışından bağımsız olarak açık kalır.
+**P3-5B tamamlandı ve doğrulandı.** B1 Students, B2 Roles, B3 Attendance ve B4 Slides B4.1–B4.7 artık 🟩 durumundadır. **P3-5C başladı; C1 `index.html`, C2 Students, C3 Slides ve C4 Attendance template static styles tamamlandı; C5 `admin.js` shell template static styles sıradadır.** Fiziksel 55" 4K kabul kapısı bu refactor kapanışından bağımsız olarak açık kalır.
 
 ## 8. P3-5C — Admin inline CSS temizliği
 
-**Durum:** 🟨 9 Ağustos 2026 — uygulanıyor. C1 `index.html`, C2 Students ve C3 Slides template static inline CSS extraction tamamlandı/doğrulandı; sıradaki kontrollü dalga C4 Attendance template static styles.
+**Durum:** 🟨 9 Ağustos 2026 — uygulanıyor. C1 `index.html`, C2 Students, C3 Slides ve C4 Attendance template static inline CSS extraction tamamlandı/doğrulandı; sıradaki kontrollü dalga C5 `admin.js` shell template static styles.
 
 Amaç görsel redesign değildir. Amaç mevcut görünümü class tabanlı hale getirmektir.
 
 Sıra:
 
 1. `public/admin/index.html` içindeki statik inline stilleri domain bazında CSS class'larına taşı — 🟩 **C1 tamamlandı**.
-2. JS template string içindeki statik inline stilleri domain bazında küçük dalgalarla taşı — 🟩 **C2 Students tamamlandı**, 🟩 **C3 Slides tamamlandı**; sıradaki **C4 Attendance**, ardından admin shell.
+2. JS template string içindeki statik inline stilleri domain bazında küçük dalgalarla taşı — 🟩 **C2 Students tamamlandı**, 🟩 **C3 Slides tamamlandı**, 🟩 **C4 Attendance tamamlandı**; sıradaki **C5 admin shell**.
 3. Runtime'a bağlı `display`, progress width, media preview state, hover state gibi dinamik stilleri ilk turda koru.
 4. Daha sonra yalnız davranış testi ve browser kanıtı varsa state class modeline geçir.
 
@@ -1194,7 +1194,41 @@ TDD ve browser doğrulaması:
 10. Playwright final `/admin/` auth redirect PASS ve login console warning/error **0**.
 11. Product/test commit `31fd5cf00d823bdf7d125ad60a9e8165ab6cc01f`, GitHub Actions `31324982438`: Node 22 **PASS (24 sn)**, Node 24 **PASS (28 sn)**.
 
-**P3-5C tamamlanmış değildir. Sıradaki dalga C4 — `attendance.js` template static style extraction'dır.** `admin.js` shell template styles C4 sonrasında ele alınacaktır; dinamik state-class dönüşümü ancak ayrı TDD + browser kanıtıyla yapılacaktır.
+### C4 sırasında tespit edilen admin form erişilebilirlik kusurları — ayrı bugfix sonucu
+
+C4 gerçek browser doğrulaması sırasında Chrome DevTools production issue taraması **19 adet “No label associated with a form field”** ve **1 adet autocomplete eksikliği** raporladı. Yeni bağlayıcı “tesadüfen bulunan gerçek hatayı anında düzelt” kuralı gereği C4 geçici olarak durduruldu ve sorun ayrı TDD bugfix dalgasıyla kapatıldı.
+
+- Kök neden, admin HTML'deki 19 görünür `<label>` öğesinin görsel olarak kontrol yanında bulunmasına rağmen `for/id` ile programatik bağının olmamasıydı. Bu 19 çift Students, Attendance, Slide Settings, Error Logs filtreleri ve Slide modal form alanlarına dağılıyordu.
+- Add Student içindeki ad/cinsiyet/fotoğraf kontrollerine stabil `id` eklendi; mevcut diğer kontrollerin ID'leri korundu. Tüm 19 label gerçek kontrolüne `for` ile bağlandı.
+- Öğrenci adı input'u `autocomplete="name"` aldı. Görsel class/layout ve form submit davranışı değiştirilmedi.
+- `tests/admin-form-accessibility.test.js` ilk RED'de **0/2 pass** verdi; label/control ilişkileri ve autocomplete eksikliği doğru nedenle yakalandı. Düzeltme sonrası focused **2/2**, ilgili Student/Role/Attendance/Slide/Error Logs/DOM-safety komşu grubu **82/82 pass** verdi.
+- Bugfix testi `test:core` zincirine eklendi; bugfix + devam eden C4 çalışma ağacıyla local full core **1465/1465 pass**, system smoke PASS ve `npm audit --omit=dev` **0 vulnerability** verdi.
+- Chrome cache-bypass reload sonrası production issue taraması **0 error / 0 warning / 0 issue** oldu. Playwright `/admin/` auth redirect PASS ve warning/error **0** verdi; takipteki `about:blank` davranışı yalnız MCP/tool-side olarak ayrıştırıldı.
+- Ayrı bugfix commit `8be0c1114c15e7adabab2ad6fd85af0e4c56f2fa`, GitHub Actions `31325940938`: Node 22 **PASS (1 dk 5 sn)**, Node 24 **PASS (28 sn)**.
+
+### C4 — `attendance.js` template static CSS uygulama sonucu
+
+Attendance domainindeki statik template presentation C4 ile class tabanlı hale getirildi; yoklama veri akışı, isim escape'i, radio sözleşmesi ve bulk save davranışı korunarak redesign yapılmadı.
+
+- `public/admin/js/attendance.js` template `style="..."` attribute sayısı **7 → 0** oldu.
+- Student row, avatar, name flex alanı, present/absent radio label'ları ve summary present/absent renkleri `admin-attendance-*` class'larına taşındı.
+- Mevcut generic `.student-item` ve `.student-thumb` hook/class'ları korunarak attendance'a özel class'lar yanına eklendi; böylece global student CSS davranışı ve avatar border/object-fit sözleşmesi değişmedi.
+- `attendance.js` içinde runtime `.style.*` yazımı zaten yoktu; C4 yalnız statik presentation ownership'ini taşıdı.
+- C4 sonunda `public/admin/js/attendance.js` **161 satır**, `public/admin/style.css` **1776 satır**. Admin template inline-style envanteri **8** attribute'a indi: `index.html` **0**, `students.js` **0**, `slides.js` **0**, `attendance.js` **0**, `admin.js` **8**.
+
+TDD ve browser doğrulaması:
+
+1. `tests/admin-attendance-style-refactor.test.js` production değişikliğinden önce **0/3 pass** RED verdi: 7 inline style, eksik attendance class ownership'i ve eksik behavior-hook eşlemesi doğru nedenle yakalandı.
+2. Minimal extraction sonrası C4 + B3 Attendance + student-name DOM-safety focused grup **11/11 pass**; final C4 focused **3/3**.
+3. Accessibility fix dahil admin/C1–C4/notification/error-log/DOM-safety komşu grubu **39/39 pass** verdi.
+4. C4 testi `test:core` zincirine eklendi; final full core **1468/1468 pass**, **0 fail**. `npm run test:system-smoke` PASS; `npm audit --omit=dev` **0 vulnerability**; syntax/package parse/diff-check temiz.
+5. Chrome 1366×768 pre/post computed-style karşılaştırmasında attendance card, 50×50 avatar, name flex, radio label'ları ve green/red summary renkleri birebir aynı kaldı; attendance subtree inline style **0**, horizontal overflow **0**.
+6. Gerçek browser save smoke'ta iki öğrencinin present/absent state'i değiştirildi; UI `Yoklama başarıyla kaydedildi!` gösterdi ve `/api/attendance/2026-08-09` readback seçilen durumları doğruladı.
+7. Students/Görevler/Yoklama/Slaytlar tab smoke 1366×768'de PASS; 1920×1080 istenen window inner viewport **1920×863** oldu, Sistem/Error Logs görünür ve horizontal overflow **0** kaldı.
+8. Chrome final warning/error/issue **0**; ilgili students/roles/slides/attendance/logs network çağrıları **200/304**. Playwright `/admin/` auth redirect PASS ve warning/error **0**.
+9. Product/test commit `e3f189256d81d8b1c09c2613b7cb470436754e46`, GitHub Actions `31326122652`: Node 22 **PASS (27 sn)**, Node 24 **PASS (34 sn)**.
+
+**P3-5C tamamlanmış değildir. Sıradaki dalga C5 — `public/admin/admin.js` shell template static style extraction'dır.** `admin.js` içinde kalan **8** static inline-style attribute küçük ve ayrı bir dalgada class'lara taşınacaktır. Dinamik state-class dönüşümü ancak ayrı TDD + browser kanıtıyla yapılacaktır.
 
 Her görsel dalgada en az:
 
