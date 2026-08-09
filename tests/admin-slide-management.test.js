@@ -73,6 +73,8 @@ function loadAdminSandbox(fetchImpl) {
     sandbox.window.addEventListener = () => {};
 
     vm.createContext(sandbox);
+    const slidesSource = fs.readFileSync(path.join(__dirname, '../public/admin/js/slides.js'), 'utf8');
+    vm.runInContext(slidesSource, sandbox, { filename: 'public/admin/js/slides.js' });
     const source = fs.readFileSync(path.join(__dirname, '../public/admin/admin.js'), 'utf8');
     vm.runInContext(source, sandbox, { filename: 'public/admin/admin.js' });
 
@@ -119,7 +121,7 @@ test('Admin slide management frontend', async (t) => {
             async json() { return []; }
         }));
 
-        sandbox.renderSlides([
+        sandbox.AdminSlides.renderSlides([
             {
                 id: 1,
                 title: 'Aktif slayt',

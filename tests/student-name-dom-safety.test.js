@@ -304,6 +304,7 @@ test('Student Name DOM Safety Tests', async (t) => {
         const studentModuleSource = fs.readFileSync(path.join(__dirname, '../public/admin/js/students.js'), 'utf8');
         const roleModuleSource = fs.readFileSync(path.join(__dirname, '../public/admin/js/roles.js'), 'utf8');
         const attendanceModuleSource = fs.readFileSync(path.join(__dirname, '../public/admin/js/attendance.js'), 'utf8');
+        const slideModuleSource = fs.readFileSync(path.join(__dirname, '../public/admin/js/slides.js'), 'utf8');
         const utilsSource = fs.readFileSync(path.join(__dirname, '../public/js/utils.js'), 'utf8');
         
         const { sandbox, domElements, getEl, fireDomContentLoaded } = createSandbox();
@@ -331,6 +332,7 @@ test('Student Name DOM Safety Tests', async (t) => {
         vm.runInContext(studentModuleSource, sandbox);
         vm.runInContext(roleModuleSource, sandbox);
         vm.runInContext(attendanceModuleSource, sandbox);
+        vm.runInContext(slideModuleSource, sandbox);
         const instrumentedSource = adminSource + `
             globalThis.__testApi = { 
                 noop: true
