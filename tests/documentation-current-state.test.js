@@ -15,6 +15,7 @@ const packageJson = JSON.parse(read('package.json'));
 
 const livingPlanName = 'Classroom Projesi — Önceliklendirilmiş Düzeltme Planı — 2026-08-08.md';
 const tomographyName = 'CLASSROOM_PROJE_TOMOGRAFISI_2026-08-08.md';
+const livingPlan = read(`Classroom Projesi/01 - Güncel Belgeler/${livingPlanName}`);
 
 function markdownVersionPattern(name, version) {
     const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -95,5 +96,14 @@ test('current documentation source-of-truth contract', async (t) => {
             assert.match(text, /Git HEAD|HEAD/i, `${name} must defer changing code facts to Git HEAD`);
             assert.match(text, /Önceliklendirilmiş Düzeltme Planı/, `${name} must point to the living work queue`);
         }
+    });
+
+    await t.test('living priority table reflects already completed P3-1 and P3-2 milestones', () => {
+        assert.match(livingPlan, /# 4\. FAZ 0[^\n]*Değişiklikten önce tabanı sabitle[\s\S]{0,220}\*\*Durum:\*\* 🟩 Tamamlandı ve doğrulandı/);
+        assert.match(livingPlan, /# 17\. P3-1[^\n]*Stale bakım scriptlerini temizle[\s\S]{0,180}\*\*Durum:\*\* 🟩 Tamamlandı ve doğrulandı/);
+        assert.match(livingPlan, /# 18\. P3-2[^\n]*Güncel dokümantasyonu tek gerçekliğe getir[\s\S]{0,180}\*\*Durum:\*\* 🟩 Tamamlandı ve doğrulandı/);
+        assert.match(livingPlan, /\| 0 \| Başlangıç baseline \/ test disiplini \| Zorunlu \| 🟩 \|/);
+        assert.match(livingPlan, /\| 14 \| Stale bakım scriptleri \| P3 \| 🟩 \|/);
+        assert.match(livingPlan, /\| 15 \| README\/context\/docs güncelleme \| P3 \| 🟩 \|/);
     });
 });

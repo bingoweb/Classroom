@@ -141,7 +141,7 @@ Davranış değişikliklerinin tamamlanmasından sonra yapılacak.
 
 **Öncelik:** Zorunlu başlangıç  
 **Kod değişikliği:** Hayır / test disiplini  
-**Durum:** ⬜ Bekliyor
+**Durum:** 🟩 Tamamlandı ve doğrulandı
 
 ## 4.1 Başlangıç gerçekliği
 
@@ -154,6 +154,8 @@ Davranış değişikliklerinin tamamlanmasından sonra yapılacak.
 - çalışma ağacındaki yeni dokümanlar dışında kaynak kod değişmemişti.
 
 Bu nokta düzeltme serisinin “önceki sağlıklı durum” referansıdır.
+
+**Güncel not:** Bu başlangıç kapısı 8 Ağustos 2026'da uygulanmış tarihsel baseline'dır. Sonraki bütün P1/P2/P3 dalgaları aynı küçük commit + regression + core + exact-SHA CI disipliniyle yürütülmüştür; yaşayan current source-of-truth artık her oturumda yeniden doğrulanan Git `HEAD`/`origin/main` ve bu belgenin güncel durum tablosudur.
 
 ## 4.2 Çalışma kuralı
 
@@ -3980,12 +3982,25 @@ Bu script bugünkü ürünle ilişkili değildir.
 
 Yerine yeni bir “code health” script yazmaya gerek yok; node test suite zaten daha güvenilir.
 
+## 17.3 Uygulama sonucu — 8 Ağustos 2026
+
+İlk plan `verify-code.js` dosyasını tamamen kaldırmayı öneriyordu; gerçek uygulamada README/package compatibility komutunu kırmamak için daha küçük ve güvenli bir çözüm seçildi:
+
+- `scripts/test_system.js` eski `/api/word`, sabit `localhost:3000` ve auth'suz admin varsayımlarından temizlenip temp SQLite + gerçek login/session/CSRF kullanan auth-aware system smoke haline getirildi.
+- `scripts/verify-code.js` legacy Gemini/Nano Banana arayıcısı olmaktan çıkarıldı; yalnız yaşayan `npm run test:core` kalite kapısına delegasyon yapan compatibility wrapper olarak korundu.
+- `tests/system-smoke-script.test.js` bu iki bakım aracının güncel mimariye bağlı kalmasını regression kontratı haline getirdi.
+- Bugünkü fresh focused doğrulama: **4/4 PASS**.
+- Milestone commit `f7f5c52ba8a4d9759c7bc8d90b0f58763859fd06` — `test: modernize maintenance smoke tooling`.
+- GitHub Actions `31269383546`: exact milestone SHA üzerinde Node 22 ve Node 24 **PASS**.
+
+Dolayısıyla P3-1'in gerçek sonucu “scriptleri körlemesine silmek” değil, **yanıltıcı stale bakım davranışını kaldırıp yararlı iki güncel guardrail bırakmak** olmuştur.
+
 ---
 
 # 18. P3-2 — Güncel dokümantasyonu tek gerçekliğe getir
 
 **Öncelik:** P3  
-**Durum:** ⬜ Bekliyor
+**Durum:** 🟩 Tamamlandı ve doğrulandı
 
 Tomografi bugünkü doğru gerçekliği çıkardı; eski üst seviye belgeler hâlâ yeni oturumları yanıltabilir.
 
@@ -4036,6 +4051,24 @@ Silinmeyecek.
 Tarihsel geliştirme kaydı olarak kalacak.
 
 Yeni dokümantasyon ise yalnız `.md` olacaktır.
+
+## 18.5 Uygulama / doğrulama sonucu — 8–9 Ağustos 2026
+
+P3-2 gerçek dokümantasyon yenilemesi uygulanmıştır:
+
+- `README.md` güncel Node **22/24**, local-first çalışma modeli, Magic Park kiosk, güncel admin auth, yerel SheetJS ve yaşayan test komutlarını anlatacak şekilde yenilendi.
+- `AI_PROJECT_CONTEXT.md` eski branch/prototip günlüğü olmaktan çıkarılıp Git HEAD + yaşayan planı referans alan güncel handoff haline getirildi.
+- `docs/PROJE_OZETI.md` eski çok-bin-satırlı snapshot yerine güncel ürün/mimari özeti ve source-of-truth sınırlarını taşır.
+- Eski DOCX belgeleri tarihsel kaynak olarak korundu; yeni yaşayan belgeler Markdown olarak tutuluyor.
+- `tests/documentation-current-state.test.js` README / AI context / proje özeti için ortak source-of-truth ve removed-feature regression kontratını taşır.
+
+Tarihçe özellikle şöyledir:
+
+1. İlk P3-2 içerik commit'i `a4be245e8ac80371b0c0aed19cfd644f451c6566` — `docs: refresh current project context` — içerik yenilemesini yaptı; fakat GitHub Actions `31269912237` hem Node 22 hem Node 24'te **FAIL** verdi. Neden güncel dokümantasyonu geri almak değil, iki eski test expectation'ının yeni Markdown/local-first kontratıyla çelişmesiydi.
+2. Sonraki P3-3 product ağacında `tests/documentation-current-state.test.js` ve `tests/internet-requirement-copy.test.js` güncel source-of-truth ile hizalandı. Commit `ae4753cf4ae02a074ad50cc06b07ab6022bd540b`, GitHub Actions `31273344970` exact SHA üzerinde **success** oldu.
+3. 9 Ağustos 2026 fresh doğrulamasında dokümantasyon kontratı **5/5 PASS**. P3-5D0 evidence HEAD'i `ec0cb58a7753377b5666db77e07bc78dcb94b42d` için GitHub Actions `31328703246` Node 22 ve Node 24 **PASS (29 sn / 29 sn)**.
+
+Bu nedenle P3-2 artık yaşayan tabloda bekleyen iş değildir; mevcut README/context/özet kontratı test ve CI ile korunmaktadır.
 
 ---
 
@@ -5384,7 +5417,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 
 | Sıra | İş | Öncelik | Durum |
 |---:|---|---|---|
-| 0 | Başlangıç baseline / test disiplini | Zorunlu | ⬜ |
+| 0 | Başlangıç baseline / test disiplini | Zorunlu | 🟩 |
 | 1 | Slayt Aktif/Pasif yönetimi | P1 | 🟩 |
 | 2 | Admin görünür feedback | P1 | 🟩 |
 | 3 | Admin İstanbul “Bugün” tarihi | P1 | 🟩 |
@@ -5398,8 +5431,8 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 11 | GSAP resize güvenilirliği | P2 | 🟩 |
 | 12 | Fallback slide sistem sahipliği | P2 | 🟩 |
 | 13 | Fiziksel 4K kabul | P2 | 🟨 |
-| 14 | Stale bakım scriptleri | P3 | ⬜ |
-| 15 | README/context/docs güncelleme | P3 | ⬜ |
+| 14 | Stale bakım scriptleri | P3 | 🟩 |
+| 15 | README/context/docs güncelleme | P3 | 🟩 |
 | 16 | Legacy settings katmanı | P3 | 🟩 |
 | 17 | Orphan backend config/utils | P3 | 🟩 |
 | 18 | Büyük server/admin/CSS refactor planı | P3 | 🟩 |
