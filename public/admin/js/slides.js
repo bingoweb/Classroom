@@ -9,7 +9,7 @@
         if (!container) return;
 
         if (slides.length === 0) {
-            container.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">Henüz slayt eklenmemiş.</p>';
+            container.innerHTML = '<p class="admin-slide-empty">Henüz slayt eklenmemiş.</p>';
             return;
         }
 
@@ -48,32 +48,32 @@
             const safeTextPreview = Utils.escapeHtml(textPreview);
 
             return `
-            <div class="slide-item${isActive ? '' : ' is-inactive'}" data-id="${slide.id}" data-order="${slide.display_order}" draggable="true" style="display: flex; align-items: center; gap: 15px; padding: 15px; margin-bottom: 10px; background: white; border-radius: 8px; border: 1px solid #ddd; cursor: move;">
-                <div style="font-size: 1.5rem; cursor: move;">☰</div>
+            <div class="slide-item admin-slide-item${isActive ? '' : ' is-inactive'}" data-id="${slide.id}" data-order="${slide.display_order}" draggable="true">
+                <div class="admin-slide-item__drag">☰</div>
                 ${mediaPath ? `
-                    <div style="flex-shrink: 0; width: 80px; height: 60px; border-radius: 5px; overflow: hidden; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                    <div class="admin-slide-item__media">
                         ${slide.media_type === 'video' ? `
-                            <video src="${mediaPath}" style="width: 100%; height: 100%; object-fit: cover;" muted></video>
+                            <video src="${mediaPath}" class="admin-slide-item__media-object" muted></video>
                         ` : `
-                            <img src="${mediaPath}" style="width: 100%; height: 100%; object-fit: cover;" alt="Preview" onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\\'color: #999; font-size: 0.8rem;\\'>Görsel yok</span>'">
+                            <img src="${mediaPath}" class="admin-slide-item__media-object" alt="Preview" onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\\'admin-slide-item__media-empty\\'>Görsel yok</span>'">
                         `}
                     </div>
-                ` : '<div style="flex-shrink: 0; width: 80px; height: 60px; border-radius: 5px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #999; font-size: 0.8rem;">Görsel yok</div>'}
-                <div style="flex: 1; min-width: 0;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-                        <span style="font-weight: bold; color: var(--primary);">#${slide.display_order}</span>
-                        <span style="background: #e3f2fd; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem;">${contentTypeLabel}</span>
-                        <span style="font-size: 1.2rem;">${mediaTypeIcons[slide.media_type] || '📄'}</span>
-                        ${slide.title ? `<span style="font-weight: bold;">${safeTitle}</span>` : ''}
-                        <span style="color: #666; font-size: 0.9rem;">${transitionLabel}</span>
-                        ${isActive ? '<span style="color: green;">✓ Aktif</span>' : '<span style="color: red;">✗ Pasif</span>'}
+                ` : '<div class="admin-slide-item__media admin-slide-item__media--empty"><span class="admin-slide-item__media-empty">Görsel yok</span></div>'}
+                <div class="admin-slide-item__content">
+                    <div class="admin-slide-item__meta">
+                        <span class="admin-slide-item__order">#${slide.display_order}</span>
+                        <span class="admin-slide-item__type">${contentTypeLabel}</span>
+                        <span class="admin-slide-item__media-icon">${mediaTypeIcons[slide.media_type] || '📄'}</span>
+                        ${slide.title ? `<span class="admin-slide-item__title">${safeTitle}</span>` : ''}
+                        <span class="admin-slide-item__transition">${transitionLabel}</span>
+                        ${isActive ? '<span class="admin-slide-item__status admin-slide-item__status--active">✓ Aktif</span>' : '<span class="admin-slide-item__status admin-slide-item__status--passive">✗ Pasif</span>'}
                     </div>
-                    ${slide.text_content ? `<div style="color: #666; font-size: 0.9rem; margin-top: 5px;">${safeTextPreview}</div>` : ''}
+                    ${slide.text_content ? `<div class="admin-slide-item__text">${safeTextPreview}</div>` : ''}
                 </div>
-                <div style="display: flex; gap: 5px;">
-                    <button onclick="editSlide(${slide.id})" style="padding: 5px 10px; background: var(--secondary); color: white; border: none; border-radius: 4px; cursor: pointer;">Düzenle</button>
-                    <button onclick="toggleSlideActive(${slide.id})" style="padding: 5px 10px; background: ${isActive ? '#ff9800' : '#4caf50'}; color: white; border: none; border-radius: 4px; cursor: pointer;">${isActive ? 'Pasif Yap' : 'Aktif Yap'}</button>
-                    <button onclick="deleteSlide(${slide.id})" style="padding: 5px 10px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">Sil</button>
+                <div class="admin-slide-item__actions">
+                    <button onclick="editSlide(${slide.id})" class="admin-slide-item__button admin-slide-item__button--edit">Düzenle</button>
+                    <button onclick="toggleSlideActive(${slide.id})" class="admin-slide-item__button ${isActive ? 'admin-slide-item__button--deactivate' : 'admin-slide-item__button--activate'}">${isActive ? 'Pasif Yap' : 'Aktif Yap'}</button>
+                    <button onclick="deleteSlide(${slide.id})" class="admin-slide-item__button admin-slide-item__button--delete">Sil</button>
                 </div>
             </div>
         `;
@@ -205,27 +205,27 @@
         const currentMediaInfo = document.getElementById('slideCurrentMediaInfo');
 
         if (!slide.media_path) {
-            preview.innerHTML = '<p style="color: #999;">Mevcut medya dosyası yok</p>';
+            preview.innerHTML = '<p class="admin-slide-media-empty">Mevcut medya dosyası yok</p>';
             currentMediaInfo.textContent = '';
             return;
         }
 
         let mediaPath = Utils.normalizePath ? Utils.normalizePath(slide.media_path, true) : slide.media_path;
         const mediaTypeText = slide.media_type === 'video' ? 'Video' : slide.media_type === 'gif' ? 'GIF' : 'Resim';
-        currentMediaInfo.innerHTML = `✓ Mevcut medya: ${mediaTypeText} - <a href="${mediaPath}" target="_blank" style="color: #28a745;">Görüntüle</a>`;
+        currentMediaInfo.innerHTML = `✓ Mevcut medya: ${mediaTypeText} - <a href="${mediaPath}" target="_blank" class="admin-slide-current-media-link">Görüntüle</a>`;
 
         if (slide.media_type === 'video') {
             preview.innerHTML = `
-                <div style="text-align: center;">
-                    <video src="${mediaPath}" style="max-width: 100%; max-height: 300px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" controls></video>
-                    <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">Mevcut Video</p>
+                <div class="admin-slide-media-preview">
+                    <video src="${mediaPath}" class="admin-slide-media-preview__object" controls></video>
+                    <p class="admin-slide-media-preview__caption">Mevcut Video</p>
                 </div>
             `;
         } else {
             preview.innerHTML = `
-                <div style="text-align: center;">
-                    <img src="${mediaPath}" style="max-width: 100%; max-height: 300px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" alt="Mevcut Medya">
-                    <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">Mevcut ${slide.media_type === 'gif' ? 'GIF' : 'Resim'}</p>
+                <div class="admin-slide-media-preview">
+                    <img src="${mediaPath}" class="admin-slide-media-preview__object" alt="Mevcut Medya">
+                    <p class="admin-slide-media-preview__caption">Mevcut ${slide.media_type === 'gif' ? 'GIF' : 'Resim'}</p>
                 </div>
             `;
         }
@@ -295,16 +295,16 @@
         reader.onload = function (event) {
             if (file.type.startsWith('video/')) {
                 preview.innerHTML = `
-                    <div style="text-align: center;">
-                        <video src="${event.target.result}" style="max-width: 100%; max-height: 300px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" controls></video>
-                        <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">Yeni Video Önizlemesi</p>
+                    <div class="admin-slide-media-preview">
+                        <video src="${event.target.result}" class="admin-slide-media-preview__object" controls></video>
+                        <p class="admin-slide-media-preview__caption">Yeni Video Önizlemesi</p>
                     </div>
                 `;
             } else {
                 preview.innerHTML = `
-                    <div style="text-align: center;">
-                        <img src="${event.target.result}" style="max-width: 100%; max-height: 300px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" alt="Yeni Dosya Önizlemesi">
-                        <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">Yeni ${file.type === 'image/gif' ? 'GIF' : 'Resim'} Önizlemesi</p>
+                    <div class="admin-slide-media-preview">
+                        <img src="${event.target.result}" class="admin-slide-media-preview__object" alt="Yeni Dosya Önizlemesi">
+                        <p class="admin-slide-media-preview__caption">Yeni ${file.type === 'image/gif' ? 'GIF' : 'Resim'} Önizlemesi</p>
                     </div>
                 `;
             }

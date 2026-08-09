@@ -1581,3 +1581,160 @@ button:hover {
     font-size: 0.9rem;
     color: #666;
 }
+
+/* P3-5C3: Slides template presentation */
+.admin-slide-empty {
+    color: #666;
+    text-align: center;
+    padding: 20px;
+}
+
+.admin-slide-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    margin-bottom: 10px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    cursor: move;
+}
+
+.admin-slide-item__drag {
+    font-size: 1.5rem;
+    cursor: move;
+}
+
+.admin-slide-item__media {
+    flex-shrink: 0;
+    width: 80px;
+    height: 60px;
+    border-radius: 5px;
+    overflow: hidden;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-slide-item__media--empty,
+.admin-slide-item__media-empty {
+    color: #999;
+    font-size: 0.8rem;
+}
+
+.admin-slide-item__media-object {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.admin-slide-item__content {
+    flex: 1;
+    min-width: 0;
+}
+
+.admin-slide-item__meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.admin-slide-item__order {
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.admin-slide-item__type {
+    background: #e3f2fd;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.admin-slide-item__media-icon {
+    font-size: 1.2rem;
+}
+
+.admin-slide-item__title {
+    font-weight: bold;
+}
+
+.admin-slide-item__transition {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.admin-slide-item__status {
+    font-size: inherit;
+}
+
+.admin-slide-item__status--active {
+    color: green;
+}
+
+.admin-slide-item__status--passive {
+    color: red;
+}
+
+.admin-slide-item__text {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+.admin-slide-item__actions {
+    display: flex;
+    gap: 5px;
+}
+
+.admin-slide-item__button {
+    padding: 5px 10px;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.admin-slide-item__button--edit {
+    background: var(--secondary);
+}
+
+.admin-slide-item__button--deactivate {
+    background: #ff9800;
+}
+
+.admin-slide-item__button--activate {
+    background: #4caf50;
+}
+
+.admin-slide-item__button--delete {
+    background: #f44336;
+}
+
+.admin-slide-media-empty {
+    color: #999;
+}
+
+.admin-slide-current-media-link {
+    color: #28a745;
+}
+
+.admin-slide-media-preview {
+    text-align: center;
+}
+
+.admin-slide-media-preview__object {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.admin-slide-media-preview__caption {
+    margin-top: 10px;
+    color: #666;
+    font-size: 0.9rem;
+}
