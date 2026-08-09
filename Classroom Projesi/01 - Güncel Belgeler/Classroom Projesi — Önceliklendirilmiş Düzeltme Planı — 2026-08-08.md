@@ -4529,6 +4529,47 @@ Kanıtlar:
 
 `public/admin/admin.js` **1804 → 1176 satıra** indi; yeni `public/admin/js/students.js` **609 satır**. Bilinen fresh-DB `error_logs` cleanup-order bug'ı değiştirilmedi; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. Sıradaki admin JS dalgası **P3-5B2 — Roles** olacaktır.
 
+### 21.0.9 9 Ağustos 2026 — P3-5B2 admin roles module extraction
+
+Admin role domaini `admin.js` dışına ayrıldı; B2 yalnız frontend ownership sınırını değiştirdi, backend role limit/transaction davranışlarına dokunmadı.
+
+Uygulanan sınır:
+
+- `public/admin/js/roles.js`: role-select population, assign, render, remove ve role-section remove event delegation,
+- `public/admin/admin.js`: `fetchStudents()` → `AdminRoles.updateRoleSelects(students)`, `fetchRoles()` → `AdminRoles.renderRoles(roles)` shell köprüleri ve `AdminRoles.init({ refreshRoles: fetchRoles })`,
+- `public/admin/index.html`: `js/roles.js`, `js/students.js` sonrasında ve `admin.js` öncesinde,
+- `tests/admin-role-module.test.js`: B2 fiziksel extraction, script sırası, namespace/global adaptör ve shell ownership sözleşmesi,
+- mevcut VM DOM-safety/error-log/Excel harness'leri gerçek `students.js → roles.js → admin.js` script zincirini izleyecek şekilde güncellendi.
+
+Korunan kritik sözleşmeler:
+
+- `window.assignRole` ve `window.removeRole` inline/global API'leri,
+- student fetch sonucunun role select'lere güvenli `Utils.escapeHtml` ile aktarılması,
+- president/vice-president/duty/star seçme ve render davranışı,
+- assign başarı/hata feedback'i ve role refresh,
+- remove confirm + success/error fallback + role refresh,
+- `.remove-role-btn` event delegation,
+- mevcut backend role bounded limitleri ve HTTP response metinlerinin frontend'de görünmesi,
+- classic script düzeni; ES module/framework eklenmemesi.
+
+Kanıtlar:
+
+- TDD structural test RED → GREEN,
+- B2 structural **1/1**,
+- geniş admin-source odak grubu **76/76**,
+- tam core **1409/1409**,
+- system smoke PASS,
+- audit 0,
+- `admin.js` + `students.js` + `roles.js` syntax, package parse ve diff check temiz,
+- izole temp DB gerçek admin UI: dört öğrenci create; president 200; iki vice-president 200; üçüncü vice-president beklenen 400 + `En fazla 2 başkan yardımcısı olabilir`; star 200; remove-role confirm/event delegation sonrası DELETE 200,
+- Chrome DevTools: `/admin/js/roles.js` 200; role GET/POST/DELETE network akışı doğru; beklenen limit 400 sonrası temiz reload'da console error/warn 0; yalnız önceden var olan label/autocomplete issue kayıtları,
+- 1366×768 ve 1920×1080 viewport horizontal overflow 0,
+- Playwright `/admin/` auth redirect PASS,
+- exact milestone commit `1e04860d296a3f5bcda2a3f0497fc4c8f46c83a6`,
+- GitHub Actions run `31315902265`: Node 22 PASS (27 sn), Node 24 PASS (31 sn).
+
+`public/admin/admin.js` **1176 → 1052 satıra** indi; yeni `public/admin/js/roles.js` **137 satır**. Bilinen fresh-DB `error_logs` cleanup-order bug'ı değiştirilmedi; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. Sıradaki admin JS dalgası **P3-5B3 — Attendance** olacaktır.
+
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
 ## 21.1 `backend/server.js` — A1–A7 sonrası 416 satır
@@ -4545,18 +4586,17 @@ Domain route extraction tamamlandı:
 
 Admin auth/session composition root içinde kalır. Bu sınır sırf dosya daha da küçülsün diye taşınmayacak; A8 ancak ayrı security regression turuyla değerlendirilecektir.
 
-## 21.2 `public/admin/admin.js` — B1 sonrası 1176 satır
+## 21.2 `public/admin/admin.js` — B2 sonrası 1052 satır
 
-B1 ile students domaini `public/admin/js/students.js` içine ayrıldı. `fetchStudents()` shell bridge olarak ve role select fan-out'u nedeniyle şimdilik `admin.js` içinde kalır.
+B1 ile students domaini `public/admin/js/students.js`, B2 ile roles domaini `public/admin/js/roles.js` içine ayrıldı. `fetchStudents()` ve `fetchRoles()` shell bridge olarak `admin.js` içinde kalır ve domain modüllerine veri fan-out'u yapar.
 
 Kalan alan modülleri:
 
-- roles
 - attendance
 - slides
 - system/logs
 
-olarak ayrılabilir. Sıradaki aktif dalga **B2 Roles**'dür.
+olarak ayrılabilir. Sıradaki aktif dalga **B3 Attendance**'dır.
 
 ## 21.3 Admin inline CSS
 
@@ -4834,7 +4874,8 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 24 | P3-5A6 logs route extraction | P3 | 🟩 |
 | 25 | P3-5A7 slides route extraction | P3 | 🟩 |
 | 26 | P3-5B1 admin students module extraction | P3 | 🟩 |
-| 27 | P3-5B2 admin roles module extraction | P3 | ⬜ |
+| 27 | P3-5B2 admin roles module extraction | P3 | 🟩 |
+| 28 | P3-5B3 admin attendance module extraction | P3 | ⬜ |
 
 Durum simgeleri:
 

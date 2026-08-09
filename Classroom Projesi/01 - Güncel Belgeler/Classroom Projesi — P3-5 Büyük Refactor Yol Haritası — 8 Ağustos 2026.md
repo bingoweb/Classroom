@@ -668,7 +668,7 @@ Auth refactor ayrı security regression turu gerektirir.
 
 ## 7. P3-5B — Admin JavaScript modülerleştirme
 
-**Durum:** 🟨 Uygulanıyor — B1 tamamlandı ve doğrulandı; sıradaki dalga B2 Roles.
+**Durum:** 🟨 Uygulanıyor — B1 Students ve B2 Roles tamamlandı/doğrulandı; sıradaki dalga B3 Attendance.
 
 Mevcut `error-logs.js` dosyası admin tarafında domain ayrımının çalışan örneğidir.
 
@@ -747,6 +747,46 @@ Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B1 sırasında deği�
 ### B2 — Roles
 
 `assignRole`, `removeRole`, `renderRoles` ve select population aynı domain modülüne taşınır.
+
+**Durum:** 🟩 9 Ağustos 2026 — tamamlandı ve doğrulandı.
+
+#### B2 uygulama sonucu
+
+Admin görevler/roller domaini klasik script düzeni korunarak `admin.js` dışına ayrıldı:
+
+- `public/admin/js/roles.js` oluşturuldu.
+- role-select population, `assignRole`, `renderRoles`, `removeRole` ve `.remove-role-btn` event delegation bu modüle taşındı.
+- Modül `window.AdminRoles = { init, updateRoleSelects, renderRoles, assignRole, removeRole }` namespace'ini kullanıyor; ES module/framework eklenmedi.
+- Mevcut inline/global çağrılar için `window.assignRole` ve `window.removeRole` adaptörleri korunuyor.
+- `fetchStudents()` shell'de kalıp aynı öğrenci listesini `AdminStudents.renderStudents(students)` ve `AdminRoles.updateRoleSelects(students)` arasında dağıtmaya devam ediyor.
+- `fetchRoles()` shell'de kalıp aldığı role listesini `AdminRoles.renderRoles(roles)` ile domain modülüne aktarıyor.
+- Ana bootstrap `AdminRoles.init({ refreshRoles: fetchRoles })` ile role refresh callback'ini açıkça enjekte ediyor.
+- Script sırası `error-logs.js → js/students.js → js/roles.js → admin.js` oldu.
+- `public/admin/admin.js` **1176 → 1052 satıra** indi; yeni `public/admin/js/roles.js` **137 satır**.
+
+TDD ve regresyon kanıtı:
+
+1. `tests/admin-role-module.test.js` production modülünden önce yazıldı ve `public/admin/js/roles.js must exist` nedeniyle beklenen RED verdi.
+2. Minimal extraction sonrası B2 structural test **1/1 pass** verdi.
+3. İlk geniş modular testte yalnız gerçek HTML'deki `roles.js` scriptini yüklemeyen eski VM harness'leri `AdminRoles is not defined` / taşınmış lexical function hataları üretti. Production davranışı değiştirilmeden harness'ler gerçek `students.js → roles.js → admin.js` zincirine geçirildi; DOM-safety assertion'ları zayıflatılmadı.
+4. Geniş admin-source odak grubu **76/76 pass** verdi.
+5. Tam core **1409/1409 pass** verdi.
+6. System smoke PASS; npm audit 0; `admin.js`, `students.js`, `roles.js` syntax kontrolleri, package JSON parse ve `git diff --check` temiz.
+7. İzole temp DB + gerçek admin browser smoke: dört öğrenci create ile role select'ler doldu; president POST 200; iki vice-president POST 200; üçüncü vice-president denemesi beklenen 400 / `En fazla 2 başkan yardımcısı olabilir`; star POST 200; remove-role event delegation + confirm sonrası DELETE 200 ve UI listesi yenilendi.
+8. Chrome DevTools network: `/admin/js/roles.js` 200; role GET/POST/DELETE akışları beklenen status kodlarıyla görüldü. Beklenen limit 400'ünün logger console kaydından sonra yapılan temiz reload'da console error/warn **0**; yalnız önceden var olan form label/autocomplete DevTools issue kayıtları kaldı.
+9. 1366×768 ve 1920×1080 admin viewport'larında horizontal overflow **0**.
+10. Playwright korumalı `/admin/` erişiminin login sayfasına yönlendiğini doğruladı.
+
+Kod/test milestone:
+
+- Commit: `1e04860d296a3f5bcda2a3f0497fc4c8f46c83a6`
+- GitHub Actions: `31315902265`
+- Node 22: PASS (27 sn)
+- Node 24: PASS (31 sn)
+
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B2 sırasında değiştirilmedi. P2-6 gerçek 55" 4K fiziksel kabul kapısı da ayrı biçimde açık kalır.
+
+**Sıradaki admin JS dalgası: B3 — Attendance.** Istanbul tarih anahtarı, attendance render/summary ve bulk-save davranışı aynı domain modülünde korunacaktır.
 
 ### B3 — Attendance
 
