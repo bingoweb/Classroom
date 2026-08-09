@@ -937,6 +937,34 @@ button:hover {
     justify-content: center;
 }
 
+/* P3-5C5: Admin shell QR address presentation */
+.admin-qr-address {
+    text-align: center;
+    padding: 20px;
+}
+
+.admin-qr-address__title {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.admin-qr-address__value {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    border: 2px solid var(--primary);
+    word-break: break-all;
+    font-family: monospace;
+    font-size: 1rem;
+}
+
+.admin-qr-address__note {
+    margin-top: 15px;
+    font-size: 0.9rem;
+    color: #666;
+}
+
 .photo-upload-form {
     display: flex;
     flex-direction: column;

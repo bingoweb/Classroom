@@ -60,23 +60,23 @@ window.showQRCode = async function () {
         const data = await res.json();
         const url = `http://${data.ip}:${data.port}/index.html`;
         document.getElementById('qrcode').innerHTML = `
-            <div style="text-align: center; padding: 20px;">
-                <p style="font-size: 1.2rem; margin-bottom: 15px; font-weight: bold;">Ana Ekran Adresi:</p>
-                <div style="background: white; padding: 15px; border-radius: 10px; border: 2px solid var(--primary); word-break: break-all; font-family: monospace; font-size: 1rem;">
+            <div class="admin-qr-address">
+                <p class="admin-qr-address__title">Ana Ekran Adresi:</p>
+                <div class="admin-qr-address__value">
                     ${url}
                 </div>
-                <p style="margin-top: 15px; font-size: 0.9rem; color: #666;">Bu adresi tarayıcınızda açarak ana ekrana erişebilirsiniz.</p>
+                <p class="admin-qr-address__note">Bu adresi tarayıcınızda açarak ana ekrana erişebilirsiniz.</p>
             </div>
         `;
     } catch(e) {
         const url = new URL('/index.html', window.location.origin).href;
         document.getElementById('qrcode').innerHTML = `
-            <div style="text-align: center; padding: 20px;">
-                <p style="font-size: 1.2rem; margin-bottom: 15px; font-weight: bold;">Ana Ekran Adresi:</p>
-                <div style="background: white; padding: 15px; border-radius: 10px; border: 2px solid var(--primary); word-break: break-all; font-family: monospace; font-size: 1rem;">
+            <div class="admin-qr-address">
+                <p class="admin-qr-address__title">Ana Ekran Adresi:</p>
+                <div class="admin-qr-address__value">
                     ${url}
                 </div>
-                <p style="margin-top: 15px; font-size: 0.9rem; color: #666;">Bu adresi tarayıcınızda açarak ana ekrana erişebilirsiniz.</p>
+                <p class="admin-qr-address__note">Bu adresi tarayıcınızda açarak ana ekrana erişebilirsiniz.</p>
             </div>
         `;
     }
