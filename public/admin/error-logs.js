@@ -282,6 +282,41 @@
             window.clearOldLogs = clearOldLogs;
             window.toggleDebugMode = toggleDebugMode;
 
+            const debugModeToggle = document.getElementById('debugModeToggle');
+            if (debugModeToggle) {
+                debugModeToggle.addEventListener('change', toggleDebugMode);
+            }
+
+            const refreshErrorLogsButton = document.getElementById('refreshErrorLogsButton');
+            if (refreshErrorLogsButton) {
+                refreshErrorLogsButton.addEventListener('click', refreshErrorLogs);
+            }
+
+            const exportErrorLogsButton = document.getElementById('exportErrorLogsButton');
+            if (exportErrorLogsButton) {
+                exportErrorLogsButton.addEventListener('click', exportErrorLogs);
+            }
+
+            const clearOldLogsButton = document.getElementById('clearOldLogsButton');
+            if (clearOldLogsButton) {
+                clearOldLogsButton.addEventListener('click', clearOldLogs);
+            }
+
+            const logLevelFilter = document.getElementById('logLevelFilter');
+            if (logLevelFilter) {
+                logLevelFilter.addEventListener('change', filterErrorLogs);
+            }
+
+            const logComponentFilter = document.getElementById('logComponentFilter');
+            if (logComponentFilter) {
+                logComponentFilter.addEventListener('change', filterErrorLogs);
+            }
+
+            const logTimeFilter = document.getElementById('logTimeFilter');
+            if (logTimeFilter) {
+                logTimeFilter.addEventListener('change', filterErrorLogs);
+            }
+
             const syncDebug = () => {
                 const toggle = document.getElementById('debugModeToggle');
                 if (toggle) {

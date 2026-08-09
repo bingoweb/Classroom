@@ -381,13 +381,13 @@
                     <h2>Hata Logları</h2>
                     <div class="error-log-toolbar__actions">
                         <label class="error-log-debug-toggle">
-                            <input type="checkbox" id="debugModeToggle" onchange="toggleDebugMode()">
+                            <input type="checkbox" id="debugModeToggle">
                             <span>Debug Modu</span>
                         </label>
-                        <button onclick="refreshErrorLogs()" class="error-log-action error-log-action--refresh">Yenile</button>
-                        <button onclick="exportErrorLogs()" class="error-log-action error-log-action--export">Dışa
+                        <button id="refreshErrorLogsButton" class="error-log-action error-log-action--refresh">Yenile</button>
+                        <button id="exportErrorLogsButton" class="error-log-action error-log-action--export">Dışa
                             Aktar</button>
-                        <button onclick="clearOldLogs()" class="error-log-action error-log-action--cleanup">Eski
+                        <button id="clearOldLogsButton" class="error-log-action error-log-action--cleanup">Eski
                             Logları Temizle</button>
                     </div>
                 </div>
@@ -396,7 +396,7 @@
                 <div class="error-log-filters">
                     <div>
                         <label for="logLevelFilter">Seviye:</label><br>
-                        <select id="logLevelFilter" onchange="filterErrorLogs()" class="error-log-filter-control">
+                        <select id="logLevelFilter" class="error-log-filter-control">
                             <option value="">Tümü</option>
                             <option value="ERROR">ERROR</option>
                             <option value="WARN">WARN</option>
@@ -406,7 +406,7 @@
                     </div>
                     <div>
                         <label for="logComponentFilter">Bileşen:</label><br>
-                        <select id="logComponentFilter" onchange="filterErrorLogs()" class="error-log-filter-control">
+                        <select id="logComponentFilter" class="error-log-filter-control">
                             <option value="">Tümü</option>
                             <option value="SLIDESHOW">SLIDESHOW</option>
                             <option value="ADMIN">ADMIN</option>
@@ -419,7 +419,7 @@
                     </div>
                     <div>
                         <label for="logTimeFilter">Son:</label><br>
-                        <select id="logTimeFilter" onchange="filterErrorLogs()" class="error-log-filter-control">
+                        <select id="logTimeFilter" class="error-log-filter-control">
                             <option value="">Tümü</option>
                             <option value="1h">Son 1 Saat</option>
                             <option value="24h">Son 24 Saat</option>
@@ -458,7 +458,7 @@
                 <input type="file" id="photoFileInput" accept="image/*" required class="photo-upload-file">
                 <div class="photo-upload-actions">
                     <button type="submit" class="photo-upload-action photo-upload-action--submit">Yükle</button>
-                    <button type="button" onclick="closePhotoUploadModal()" class="photo-upload-action photo-upload-action--cancel">İptal</button>
+                    <button type="button" id="closePhotoUploadModalButton" class="photo-upload-action photo-upload-action--cancel">İptal</button>
                 </div>
             </form>
         </div>

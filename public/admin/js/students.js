@@ -410,6 +410,11 @@
         document.addEventListener('click', handleStudentActionClick);
 
         const photoUploadForm = document.getElementById('photoUploadForm');
+        const closePhotoUploadModalButton = document.getElementById('closePhotoUploadModalButton');
+        if (closePhotoUploadModalButton) {
+            closePhotoUploadModalButton.addEventListener('click', closePhotoUploadModal);
+        }
+
         if (photoUploadForm) {
             photoUploadForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
