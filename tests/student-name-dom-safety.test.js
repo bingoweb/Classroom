@@ -301,6 +301,7 @@ test('Student Name DOM Safety Tests', async (t) => {
 
     await t.test('Admin Panel (admin.js) safely escapes injected names and handles event delegation', async () => {
         const adminSource = fs.readFileSync(path.join(__dirname, '../public/admin/admin.js'), 'utf8');
+        const studentModuleSource = fs.readFileSync(path.join(__dirname, '../public/admin/js/students.js'), 'utf8');
         const utilsSource = fs.readFileSync(path.join(__dirname, '../public/js/utils.js'), 'utf8');
         
         const { sandbox, domElements, getEl, fireDomContentLoaded } = createSandbox();
@@ -325,9 +326,9 @@ test('Student Name DOM Safety Tests', async (t) => {
             return { json: async () => ([]) };
         };
 
+        vm.runInContext(studentModuleSource, sandbox);
         const instrumentedSource = adminSource + `
             globalThis.__testApi = { 
-                displayStudents, 
                 updateRoleSelects, 
                 renderRoles, 
                 renderAttendanceList
@@ -346,7 +347,7 @@ test('Student Name DOM Safety Tests', async (t) => {
             { role_type: 'star', role_id: 4, name: maliciousNames[0] }
         ];
 
-        sandbox.globalThis.__testApi.displayStudents(students);
+        sandbox.AdminStudents.displayStudents(students);
         const listHtml = getEl('studentList').innerHTML;
         
         assert.ok(!listHtml.includes('onerror="globalThis.__xss=1"'), 'No raw injected onerror attribute in student card');

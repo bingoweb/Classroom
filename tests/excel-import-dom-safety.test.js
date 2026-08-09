@@ -93,6 +93,7 @@ test('Excel Import DOM Safety Tests', async (t) => {
 
     const runScript = async () => {
         const adminSource = fs.readFileSync(path.join(__dirname, '../public/admin/admin.js'), 'utf8');
+        const studentModuleSource = fs.readFileSync(path.join(__dirname, '../public/admin/js/students.js'), 'utf8');
         const utilsSource = fs.readFileSync(path.join(__dirname, '../public/js/utils.js'), 'utf8');
         
         const { sandbox, domElements, getEl } = createSandbox();
@@ -104,6 +105,7 @@ test('Excel Import DOM Safety Tests', async (t) => {
         sandbox.Utils.showError = () => {};
         sandbox.Utils.showSuccess = () => {};
 
+        vm.runInContext(studentModuleSource, sandbox);
         vm.runInContext(adminSource, sandbox);
         
         // Wait for DOMContentLoaded

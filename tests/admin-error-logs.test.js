@@ -7,6 +7,7 @@ const vm = require('vm');
 test('Admin Error Logs Tests', async (t) => {
     const htmlContent = fs.readFileSync(path.join(__dirname, '../public/admin/index.html'), 'utf8');
     const scriptContent = fs.readFileSync(path.join(__dirname, '../public/admin/error-logs.js'), 'utf8');
+    const studentModuleContent = fs.readFileSync(path.join(__dirname, '../public/admin/js/students.js'), 'utf8');
     const adminScriptContent = fs.readFileSync(path.join(__dirname, '../public/admin/admin.js'), 'utf8');
 
     const createSandbox = () => {
@@ -161,6 +162,7 @@ test('Admin Error Logs Tests', async (t) => {
         const { sandbox, domElements, getEl } = createSandbox();
         vm.createContext(sandbox);
         vm.runInContext(scriptContent, sandbox);
+        vm.runInContext(studentModuleContent, sandbox);
 
         vm.runInContext(adminScriptContent, sandbox);
 
