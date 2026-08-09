@@ -13,6 +13,7 @@ const scheduleRoutesPath = path.join(root, 'backend', 'routes', 'schedule-routes
 const studentRoutesPath = path.join(root, 'backend', 'routes', 'student-routes.js');
 const roleRoutesPath = path.join(root, 'backend', 'routes', 'role-routes.js');
 const attendanceRoutesPath = path.join(root, 'backend', 'routes', 'attendance-routes.js');
+const logRoutesPath = path.join(root, 'backend', 'routes', 'log-routes.js');
 
 test('P3-5A1 extracts settings and system route registration from server.js', () => {
     assert.equal(
@@ -144,4 +145,31 @@ test('P3-5A5 extracts attendance route registration from server.js', () => {
     assert.match(attendanceSource, /app\.get\(['"]\/api\/attendance\/:date['"]/);
     assert.match(attendanceSource, /app\.post\(['"]\/api\/attendance['"]/);
     assert.match(attendanceSource, /app\.put\(['"]\/api\/attendance\/:id['"]/);
+});
+
+test('P3-5A6 extracts log route registration from server.js without moving startup cleanup', () => {
+    assert.equal(
+        fs.existsSync(logRoutesPath),
+        true,
+        'backend/routes/log-routes.js must exist'
+    );
+
+    const serverSource = fs.readFileSync(serverPath, 'utf8');
+    const logSource = fs.readFileSync(logRoutesPath, 'utf8');
+
+    assert.match(logSource, /function\s+registerLogRoutes\s*\(app,\s*deps\)/);
+    assert.match(serverSource, /registerLogRoutes\s*\(app,/);
+
+    assert.doesNotMatch(serverSource, /app\.post\(['"]\/api\/logs['"]/);
+    assert.doesNotMatch(serverSource, /app\.get\(['"]\/api\/logs['"]/);
+    assert.doesNotMatch(serverSource, /app\.delete\(['"]\/api\/logs\/cleanup['"]/);
+
+    assert.match(logSource, /app\.post\(['"]\/api\/logs['"]/);
+    assert.match(logSource, /app\.get\(['"]\/api\/logs['"]/);
+    assert.match(logSource, /app\.delete\(['"]\/api\/logs\/cleanup['"]/);
+
+    assert.match(serverSource, /function\s+cleanupOldLogs\s*\(/);
+    assert.match(serverSource, /setInterval\(cleanupOldLogs,\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000\)/);
+    assert.match(serverSource, /cleanupOldLogs\(\)/);
+    assert.doesNotMatch(logSource, /function\s+cleanupOldLogs\s*\(/);
 });
