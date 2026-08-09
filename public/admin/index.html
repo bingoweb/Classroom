@@ -79,26 +79,26 @@
                     </p>
                     <form id="addStudentForm" class="admin-column-form admin-column-form--compact">
                         <div>
-                            <label class="admin-panel-label admin-panel-label--small">
+                            <label for="studentNameInput" class="admin-panel-label admin-panel-label--small">
                                 📝 Ad Soyad <span class="admin-required-mark">*</span>
                             </label>
-                            <input type="text" name="name" placeholder="Örn: Ahmet Yılmaz" required
+                            <input type="text" id="studentNameInput" name="name" placeholder="Örn: Ahmet Yılmaz" required autocomplete="name"
                                 class="admin-panel-control admin-panel-control--full">
                         </div>
                         <div>
-                            <label class="admin-panel-label admin-panel-label--small">
+                            <label for="studentGenderSelect" class="admin-panel-label admin-panel-label--small">
                                 👤 Cinsiyet <span class="admin-required-mark">*</span>
                             </label>
-                            <select name="gender" required class="admin-panel-control admin-panel-control--full admin-panel-control--select">
+                            <select id="studentGenderSelect" name="gender" required class="admin-panel-control admin-panel-control--full admin-panel-control--select">
                                 <option value="M">👦 Erkek</option>
                                 <option value="F">👧 Kız</option>
                             </select>
                         </div>
                         <div>
-                            <label class="admin-panel-label admin-panel-label--small">
+                            <label for="studentPhotoInput" class="admin-panel-label admin-panel-label--small">
                                 📷 Fotoğraf <span class="admin-optional-note">(opsiyonel)</span>
                             </label>
-                            <input type="file" name="photo" accept="image/*" class="admin-panel-file-input">
+                            <input type="file" id="studentPhotoInput" name="photo" accept="image/*" class="admin-panel-file-input">
                             <small class="admin-panel-help admin-panel-help--tiny">
                                 💡 Boş bırakırsanız varsayılan avatar kullanılır
                             </small>
@@ -131,7 +131,7 @@
 
                     <form id="excelImportForm" class="admin-column-form admin-column-form--compact">
                         <div>
-                            <label class="admin-panel-label admin-panel-label--small">
+                            <label for="excelFileInput" class="admin-panel-label admin-panel-label--small">
                                 📁 Excel Dosyası <span class="admin-required-mark">*</span>
                             </label>
                             <input type="file" id="excelFileInput" accept=".xlsx,.xls" required class="admin-panel-file-input">
@@ -314,7 +314,7 @@
             <div class="card">
                 <h2>Günlük Yoklama</h2>
                 <div class="attendance-toolbar">
-                    <label>Tarih:</label>
+                    <label for="attendanceDate">Tarih:</label>
                     <input type="date" id="attendanceDate" class="attendance-date-input">
                     <button onclick="loadAttendanceForDate()" class="attendance-toolbar__button attendance-toolbar__button--load">Yükle</button>
                     <button onclick="setTodayDate()" class="attendance-toolbar__button attendance-toolbar__button--today">Bugün</button>
@@ -352,12 +352,12 @@
                 <h2>Genel Slayt Ayarları</h2>
                 <form id="slideSettingsForm" class="slide-settings-form">
                     <div>
-                        <label>Varsayılan Gösterim Süresi (saniye)</label><br>
+                            <label for="defaultDuration">Varsayılan Gösterim Süresi (saniye)</label><br>
                         <input type="number" id="defaultDuration" min="1" max="60" value="10"
                             class="slide-settings-control">
                     </div>
                     <div>
-                        <label>Varsayılan Geçiş Modu</label><br>
+                            <label for="defaultTransitionMode">Varsayılan Geçiş Modu</label><br>
                         <select id="defaultTransitionMode" class="slide-settings-control">
                             <option value="auto">Otomatik Akıllı Seçim</option>
                             <option value="random">Random</option>
@@ -365,7 +365,7 @@
                         </select>
                     </div>
                     <div>
-                        <label>Varsayılan Geçiş Süresi (saniye)</label><br>
+                            <label for="defaultTransitionDuration">Varsayılan Geçiş Süresi (saniye)</label><br>
                         <input type="number" id="defaultTransitionDuration" min="0.5" max="3" step="0.1" value="1"
                             class="slide-settings-control">
                     </div>
@@ -395,7 +395,7 @@
                 <!-- Filters -->
                 <div class="error-log-filters">
                     <div>
-                        <label>Seviye:</label><br>
+                        <label for="logLevelFilter">Seviye:</label><br>
                         <select id="logLevelFilter" onchange="filterErrorLogs()" class="error-log-filter-control">
                             <option value="">Tümü</option>
                             <option value="ERROR">ERROR</option>
@@ -405,7 +405,7 @@
                         </select>
                     </div>
                     <div>
-                        <label>Bileşen:</label><br>
+                        <label for="logComponentFilter">Bileşen:</label><br>
                         <select id="logComponentFilter" onchange="filterErrorLogs()" class="error-log-filter-control">
                             <option value="">Tümü</option>
                             <option value="SLIDESHOW">SLIDESHOW</option>
@@ -418,7 +418,7 @@
                         </select>
                     </div>
                     <div>
-                        <label>Son:</label><br>
+                        <label for="logTimeFilter">Son:</label><br>
                         <select id="logTimeFilter" onchange="filterErrorLogs()" class="error-log-filter-control">
                             <option value="">Tümü</option>
                             <option value="1h">Son 1 Saat</option>
@@ -484,7 +484,7 @@
                     <div class="slide-form-grid">
                         <!-- Başlık -->
                         <div>
-                            <label class="slide-form-label">
+                            <label for="slideTitle" class="slide-form-label">
                                 Başlık <span class="slide-form-optional">(opsiyonel)</span>
                             </label>
                             <input type="text" id="slideTitle" placeholder="Örn: Sınıf Kuralları"
@@ -496,7 +496,7 @@
 
                         <!-- İçerik Tipi -->
                         <div>
-                            <label class="slide-form-label">
+                            <label for="slideContentType" class="slide-form-label">
                                 İçerik Tipi <span class="admin-required-mark">*</span>
                             </label>
                             <select id="slideContentType" required
@@ -522,7 +522,7 @@
                     </h3>
 
                     <div>
-                        <label id="slideMediaLabel" class="slide-form-label slide-form-label--roomy">
+                        <label id="slideMediaLabel" for="slideMedia" class="slide-form-label slide-form-label--roomy">
                             📁 Resim, GIF veya Video <span class="admin-required-mark">*</span>
                         </label>
 
@@ -558,7 +558,7 @@
                     <h3 class="slide-form-section__title">
                         ✏️ Metin İçeriği
                     </h3>
-                    <label class="slide-form-label slide-form-label--roomy">
+                    <label for="slideTextContent" class="slide-form-label slide-form-label--roomy">
                         Kural veya Duyuru Metni
                     </label>
                     <textarea id="slideTextContent" rows="4" placeholder="Kuralınızı veya duyurunuzu buraya yazın..."
@@ -578,7 +578,7 @@
                     <div class="slide-form-grid">
                         <!-- Gösterim Süresi -->
                         <div>
-                            <label class="slide-form-label">
+                            <label for="slideDisplayDuration" class="slide-form-label">
                                 Ekranda Kalma Süresi <span class="slide-form-optional">(saniye)</span>
                             </label>
                             <input type="number" id="slideDisplayDuration" min="1" max="60"
@@ -612,7 +612,7 @@
                     <div class="slide-form-grid">
                         <!-- Geçiş Modu -->
                         <div>
-                            <label class="slide-form-label">
+                            <label for="slideTransitionMode" class="slide-form-label">
                                 Geçiş Modu
                             </label>
                             <select id="slideTransitionMode"
@@ -629,7 +629,7 @@
 
                         <!-- Manuel Geçiş Efekti (Conditional) -->
                         <div id="slideTransitionManualDiv" class="slide-transition-manual">
-                            <label class="slide-form-label">
+                            <label for="slideTransitionType" class="slide-form-label">
                                 Geçiş Efekti Seçimi
                             </label>
                             <select id="slideTransitionType"
@@ -668,7 +668,7 @@
 
                         <!-- Geçiş Süresi -->
                         <div>
-                            <label class="slide-form-label">
+                            <label for="slideTransitionDuration" class="slide-form-label">
                                 Geçiş Animasyon Süresi <span class="slide-form-optional">(saniye)</span>
                             </label>
                             <input type="number" id="slideTransitionDuration" min="0.5" max="3" step="0.1"
