@@ -46,14 +46,14 @@
             const avatarPath = Utils.getAvatarPath(s);
             const currentStatus = attendanceMap[s.id] || 'present';
             return `
-        <div class="student-item" style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; margin-bottom: 8px;">
-            <img src="../${avatarPath}" class="student-thumb" onerror="this.src='../assets/default_boy.png'" style="width: 50px; height: 50px; border-radius: 50%;">
-            <span style="flex: 1;">${Utils.escapeHtml(s.name)} (${s.gender === 'M' ? 'Erkek' : 'Kız'})</span>
-            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+        <div class="student-item admin-attendance-student">
+            <img src="../${avatarPath}" class="student-thumb admin-attendance-avatar" onerror="this.src='../assets/default_boy.png'">
+            <span class="admin-attendance-name">${Utils.escapeHtml(s.name)} (${s.gender === 'M' ? 'Erkek' : 'Kız'})</span>
+            <label class="admin-attendance-choice">
                 <input type="radio" name="attendance_${s.id}" value="present" ${currentStatus === 'present' ? 'checked' : ''} data-student-id="${s.id}">
                 <span>Var</span>
             </label>
-            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+            <label class="admin-attendance-choice">
                 <input type="radio" name="attendance_${s.id}" value="absent" ${currentStatus === 'absent' ? 'checked' : ''} data-student-id="${s.id}">
                 <span>Yok</span>
             </label>
@@ -75,8 +75,8 @@
 
         document.getElementById('attendanceSummaryContent').innerHTML = `
         <p><strong>Toplam:</strong> ${total} öğrenci</p>
-        <p style="color: green;"><strong>Var:</strong> ${present} öğrenci</p>
-        <p style="color: red;"><strong>Yok:</strong> ${absent} öğrenci</p>
+        <p class="admin-attendance-summary__present"><strong>Var:</strong> ${present} öğrenci</p>
+        <p class="admin-attendance-summary__absent"><strong>Yok:</strong> ${absent} öğrenci</p>
     `;
     }
 

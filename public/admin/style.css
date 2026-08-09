@@ -812,6 +812,42 @@ button:hover {
     border-radius: 10px;
 }
 
+/* P3-5C4: Attendance template presentation */
+.admin-attendance-student {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.admin-attendance-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+}
+
+.admin-attendance-name {
+    flex: 1;
+}
+
+.admin-attendance-choice {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+}
+
+.admin-attendance-summary__present {
+    color: green;
+}
+
+.admin-attendance-summary__absent {
+    color: red;
+}
+
 .slide-add-button {
     margin-bottom: 20px;
 }
