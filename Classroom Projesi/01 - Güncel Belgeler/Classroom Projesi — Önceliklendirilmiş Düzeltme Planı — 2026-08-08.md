@@ -4396,6 +4396,47 @@ Kanıtlar:
 
 `backend/server.js` 1853 → 1617 satıra indi; `backend/routes/attendance-routes.js` 262 satır. Bilinen fresh-DB `error_logs` cleanup-order logu değiştirilmedi. Sıradaki extraction dalgası **P3-5A6 — logs** olacaktır. P2-6 gerçek 55\" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
+### 21.0.6 9 Ağustos 2026 — P3-5A6 logs route extraction
+
+Altıncı backend refactor dalgası tamamlandı. Log create/read/cleanup API yüzeyi tek domain kayıt modülüne taşındı; log validation, JSON parsing, error redaction ve startup cleanup davranışı yeniden tasarlanmadı.
+
+Uygulanan sınır:
+
+- `backend/routes/log-routes.js`: `POST /api/logs`, `GET /api/logs`, `DELETE /api/logs/cleanup`,
+- `backend/server.js`: eski göreli noktada `registerLogRoutes(app, deps)`,
+- `tests/backend-route-extraction.test.js`: A6 fiziksel extraction, çift-kayıt önleme ve startup cleanup'ın `server.js` içinde kalması sözleşmesi.
+
+Korunan kritik sözleşmeler:
+
+- log create ve cleanup için auth → CSRF → write rate-limit sırası,
+- log read için yalnız auth; CSRF/write rate-limit eklenmemesi,
+- create required-field validation ve optional JSON/null parametre davranışı,
+- DB başarısından önce filesystem append yapılmaması,
+- filesystem hatasının DB başarısını tersine çevirmemesi,
+- read `limit` canonical `1..1000`, varsayılan 100,
+- `level → component → since → limit` filtre parametre sırası,
+- malformed/primitive JSON alanlarını bozmadan döndüren safe parse davranışı,
+- cleanup `days` strict positive safe-integer validation ve varsayılan 30 gün,
+- create/read/cleanup DB hata ayrıntılarının HTTP response'a sızmaması,
+- `cleanupOldLogs()`, günlük timer ve startup çağrısının `server.js` içinde aynen kalması.
+
+Kanıtlar:
+
+- TDD extraction testi RED → GREEN,
+- extraction **6/6**,
+- logs/admin auth/rate-limit odak grubu **75/75**,
+- tam core **1406/1406**,
+- system smoke PASS,
+- audit 0,
+- syntax ve diff check temiz,
+- izole temp DB HTTP smoke: unauth logs GET 401, login/session 200, CSRF 64, invalid limit/days 400, create/read 200, JSON parse doğru, cleanup 200 ve final filtre boş,
+- Playwright `/admin` korumalı erişimi login yüzeyine yönlendirdi; bu oturumdaki Playwright `browser_evaluate` tool-side `about:blank` problemi nedeniyle API browser kanıtı Chrome DevTools ile tamamlandı,
+- Chrome DevTools isolated context: admin login/session 200, log create/filter GET 200, CSRF 64, console error/warn/issue 0 ve ilgili network istekleri 200/304,
+- exact milestone commit `1394fa033b1a470331c2025e50f4b2ab748790b0`,
+- GitHub Actions run `31313198706`: Node 24 PASS (~23 sn), Node 22 PASS (~34 sn).
+
+`backend/server.js` 1617 → 1460 satıra indi; `backend/routes/log-routes.js` 182 satır. Bilinen fresh-DB `error_logs` cleanup-order bug'ı kasıtlı olarak düzeltilmedi ve ayrı bugfix olarak kalıyor. Sıradaki extraction dalgası **P3-5A7 — slides** olacaktır. P2-6 gerçek 55\" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
 ## 21.1 `backend/server.js` — ~2800 satır
@@ -4697,7 +4738,8 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 21 | P3-5A3 students route extraction | P3 | 🟩 |
 | 22 | P3-5A4 roles route extraction | P3 | 🟩 |
 | 23 | P3-5A5 attendance route extraction | P3 | 🟩 |
-| 24 | P3-5A6 logs route extraction | P3 | ⬜ |
+| 24 | P3-5A6 logs route extraction | P3 | 🟩 |
+| 25 | P3-5A7 slides route extraction | P3 | ⬜ |
 
 Durum simgeleri:
 

@@ -158,7 +158,7 @@ Bu bölümdeki A1 → A8 sırası **uygulama/commit sırasıdır**. Mevcut Expre
 
 ### P3-5A — Backend route modülerleştirme
 
-**Durum:** 🟨 Uygulanıyor — A1, A2, A3, A4 ve A5 tamamlandı ve doğrulandı; sıradaki dalga A6 logs extraction.
+**Durum:** 🟨 Uygulanıyor — A1, A2, A3, A4, A5 ve A6 tamamlandı ve doğrulandı; sıradaki dalga A7 slides extraction.
 
 #### A0 — Contract baseline
 
@@ -512,6 +512,8 @@ Bilinen fresh-DB `error_logs` cleanup-order log gürültüsü bu refactor sıras
 
 #### A6 — Logs
 
+**Durum:** 🟩 9 Ağustos 2026 — tamamlandı ve doğrulandı.
+
 Önerilen dosya:
 
 ```text
@@ -521,6 +523,56 @@ backend/routes/log-routes.js
 Error redaction ve cleanup validation testleri taşımadan önce ve sonra aynı sonucu vermelidir.
 
 Startup `error_logs` cleanup-order log problemi bu extraction ile gizlice çözülmemelidir; ayrı bugfix olarak ele alınmalıdır. Böylece refactor ile davranış düzeltmesi aynı committe karışmaz.
+
+##### A6 uygulama sonucu
+
+Log route yüzeyi mevcut güvenlik, validation, JSON parse ve redaction davranışları korunarak tek domain kayıt modülüne ayrıldı:
+
+- `backend/routes/log-routes.js` oluşturuldu.
+- korumalı `POST /api/logs` yeni modüle taşındı.
+- korumalı `GET /api/logs` yeni modüle taşındı.
+- korumalı `DELETE /api/logs/cleanup` yeni modüle taşındı.
+- `server.js`, `registerLogRoutes(app, deps)` çağrısını eski log route bloğunun göreli kayıt noktasında, slide route'larından sonra ve startup cleanup fonksiyonundan önce yapıyor.
+- DB, filesystem, logger ve admin write middleware'leri explicit dependency olarak aktarılıyor.
+- `cleanupOldLogs()`, günlük `setInterval` ve startup `cleanupOldLogs()` çağrısı bilerek `server.js` içinde bırakıldı.
+- `backend/server.js` 1617 satırdan 1460 satıra indi; yeni `backend/routes/log-routes.js` 182 satır.
+
+Korunan kritik sözleşmeler:
+
+- `POST /api/logs` middleware sırası `requireAdminSession → requireCsrfToken → requireAdminWriteRateLimit`,
+- `GET /api/logs` yalnız `requireAdminSession` ile korunan read route olarak kalır; CSRF/write rate-limit eklenmez,
+- `DELETE /api/logs/cleanup` middleware sırası `requireAdminSession → requireCsrfToken → requireAdminWriteRateLimit`,
+- create için zorunlu `timestamp`, `level`, `component`, `message` validation'ı,
+- optional `errorDetails` / `context` JSON serialization ve null davranışı,
+- DB insert başarıya ulaşmadan filesystem append yapılmaması,
+- filesystem append hatasının başarılı DB insert request'ini başarısız saymaması,
+- GET `limit` varsayılanı 100; kabul aralığı yalnız canonical `1..1000`,
+- GET filtre parametre sırası `level → component → since → limit`,
+- malformed veya primitive JSON alanlarının güvenli `safeParseJSON` davranışı,
+- cleanup `days` varsayılanı 30 ve strict positive safe-integer validation,
+- create/read/cleanup DB hatalarında raw SQLite/stack ayrıntılarının HTTP response'a sızmaması.
+
+TDD ve regresyon kanıtı:
+
+1. `tests/backend-route-extraction.test.js` içine A6 sözleşmesi önce eklendi ve `backend/routes/log-routes.js must exist` nedeniyle RED verdi.
+2. Extraction sonrası A1–A6 structural testleri **6/6 pass** verdi.
+3. Logs cleanup/create/read + admin error-log UI + admin auth/rate-limit odak grubu **75/75 pass** verdi.
+4. Tam core **1406/1406 pass** verdi.
+5. System smoke PASS; npm audit 0; syntax ve `git diff --check` temiz.
+6. İzole temp DB HTTP smoke: unauth GET 401, admin login/session 200, CSRF 64, invalid limit/days 400, create/read 200, JSON error/context parse doğru, cleanup 200 ve final filtered GET boş.
+7. Playwright korumalı `/admin` erişiminin `admin-login.html?next=/admin/` yüzeyine yönlendiğini doğruladı. Bu oturumda Playwright `browser_evaluate` aracı sayfayı `about:blank`e düşüren tool-side hata verdiği için API davranışı ayrıca Chrome DevTools ve gerçek HTTP smoke ile doğrulandı.
+8. Chrome DevTools isolated browser context: login/session/create/filter GET 200, CSRF 64, JSON context doğru ve console error/warn/issue **0**; ilgili XHR/fetch trafiği 200/304.
+
+Kod/test milestone:
+
+- Commit: `1394fa033b1a470331c2025e50f4b2ab748790b0`
+- GitHub Actions: `31313198706`
+- Node 24: PASS (~23 sn)
+- Node 22: PASS (~34 sn)
+
+Bilinen fresh-DB `error_logs` cleanup-order logu extraction sırasında kasıtlı olarak aynı kaldı; startup cleanup hâlâ tablo oluşmadan çalıştığı için bu bağımsız bug ayrı iş olarak ele alınacaktır.
+
+**Sıradaki backend dalgası: A7 — Slides.** Bu, backend extraction serisinin en riskli domainidir; active/admin list ayrımı, fallback ownership/reconciliation, cache invalidation, media cleanup, reorder transaction ve `/api/slides/active` route sırası özel kapılarla korunacaktır.
 
 #### A7 — Slides — en son
 
