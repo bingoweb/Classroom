@@ -5214,6 +5214,43 @@ Bu iş görsel regresyona çok açıktır.
 
 Fiziksel 4K kabul turundan **önce** büyük CSS temizliği yapılmamalıdır.
 
+## 21.5 Admin inline event handler refactor — P3-5E
+
+P3-5B domain extraction sırasında HTML/template inline handler global adaptörleri bilinçli olarak korunmuştu. P3-5C static CSS tamamlandıktan ve A8 security değerlendirmesi kapandıktan sonra fiziksel 4K kapısından bağımsız ilk ertelenmiş refactor olarak **P3-5E** açıldı.
+
+Başlangıç envanteri **38** inline event attribute'tur:
+
+- `public/admin/index.html`: 27,
+- `public/admin/js/students.js`: 8,
+- `public/admin/js/slides.js`: 3.
+
+### 21.5.1 E1 — shell/navigation/QR/logout — 🟩
+
+Sekiz shell handler source-string/global inline çağrı modelinden açık JS event binding modeline geçirildi:
+
+- Sistem + dört primary tab → ortak `data-admin-tab`,
+- Mobil Bağlan → `#mobileConnectButton`,
+- Çıkış Yap → `#logoutButton`,
+- QR kapat → `#qrCloseButton`.
+
+`showTab()` artık `onclick` metni parse etmiyor; `logoutAdmin()` `index.html` trailing inline script'inden `admin.js` shell ownership'ine taşındı. CSRF fetch wrapper ve domain handler'ları değiştirilmedi.
+
+Sonuç:
+
+- shell inline handler **8 → 0**,
+- index HTML **27 → 19**,
+- toplam admin inline handler **38 → 30**,
+- E1 RED **0/3** → GREEN **3/3**,
+- E1 + Error Logs **15/15**,
+- ilk full core'da yeni DOM mock contract'ını modellemeyen eski test harness'leri görünür oldu; kök neden test-only idi ve ilgili grup **32/32** ile kapandı,
+- final full core **1488/1488**, lifecycle/lock **NONE**,
+- system smoke PASS, audit **0**,
+- Chrome 1366×768 + 1920-wide tab/System/QR/logout smoke PASS, overflow **0**, final normal console issue **0**,
+- Playwright auth redirect PASS; bilinen snapshot `about:blank` tool-side davranışı tekrarlandı,
+- product/test commit `46485e067c0e79c15d37f6add656f9ca9816c0d6`, GitHub Actions `31331183368`: Node 22 PASS (24 sn), Node 24 PASS (28 sn).
+
+**P3-5E devam ediyor. Sıradaki kontrollü dalga E2 — Students inline event handler ownership'idir.** Students hover/state davranışları görünüm değişmeden korunmalı; gerekirse E2 alt dalgalara ayrılmalıdır.
+
 ---
 
 # 22. Özellikle şimdilik dokunulmaması gereken alanlar
@@ -5477,6 +5514,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 30 | P3-5C admin inline CSS — C1–C5 tamamlandı; admin statik inline-style envanteri 0, runtime state yazımları behavior-owned | P3 | 🟩 |
 | 31 | P3-5D0 kiosk CSS analiz/baseline hazırlığı — analyzer + duplicate/override/unused aday raporu + 4 viewport browser baseline; CSS değişikliği 0 | P3 | 🟩 |
 | 32 | P3-5A8 admin auth/session security refactor değerlendirmesi — no-extraction kararı; mevcut composition root korunuyor | P3 | 🟩 |
+| 33 | P3-5E admin inline event handler cleanup — E1 shell tamamlandı; 38 → 30, sıradaki E2 Students | P3 | 🟨 |
 
 Durum simgeleri:
 

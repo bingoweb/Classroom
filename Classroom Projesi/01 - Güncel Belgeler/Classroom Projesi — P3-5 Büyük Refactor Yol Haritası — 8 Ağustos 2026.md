@@ -1327,6 +1327,62 @@ TDD ve browser doğrulaması:
 
 **P3-5C tamamlandı ve doğrulandı.** Statik admin inline-CSS temizliği C1–C5 ile kapandı. Runtime state yazımları yalnız davranış testi + browser kanıtı gerektiren ayrı bir ürün davranışı kararı olmadan class'a çevrilmeyecektir. **P3-5D0 analiz/baseline hazırlığı tamamlandı; gerçek P3-5D kiosk CSS cleanup P2-6 gerçek 55" 4K fiziksel kabul kapısı nedeniyle bloke/beklemededir.**
 
+## 8.1 P3-5E — Admin inline event handler temizliği
+
+**Durum:** 🟨 9 Ağustos 2026 — uygulanıyor. E1 shell/navigation/QR/logout handler temizliği tamamlandı ve doğrulandı; sıradaki kontrollü dalga **E2 Students**.
+
+Bu faz P3-5B sırasında geçici uyumluluk için korunan inline HTML/template event handler'larını domain bazında kaldırır. Amaç framework değişimi veya behavior redesign değildir; mevcut classic-script davranışı açık `addEventListener` / event-delegation ownership'ine taşınacaktır.
+
+E fazı başlangıç envanteri:
+
+- `public/admin/index.html`: **27** inline event attribute,
+- `public/admin/js/students.js`: **8**,
+- `public/admin/js/slides.js`: **3**,
+- toplam: **38**.
+
+Dalga sırası küçük tutulacaktır:
+
+1. **E1 shell/navigation/QR/logout — 🟩 tamamlandı**,
+2. **E2 Students — sıradaki**,
+3. Roles + Attendance,
+4. Slides,
+5. Error Logs ve kalan modal/domain handler'ları.
+
+Runtime hover/state davranışları yalnız mevcut computed-style/interaction sözleşmesi test + browser kanıtıyla korunabiliyorsa inline handler dışına taşınacaktır; E fazı runtime `.style.*` state ownership'ini otomatik olarak CSS refactor kapsamına almaz.
+
+### E1 — shell/navigation/QR/logout uygulama sonucu
+
+E1 yalnız sekiz düşük-risk shell handler'ını taşıdı:
+
+- Sistem → `data-admin-tab="error-logs"`,
+- dört ana tab → `data-admin-tab="students|roles|attendance|slides"`,
+- Mobil Bağlan → `#mobileConnectButton`,
+- Çıkış Yap → `#logoutButton`,
+- QR Kapat → `#qrCloseButton`.
+
+`showTab()` artık `onclick` source-text parse etmiyor; primary tab active state'i `dataset.adminTab` üzerinden bulunuyor. Tüm tab/system kontrolleri ortak `[data-admin-tab]` click binding'i kullanıyor. `logoutAdmin()` trailing inline `<script>` bloğundan `public/admin/admin.js` shell ownership'ine taşındı. CSRF fetch wrapper güvenlik sınırı E1 kapsamına alınmadı ve değiştirilmedi.
+
+E1 sonrası inline event envanteri:
+
+- shell hedef grubu: **8 → 0**,
+- `public/admin/index.html`: **27 → 19**,
+- `students.js`: **8**,
+- `slides.js`: **3**,
+- toplam: **38 → 30**.
+
+TDD / regresyon / browser kanıtı:
+
+1. `tests/admin-shell-event-handler-refactor.test.js` production değişikliğinden önce **0/3 PASS** RED verdi; data hook'ları yoktu, `admin.js` `onclick` parse ediyordu ve logout hâlâ HTML inline script'indeydi.
+2. Minimal E1 değişikliği sonrası focused E1 **3/3 PASS**; Error Logs source-shape harness'i yeni `data-admin-tab` sözleşmesine taşındı ve birleşik E1 + Error Logs **15/15 PASS** oldu.
+3. İlk full-core koşusu **1478 PASS / 10 FAIL** verdi. Kök neden production regresyonu değil, üç eski test harness'inin yeni gerçek DOM sözleşmesini eksik modellemesiydi: `admin-settings-simplification` eski `onclick` markup'ını arıyordu; Excel DOM-safety ve Student Name DOM-safety sandbox'larında `document.querySelectorAll` yoktu. Beklentiler gevşetilmeden yeni DOM kontratına hizalandı; ilgili paketler final **32/32 PASS** verdi.
+4. Fresh final full core **1488/1488 PASS**, SQLite lifecycle/lock taraması **NONE**.
+5. `npm run test:system-smoke` PASS; `npm audit --omit=dev` **0 vulnerability**; syntax/package/diff temiz.
+6. Chrome pre/post 1366×768 ve 1920-wide: horizontal overflow **0**; Students → Roles → Attendance → Slides → Sistem/Error Logs geçişleri aynı; Sistem active state ve error-log refresh aynı.
+7. Chrome post-change sekiz E1 hook'unun tamamında `onclick === null`; QR aç/kapat aynı; logout `POST /api/admin/logout` **200** ve login sayfasına dönüş aynı; normal akış final console error/warn/issue **0**.
+8. Chrome MCP Sistem post-check sırasında tek geçici upstream **502 tool-side** hata verdi; servis yeniden erişilebilir olduğunda aynı kontroller başarıyla tamamlandı ve production etkilenmedi.
+9. Playwright pre/post `/admin/` auth redirect + `Yönetici Girişi` title PASS; post-change snapshot çağrısında bilinen tool-side `about:blank` davranışı tekrarlandı.
+10. Product/test commit `46485e067c0e79c15d37f6add656f9ca9816c0d6`; GitHub Actions `31331183368`: Node 22 **PASS (24 sn)**, Node 24 **PASS (28 sn)**.
+
 Her görsel dalgada en az:
 
 - 1366×768 admin smoke,
