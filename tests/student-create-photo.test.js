@@ -1,10 +1,11 @@
 const test = require('node:test');
-const { after } = require('node:test');
+const { after, before } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
+const { awaitDatabaseReady } = require('./helpers/database-test-utils.js');
 
 const originalDbPath = process.env.CLASSROOM_DB_PATH;
 const tempDir = fs.mkdtempSync(
@@ -22,6 +23,10 @@ global.setInterval = () => {};
 
 const app = require('../backend/server.js');
 const db = require('../backend/database.js');
+
+before(async () => {
+    await awaitDatabaseReady(db);
+});
 
 test('Student Create Photo Web Path Tests', async (t) => {
     const stack = app._router.stack;

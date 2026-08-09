@@ -25,6 +25,7 @@ Date.now = () => fakeTime;
 const app = require('../backend/server');
 const dbModule = require('../backend/database');
 const db = dbModule.db || dbModule;
+const { awaitDatabaseReady } = require('./helpers/database-test-utils.js');
 
 function closeDatabase(database) {
     return new Promise((resolve, reject) => {
@@ -94,6 +95,8 @@ test('Admin Rate Limit Tests', async (t) => {
     let serverUrl;
 
     try {
+        await awaitDatabaseReady(db);
+
         await new Promise((resolve, reject) => {
             server = app.listen(0, '127.0.0.1', (err) => {
                 if (err) return reject(err);

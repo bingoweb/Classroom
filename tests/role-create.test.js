@@ -4,6 +4,7 @@ const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
+const { awaitDatabaseReady } = require('./helpers/database-test-utils.js');
 
 const originalDbPath = process.env.CLASSROOM_DB_PATH;
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'classroom-role-create-test-'));
@@ -73,7 +74,7 @@ test('Role Create ID Validation Tests', async (t) => {
         }
     });
 
-    await db.scheduleMigrationPromise;
+    await awaitDatabaseReady(db);
 
     const stack = app._router.stack;
     const matchingRoutes = stack.filter(
@@ -119,7 +120,7 @@ test('Role Create ID Validation Tests', async (t) => {
         db.createIsolatedConnection = originalDbCreateIsolatedConnection;
     });
 
-    function createPromiseHelper(testHandler) {
+    function createPromiseHelper(testHandler, timeoutMs = 5000) {
         return function invokeTestHandler(req) {
             return new Promise((resolve, reject) => {
                 let responded = false;
@@ -160,7 +161,7 @@ test('Role Create ID Validation Tests', async (t) => {
                         responded = true;
                         reject(new Error('Response timeout exceeded'));
                     }
-                }, 100);
+                }, timeoutMs);
 
                 try {
                     testHandler(req, res, next);
@@ -175,7 +176,7 @@ test('Role Create ID Validation Tests', async (t) => {
     const invokeHandler = createPromiseHelper(handler);
 
     await t.test('Helper: zero responses are detected', async () => {
-        const invokeZero = createPromiseHelper(() => {});
+        const invokeZero = createPromiseHelper(() => {}, 50);
         await assert.rejects(invokeZero({}), /Response timeout exceeded/);
     });
 

@@ -4,6 +4,7 @@ const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
+const { awaitDatabaseReady } = require('./helpers/database-test-utils.js');
 
 const originalDbPath = process.env.CLASSROOM_DB_PATH;
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'classroom-role-test-'));
@@ -49,6 +50,8 @@ function removeDirectoryIfPresent(fsApi, directoryPath) {
 }
 
 test('Role Delete ID Validation Tests', async (t) => {
+    await awaitDatabaseReady(db);
+
     t.after(async () => {
         try {
             await closeDatabase(db);

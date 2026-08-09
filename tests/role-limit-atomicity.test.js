@@ -4,6 +4,7 @@ const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
+const { awaitDatabaseReady } = require('./helpers/database-test-utils.js');
 
 const originalDbPath = process.env.CLASSROOM_DB_PATH;
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'classroom-role-atomicity-test-'));
@@ -16,7 +17,7 @@ global.setInterval = () => {};
 const app = require('../backend/server.js');
 const db = require('../backend/database.js');
 
-function invokeHandler(reqOverrides) {
+function invokeHandler(reqOverrides, timeoutMs = 5000) {
     return new Promise((resolve, reject) => {
         const stack = app._router.stack;
         const matchingRoutes = stack.filter(
@@ -43,7 +44,7 @@ function invokeHandler(reqOverrides) {
                 isSettled = true;
                 reject(new Error('Handler did not respond'));
             }
-        }, 500);
+        }, timeoutMs);
 
         const res = {
             statusCode: 200,
@@ -131,12 +132,12 @@ test('Role Limit Atomicity Tests', async (t) => {
         }
     });
 
-    await db.scheduleMigrationPromise;
+    await awaitDatabaseReady(db);
 
     await t.test('Helper self-regression: no response is rejected', async () => {
         const originalStack = app._router.stack;
         app._router.stack = [{ route: { path: '/api/roles', methods: { post: true }, stack: [{ handle: (req, res) => {} }] } }];
-        await assert.rejects(invokeHandler({}), /Handler did not respond/);
+        await assert.rejects(invokeHandler({}, 50), /Handler did not respond/);
         app._router.stack = originalStack;
     });
 

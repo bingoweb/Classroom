@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { awaitDatabaseReady } = require('./helpers/database-test-utils.js');
 
 function closeDatabase(database) {
     return new Promise((resolve, reject) => {
@@ -29,6 +30,8 @@ test('Student Import Error Redaction', async () => {
     const app = require('../backend/server.js');
     const db = require('../backend/database.js');
     const { Logger } = require('../backend/logger.js');
+
+    await awaitDatabaseReady(db);
 
     const originalReadFile = XLSX.readFile;
     const originalLoggerError = Logger.prototype.error;

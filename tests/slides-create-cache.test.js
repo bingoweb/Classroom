@@ -4,6 +4,7 @@ const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
+const { awaitDatabaseReady } = require('./helpers/database-test-utils.js');
 
 const originalDbPath = process.env.CLASSROOM_DB_PATH;
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'classroom-slides-create-cache-'));
@@ -70,6 +71,8 @@ function createMockRes() {
 }
 
 test('Slides Create Cache Invalidation Tests', async (t) => {
+    await awaitDatabaseReady(db);
+
     let originalDbAll, originalDbGet, originalDbRun, originalFsUnlinkSync, originalFsExistsSync, originalDateNow;
     let timeOffset = 0;
 
