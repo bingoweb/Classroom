@@ -32,47 +32,53 @@ test('Admin Istanbul date contract', async (t) => {
     });
 
     await t.test('admin setTodayDate uses Utils.getIstanbulDateKey and loads that date', async () => {
-        const adminSource = fs.readFileSync(path.join(__dirname, '../public/admin/admin.js'), 'utf8');
-        const start = adminSource.indexOf('window.setTodayDate = function () {');
-        const end = adminSource.indexOf('\n};', start);
-        assert.notStrictEqual(start, -1, 'setTodayDate definition should exist');
-        assert.notStrictEqual(end, -1, 'setTodayDate definition should close');
-        const functionSource = adminSource.slice(start, end + 3);
-
-        let loaded = 0;
+        const attendanceSource = fs.readFileSync(path.join(__dirname, '../public/admin/js/attendance.js'), 'utf8');
+        const requestedUrls = [];
         const attendanceDate = { value: '' };
+        const attendanceList = { innerHTML: '' };
+        const attendanceSummaryContent = { innerHTML: '' };
         const sandbox = {
-            window: {},
             document: {
                 getElementById(id) {
                     if (id === 'attendanceDate') return attendanceDate;
+                    if (id === 'attendanceList') return attendanceList;
+                    if (id === 'attendanceSummaryContent') return attendanceSummaryContent;
                     return null;
                 }
             },
+            CONFIG: { API_URL: '/api' },
             Utils: {
                 getIstanbulDateKey() {
                     return '2026-08-09';
-                }
+                },
+                getAvatarPath() { return 'assets/default_boy.png'; },
+                escapeHtml(value) { return String(value); },
+                showError() {}
             },
-            loadAttendanceForDate() {
-                loaded++;
+            async fetch(url) {
+                requestedUrls.push(url);
+                return {
+                    async json() { return []; }
+                };
             }
         };
+        sandbox.window = sandbox;
         vm.createContext(sandbox);
-        vm.runInContext(functionSource, sandbox);
+        vm.runInContext(attendanceSource, sandbox);
 
-        sandbox.window.setTodayDate();
+        sandbox.AdminAttendance.setTodayDate();
+        await new Promise(resolve => setTimeout(resolve, 0));
 
         assert.strictEqual(attendanceDate.value, '2026-08-09');
-        assert.strictEqual(loaded, 1);
+        assert.deepStrictEqual(requestedUrls, [
+            '/api/students',
+            '/api/attendance/2026-08-09'
+        ]);
     });
 
     await t.test('admin source no longer derives attendance today from UTC toISOString', () => {
-        const adminSource = fs.readFileSync(path.join(__dirname, '../public/admin/admin.js'), 'utf8');
-        const start = adminSource.indexOf('window.setTodayDate = function () {');
-        const end = adminSource.indexOf('\n};', start);
-        const functionSource = adminSource.slice(start, end + 3);
-        assert.ok(!functionSource.includes('toISOString()'));
-        assert.ok(functionSource.includes('Utils.getIstanbulDateKey()'));
+        const attendanceSource = fs.readFileSync(path.join(__dirname, '../public/admin/js/attendance.js'), 'utf8');
+        assert.ok(!attendanceSource.includes('toISOString()'));
+        assert.ok(attendanceSource.includes('Utils.getIstanbulDateKey()'));
     });
 });

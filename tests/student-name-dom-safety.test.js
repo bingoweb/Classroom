@@ -303,6 +303,7 @@ test('Student Name DOM Safety Tests', async (t) => {
         const adminSource = fs.readFileSync(path.join(__dirname, '../public/admin/admin.js'), 'utf8');
         const studentModuleSource = fs.readFileSync(path.join(__dirname, '../public/admin/js/students.js'), 'utf8');
         const roleModuleSource = fs.readFileSync(path.join(__dirname, '../public/admin/js/roles.js'), 'utf8');
+        const attendanceModuleSource = fs.readFileSync(path.join(__dirname, '../public/admin/js/attendance.js'), 'utf8');
         const utilsSource = fs.readFileSync(path.join(__dirname, '../public/js/utils.js'), 'utf8');
         
         const { sandbox, domElements, getEl, fireDomContentLoaded } = createSandbox();
@@ -329,9 +330,10 @@ test('Student Name DOM Safety Tests', async (t) => {
 
         vm.runInContext(studentModuleSource, sandbox);
         vm.runInContext(roleModuleSource, sandbox);
+        vm.runInContext(attendanceModuleSource, sandbox);
         const instrumentedSource = adminSource + `
             globalThis.__testApi = { 
-                renderAttendanceList
+                noop: true
             };
         `;
         vm.runInContext(instrumentedSource, sandbox);
@@ -370,7 +372,7 @@ test('Student Name DOM Safety Tests', async (t) => {
         assert.ok(currentDutyHtml.includes('İpek &amp; Ece &lt;3'), 'Duty display name is escaped and preserves characters');
         assert.ok(currentStarsHtml.includes('&quot;&gt;&lt;img src=x onerror=&quot;globalThis.__xss=1&quot;&gt;'), 'Star display name is escaped');
 
-        sandbox.globalThis.__testApi.renderAttendanceList(students, {});
+        sandbox.AdminAttendance.renderAttendanceList(students, {});
         const attendanceListHtml = getEl('attendanceList').innerHTML;
         assert.ok(!attendanceListHtml.includes('onerror="globalThis.__xss=1"'), 'No raw injected onerror attribute in attendance list');
         assert.ok(attendanceListHtml.includes('&quot;&gt;&lt;img src=x onerror=&quot;globalThis.__xss=1&quot;&gt;'), 'Attendance list name is escaped');

@@ -218,7 +218,7 @@ test('Admin slide settings atomic submit', async (t) => {
     await t.test('source contract contains a single PUT and no per-setting POST loop', () => {
         const source = fs.readFileSync(path.join(__dirname, '../public/admin/admin.js'), 'utf8');
         const start = source.indexOf('async function handleSlideSettingsSubmit');
-        const end = source.indexOf('// Attendance Functions', start);
+        const end = source.length;
         const fnSource = source.slice(start, end);
 
         assert.ok(start >= 0 && end > start, 'slide settings submit function should exist');
