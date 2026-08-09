@@ -302,6 +302,7 @@ test('Student Name DOM Safety Tests', async (t) => {
     await t.test('Admin Panel (admin.js) safely escapes injected names and handles event delegation', async () => {
         const adminSource = fs.readFileSync(path.join(__dirname, '../public/admin/admin.js'), 'utf8');
         const studentModuleSource = fs.readFileSync(path.join(__dirname, '../public/admin/js/students.js'), 'utf8');
+        const roleModuleSource = fs.readFileSync(path.join(__dirname, '../public/admin/js/roles.js'), 'utf8');
         const utilsSource = fs.readFileSync(path.join(__dirname, '../public/js/utils.js'), 'utf8');
         
         const { sandbox, domElements, getEl, fireDomContentLoaded } = createSandbox();
@@ -327,10 +328,9 @@ test('Student Name DOM Safety Tests', async (t) => {
         };
 
         vm.runInContext(studentModuleSource, sandbox);
+        vm.runInContext(roleModuleSource, sandbox);
         const instrumentedSource = adminSource + `
             globalThis.__testApi = { 
-                updateRoleSelects, 
-                renderRoles, 
                 renderAttendanceList
             };
         `;
@@ -353,12 +353,12 @@ test('Student Name DOM Safety Tests', async (t) => {
         assert.ok(!listHtml.includes('onerror="globalThis.__xss=1"'), 'No raw injected onerror attribute in student card');
         assert.ok(listHtml.includes('&quot;&gt;&lt;img src=x onerror=&quot;globalThis.__xss=1&quot;&gt;'), 'Student card name is escaped');
         
-        sandbox.globalThis.__testApi.updateRoleSelects(students);
+        sandbox.AdminRoles.updateRoleSelects(students);
         const presidentSelectHtml = getEl('presidentSelect').innerHTML;
         assert.ok(!presidentSelectHtml.includes('onerror="globalThis.__xss=1"'), 'No raw injected onerror attribute in role select');
         assert.ok(presidentSelectHtml.includes('&quot;&gt;&lt;img src=x onerror=&quot;globalThis.__xss=1&quot;&gt;'), 'Role select name is escaped');
 
-        sandbox.globalThis.__testApi.renderRoles(roles);
+        sandbox.AdminRoles.renderRoles(roles);
         const currentPresidentHtml = getEl('currentPresident').innerHTML;
         const currentVicePresidentsHtml = getEl('currentVicePresidents').innerHTML;
         const currentDutyHtml = getEl('currentDuty').innerHTML;

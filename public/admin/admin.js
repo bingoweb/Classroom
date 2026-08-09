@@ -34,7 +34,7 @@ async function fetchStudents() {
         const res = await fetch(`${CONFIG.API_URL}/students`);
         const students = await res.json();
         AdminStudents.renderStudents(students);
-        updateRoleSelects(students);
+        AdminRoles.updateRoleSelects(students);
     } catch (e) {
         if (typeof logger !== 'undefined') { logger.error(COMPONENTS.ADMIN, 'Error fetching students', e); }
     }
@@ -44,7 +44,7 @@ async function fetchRoles() {
     try {
         const res = await fetch(`${CONFIG.API_URL}/roles`);
         const roles = await res.json();
-        renderRoles(roles);
+        AdminRoles.renderRoles(roles);
     } catch (e) {
         if (typeof logger !== 'undefined') {
             logger.error(COMPONENTS.ADMIN, 'Error fetching roles', e);
@@ -54,125 +54,6 @@ async function fetchRoles() {
 
 // Fetch Word of the Day
 // fetchWord removed - Word of the Day feature deprecated
-
-// Update Role Selects
-function updateRoleSelects(students) {
-    const options = students.map(s => `<option value="${s.id}">${Utils.escapeHtml(s.name)}</option>`).join('');
-    document.getElementById('presidentSelect').innerHTML = options;
-    document.getElementById('vicePresidentSelect').innerHTML = options;
-    document.getElementById('dutySelect').innerHTML = options;
-    document.getElementById('starSelect').innerHTML = options;
-}
-
-// Assign Role
-window.assignRole = async function (roleType) {
-    let studentId;
-    if (roleType === 'president') studentId = document.getElementById('presidentSelect').value;
-    if (roleType === 'vice_president') studentId = document.getElementById('vicePresidentSelect').value;
-    if (roleType === 'duty') studentId = document.getElementById('dutySelect').value;
-    if (roleType === 'star') studentId = document.getElementById('starSelect').value;
-
-    if (!studentId) {
-        Utils.showError('Lütfen bir öğrenci seçin.');
-        return;
-    }
-
-    try {
-        const response = await fetch(`${CONFIG.API_URL}/roles`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ student_id: studentId, role_type: roleType })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            Utils.showError(data.error || 'Rol atanırken hata oluştu');
-            return;
-        }
-
-        Utils.showSuccess(data.message || 'Rol başarıyla atandı!');
-        fetchRoles();
-    } catch (e) {
-        if (typeof logger !== 'undefined') {
-            logger.error(COMPONENTS.ADMIN, 'Error assigning role', e);
-        }
-        Utils.showError('Görev atama sırasında hata oluştu.');
-    }
-};
-
-// Render Roles
-function renderRoles(roles) {
-
-    const president = roles.find(r => r.role_type === 'president');
-    const presidentHtml = president ?
-        `✅ ${Utils.escapeHtml(president.name)} <button class="remove-role-btn" data-id="${president.role_id}">Kaldır</button>` : '---';
-    document.getElementById('currentPresident').innerHTML = presidentHtml;
-
-    const vicePresidents = roles.filter(r => r.role_type === 'vice_president');
-    document.getElementById('currentVicePresidents').innerHTML = vicePresidents.map(vp => {
-        return `<div>👑 ${Utils.escapeHtml(vp.name)} <button class="remove-role-btn" data-id="${vp.role_id}">Kaldır</button></div>`;
-    }).join('') || '---';
-
-    const duties = roles.filter(r => r.role_type === 'duty');
-    document.getElementById('currentDuty').innerHTML = duties.map(d => {
-        return `<div>📋 ${Utils.escapeHtml(d.name)} <button class="remove-role-btn" data-id="${d.role_id}">Kaldır</button></div>`;
-    }).join('');
-
-    const stars = roles.filter(r => r.role_type === 'star');
-    document.getElementById('currentStars').innerHTML = stars.map(s => {
-        return `<div>⭐ ${Utils.escapeHtml(s.name)} <button class="remove-role-btn" data-id="${s.role_id}">Kaldır</button></div>`;
-    }).join('');
-    // Event delegation is handled in DOMContentLoaded - no need to add listeners here
-}
-
-// Remove Role - Explicitly attached to window
-window.removeRole = async function (roleId) {
-    if (!confirm('Bu rolü kaldırmak istediğinize emin misiniz?')) return;
-
-    try {
-        const response = await fetch(`${CONFIG.API_URL}/roles/${roleId}`, { method: 'DELETE' });
-
-        // Check response status before parsing JSON
-        if (!response.ok) {
-            let errorMessage = 'Rol kaldırılırken hata oluştu';
-            try {
-                const errorData = await response.json();
-                errorMessage = errorData.error || errorMessage;
-            } catch (parseError) {
-                // If JSON parsing fails, try to get text
-                try {
-                    const errorText = await response.text();
-                    errorMessage = errorText || errorMessage;
-                } catch (textError) {
-                    // Silent - nested error
-                }
-            }
-            Utils.showError(errorMessage);
-            return;
-        }
-
-        // Parse JSON only if response is OK
-        let data;
-        try {
-            data = await response.json();
-        } catch (parseError) {
-            // Silent - JSON parse error (expected for some responses)
-            // Even if JSON parsing fails, if status is OK, consider it success
-            Utils.showSuccess('Rol başarıyla kaldırıldı!');
-            fetchRoles();
-            return;
-        }
-
-        Utils.showSuccess('Rol başarıyla kaldırıldı!');
-        fetchRoles();
-    } catch (e) {
-        if (typeof logger !== 'undefined') {
-            logger.error(COMPONENTS.ADMIN, 'Error removing role', e, { roleId });
-        }
-        Utils.showError('Rol kaldırılırken hata oluştu.');
-    }
-};
 
 // QR Code - Simple URL display
 window.showQRCode = async function () {
@@ -249,13 +130,8 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshRoles: fetchRoles
     });
 
-    // For role remove buttons - use roles section as parent for event delegation
-    const rolesSection = document.getElementById('roles');
-    rolesSection.addEventListener('click', function (e) {
-        if (e.target && e.target.classList.contains('remove-role-btn')) {
-            const id = e.target.getAttribute('data-id');
-            removeRole(id);
-        }
+    AdminRoles.init({
+        refreshRoles: fetchRoles
     });
 
     // Set today's date in attendance date input
