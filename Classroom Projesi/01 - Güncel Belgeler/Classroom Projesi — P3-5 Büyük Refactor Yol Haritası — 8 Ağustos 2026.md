@@ -1329,7 +1329,7 @@ TDD ve browser doğrulaması:
 
 ## 8.1 P3-5E — Admin inline event handler temizliği
 
-**Durum:** 🟨 9 Ağustos 2026 — uygulanıyor. E1 shell/navigation/QR/logout, E2 Students, E3 Roles + Attendance ve E4 Slides handler temizliği tamamlandı/doğrulandı; sıradaki kontrollü dalga **E5 Error Logs + kalan modal/domain handler'ları**.
+**Durum:** 🟩 9 Ağustos 2026 — tamamlandı ve doğrulandı. E1–E5 ile admin inline event handler envanteri **41 → 0** oldu. P3-5E için açık dalga kalmadı.
 
 Bu faz P3-5B sırasında geçici uyumluluk için korunan inline HTML/template event handler'larını domain bazında kaldırır. Amaç framework değişimi veya behavior redesign değildir; mevcut classic-script davranışı açık `addEventListener` / event-delegation ownership'ine taşınacaktır.
 
@@ -1349,7 +1349,7 @@ Dalga sırası küçük tutulacaktır:
 2. **E2 Students — 🟩 tamamlandı**,
 3. **E3 Roles + Attendance — 🟩 tamamlandı**,
 4. **E4 Slides — 🟩 tamamlandı**,
-5. **E5 Error Logs + kalan modal/domain handler'ları — sıradaki**.
+5. **E5 Error Logs + kalan modal/domain handler'ları — 🟩 tamamlandı**.
 
 Runtime hover/state davranışları yalnız mevcut computed-style/interaction sözleşmesi test + browser kanıtıyla korunabiliyorsa inline handler dışına taşınacaktır; E fazı runtime `.style.*` state ownership'ini otomatik olarak CSS refactor kapsamına almaz.
 
@@ -1497,6 +1497,45 @@ TDD / regresyon / browser kanıtı:
 9. Chrome final cache-bypass: 1366×768 ve 1920-wide (inner 1920×863) horizontal overflow **0**; Students → Roles → Attendance → Slides → Sistem → Students smoke PASS; final console error/warn/issue **0**.
 10. Playwright `/admin/` → `/admin-login.html?next=/admin/` ve `Yönetici Girişi` title PASS.
 11. Product/test commit `ef0a620b76a098e20927924dc59909186b870014`; GitHub Actions `31333134976`: Node 22 **PASS (28 sn)**, Node 24 **PASS (29 sn)**.
+
+### E5 — Error Logs + kalan modal/domain inline event handler ownership uygulama sonucu
+
+E5 kalan **8** inline event handler'ı kaldırarak P3-5E envanterini tamamen sıfırladı:
+
+- Error Logs debug checkbox `onchange`: **1 → 0**,
+- Error Logs Yenile / Dışa Aktar / Eski Logları Temizle `onclick`: **3 → 0**,
+- Error Logs seviye / bileşen / zaman filtre `onchange`: **3 → 0**,
+- Students fotoğraf yükleme modalı İptal `onclick`: **1 → 0**.
+
+Davranış ownership'i mevcut classic-script mimarisi korunarak explicit listener modeline taşındı:
+
+- Error Logs kontrolleri mevcut güçlü ID'lerle `ErrorLogsController.init()` içinde `change` / `click` listener'larına bağlandı; `window.refreshErrorLogs`, `window.filterErrorLogs`, `window.exportErrorLogs`, `window.clearOldLogs`, `window.toggleDebugMode` uyumluluk export'ları korunuyor,
+- fotoğraf modalı İptal butonu `closePhotoUploadModalButton` ID'sini aldı ve `Students.init()` içinde `closePhotoUploadModal` listener'ına bağlandı,
+- Error Logs veri yükleme/filtreleme/export/cleanup ve Students fotoğraf upload davranışlarının iş mantığı değiştirilmedi.
+
+E5 sonunda:
+
+- `public/admin/index.html`: **8 → 0**,
+- `students.js`, `roles.js`, `attendance.js`, `slides.js`: **0** inline event attribute,
+- toplam admin inline handler envanteri: **8 → 0**,
+- P3-5E toplamı: **41 → 0**.
+
+TDD / regresyon / browser kanıtı:
+
+1. `tests/admin-final-event-handler-refactor.test.js` E5 contract'ını üç başlıkta koruyor; parent commit `6616305...` üzerinde `/tmp` replay **0/3 PASS RED**, E5 HEAD üzerinde focused **3/3 PASS GREEN**.
+2. Error Logs + Students komşu paketi **74/74 PASS**; geniş admin regresyonu **193/193 PASS**.
+3. Fresh full core **1502/1502 PASS**, SQLite lifecycle/lock taraması **NONE**.
+4. `npm run test:system-smoke` PASS; `npm audit --omit=dev` **0 vulnerability**; syntax/package/diff temiz.
+5. Chrome `localhost:3000` gerçek Error Logs kabulünde Yenile çalıştı; INFO filtresi gerçek `/api/logs?level=INFO` isteğini **200** ile tamamladı.
+6. Debug modu explicit listener ile açıldı/kapatıldı ve `slideshow_debug_mode` state'i başlangıçtaki `false` değerine geri döndü; Dışa Aktar aksiyonu tetiklendi.
+7. “Eski Logları Temizle” mevcut `30 günden eski logları silmek istediğinize emin misiniz?` confirm akışını açtı ve testte **iptal edildi**; log verisi silinmedi.
+8. Students fotoğraf modalı İptal explicit listener ile modalı `display:none` durumuna döndürdü.
+9. Chrome MCP'nin otomatik `127.0.0.1:49xxx` sayfalarıyla host-scope cookie çakışması nedeniyle görülen geçici 401 **tool/MCP kaynaklı** olarak ayrıştırıldı; source-of-truth browser kabulü ayrı cookie hostu olan `localhost:3000` üzerinde temiz geçti ve production bug/fix açılmadı.
+10. Chrome final HEAD: gerçek CSS viewport **1366×768** ve **1920×1080**, horizontal overflow **0**; tüm DOM'da inline event attribute **0**; Students → Roles → Attendance → Slides → Sistem → Students smoke PASS; final console error/warn/issue **0**.
+11. Playwright `http://localhost:3000/admin/` → `/admin-login.html?next=/admin/`, title `Yönetici Girişi` PASS.
+12. Product/test commit `eb3e97786da28af35a193225498e0fddfc8c4ed5`; GitHub Actions `31333663421`: Node 24 **PASS (24 sn)**, Node 22 **PASS (30 sn)**.
+
+**P3-5E tamamlandı ve doğrulandı.** P3-5 yol haritasında fiziksel kabul gerektirmeyen açık bir sonraki refactor dalgası tanımlı değildir. Gerçek P3-5D kiosk CSS selector/declaration cleanup, P2-6 gerçek 55" 4K fiziksel kabul kapısı nedeniyle beklemeye devam eder.
 
 Her görsel dalgada en az:
 

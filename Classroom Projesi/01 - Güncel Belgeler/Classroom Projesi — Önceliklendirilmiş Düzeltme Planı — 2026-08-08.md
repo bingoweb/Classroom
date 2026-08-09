@@ -5305,7 +5305,26 @@ Sonuç:
 - Playwright auth redirect PASS,
 - product/test commit `ef0a620b76a098e20927924dc59909186b870014`, GitHub Actions `31333134976`: Node 22 PASS (28 sn), Node 24 PASS (29 sn).
 
-**P3-5E devam ediyor. Sıradaki kontrollü dalga E5 — Error Logs + kalan modal/domain handler ownership'idir.**
+### 21.5.5 E5 — Error Logs + kalan modal/domain handler'ları — 🟩
+
+Kalan **8 inline event handler → 0** oldu. Error Logs debug/action/filter kontrolleri `ErrorLogsController.init()` içindeki explicit listener ownership'ine; Students fotoğraf modalı İptal kontrolü ise `closePhotoUploadModalButton` + explicit Students listener'ına taşındı. Existing global compatibility exports ve ürün iş mantığı korundu.
+
+Sonuç:
+
+- `index.html` **8 → 0**,
+- tüm admin HTML/template inline event handler envanteri **41 → 0**,
+- parent-commit replay RED **0/3** → focused E5 **3/3**,
+- Error Logs + Students komşu regresyonu **74/74**,
+- geniş admin **193/193**, full core **1502/1502**, lifecycle/lock **NONE**,
+- system smoke PASS, audit **0**, syntax/package/diff temiz,
+- Chrome Error Logs Yenile + INFO filter (`/api/logs?level=INFO` 200), debug on/off restore, export ve cleanup-confirm-cancel PASS,
+- Students fotoğraf modal İptal explicit listener PASS,
+- Chrome gerçek CSS viewport 1366×768 + 1920×1080 overflow **0**, inline DOM event attribute **0**, tab smoke PASS, final console issue **0**,
+- Playwright `localhost:3000` auth redirect PASS,
+- MCP'nin `127.0.0.1:49xxx` auto-page cookie çakışması tool-side kabul ortamı sorunu olarak ayrıştırıldı; production bug sayılmadı,
+- product/test commit `eb3e97786da28af35a193225498e0fddfc8c4ed5`, GitHub Actions `31333663421`: Node 24 PASS (24 sn), Node 22 PASS (30 sn).
+
+**P3-5E tamamlandı. P3-5 yol haritasında fiziksel kabul gerektirmeyen açık bir sonraki refactor dalgası yoktur. Gerçek P3-5D kiosk CSS cleanup, P2-6 gerçek 55" 4K fiziksel kabulü gelene kadar beklemededir.**
 
 ---
 
@@ -5570,7 +5589,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 30 | P3-5C admin inline CSS — C1–C5 tamamlandı; admin statik inline-style envanteri 0, runtime state yazımları behavior-owned | P3 | 🟩 |
 | 31 | P3-5D0 kiosk CSS analiz/baseline hazırlığı — analyzer + duplicate/override/unused aday raporu + 4 viewport browser baseline; CSS değişikliği 0 | P3 | 🟩 |
 | 32 | P3-5A8 admin auth/session security refactor değerlendirmesi — no-extraction kararı; mevcut composition root korunuyor | P3 | 🟩 |
-| 33 | P3-5E admin inline event handler cleanup — E1 + E2 + E3 + E4 tamamlandı; 41 → 8, sıradaki E5 Error Logs + kalan modal/domain handler'ları | P3 | 🟨 |
+| 33 | P3-5E admin inline event handler cleanup — E1–E5 tamamlandı; admin inline event handler envanteri 41 → 0 | P3 | 🟩 |
 
 Durum simgeleri:
 
