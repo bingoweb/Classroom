@@ -55,7 +55,7 @@
                         ${slide.media_type === 'video' ? `
                             <video src="${mediaPath}" class="admin-slide-item__media-object" muted></video>
                         ` : `
-                            <img src="${mediaPath}" class="admin-slide-item__media-object" alt="Preview" onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\\'admin-slide-item__media-empty\\'>Görsel yok</span>'">
+                            <img src="${mediaPath}" class="admin-slide-item__media-object" alt="Preview">
                         `}
                     </div>
                 ` : '<div class="admin-slide-item__media admin-slide-item__media--empty"><span class="admin-slide-item__media-empty">Görsel yok</span></div>'}
@@ -71,9 +71,9 @@
                     ${slide.text_content ? `<div class="admin-slide-item__text">${safeTextPreview}</div>` : ''}
                 </div>
                 <div class="admin-slide-item__actions">
-                    <button onclick="editSlide(${slide.id})" class="admin-slide-item__button admin-slide-item__button--edit">Düzenle</button>
-                    <button onclick="toggleSlideActive(${slide.id})" class="admin-slide-item__button ${isActive ? 'admin-slide-item__button--deactivate' : 'admin-slide-item__button--activate'}">${isActive ? 'Pasif Yap' : 'Aktif Yap'}</button>
-                    <button onclick="deleteSlide(${slide.id})" class="admin-slide-item__button admin-slide-item__button--delete">Sil</button>
+                    <button data-slide-action="edit" data-slide-id="${slide.id}" class="admin-slide-item__button admin-slide-item__button--edit">Düzenle</button>
+                    <button data-slide-action="toggle-active" data-slide-id="${slide.id}" class="admin-slide-item__button ${isActive ? 'admin-slide-item__button--deactivate' : 'admin-slide-item__button--activate'}">${isActive ? 'Pasif Yap' : 'Aktif Yap'}</button>
+                    <button data-slide-action="delete" data-slide-id="${slide.id}" class="admin-slide-item__button admin-slide-item__button--delete">Sil</button>
                 </div>
             </div>
         `;
@@ -690,6 +690,35 @@
         }
     }
 
+    function handleSlideListClick(event) {
+        const target = event.target;
+        if (!target || typeof target.closest !== 'function') return;
+
+        const actionButton = target.closest('[data-slide-action][data-slide-id]');
+        if (!actionButton) return;
+
+        const action = actionButton.dataset.slideAction;
+        const slideId = parseInt(actionButton.dataset.slideId, 10);
+        if (!Number.isInteger(slideId)) return;
+
+        if (action === 'edit') {
+            editSlide(slideId);
+        } else if (action === 'toggle-active') {
+            toggleSlideActive(slideId);
+        } else if (action === 'delete') {
+            deleteSlide(slideId);
+        }
+    }
+
+    function handleSlideListMediaError(event) {
+        const media = event.target;
+        if (!media || media.tagName !== 'IMG' || !media.classList || !media.classList.contains('admin-slide-item__media-object')) return;
+
+        const mediaContainer = media.parentElement;
+        if (!mediaContainer) return;
+        mediaContainer.innerHTML = '<span class="admin-slide-item__media-empty">Görsel yok</span>';
+    }
+
     function init({ getSlides, refreshSlides } = {}) {
         if (typeof getSlides === 'function') {
             getSlidesHandler = getSlides;
@@ -721,6 +750,22 @@
         const slideSettingsForm = document.getElementById('slideSettingsForm');
         if (slideSettingsForm) {
             slideSettingsForm.addEventListener('submit', handleSlideSettingsSubmit);
+        }
+
+        const showSlideFormButton = document.getElementById('showSlideFormButton');
+        if (showSlideFormButton) {
+            showSlideFormButton.addEventListener('click', () => showSlideForm());
+        }
+
+        const closeSlideFormButton = document.getElementById('closeSlideFormButton');
+        if (closeSlideFormButton) {
+            closeSlideFormButton.addEventListener('click', closeSlideForm);
+        }
+
+        const slidesList = document.getElementById('slidesList');
+        if (slidesList && typeof slidesList.addEventListener === 'function') {
+            slidesList.addEventListener('click', handleSlideListClick);
+            slidesList.addEventListener('error', handleSlideListMediaError, true);
         }
     }
 

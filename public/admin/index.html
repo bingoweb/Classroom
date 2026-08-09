@@ -335,7 +335,7 @@
         <div id="slides" class="content-section">
             <div class="card">
                 <h2>Yeni Slayt Ekle</h2>
-                <button onclick="showSlideForm()" class="admin-primary-action slide-add-button">+
+                <button id="showSlideFormButton" data-slide-action="show-form" class="admin-primary-action slide-add-button">+
                     Yeni Slayt Ekle</button>
             </div>
 
@@ -686,7 +686,7 @@
                     <button type="submit" class="slide-form-action slide-form-action--submit">
                         💾 Kaydet
                     </button>
-                    <button type="button" onclick="closeSlideForm()" class="slide-form-action slide-form-action--cancel">
+                    <button type="button" id="closeSlideFormButton" data-slide-action="close-form" class="slide-form-action slide-form-action--cancel">
                         ❌ İptal
                     </button>
                 </div>
