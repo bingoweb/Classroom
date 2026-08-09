@@ -4484,6 +4484,51 @@ Kanıtlar:
 
 `backend/server.js` 1460 → **416 satıra** indi; yeni `backend/routes/slide-routes.js` 994 satır ve `backend/slide-media-paths.js` 66 satır. Böylece P3-5 backend domain extraction **A1–A7 tamamlandı**. A8 admin auth/session ancak ayrı güvenlik regresyon turuyla değerlendirilecektir; sıradaki aktif refactor fazı **P3-5B — admin JavaScript modülerleştirme**dir. Bilinen fresh-DB `error_logs` cleanup-order bug'ı ve P2-6 gerçek 55\" 4K fiziksel kabul kapısı ayrı olarak açık kalır.
 
+### 21.0.8 9 Ağustos 2026 — P3-5B1 admin students module extraction
+
+Admin JavaScript modülerleştirmesinin ilk dalgası tamamlandı. Öğrenci domaini klasik script mimarisi korunarak `public/admin/admin.js` dışına ayrıldı; role/yoklama/slayt sorumlulukları B1'e karıştırılmadı.
+
+Uygulanan sınır:
+
+- `public/admin/js/students.js`: student render/stats/filter, create/delete, photo modal/upload/preview, Excel preview/import,
+- `public/admin/admin.js`: `fetchStudents()` shell bridge olarak kaldı; aynı öğrenci listesi `AdminStudents.renderStudents(students)` ve mevcut `updateRoleSelects(students)` üzerinden iki domaine dağıtılıyor,
+- `public/admin/index.html`: `js/students.js`, `admin.js`ten önce yükleniyor,
+- `tests/admin-student-module.test.js`: B1 fiziksel extraction, script sırası, namespace/adaptör ve monolitten çıkış sözleşmesi,
+- mevcut VM test harness'leri yeni gerçek script zincirini izleyecek şekilde güncellendi; DOM/Excel güvenlik assertion'ları korunuyor.
+
+Korunan kritik sözleşmeler:
+
+- `window.filterStudents`, `window.deleteStudent`, `window.showPhotoUploadModal`, `window.closePhotoUploadModal`, `window.clearExcelFile`, `window.clearPhotoFile` global adaptörleri,
+- öğrenci adlarının `Utils.escapeHtml` ile güvenli render edilmesi,
+- search + gender filtre davranışı,
+- toplam/erkek/kız sayaçları,
+- student create/delete sonrası refresh,
+- student delete sonrası roles refresh,
+- photo MIME/5 MB validation ve upload feedback,
+- Excel dosya adı/hücre/error içeriklerinde DOM safety,
+- Excel import success/failure feedback,
+- mevcut notification davranışı,
+- classic script düzeni; ES module/framework eklenmemesi.
+
+Kanıtlar:
+
+- TDD structural test RED → GREEN,
+- extraction öncesi student odak baseline **32/32**,
+- B1 structural **1/1**,
+- geniş admin-source odak grubu **77/77**,
+- tam core **1408/1408**,
+- system smoke PASS,
+- audit 0,
+- `admin.js` + `students.js` syntax ve diff check temiz,
+- izole temp DB gerçek admin smoke: login 200; student script/admin script 200; create 200 ve sayaç 0→1; filtre doğru; photo modal doğru ID/ad; delete 200 ve sayaç 1→0,
+- Chrome DevTools network: `/admin/js/students.js` 200, `/admin/admin.js` 200, student GET/POST/DELETE başarılı; console error/warn 0,
+- 1366×768 ve 1920×1080 admin viewport'larında horizontal overflow 0,
+- Playwright admin auth redirect PASS; sonraki evaluate çağrısındaki bilinen tool-side `about:blank` davranışı nedeniyle ayrıntılı UI/API doğrulaması Chrome DevTools ile tamamlandı,
+- exact milestone commit `aeba60092fc6ba51036e7df58defe8351bdaf12c`,
+- GitHub Actions run `31315184119`: Node 24 PASS (28 sn), Node 22 PASS (29 sn).
+
+`public/admin/admin.js` **1804 → 1176 satıra** indi; yeni `public/admin/js/students.js` **609 satır**. Bilinen fresh-DB `error_logs` cleanup-order bug'ı değiştirilmedi; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. Sıradaki admin JS dalgası **P3-5B2 — Roles** olacaktır.
+
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
 ## 21.1 `backend/server.js` — A1–A7 sonrası 416 satır
@@ -4500,17 +4545,18 @@ Domain route extraction tamamlandı:
 
 Admin auth/session composition root içinde kalır. Bu sınır sırf dosya daha da küçülsün diye taşınmayacak; A8 ancak ayrı security regression turuyla değerlendirilecektir.
 
-## 21.2 `public/admin/admin.js` — ~1800 satır
+## 21.2 `public/admin/admin.js` — B1 sonrası 1176 satır
 
-Alan modülleri:
+B1 ile students domaini `public/admin/js/students.js` içine ayrıldı. `fetchStudents()` shell bridge olarak ve role select fan-out'u nedeniyle şimdilik `admin.js` içinde kalır.
 
-- students
+Kalan alan modülleri:
+
 - roles
 - attendance
 - slides
 - system/logs
 
-olarak ayrılabilir.
+olarak ayrılabilir. Sıradaki aktif dalga **B2 Roles**'dür.
 
 ## 21.3 Admin inline CSS
 
@@ -4787,6 +4833,8 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 23 | P3-5A5 attendance route extraction | P3 | 🟩 |
 | 24 | P3-5A6 logs route extraction | P3 | 🟩 |
 | 25 | P3-5A7 slides route extraction | P3 | 🟩 |
+| 26 | P3-5B1 admin students module extraction | P3 | 🟩 |
+| 27 | P3-5B2 admin roles module extraction | P3 | ⬜ |
 
 Durum simgeleri:
 

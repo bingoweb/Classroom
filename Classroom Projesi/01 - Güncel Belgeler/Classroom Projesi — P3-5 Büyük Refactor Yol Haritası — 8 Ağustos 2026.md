@@ -668,7 +668,7 @@ Auth refactor ayrı security regression turu gerektirir.
 
 ## 7. P3-5B — Admin JavaScript modülerleştirme
 
-**Durum:** Planlandı, henüz uygulanmadı.
+**Durum:** 🟨 Uygulanıyor — B1 tamamlandı ve doğrulandı; sıradaki dalga B2 Roles.
 
 Mevcut `error-logs.js` dosyası admin tarafında domain ayrımının çalışan örneğidir.
 
@@ -695,6 +695,8 @@ public/admin/error-logs.js
 
 İlk adaydır; students fonksiyon grubu dosyanın başında görece bağımsızdır.
 
+**Durum:** 🟩 9 Ağustos 2026 — tamamlandı ve doğrulandı.
+
 Korunacaklar:
 
 - DOM safety,
@@ -703,6 +705,44 @@ Korunacaklar:
 - student stats,
 - search/filter,
 - mevcut notification davranışı.
+
+#### B1 uygulama sonucu
+
+Admin öğrenciler domaini klasik script düzeni korunarak `admin.js` dışına ayrıldı:
+
+- `public/admin/js/students.js` oluşturuldu.
+- Öğrenci render/stats/filter, create/delete, photo modal/upload/preview ve Excel preview/import akışları bu modüle taşındı.
+- Modül `window.AdminStudents = { init, renderStudents, displayStudents }` namespace'ini kullanıyor; ES module veya framework eklenmedi.
+- Mevcut inline/global çağrılar için `window.filterStudents`, `window.deleteStudent`, `window.showPhotoUploadModal`, `window.closePhotoUploadModal`, `window.clearExcelFile` ve `window.clearPhotoFile` adaptörleri korunuyor.
+- `fetchStudents()` shell sorumluluğu olarak `admin.js` içinde kaldı; aynı fetch sonucu önce `AdminStudents.renderStudents(students)` ile öğrenci modülüne, sonra mevcut `updateRoleSelects(students)` ile role-select akışına dağıtılıyor. Böylece B1, B2 Roles sorumluluğunu erken taşımadı.
+- Ana bootstrap `AdminStudents.init({ refreshStudents: fetchStudents, refreshRoles: fetchRoles })` ile refresh callback'lerini açıkça enjekte ediyor.
+- Script sırası `error-logs.js → js/students.js → admin.js` olacak şekilde güncellendi.
+- `public/admin/admin.js` **1804 → 1176 satıra** indi; yeni `public/admin/js/students.js` **609 satır**.
+
+TDD ve regresyon kanıtı:
+
+1. `tests/admin-student-module.test.js` production modülünden önce yazıldı ve `public/admin/js/students.js must exist` nedeniyle beklenen RED verdi.
+2. Minimal extraction sonrası structural test **1/1 pass** verdi.
+3. Extraction öncesi student DOM/Excel/notification/copy baseline grubu **32/32 pass** idi.
+4. İlk modular test koşusunda eski VM harness'lerinin yalnız monolit `admin.js` yüklediği doğrulandı; `AdminStudents is not defined` ve taşınmış `displayStudents` lexical-scope hataları production bug olarak yorumlanmadı. Harness'ler gerçek script zincirini izleyecek şekilde, güvenlik assertion'ları zayıflatılmadan güncellendi.
+5. Geniş admin-source odak grubu **77/77 pass** verdi.
+6. Tam core **1408/1408 pass** verdi.
+7. System smoke PASS; npm audit 0; `admin.js` ve `students.js` syntax kontrolleri ile `git diff --check` temiz.
+8. İzole temp DB + gerçek admin browser smoke: login 200; `/admin/js/students.js` ve `/admin/admin.js` 200; student create sonrası sayaç 0→1; isim/gender render doğru; search/filter doğru; fotoğraf modalı doğru öğrenci adı/ID'si ile açıldı; delete 200 sonrası sayaç 1→0 ve boş state geri geldi.
+9. 1366×768 ve 1920×1080 admin viewport'larında horizontal overflow **0**; Chrome DevTools console error/warn **0**.
+10. Chrome DevTools script zincirinde `js/students.js`in `admin.js`ten önce yüklendiği ve geçici global adaptörlerin function olarak mevcut olduğu doğrulandı.
+11. Playwright `/admin/` erişiminin doğru biçimde login yüzeyine yönlendiğini doğruladı. Login sayfasında mevcut `/favicon.ico` 404 dışında B1 kaynaklı hata görülmedi; sonraki `browser_evaluate` çağrısında daha önceki turlarda da görülen tool-side `about:blank` davranışı tekrarlandığı için gerçek admin API/UI/console kanıtı Chrome DevTools ile tamamlandı.
+
+Kod/test milestone:
+
+- Commit: `aeba60092fc6ba51036e7df58defe8351bdaf12c`
+- GitHub Actions: `31315184119`
+- Node 24: PASS (28 sn)
+- Node 22: PASS (29 sn)
+
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B1 sırasında değiştirilmedi. P2-6 gerçek 55" 4K fiziksel kabul kapısı da ayrı biçimde açık kalır.
+
+**Sıradaki admin JS dalgası: B2 — Roles.** `assignRole`, `removeRole`, `renderRoles` ve role select population tek role modülüne taşınacak; B1'in `fetchStudents()` fan-out köprüsü bu dalgada kontrollü olarak yeniden değerlendirilecektir.
 
 ### B2 — Roles
 
