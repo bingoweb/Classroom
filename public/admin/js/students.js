@@ -51,15 +51,13 @@
 
             return `
                 <div class="admin-student-card ${genderClass}"
-                     onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.15)'; this.style.borderColor='var(--primary)'"
-                     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'; this.style.borderColor='transparent'"
                      data-gender="${s.gender}">
                     <div class="admin-student-card__badge">
                         ${genderIcon} ${genderText}
                     </div>
                     <div class="admin-student-card__visual">
                         <img src="${displayPath}"
-                             onerror="this.onerror=null; this.src='${defaultAvatar}'"
+                             data-default-avatar="${defaultAvatar}"
                              class="admin-student-card__avatar">
                     </div>
                     <div class="admin-student-card__body">
@@ -67,14 +65,10 @@
                             ${Utils.escapeHtml(s.name)}
                         </div>
                         <div class="admin-student-card__actions">
-                            <button class="upload-photo-btn admin-student-card__photo-button" data-id="${s.id}"
-                                onmouseover="this.style.opacity='0.9'"
-                                onmouseout="this.style.opacity='1'">
+                            <button class="upload-photo-btn admin-student-card__photo-button" data-id="${s.id}">
                                 📷 Resim
                             </button>
-                            <button class="delete-btn admin-student-card__delete-button" data-id="${s.id}"
-                                onmouseover="this.style.opacity='0.9'"
-                                onmouseout="this.style.opacity='1'">
+                            <button class="delete-btn admin-student-card__delete-button" data-id="${s.id}">
                                 🗑️
                             </button>
                         </div>
@@ -174,6 +168,51 @@
         }
         if (previewContainer) {
             previewContainer.remove();
+        }
+    }
+
+    function handleStudentListPointerState(event, isHovering) {
+        const target = event.target;
+        if (!target || typeof target.closest !== 'function') return;
+
+        const card = target.closest('.admin-student-card');
+        if (card) {
+            card.style.transform = isHovering ? 'translateY(-4px)' : 'translateY(0)';
+            card.style.boxShadow = isHovering
+                ? '0 4px 16px rgba(0,0,0,0.15)'
+                : '0 2px 8px rgba(0,0,0,0.1)';
+            card.style.borderColor = isHovering ? 'var(--primary)' : 'transparent';
+        }
+
+        const actionButton = target.closest('.admin-student-card__photo-button, .admin-student-card__delete-button');
+        if (actionButton) {
+            actionButton.style.opacity = isHovering ? '0.9' : '1';
+        }
+    }
+
+    function handleStudentAvatarError(event) {
+        const avatar = event.target;
+        if (!avatar || !avatar.classList || !avatar.classList.contains('admin-student-card__avatar')) return;
+
+        const defaultAvatar = avatar.getAttribute('data-default-avatar');
+        if (!defaultAvatar) return;
+
+        avatar.removeAttribute('data-default-avatar');
+        avatar.src = defaultAvatar;
+    }
+
+    function handleStudentActionClick(event) {
+        const target = event.target;
+        if (!target || typeof target.closest !== 'function') return;
+
+        const actionButton = target.closest('[data-student-action]');
+        if (!actionButton) return;
+
+        const action = actionButton.getAttribute('data-student-action');
+        if (action === 'clear-excel-file') {
+            clearExcelFile();
+        } else if (action === 'clear-photo-file') {
+            clearPhotoFile();
         }
     }
 
@@ -340,8 +379,21 @@
             });
         }
 
+        const studentSearch = document.getElementById('studentSearch');
+        if (studentSearch) {
+            studentSearch.addEventListener('keyup', filterStudents);
+        }
+
+        const genderFilter = document.getElementById('genderFilter');
+        if (genderFilter) {
+            genderFilter.addEventListener('change', filterStudents);
+        }
+
         const studentList = document.getElementById('studentList');
         if (studentList) {
+            studentList.addEventListener('mouseover', (e) => handleStudentListPointerState(e, true));
+            studentList.addEventListener('mouseout', (e) => handleStudentListPointerState(e, false));
+            studentList.addEventListener('error', handleStudentAvatarError, true);
             studentList.addEventListener('click', function (e) {
                 if (e.target && e.target.classList.contains('delete-btn')) {
                     const id = e.target.getAttribute('data-id');
@@ -354,6 +406,8 @@
                 }
             });
         }
+
+        document.addEventListener('click', handleStudentActionClick);
 
         const photoUploadForm = document.getElementById('photoUploadForm');
         if (photoUploadForm) {
@@ -453,7 +507,7 @@
                                         ${(file.size / 1024).toFixed(2)} KB
                                     </div>
                                 </div>
-                                <button onclick="clearExcelFile()" type="button" class="admin-excel-selected__clear">
+                                <button type="button" class="admin-excel-selected__clear" data-student-action="clear-excel-file">
                                     ✖ Temizle
                                 </button>
                             </div>
@@ -571,7 +625,7 @@
                         previewContainer.innerHTML = `
                             <div class="admin-photo-preview__header">
                                 <div class="admin-photo-preview__title">📷 Yüklenecek Resim Önizlemesi:</div>
-                                <button onclick="clearPhotoFile()" type="button" class="admin-photo-preview__clear">
+                                <button type="button" class="admin-photo-preview__clear" data-student-action="clear-photo-file">
                                     ✖ Temizle
                                 </button>
                             </div>

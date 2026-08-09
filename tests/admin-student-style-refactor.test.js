@@ -54,13 +54,13 @@ test('P3-5C2 keeps male/female colors and existing hover runtime behavior explic
     assert.match(css, /\.admin-student-card--male\s+\.admin-student-card__visual\s*\{[^}]*#2196F320[^}]*#2196F310/s);
     assert.match(css, /\.admin-student-card--female\s+\.admin-student-card__visual\s*\{[^}]*#E91E6320[^}]*#E91E6310/s);
 
-    assert.match(source, /this\.style\.transform='translateY\(-4px\)'/,
+    assert.match(source, /card\.style\.transform\s*=\s*isHovering\s*\?\s*'translateY\(-4px\)'\s*:\s*'translateY\(0\)'/,
         'existing card hover transform must remain runtime-owned in C2');
-    assert.match(source, /this\.style\.boxShadow='0 4px 16px rgba\(0,0,0,0\.15\)'/,
+    assert.match(source, /'0 4px 16px rgba\(0,0,0,0\.15\)'/,
         'existing card hover shadow must remain runtime-owned in C2');
-    assert.match(source, /this\.style\.borderColor='var\(--primary\)'/,
+    assert.match(source, /card\.style\.borderColor\s*=\s*isHovering\s*\?\s*'var\(--primary\)'\s*:\s*'transparent'/,
         'existing card hover border must remain runtime-owned in C2');
-    assert.match(source, /this\.style\.opacity='0\.9'/,
+    assert.match(source, /actionButton\.style\.opacity\s*=\s*isHovering\s*\?\s*'0\.9'\s*:\s*'1'/,
         'existing action-button hover opacity must remain runtime-owned in C2');
 });
 
