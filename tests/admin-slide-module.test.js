@@ -99,7 +99,7 @@ test('P3-5B4.3 extracts drag/reorder ownership into slides.js without shell call
     assert.doesNotMatch(adminSource, /async function reorderSlides\(/);
     assert.doesNotMatch(adminSource, /setupDragAndDrop\s*[,}]/);
 
-    // B4.5-B4.7 still belong to the shell after this sub-wave.
+    // B4.6-B4.7 still belong to the shell after the cumulative B4.5 extraction.
     assert.match(adminSource, /window\.deleteSlide\s*=/);
     assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
 });
@@ -122,31 +122,52 @@ test('P3-5B4.4 extracts slide form open/close/edit ownership while media preview
     assert.doesNotMatch(adminSource, /window\.closeSlideForm\s*=/);
     assert.doesNotMatch(adminSource, /window\.editSlide\s*=/);
 
-    // B4.5 media preview and B4.6-B4.7 write/settings behavior remain shell-owned.
-    assert.match(adminSource, /function prepareSlideMediaForm\(slide\)/);
-    assert.match(adminSource, /function resetSlideMediaForm\(\)/);
-    assert.match(adminSource, /function handleSlideMediaChange\(e\)/);
+    // B4.6-B4.7 write/settings behavior remain shell-owned after B4.5.
     assert.match(adminSource, /async function handleSlideSubmit\(e\)/);
     assert.match(adminSource, /window\.deleteSlide\s*=/);
     assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
     assert.match(adminSource, /AdminSlides\.getCurrentEditingSlideId\(\)/);
 });
 
+test('P3-5B4.5 extracts media preview ownership and change binding into slides.js', () => {
+    const adminSource = fs.readFileSync(adminPath, 'utf8');
+    const slidesSource = fs.readFileSync(slidesPath, 'utf8');
+
+    assert.match(slidesSource, /function prepareSlideMediaForm\(slide\)/);
+    assert.match(slidesSource, /function resetSlideMediaForm\(\)/);
+    assert.match(slidesSource, /function handleSlideMediaChange\(e\)/);
+    assert.match(slidesSource, /slideMedia\.addEventListener\('change', handleSlideMediaChange\)/);
+    assert.match(slidesSource, /Utils\.normalizePath\(slide\.media_path, true\)/);
+    assert.match(slidesSource, /new FileReader\(\)/);
+
+    assert.doesNotMatch(adminSource, /function prepareSlideMediaForm\(slide\)/);
+    assert.doesNotMatch(adminSource, /function resetSlideMediaForm\(\)/);
+    assert.doesNotMatch(adminSource, /function handleSlideMediaChange\(e\)/);
+    assert.doesNotMatch(adminSource, /slideMedia\.addEventListener\('change', handleSlideMediaChange\)/);
+    assert.doesNotMatch(adminSource, /prepareMediaForm:\s*prepareSlideMediaForm/);
+    assert.doesNotMatch(adminSource, /resetMediaForm:\s*resetSlideMediaForm/);
+
+    // B4.6 CRUD and B4.7 settings remain shell-owned.
+    assert.match(adminSource, /async function handleSlideSubmit\(e\)/);
+    assert.match(adminSource, /window\.deleteSlide\s*=/);
+    assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
+});
+
 function loadSlidesModule({
     slides,
     fetchImpl,
     documentImpl,
-    prepareMediaForm,
-    resetMediaForm,
     syncContentType,
-    syncTransitionMode
+    syncTransitionMode,
+    FileReaderImpl
 }) {
     const calls = {
         fetch: [],
         refresh: 0,
         success: [],
         error: [],
-        logger: []
+        logger: [],
+        normalize: []
     };
 
     const context = {
@@ -164,6 +185,10 @@ function loadSlidesModule({
             },
             showError(message) {
                 calls.error.push(message);
+            },
+            normalizePath(value, forAdmin) {
+                calls.normalize.push({ value, forAdmin });
+                return `/normalized/${value}`;
             }
         },
         logger: {
@@ -175,6 +200,9 @@ function loadSlidesModule({
         fetch: async (url, options) => {
             calls.fetch.push({ url, options });
             return fetchImpl(url, options);
+        },
+        FileReader: FileReaderImpl || class {
+            readAsDataURL() {}
         }
     };
 
@@ -185,8 +213,6 @@ function loadSlidesModule({
         refreshSlides: () => {
             calls.refresh += 1;
         },
-        prepareMediaForm,
-        resetMediaForm,
         syncContentType,
         syncTransitionMode
     });
@@ -208,7 +234,13 @@ function createSlideFormDocument() {
         'slideVideoAutoAdvance',
         'slideTransitionMode',
         'slideTransitionType',
-        'slideTransitionDuration'
+        'slideTransitionDuration',
+        'slideMedia',
+        'slideMediaLabel',
+        'slideMediaPreview',
+        'slideMediaInfo',
+        'slideCurrentMediaInfo',
+        'slideUploadProgress'
     ];
 
     ids.forEach((id) => {
@@ -217,10 +249,26 @@ function createSlideFormDocument() {
             value: '',
             checked: false,
             textContent: '',
+            innerHTML: '',
+            files: [],
             style: {},
+            attributes: new Map(),
+            listeners: new Map(),
             resetCount: 0,
             reset() {
                 this.resetCount += 1;
+            },
+            setAttribute(name, value) {
+                this.attributes.set(name, value);
+            },
+            removeAttribute(name) {
+                this.attributes.delete(name);
+            },
+            hasAttribute(name) {
+                return this.attributes.has(name);
+            },
+            addEventListener(type, handler) {
+                this.listeners.set(type, handler);
             }
         });
     });
@@ -235,19 +283,16 @@ function createSlideFormDocument() {
     };
 }
 
-test('P3-5B4.4 form ownership preserves add/edit/close state and delegates media-only work', async (t) => {
-    await t.test('new slide opens a reset form, delegates new-media preparation and keeps editing state null', () => {
+test('P3-5B4.4 form ownership preserves add/edit/close state with B4.5 media behavior internalized', async (t) => {
+    await t.test('new slide opens a reset form with required media and keeps editing state null', () => {
         const { elements, document } = createSlideFormDocument();
         elements.get('slideId').value = 88;
-        const mediaCalls = [];
         let contentSync = 0;
         let transitionSync = 0;
         const { context } = loadSlidesModule({
             slides: [],
             fetchImpl: async () => ({ ok: true, status: 200 }),
             documentImpl: document,
-            prepareMediaForm(slide) { mediaCalls.push(slide); },
-            resetMediaForm() {},
             syncContentType() { contentSync += 1; },
             syncTransitionMode() { transitionSync += 1; }
         });
@@ -259,12 +304,14 @@ test('P3-5B4.4 form ownership preserves add/edit/close state and delegates media
         assert.strictEqual(elements.get('slideFormModal').style.display, 'flex');
         assert.strictEqual(elements.get('slideId').value, '');
         assert.strictEqual(context.window.AdminSlides.getCurrentEditingSlideId(), null);
-        assert.deepStrictEqual(mediaCalls, [null]);
+        assert.strictEqual(elements.get('slideMedia').hasAttribute('required'), true);
+        assert.strictEqual(elements.get('slideMediaLabel').textContent, 'Medya Dosyası * (Resim, GIF veya Video - Max 100 MB)');
+        assert.strictEqual(elements.get('slideMediaPreview').innerHTML, '');
         assert.strictEqual(contentSync, 1);
         assert.strictEqual(transitionSync, 1);
     });
 
-    await t.test('editing a slide populates non-media fields, normalizes durations and delegates media preview', () => {
+    await t.test('editing a slide populates fields and renders normalized existing media preview', () => {
         const { elements, document } = createSlideFormDocument();
         const slide = {
             id: 47,
@@ -279,15 +326,12 @@ test('P3-5B4.4 form ownership preserves add/edit/close state and delegates media
             media_type: 'image',
             media_path: 'assets/default_boy.png'
         };
-        const mediaCalls = [];
         let contentSync = 0;
         let transitionSync = 0;
-        const { context } = loadSlidesModule({
+        const { context, calls } = loadSlidesModule({
             slides: [slide],
             fetchImpl: async () => ({ ok: true, status: 200 }),
             documentImpl: document,
-            prepareMediaForm(value) { mediaCalls.push(value); },
-            resetMediaForm() {},
             syncContentType() { contentSync += 1; },
             syncTransitionMode() { transitionSync += 1; }
         });
@@ -306,32 +350,147 @@ test('P3-5B4.4 form ownership preserves add/edit/close state and delegates media
         assert.strictEqual(elements.get('slideTransitionType').value, 'fade');
         assert.strictEqual(elements.get('slideTransitionDuration').value, 1.75);
         assert.strictEqual(elements.get('slideFormModal').style.display, 'flex');
-        assert.deepStrictEqual(mediaCalls, [slide]);
+        assert.strictEqual(elements.get('slideMedia').hasAttribute('required'), false);
+        assert.match(elements.get('slideMediaPreview').innerHTML, /<img src="\/normalized\/assets\/default_boy\.png"/);
+        assert.match(elements.get('slideCurrentMediaInfo').innerHTML, /Mevcut medya: Resim/);
+        assert.deepStrictEqual(calls.normalize, [{ value: 'assets/default_boy.png', forAdmin: true }]);
         assert.strictEqual(contentSync, 1);
         assert.strictEqual(transitionSync, 1);
     });
 
-    await t.test('close clears editing state, resets the form and delegates media cleanup', () => {
+    await t.test('close clears editing state, resets media fields and hides upload progress', () => {
         const { elements, document } = createSlideFormDocument();
-        let mediaReset = 0;
         const { context } = loadSlidesModule({
             slides: [{ id: 51, title: 'Close test' }],
             fetchImpl: async () => ({ ok: true, status: 200 }),
             documentImpl: document,
-            prepareMediaForm() {},
-            resetMediaForm() { mediaReset += 1; },
             syncContentType() {},
             syncTransitionMode() {}
         });
 
         context.window.showSlideForm(51);
+        elements.get('slideMediaPreview').innerHTML = 'preview';
+        elements.get('slideMediaInfo').textContent = 'info';
+        elements.get('slideCurrentMediaInfo').textContent = 'current';
+        elements.get('slideUploadProgress').style.display = 'block';
         context.window.closeSlideForm();
 
         assert.strictEqual(elements.get('slideFormModal').style.display, 'none');
         assert.strictEqual(elements.get('slideForm').resetCount, 1);
         assert.strictEqual(elements.get('slideId').value, '');
         assert.strictEqual(context.window.AdminSlides.getCurrentEditingSlideId(), null);
-        assert.strictEqual(mediaReset, 1);
+        assert.strictEqual(elements.get('slideMedia').hasAttribute('required'), true);
+        assert.strictEqual(elements.get('slideMediaPreview').innerHTML, '');
+        assert.strictEqual(elements.get('slideMediaInfo').textContent, '');
+        assert.strictEqual(elements.get('slideCurrentMediaInfo').textContent, '');
+        assert.strictEqual(elements.get('slideUploadProgress').style.display, 'none');
+    });
+});
+
+test('P3-5B4.5 media preview preserves existing-media restore, validation and FileReader rendering', async (t) => {
+    await t.test('init owns the media change listener and empty selection restores the editing slide preview', () => {
+        const { elements, document } = createSlideFormDocument();
+        const slide = { id: 61, media_type: 'image', media_path: 'assets/default_girl.png' };
+        const { context, calls } = loadSlidesModule({
+            slides: [slide],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            documentImpl: document,
+            syncContentType() {},
+            syncTransitionMode() {}
+        });
+
+        context.window.showSlideForm(61);
+        elements.get('slideMediaPreview').innerHTML = '';
+        elements.get('slideCurrentMediaInfo').innerHTML = '';
+        elements.get('slideMedia').files = [];
+        const changeHandler = elements.get('slideMedia').listeners.get('change');
+        assert.strictEqual(typeof changeHandler, 'function');
+        changeHandler({ target: elements.get('slideMedia') });
+
+        assert.match(elements.get('slideMediaPreview').innerHTML, /Mevcut Resim/);
+        assert.match(elements.get('slideCurrentMediaInfo').innerHTML, /default_girl\.png/);
+        assert.deepStrictEqual(calls.normalize, [
+            { value: 'assets/default_girl.png', forAdmin: true },
+            { value: 'assets/default_girl.png', forAdmin: true }
+        ]);
+    });
+
+    await t.test('oversized media is rejected, input is cleared and no FileReader is created', () => {
+        const { elements, document } = createSlideFormDocument();
+        let readerCount = 0;
+        class FakeReader {
+            constructor() { readerCount += 1; }
+            readAsDataURL() {}
+        }
+        const { calls } = loadSlidesModule({
+            slides: [],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            documentImpl: document,
+            syncContentType() {},
+            syncTransitionMode() {},
+            FileReaderImpl: FakeReader
+        });
+        const input = elements.get('slideMedia');
+        input.value = 'too-big.mp4';
+        input.files = [{ name: 'too-big.mp4', type: 'video/mp4', size: 100 * 1024 * 1024 + 1 }];
+
+        input.listeners.get('change')({ target: input });
+
+        assert.deepStrictEqual(calls.error, ["Dosya boyutu 100 MB'dan büyük olamaz!"]);
+        assert.strictEqual(input.value, '');
+        assert.strictEqual(readerCount, 0);
+    });
+
+    await t.test('new image media clears existing info, reports file size and renders FileReader preview', () => {
+        const { elements, document } = createSlideFormDocument();
+        class FakeReader {
+            readAsDataURL(file) {
+                this.onload({ target: { result: `data:${file.type};base64,TEST` } });
+            }
+        }
+        loadSlidesModule({
+            slides: [],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            documentImpl: document,
+            syncContentType() {},
+            syncTransitionMode() {},
+            FileReaderImpl: FakeReader
+        });
+        const input = elements.get('slideMedia');
+        elements.get('slideCurrentMediaInfo').textContent = 'old';
+        input.files = [{ name: 'poster.png', type: 'image/png', size: 1024 * 1024 }];
+
+        input.listeners.get('change')({ target: input });
+
+        assert.strictEqual(elements.get('slideCurrentMediaInfo').textContent, '');
+        assert.strictEqual(elements.get('slideMediaInfo').textContent, 'Yeni dosya: poster.png (1.00 MB)');
+        assert.match(elements.get('slideMediaPreview').innerHTML, /Yeni Resim Önizlemesi/);
+        assert.match(elements.get('slideMediaPreview').innerHTML, /data:image\/png;base64,TEST/);
+    });
+
+    await t.test('new video media renders the existing video preview contract', () => {
+        const { elements, document } = createSlideFormDocument();
+        class FakeReader {
+            readAsDataURL(file) {
+                this.onload({ target: { result: `data:${file.type};base64,VIDEO` } });
+            }
+        }
+        loadSlidesModule({
+            slides: [],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            documentImpl: document,
+            syncContentType() {},
+            syncTransitionMode() {},
+            FileReaderImpl: FakeReader
+        });
+        const input = elements.get('slideMedia');
+        input.files = [{ name: 'clip.mp4', type: 'video/mp4', size: 2 * 1024 * 1024 }];
+
+        input.listeners.get('change')({ target: input });
+
+        assert.strictEqual(elements.get('slideMediaInfo').textContent, 'Yeni dosya: clip.mp4 (2.00 MB)');
+        assert.match(elements.get('slideMediaPreview').innerHTML, /<video src="data:video\/mp4;base64,VIDEO"/);
+        assert.match(elements.get('slideMediaPreview').innerHTML, /Yeni Video Önizlemesi/);
     });
 });
 

@@ -1,8 +1,6 @@
 (function () {
     let getSlidesHandler = () => [];
     let refreshSlidesHandler = () => {};
-    let prepareMediaFormHandler = () => {};
-    let resetMediaFormHandler = () => {};
     let syncContentTypeHandler = () => {};
     let syncTransitionModeHandler = () => {};
     let draggedElement = null;
@@ -197,6 +195,118 @@
         }
     }
 
+    function renderExistingMediaPreview(slide) {
+        const preview = document.getElementById('slideMediaPreview');
+        const currentMediaInfo = document.getElementById('slideCurrentMediaInfo');
+
+        if (!slide.media_path) {
+            preview.innerHTML = '<p style="color: #999;">Mevcut medya dosyası yok</p>';
+            currentMediaInfo.textContent = '';
+            return;
+        }
+
+        let mediaPath = Utils.normalizePath ? Utils.normalizePath(slide.media_path, true) : slide.media_path;
+        const mediaTypeText = slide.media_type === 'video' ? 'Video' : slide.media_type === 'gif' ? 'GIF' : 'Resim';
+        currentMediaInfo.innerHTML = `✓ Mevcut medya: ${mediaTypeText} - <a href="${mediaPath}" target="_blank" style="color: #28a745;">Görüntüle</a>`;
+
+        if (slide.media_type === 'video') {
+            preview.innerHTML = `
+                <div style="text-align: center;">
+                    <video src="${mediaPath}" style="max-width: 100%; max-height: 300px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" controls></video>
+                    <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">Mevcut Video</p>
+                </div>
+            `;
+        } else {
+            preview.innerHTML = `
+                <div style="text-align: center;">
+                    <img src="${mediaPath}" style="max-width: 100%; max-height: 300px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" alt="Mevcut Medya">
+                    <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">Mevcut ${slide.media_type === 'gif' ? 'GIF' : 'Resim'}</p>
+                </div>
+            `;
+        }
+    }
+
+    function prepareSlideMediaForm(slide) {
+        const fileInput = document.getElementById('slideMedia');
+        const mediaLabel = document.getElementById('slideMediaLabel');
+        const preview = document.getElementById('slideMediaPreview');
+        const mediaInfo = document.getElementById('slideMediaInfo');
+        const currentMediaInfo = document.getElementById('slideCurrentMediaInfo');
+
+        if (!slide) {
+            fileInput.setAttribute('required', 'required');
+            mediaLabel.textContent = 'Medya Dosyası * (Resim, GIF veya Video - Max 100 MB)';
+            preview.innerHTML = '';
+            mediaInfo.textContent = '';
+            currentMediaInfo.textContent = '';
+            return;
+        }
+
+        fileInput.removeAttribute('required');
+        mediaLabel.textContent = 'Medya Dosyası (Opsiyonel - Yeni dosya seçmezseniz mevcut dosya korunur)';
+        renderExistingMediaPreview(slide);
+        if (slide.media_path) {
+            mediaInfo.textContent = '';
+        }
+    }
+
+    function resetSlideMediaForm() {
+        const fileInput = document.getElementById('slideMedia');
+        const mediaLabel = document.getElementById('slideMediaLabel');
+        fileInput.setAttribute('required', 'required');
+        mediaLabel.textContent = 'Medya Dosyası * (Resim, GIF veya Video - Max 100 MB)';
+        document.getElementById('slideMediaPreview').innerHTML = '';
+        document.getElementById('slideMediaInfo').textContent = '';
+        document.getElementById('slideCurrentMediaInfo').textContent = '';
+        document.getElementById('slideUploadProgress').style.display = 'none';
+    }
+
+    function handleSlideMediaChange(e) {
+        const file = e.target.files[0];
+        if (!file) {
+            if (currentEditingSlide) {
+                const slide = getSlidesHandler().find(s => s.id === currentEditingSlide);
+                if (slide && slide.media_path) {
+                    renderExistingMediaPreview(slide);
+                }
+            }
+            return;
+        }
+
+        const maxSize = 100 * 1024 * 1024;
+        if (file.size > maxSize) {
+            Utils.showError('Dosya boyutu 100 MB\'dan büyük olamaz!');
+            e.target.value = '';
+            return;
+        }
+
+        document.getElementById('slideCurrentMediaInfo').textContent = '';
+
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        document.getElementById('slideMediaInfo').textContent = `Yeni dosya: ${file.name} (${fileSizeMB} MB)`;
+
+        const preview = document.getElementById('slideMediaPreview');
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            if (file.type.startsWith('video/')) {
+                preview.innerHTML = `
+                    <div style="text-align: center;">
+                        <video src="${event.target.result}" style="max-width: 100%; max-height: 300px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" controls></video>
+                        <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">Yeni Video Önizlemesi</p>
+                    </div>
+                `;
+            } else {
+                preview.innerHTML = `
+                    <div style="text-align: center;">
+                        <img src="${event.target.result}" style="max-width: 100%; max-height: 300px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" alt="Yeni Dosya Önizlemesi">
+                        <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">Yeni ${file.type === 'image/gif' ? 'GIF' : 'Resim'} Önizlemesi</p>
+                    </div>
+                `;
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+
     function showSlideForm(slideId = null) {
         currentEditingSlide = slideId;
         const modal = document.getElementById('slideFormModal');
@@ -217,7 +327,7 @@
                 document.getElementById('slideTransitionType').value = slide.transition_type || '';
                 document.getElementById('slideTransitionDuration').value = slide.transition_duration ? slide.transition_duration / 1000 : '';
 
-                prepareMediaFormHandler(slide);
+                prepareSlideMediaForm(slide);
                 syncContentTypeHandler();
                 syncTransitionModeHandler();
             }
@@ -225,7 +335,7 @@
             formTitle.textContent = 'Yeni Slayt Ekle';
             form.reset();
             document.getElementById('slideId').value = '';
-            prepareMediaFormHandler(null);
+            prepareSlideMediaForm(null);
             syncContentTypeHandler();
             syncTransitionModeHandler();
         }
@@ -239,7 +349,7 @@
         currentEditingSlide = null;
         document.getElementById('slideForm').reset();
         document.getElementById('slideId').value = '';
-        resetMediaFormHandler();
+        resetSlideMediaForm();
     }
 
     function editSlide(id) {
@@ -303,8 +413,6 @@
     function init({
         getSlides,
         refreshSlides,
-        prepareMediaForm,
-        resetMediaForm,
         syncContentType,
         syncTransitionMode
     } = {}) {
@@ -314,17 +422,16 @@
         if (typeof refreshSlides === 'function') {
             refreshSlidesHandler = refreshSlides;
         }
-        if (typeof prepareMediaForm === 'function') {
-            prepareMediaFormHandler = prepareMediaForm;
-        }
-        if (typeof resetMediaForm === 'function') {
-            resetMediaFormHandler = resetMediaForm;
-        }
         if (typeof syncContentType === 'function') {
             syncContentTypeHandler = syncContentType;
         }
         if (typeof syncTransitionMode === 'function') {
             syncTransitionModeHandler = syncTransitionMode;
+        }
+
+        const slideMedia = document.getElementById('slideMedia');
+        if (slideMedia) {
+            slideMedia.addEventListener('change', handleSlideMediaChange);
         }
     }
 

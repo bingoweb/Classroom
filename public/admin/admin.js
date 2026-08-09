@@ -135,8 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
     AdminSlides.init({
         getSlides: () => allSlides,
         refreshSlides: fetchSlides,
-        prepareMediaForm: prepareSlideMediaForm,
-        resetMediaForm: resetSlideMediaForm,
         syncContentType: handleContentTypeChange,
         syncTransitionMode: handleTransitionModeChange
     });
@@ -151,11 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const slideForm = document.getElementById('slideForm');
     if (slideForm) {
         slideForm.addEventListener('submit', handleSlideSubmit);
-    }
-
-    const slideMedia = document.getElementById('slideMedia');
-    if (slideMedia) {
-        slideMedia.addEventListener('change', handleSlideMediaChange);
     }
 
     const slideContentType = document.getElementById('slideContentType');
@@ -221,142 +214,6 @@ async function fetchSlideSettings() {
     } catch (e) {
         if (typeof logger !== 'undefined') { logger.error(COMPONENTS.ADMIN, 'Error fetching slide settings', e); }
     }
-}
-
-function prepareSlideMediaForm(slide) {
-    const fileInput = document.getElementById('slideMedia');
-    const mediaLabel = document.getElementById('slideMediaLabel');
-    const preview = document.getElementById('slideMediaPreview');
-    const mediaInfo = document.getElementById('slideMediaInfo');
-    const currentMediaInfo = document.getElementById('slideCurrentMediaInfo');
-
-    if (!slide) {
-        fileInput.setAttribute('required', 'required');
-        mediaLabel.textContent = 'Medya Dosyası * (Resim, GIF veya Video - Max 100 MB)';
-        preview.innerHTML = '';
-        mediaInfo.textContent = '';
-        currentMediaInfo.textContent = '';
-        return;
-    }
-
-    fileInput.removeAttribute('required');
-    mediaLabel.textContent = 'Medya Dosyası (Opsiyonel - Yeni dosya seçmezseniz mevcut dosya korunur)';
-
-    if (slide.media_path) {
-        // Normalize media path for admin panel
-        let mediaPath = Utils.normalizePath ? Utils.normalizePath(slide.media_path, true) : slide.media_path;
-
-        // Show current media info
-        const mediaTypeText = slide.media_type === 'video' ? 'Video' : slide.media_type === 'gif' ? 'GIF' : 'Resim';
-        currentMediaInfo.innerHTML = `✓ Mevcut medya: ${mediaTypeText} - <a href="${mediaPath}" target="_blank" style="color: #28a745;">Görüntüle</a>`;
-
-        // Show preview
-        if (slide.media_type === 'video') {
-            preview.innerHTML = `
-                <div style="text-align: center;">
-                    <video src="${mediaPath}" style="max-width: 100%; max-height: 300px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" controls></video>
-                    <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">Mevcut Video</p>
-                </div>
-            `;
-        } else {
-            preview.innerHTML = `
-                <div style="text-align: center;">
-                    <img src="${mediaPath}" style="max-width: 100%; max-height: 300px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" alt="Mevcut Medya">
-                    <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">Mevcut ${slide.media_type === 'gif' ? 'GIF' : 'Resim'}</p>
-                </div>
-            `;
-        }
-        mediaInfo.textContent = '';
-    } else {
-        preview.innerHTML = '<p style="color: #999;">Mevcut medya dosyası yok</p>';
-        currentMediaInfo.textContent = '';
-    }
-}
-
-function resetSlideMediaForm() {
-    const fileInput = document.getElementById('slideMedia');
-    const mediaLabel = document.getElementById('slideMediaLabel');
-    fileInput.setAttribute('required', 'required');
-    mediaLabel.textContent = 'Medya Dosyası * (Resim, GIF veya Video - Max 100 MB)';
-    document.getElementById('slideMediaPreview').innerHTML = '';
-    document.getElementById('slideMediaInfo').textContent = '';
-    document.getElementById('slideCurrentMediaInfo').textContent = '';
-    document.getElementById('slideUploadProgress').style.display = 'none';
-}
-
-function handleSlideMediaChange(e) {
-    const file = e.target.files[0];
-    if (!file) {
-        // If no file selected, show existing media again (if editing)
-        const currentEditingSlide = AdminSlides.getCurrentEditingSlideId();
-        if (currentEditingSlide) {
-            const slide = allSlides.find(s => s.id === currentEditingSlide);
-            if (slide && slide.media_path) {
-                const preview = document.getElementById('slideMediaPreview');
-                const currentMediaInfo = document.getElementById('slideCurrentMediaInfo');
-
-                // Normalize media path for admin panel
-                let mediaPath = Utils.normalizePath ? Utils.normalizePath(slide.media_path, true) : slide.media_path;
-
-                const mediaTypeText = slide.media_type === 'video' ? 'Video' : slide.media_type === 'gif' ? 'GIF' : 'Resim';
-                currentMediaInfo.innerHTML = `✓ Mevcut medya: ${mediaTypeText} - <a href="${mediaPath}" target="_blank" style="color: #28a745;">Görüntüle</a>`;
-
-                if (slide.media_type === 'video') {
-                    preview.innerHTML = `
-                        <div style="text-align: center;">
-                            <video src="${mediaPath}" style="max-width: 100%; max-height: 300px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" controls></video>
-                            <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">Mevcut Video</p>
-                        </div>
-                    `;
-                } else {
-                    preview.innerHTML = `
-                        <div style="text-align: center;">
-                            <img src="${mediaPath}" style="max-width: 100%; max-height: 300px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" alt="Mevcut Medya">
-                            <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">Mevcut ${slide.media_type === 'gif' ? 'GIF' : 'Resim'}</p>
-                        </div>
-                    `;
-                }
-            }
-        }
-        return;
-    }
-
-    // Check file size (100 MB)
-    const maxSize = 100 * 1024 * 1024;
-    if (file.size > maxSize) {
-        Utils.showError('Dosya boyutu 100 MB\'dan büyük olamaz!');
-        e.target.value = '';
-        return;
-    }
-
-    // Hide current media info when new file is selected
-    document.getElementById('slideCurrentMediaInfo').textContent = '';
-
-    // Show file info
-    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-    document.getElementById('slideMediaInfo').textContent = `Yeni dosya: ${file.name} (${fileSizeMB} MB)`;
-
-    // Show preview
-    const preview = document.getElementById('slideMediaPreview');
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        if (file.type.startsWith('video/')) {
-            preview.innerHTML = `
-                <div style="text-align: center;">
-                    <video src="${e.target.result}" style="max-width: 100%; max-height: 300px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" controls></video>
-                    <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">Yeni Video Önizlemesi</p>
-                </div>
-            `;
-        } else {
-            preview.innerHTML = `
-                <div style="text-align: center;">
-                    <img src="${e.target.result}" style="max-width: 100%; max-height: 300px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" alt="Yeni Dosya Önizlemesi">
-                    <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">Yeni ${file.type === 'image/gif' ? 'GIF' : 'Resim'} Önizlemesi</p>
-                </div>
-            `;
-        }
-    };
-    reader.readAsDataURL(file);
 }
 
 function handleContentTypeChange() {
