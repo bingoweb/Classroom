@@ -43,6 +43,16 @@ Yeni çalışma düzeni:
 - Hata düzeltmesi gerekiyorsa ana refactor commit'inden ayrı **bugfix product/test commit'i** tercih edilecek; exact-SHA Node 22 + Node 24 CI yeşil olmadan ana dalgaya geri dönülmeyecektir.
 - Bu kural bundan sonraki bütün Classroom geliştirme oturumlarında **bağlayıcı ve kalıcıdır**.
 
+### 0.3 Gerekli yerel araç/program eksikse kurulabilir olanı kurma kuralı
+
+- Geliştirme, test, analiz, browser doğrulama veya bakım sırasında macOS üzerinde gerekli bir uygulama/CLI/program eksik olduğu fark edilirse yalnızca “kurulu değil”, “yok” veya “bu araç mevcut değil” denilerek geçilmeyecektir.
+- Araç güvenli, makul ve mevcut sistem yetkileriyle kurulabiliyorsa doğrudan kurulacaktır.
+- Homebrew ile kurulabilen CLI/formüller için Homebrew tercih edilebilir; mevcut proje ve sistem kurallarıyla çelişen global değişiklik yapılmayacaktır.
+- Kurulum sonrası sürüm/çalışabilirlik doğrulanacak ve ana iş kaldığı yerden devam edecektir.
+- Kurulum gerçekten mümkün değilse veya kullanıcı etkileşimi, ayrı lisans ya da ek yetki gerekiyorsa ancak o zaman açık blocker olarak raporlanacaktır.
+- Bu kural DevSpace zorunluluğunu kaldırmaz; yerel geliştirme/komut yürütme yine DevSpace source-of-truth üzerinden yapılacaktır.
+- 9 Ağustos 2026 P3-5D0 hazırlığında eksik `rg`/ripgrep bu kurala göre Homebrew üzerinden kurulmuş ve `ripgrep 15.2.0` olarak doğrulanmıştır.
+
 ---
 
 # 1. Bu planın amacı
