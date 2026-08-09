@@ -25,6 +25,7 @@ test('Admin Error Logs Tests', async (t) => {
                     value: '',
                     checked: false,
                     style: {},
+                    dataset: {},
                     classList: {
                         classes: new Set(),
                         contains: function(c) { return this.classes.has(c); },
@@ -56,9 +57,9 @@ test('Admin Error Logs Tests', async (t) => {
                 }
             },
             querySelector: (sel) => {
-                if (sel === ".tab-btn[onclick=\"showTab('error-logs')\"]") {
-                    const btn = getEl('errorLogBtn');
-                    btn.getAttribute = () => "showTab('error-logs')";
+                if (sel === '[data-admin-tab="error-logs"]') {
+                    const btn = getEl('systemButton');
+                    btn.dataset.adminTab = 'error-logs';
                     return btn;
                 }
                 return getEl('qs_mock');
@@ -66,10 +67,17 @@ test('Admin Error Logs Tests', async (t) => {
             querySelectorAll: (sel) => {
                 if (sel === '.content-section') return [getEl('error-logs')];
                 if (sel === '.tab-btn') {
-                    const btn = getEl('errorLogBtn');
-                    btn.getAttribute = () => "showTab('error-logs')";
+                    const btn = getEl('studentsTab');
+                    btn.dataset.adminTab = 'students';
                     allBtns = [btn];
                     return allBtns;
+                }
+                if (sel === '[data-admin-tab]') {
+                    const systemButton = getEl('systemButton');
+                    systemButton.dataset.adminTab = 'error-logs';
+                    const studentsTab = getEl('studentsTab');
+                    studentsTab.dataset.adminTab = 'students';
+                    return [systemButton, studentsTab];
                 }
                 if (sel === '#error-logs') {
                     const sec = getEl('error-logs');
@@ -142,10 +150,10 @@ test('Admin Error Logs Tests', async (t) => {
     await t.test('HTML contract', () => {
         assert.match(
             htmlContent,
-            /id="systemButton" class="admin-action-btn admin-action-btn--system"\s+onclick="showTab\('error-logs'\)">⚙️ Sistem<\/button>/,
+            /id="systemButton" class="admin-action-btn admin-action-btn--system"\s+data-admin-tab="error-logs">⚙️ Sistem<\/button>/,
             'system action opens the error log section'
         );
-        assert.ok(!htmlContent.includes(`<button class="tab-btn" onclick="showTab('error-logs')">`), 'error logs are not a primary tab');
+        assert.doesNotMatch(htmlContent, /class="tab-btn(?: active)?"[^>]*data-admin-tab="error-logs"/, 'error logs are not a primary tab');
         assert.ok(htmlContent.includes(`<div id="error-logs" class="content-section">`), 'exactly one `error-logs` content section exists');
         assert.ok(htmlContent.includes(`id="errorLogsList"`));
         assert.ok(htmlContent.includes(`id="debugModeToggle"`));

@@ -40,6 +40,7 @@ test('Excel Import DOM Safety Tests', async (t) => {
                 }
             },
             querySelector: () => getEl('qs_mock'),
+            querySelectorAll: () => [],
             createElement: (tag) => getEl('create_' + tag)
         };
         

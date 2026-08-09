@@ -17,19 +17,19 @@
             <h1>Admin Panel</h1>
             <div class="admin-header-actions">
                 <button id="systemButton" class="admin-action-btn admin-action-btn--system"
-                    onclick="showTab('error-logs')">⚙️ Sistem</button>
-                <button class="admin-action-btn admin-action-btn--mobile" onclick="showQRCode()">📱 Mobil Bağlan</button>
-                <button class="admin-action-btn admin-action-btn--logout" onclick="logoutAdmin()">🚪 Çıkış Yap</button>
+                    data-admin-tab="error-logs">⚙️ Sistem</button>
+                <button id="mobileConnectButton" class="admin-action-btn admin-action-btn--mobile">📱 Mobil Bağlan</button>
+                <button id="logoutButton" class="admin-action-btn admin-action-btn--logout">🚪 Çıkış Yap</button>
             </div>
         </header>
 
         <div id="adminNotificationRegion" class="admin-notification-region" aria-live="polite" aria-atomic="true"></div>
 
         <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('students')">Öğrenciler</button>
-            <button class="tab-btn" onclick="showTab('roles')">Görevler</button>
-            <button class="tab-btn" onclick="showTab('attendance')">Yoklama</button>
-            <button class="tab-btn" onclick="showTab('slides')">Slaytlar</button>
+            <button class="tab-btn active" data-admin-tab="students">Öğrenciler</button>
+            <button class="tab-btn" data-admin-tab="roles">Görevler</button>
+            <button class="tab-btn" data-admin-tab="attendance">Yoklama</button>
+            <button class="tab-btn" data-admin-tab="slides">Slaytlar</button>
         </div>
 
         <!-- Students Section -->
@@ -444,7 +444,7 @@
             <h2>Mobil Bağlantı</h2>
             <p>Bu QR kodu telefonunuzla tarayın:</p>
             <div id="qrcode" class="qr-code-host"></div>
-            <button onclick="closeQRCode()">Kapat</button>
+            <button id="qrCloseButton">Kapat</button>
         </div>
     </div>
 
@@ -749,15 +749,5 @@
     <script src="js/attendance.js"></script>
     <script src="js/slides.js"></script>
     <script src="admin.js"></script>
-    <script>
-        async function logoutAdmin() {
-            try {
-                const res = await fetch('/api/admin/logout', { method: 'POST' });
-                if (res.ok) window.location.href = '/admin-login.html';
-            } catch (err) {
-                console.error('Logout error:', err);
-            }
-        }
-    </script>
 </body>
 </html>

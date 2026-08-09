@@ -8,10 +8,9 @@ window.showTab = function (tabName) {
     if (!section) return;
 
     section.classList.add('active');
-    // Find the button that calls this function and add active class
     const buttons = document.querySelectorAll('.tab-btn');
     buttons.forEach(btn => {
-        if (btn.getAttribute('onclick') === `showTab('${tabName}')`) {
+        if (btn.dataset.adminTab === tabName) {
             btn.classList.add('active');
         }
     });
@@ -86,6 +85,36 @@ window.closeQRCode = function () {
     document.getElementById('qrModal').style.display = 'none';
 };
 
+async function logoutAdmin() {
+    try {
+        const res = await fetch('/api/admin/logout', { method: 'POST' });
+        if (res.ok) window.location.href = '/admin-login.html';
+    } catch (err) {
+        console.error('Logout error:', err);
+    }
+}
+
+function bindShellEvents() {
+    document.querySelectorAll('[data-admin-tab]').forEach(button => {
+        button.addEventListener('click', () => window.showTab(button.dataset.adminTab));
+    });
+
+    const mobileConnectButton = document.getElementById('mobileConnectButton');
+    if (mobileConnectButton) {
+        mobileConnectButton.addEventListener('click', window.showQRCode);
+    }
+
+    const logoutButton = document.getElementById('logoutButton');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', logoutAdmin);
+    }
+
+    const qrCloseButton = document.getElementById('qrCloseButton');
+    if (qrCloseButton) {
+        qrCloseButton.addEventListener('click', window.closeQRCode);
+    }
+}
+
 // Word of the Day form removed - feature deprecated
 
 // Global error handlers for admin panel
@@ -115,6 +144,8 @@ if (typeof window !== 'undefined') {
 }
 // Initial Load
 document.addEventListener('DOMContentLoaded', () => {
+    bindShellEvents();
+
     if (typeof CONFIG === 'undefined' || typeof Utils === 'undefined') {
         if (typeof logger !== 'undefined') { logger.error(COMPONENTS.ADMIN, 'CONFIG or Utils not loaded!'); }
         alert('Sistem hatası: Gerekli kütüphaneler yüklenemedi. Sayfayı yenileyin.');

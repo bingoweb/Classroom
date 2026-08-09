@@ -73,7 +73,8 @@ test('admin ana menüsü günlük işlere odaklanır ve sistem kayıtlarını ko
         .map(match => match[1].trim());
 
     assert.deepStrictEqual(primaryTabs, ['Öğrenciler', 'Görevler', 'Yoklama', 'Slaytlar']);
-    assert.match(adminHtml, /id="systemButton"[^>]*onclick="showTab\('error-logs'\)"[^>]*>⚙️ Sistem<\/button>/);
+    assert.match(adminHtml, /id="systemButton"[^>]*data-admin-tab="error-logs"[^>]*>⚙️ Sistem<\/button>/);
+    assert.doesNotMatch(adminHtml, /id="systemButton"[^>]*onclick=/);
     assert.match(adminHtml, /<div id="error-logs" class="content-section">/);
     assert.match(adminHtml, /<script src="error-logs\.js"><\/script>/);
     assert.doesNotMatch(adminHtml, /scheduleDiagnostics|Ders Programı Tanılama|Ders Programı Taslağı|schedule-(?:diagnostics|draft-editor|review-panel)\.js|schedule-normalizer\.js/);
