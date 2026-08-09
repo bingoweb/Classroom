@@ -4825,7 +4825,70 @@ Kanıtlar:
 - exact product/test commit `1247e4775950c2236517cd7afe8ad546016b4a88`,
 - GitHub Actions run `31320857054`: Node 24 PASS (27 sn), Node 22 PASS (29 sn).
 
-Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B4 henüz tamamlanmadı; sıradaki alt dalga B4.6 — create/update/delete** olacaktır.
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **B4.5 kapanışında sıradaki alt dalga B4.6 — create/update/delete idi; bu alt dalga aşağıdaki 21.0.16 kaydında tamamlanmıştır.**
+
+### 21.0.16 9 Ağustos 2026 — P3-5B4.6 admin slides create/update/delete extraction
+
+B4 Slides altıncı alt dalgasında submit/create/update/delete ownership'i `public/admin/js/slides.js` içine taşındı; B4.7 slide settings bu adımda shell'de bırakıldı.
+
+Uygulanan sınır:
+
+- `handleSlideSubmit` + `deleteSlide` ownership'i slide modülünde,
+- `slideForm` submit binding `AdminSlides.init()` içinde,
+- `window.deleteSlide` inline/global adaptörü korunuyor,
+- FormData/XHR/CSRF/progress/media-type/100 MB validation davranışı aynı,
+- edit-no-new-file media_type `getSlidesHandler()` üzerinden korunuyor,
+- success refresh `refreshSlidesHandler()` üzerinden shell bridge'e dönüyor,
+- delete confirm/DELETE/safe feedback sözleşmesi korunuyor,
+- settings B4.7 için shell'de kaldı.
+
+Kanıtlar:
+
+- TDD RED **25 pass / 10 fail**,
+- focused GREEN **35/35**,
+- geniş CRUD/cache/delete/media/notification kapısı **124/124**,
+- tam core **1445/1445**,
+- system smoke PASS,
+- `npm audit --omit=dev` **0 vulnerability**,
+- syntax + `git diff --check` temiz,
+- `public/admin/admin.js` **481 → 301 satır**, `public/admin/js/slides.js` **453 → 627 satır**,
+- Chrome DevTools temp-DB gerçek CRUD: POST `/api/slides` 200 → PUT `/api/slides/8` 200 → DELETE `/api/slides/8` 200; management-list refresh/readback doğru; console error/warn 0; horizontal overflow 0,
+- Playwright `/admin/` auth redirect PASS; takip eden çağrıda bilinen tool-side `about:blank`,
+- exact product/test commit `9e8d9f528a214b7fcb1e1fb57f7fdfbab2683db9`,
+- GitHub Actions `31321479475`: Node 22 PASS (25 sn), Node 24 PASS (29 sn).
+
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **B4.6 kapanışında sıradaki son alt dalga B4.7 — slide settings idi; bu alt dalga aşağıdaki 21.0.17 kaydında tamamlanmıştır.**
+
+### 21.0.17 9 Ağustos 2026 — P3-5B4.7 admin slides settings/final ownership extraction
+
+B4 Slides son alt dalgasında settings read/save ve slide-form content/video/transition visibility ownership'i `public/admin/js/slides.js` içine taşındı. Bu adımla P3-5B4 ve dolayısıyla P3-5B Admin JavaScript modülerleştirme tamamlandı.
+
+Uygulanan sınır:
+
+- `fetchSlideSettings`, `handleSlideSettingsSubmit`, `handleContentTypeChange`, `handleTransitionModeChange` slide modülünde,
+- content-type/transition/settings event binding `AdminSlides.init()` içinde,
+- form open/edit internal visibility handler'larını doğrudan çağırıyor; sync callback injection kaldırıldı,
+- settings load bootstrap side-effect'i açık composition-root çağrısı olarak `AdminSlides.fetchSlideSettings()` üzerinden shell'de başlatılıyor,
+- settings GET ms→s ve atomik PUT safe-error sözleşmeleri korunuyor,
+- settings submit test harness'i gerçek `slides.js` modülüne geçirildi,
+- `admin.js` slide tarafında yalnız `allSlides` / `fetchSlides` bridge, module init ve settings bootstrap sorumluluklarını taşıyor.
+
+Kanıtlar:
+
+- ilk birleşik TDD RED **26 pass / 18 fail**,
+- module + atomic-settings GREEN **48/48**,
+- geniş slide/settings/CRUD/reorder/cache/DOM-safety kapısı **217/217**,
+- final tam core **1450/1450**,
+- system smoke PASS,
+- `npm audit --omit=dev` **0 vulnerability**,
+- syntax + `git diff --check` temiz,
+- `public/admin/admin.js` **301 → 171 satır**, `public/admin/js/slides.js` **627 → 742 satır**,
+- Chrome DevTools form visibility `none/none/none → block/block/block`; settings PUT 200 + API readback `17000/random/1500`; reload GET sonrası UI `17/random/1.5`; console error/warn 0; horizontal overflow 0,
+- Playwright `/admin/` auth redirect PASS; takip snapshot'ında bilinen tool-side `about:blank`,
+- exact product/test commit `d9376fee556470124ff0c1f4ab13e8cd58f959ee`,
+- GitHub Actions `31321996082`: Node 22 PASS (29 sn), Node 24 PASS (29 sn).
+
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B tamamlandı/doğrulandı; sıradaki planlı refactor P3-5C Admin inline CSS temizliği**dir.
 
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
@@ -4843,16 +4906,18 @@ Domain route extraction tamamlandı:
 
 Admin auth/session composition root içinde kalır. Bu sınır sırf dosya daha da küçülsün diye taşınmayacak; A8 ancak ayrı security regression turuyla değerlendirilecektir.
 
-## 21.2 `public/admin/admin.js` — B4.5 sonrası 481 satır
+## 21.2 `public/admin/admin.js` — P3-5B tamamlandıktan sonra 171 satır
 
-B1 ile students domaini `public/admin/js/students.js`, B2 ile roles domaini `public/admin/js/roles.js`, B3 ile attendance domaini `public/admin/js/attendance.js` içine ayrıldı. B4.1 ile slide management read/render, B4.2 ile active toggle, B4.3 ile drag/reorder, B4.4 ile form open/close/edit state ve B4.5 ile media prepare/reset/change-preview ownership'i `public/admin/js/slides.js` içine ayrıldı. `fetchStudents()`, `fetchRoles()` ve `fetchSlides()` ilgili domain modüllerine veri taşıyan shell bridge'ler olarak `admin.js` içinde kalır. Media change binding artık slide modülü içindedir.
+B1 ile students domaini `public/admin/js/students.js`, B2 ile roles domaini `public/admin/js/roles.js`, B3 ile attendance domaini `public/admin/js/attendance.js` içine ayrıldı. B4.1–B4.7 ile slide management read/render, active toggle, drag/reorder, form/edit state, media preview, create/update/delete ve slide settings ownership'i `public/admin/js/slides.js` içine ayrıldı. `fetchStudents()`, `fetchRoles()` ve `fetchSlides()` ilgili domain modüllerine veri taşıyan shell bridge'ler olarak `admin.js` içinde kalır; `AdminSlides.fetchSlideSettings()` bootstrap çağrısı da composition root'ta açıkça başlatılır.
 
-Slides tarafında sıradaki kontrollü extraction alanları:
+P3-5B sonunda `admin.js` ortak/shell sorumluluklarına yaklaşmıştır:
 
-- B4.6 create/update/delete,
-- B4.7 slide settings.
+- domain module init/bootstrap,
+- students/roles/slides fetch bridge'leri,
+- tab navigation,
+- QR/modal gibi ortak admin yüzeyleri.
 
-System/logs tarafında mevcut `error-logs.js` ayrımı korunur. Sıradaki aktif dalga **B4.6 create/update/delete**'tir; B4 tek seferde taşınmayacaktır.
+System/logs tarafında mevcut `error-logs.js` ayrımı korunur. **P3-5B tamamlanmıştır. Sıradaki planlı refactor P3-5C Admin inline CSS temizliği**dir.
 
 ## 21.3 Admin inline CSS
 
@@ -5132,7 +5197,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 26 | P3-5B1 admin students module extraction | P3 | 🟩 |
 | 27 | P3-5B2 admin roles module extraction | P3 | 🟩 |
 | 28 | P3-5B3 admin attendance module extraction | P3 | 🟩 |
-| 29 | P3-5B4 admin slides module extraction — B4.1 read/render + B4.2 active toggle + B4.3 drag/reorder + B4.4 form open/close/edit + B4.5 media preview tamamlandı, B4.6 create/update/delete sırada | P3 | 🟨 |
+| 29 | P3-5B4 admin slides module extraction — B4.1–B4.7 tamamlandı ve doğrulandı; P3-5B kapandı | P3 | 🟩 |
 
 Durum simgeleri:
 
