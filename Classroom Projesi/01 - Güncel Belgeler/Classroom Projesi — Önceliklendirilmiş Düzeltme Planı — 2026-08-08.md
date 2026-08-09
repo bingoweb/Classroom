@@ -4888,7 +4888,7 @@ Kanıtlar:
 - exact product/test commit `d9376fee556470124ff0c1f4ab13e8cd58f959ee`,
 - GitHub Actions `31321996082`: Node 22 PASS (29 sn), Node 24 PASS (29 sn).
 
-Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B tamamlandı/doğrulandı; P3-5C başladı, C1 HTML static inline CSS tamamlandı ve C2 Students template styles sıradadır.**
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B tamamlandı/doğrulandı; P3-5C uygulanıyor, C1 HTML ve C2 Students template static CSS tamamlandı; C3 Slides template styles sıradadır.**
 
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
@@ -4917,9 +4917,9 @@ P3-5B sonunda `admin.js` ortak/shell sorumluluklarına yaklaşmıştır:
 - tab navigation,
 - QR/modal gibi ortak admin yüzeyleri.
 
-System/logs tarafında mevcut `error-logs.js` ayrımı korunur. **P3-5B tamamlanmıştır. P3-5C Admin inline CSS temizliği uygulanıyor; C1 HTML static inline CSS tamamlandı, sıradaki dalga C2 Students template styles**dir.
+System/logs tarafında mevcut `error-logs.js` ayrımı korunur. **P3-5B tamamlanmıştır. P3-5C Admin inline CSS temizliği uygulanıyor; C1 HTML ve C2 Students template static CSS tamamlandı, sıradaki dalga C3 Slides template styles**dir.
 
-## 21.3 Admin inline CSS — C1 sonrası
+## 21.3 Admin inline CSS — C2 sonrası
 
 `public/admin/index.html` içindeki statik presentation C1 ile class tabanlı hale getirildi:
 
@@ -4947,14 +4947,43 @@ TDD/browser kanıtı:
 - Playwright `/admin/` auth redirect PASS; takip snapshot'ında bilinen tool-side `about:blank`,
 - product/test commit `61d10237688647698c01c9bbd735216d4cdf7bda`, GitHub Actions `31323081934`: Node 22 PASS (30 sn), Node 24 PASS (29 sn).
 
-JS template tarafında kalan inline-style envanteri **96** attribute'tur:
+### C2 — Students template static CSS sonucu
 
-- `public/admin/js/students.js`: **46**,
+`public/admin/js/students.js` içindeki statik template presentation C2 ile class tabanlı hale getirildi:
+
+- template `style="..."` attribute sayısı **46 → 0**,
+- empty state, öğrenci kartı, gender badge/visual, avatar, action button'ları, Excel selected-file/preview/result ve photo-preview child markup semantic `admin-student-*`, `admin-excel-*`, `admin-photo-preview-*` class'larına taşındı,
+- erkek/kız renkleri `admin-student-card--male` / `admin-student-card--female` modifier class'larıyla korunuyor,
+- mevcut card/action hover `this.style.*` state yazımları değişmedi,
+- runtime-created photo preview container için mevcut **1 adet** `container.style.cssText` yazımı bilinçli olarak sonraki state-class dalgasına bırakıldı,
+- `students.js` **609 → 604 satır**, `style.css` **1290 → 1583 satır**.
+
+TDD/browser doğrulaması:
+
+- ilk RED: students template içinde **46** inline-style attribute bulundu; male/female modifier sözleşmesi henüz yoktu ve güncellenen Excel DOM-safety markup expectation'ı eski template yüzünden beklenen şekilde fail verdi,
+- final focused Student/C2/Excel/XSS grubu **18/18 pass**,
+- geniş admin frontend komşu grubu **38/38 pass**,
+- final full core iki fresh koşuda **1456/1456 pass**, **0 fail**,
+- system smoke PASS,
+- `npm audit --omit=dev` **0 vulnerability**,
+- `node --check public/admin/js/students.js` ve `git diff --check` temiz,
+- Chrome 1366×768 pre/post computed-style karşılaştırmasında empty state, erkek/kız kartları, avatar, action button'ları, Excel preview ve photo preview baseline ile eşleşti; horizontal overflow **0**,
+- hover smoke `translateY(-4px)`, shadow, primary border ve `opacity=0.9` state'lerini; mouseout baseline dönüşünü doğruladı,
+- browser-native XLSX + `DataTransfer` ve photo File + `DataTransfer` preview smoke'ları PASS; class'a taşınan child template subtree'lerinde inline style **0**,
+- gerçek student create → render → delete feedback smoke PASS; search ve M/F filter sonuçları doğru,
+- 1920-wide ve küçük-window kontrollerinde horizontal overflow **0**; Students/Roles/Attendance/Slides/Error Logs tab smoke PASS,
+- Chrome authenticated final reload console warning/error **0**, ilgili static/API request'ler **200/304**, default avatarlar 1024×1024 doğal boyutla yükleniyor,
+- Playwright `/admin/` auth redirect PASS; login sayfasındaki pre-existing `/favicon.ico` 404 C2 öncesi baseline'da da vardı ve authenticated admin Chrome yüzeyinde yok,
+- product/test commit `cc742990210b8db14d01985a0b87a4cc53e88a07`, GitHub Actions `31323998676`: Node 22 PASS (26 sn), Node 24 PASS (30 sn).
+
+Admin JS template tarafında kalan inline-style envanteri **50** attribute'tur:
+
+- `public/admin/js/students.js`: **0** template attribute (+ ayrı tutulan 1 runtime `style.cssText`),
 - `public/admin/js/slides.js`: **35**,
 - `public/admin/js/attendance.js`: **7**,
 - `public/admin/admin.js`: **8**.
 
-Sıradaki aktif kontrollü dalga **P3-5C2 — Students template static style extraction** olacaktır. Static base presentation class'a taşınacak; hover/runtime state yazımları ancak ayrı davranış/browser testi varsa ele alınacaktır.
+Sıradaki aktif kontrollü dalga **P3-5C3 — Slides template static style extraction** olacaktır. Media/progress/display gibi runtime state yazımları ilk turda korunacak; state-class dönüşümü ancak ayrı davranış testi + browser kanıtıyla yapılacaktır.
 
 Bilinen fresh-DB `error_logs` cleanup-order mesajı kapsam dışıdır. P2-6 fiziksel 55\" 4K kabul kapısı açık kalır.
 
@@ -5231,7 +5260,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 27 | P3-5B2 admin roles module extraction | P3 | 🟩 |
 | 28 | P3-5B3 admin attendance module extraction | P3 | 🟩 |
 | 29 | P3-5B4 admin slides module extraction — B4.1–B4.7 tamamlandı ve doğrulandı; P3-5B kapandı | P3 | 🟩 |
-| 30 | P3-5C admin inline CSS — C1 index.html static styles tamamlandı; C2 Students template styles sırada | P3 | 🟨 |
+| 30 | P3-5C admin inline CSS — C1 index.html + C2 Students template styles tamamlandı; C3 Slides template styles sırada | P3 | 🟨 |
 
 Durum simgeleri:
 
