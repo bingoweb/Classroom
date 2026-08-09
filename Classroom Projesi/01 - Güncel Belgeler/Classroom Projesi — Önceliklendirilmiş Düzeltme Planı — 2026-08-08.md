@@ -4656,7 +4656,49 @@ Kanıtlar:
 - exact product/test commit `338802d4df09accf73c14a5f35146a6f1b1ca497`,
 - GitHub Actions run `31317816068`: Node 22 PASS (26 sn), Node 24 PASS (29 sn).
 
-`public/admin/admin.js` **897 → 827 satıra** indi; yeni `public/admin/js/slides.js` **85 satır**. Bilinen fresh-DB `error_logs` cleanup-order bug'ı değiştirilmedi; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B4 henüz tamamlanmadı; sıradaki alt dalga B4.2 — active toggle** olacaktır.
+`public/admin/admin.js` **897 → 827 satıra** indi; yeni `public/admin/js/slides.js` **85 satır**. Bilinen fresh-DB `error_logs` cleanup-order bug'ı değiştirilmedi; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. Bu evidence B4.1 kapanışını kaydeder; B4.2 active toggle aşağıdaki ayrı alt dalgada tamamlanmıştır.
+
+### 21.0.12 9 Ağustos 2026 — P3-5B4.2 admin slides active toggle extraction
+
+B4 Slides ikinci alt dalgasında yalnız active/passive toggle ownership'i taşındı. Drag/reorder, form open/close/edit, media preview, create/update/delete ve slide settings bu değişikliğin dışında bırakıldı.
+
+Uygulanan sınır:
+
+- `public/admin/js/slides.js`: `toggleSlideActive(id)` ownership'i, mevcut PUT/error/success/logger davranışı ve `window.toggleSlideActive` inline adaptörü,
+- `public/admin/admin.js`: `AdminSlides.init({ getSlides: () => allSlides, refreshSlides: fetchSlides, setupDragAndDrop })` ile yalnız açık state/refresh/drag callback injection'ı; toggle implementation artık shell'de değil,
+- `tests/admin-slide-module.test.js`: active→passive, passive→active, HTTP error, missing slide ve network error behavior regression'ları ile B4.3–B4.7 ownership sınırı,
+- reorder/drag-drop, form/edit, media preview, create/update/delete ve settings kodları `admin.js` içinde korunuyor.
+
+Korunan kritik sözleşmeler:
+
+- `PUT /api/slides/:id` ve `{ is_active: 0|1 }` request body,
+- active slide → `Pasif Yap`, passive slide → `Aktif Yap`,
+- `✓ Aktif` / `✗ Pasif` render state'i,
+- success `Slayt durumu başarıyla güncellendi!` feedback'i,
+- safe server error + generic network error feedback'i,
+- existing warn/debug/info/error logger mesajları,
+- başarılı update sonrası `fetchSlides()` management-list refresh'i,
+- classic script/global inline callback uyumluluğu,
+- B4.3–B4.7'nin erken taşınmaması.
+
+Kanıtlar:
+
+- değişiklik öncesi focused baseline **54/54**, full core baseline **1411/1411**,
+- TDD RED: eski B4.1 test **PASS**, yeni structural + behavior contract doğru nedenle **1 pass / 7 fail** (`toggleSlideActive` module/global ownership'i henüz yok),
+- minimal GREEN: `npm run test:admin-slide-module` **8/8**,
+- geniş focused slide/admin kapısı **61/61**,
+- tam core **1418/1418**,
+- system smoke PASS,
+- npm audit **0 vulnerability**,
+- `admin.js`, `slides.js`, ilgili test `node --check` ve `git diff --check` temiz,
+- izole temp DB gerçek admin browser active→passive→active smoke: iki PUT **200**, payload sırasıyla `{ "is_active": 0 }` ve `{ "is_active": 1 }`; render/buton state'i doğru refresh oldu, DB final `is_active=1`,
+- Playwright: aynı gerçek UI akışı ve payload doğrulandı; 1366×768 ile 1920×1080 horizontal overflow **0**,
+- Chrome DevTools: iki PUT **200**, body'ler doğru, başarı notification'ı görünür, her toggle sonrası `/api/admin/slides` refresh'i var; toggle kaynaklı console error yok, yalnız önceden mevcut form-label/autocomplete issue kayıtları,
+- `public/admin/admin.js` **827 → 779 satır**, `public/admin/js/slides.js` **85 → 145 satır**,
+- exact product/test commit `b8971f692113c2365de85b11b81aa825d2be65ad`,
+- GitHub Actions run `31318593581`: Node 22 PASS (33 sn), Node 24 PASS (28 sn).
+
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B4 henüz tamamlanmadı; sıradaki alt dalga B4.3 — drag/reorder** olacaktır.
 
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
@@ -4674,20 +4716,19 @@ Domain route extraction tamamlandı:
 
 Admin auth/session composition root içinde kalır. Bu sınır sırf dosya daha da küçülsün diye taşınmayacak; A8 ancak ayrı security regression turuyla değerlendirilecektir.
 
-## 21.2 `public/admin/admin.js` — B4.1 sonrası 827 satır
+## 21.2 `public/admin/admin.js` — B4.2 sonrası 779 satır
 
-B1 ile students domaini `public/admin/js/students.js`, B2 ile roles domaini `public/admin/js/roles.js`, B3 ile attendance domaini `public/admin/js/attendance.js` içine ayrıldı. B4.1 ile slide management read/render ownership'i `public/admin/js/slides.js` içine ayrıldı. `fetchStudents()`, `fetchRoles()` ve `fetchSlides()` ilgili domain modüllerine veri taşıyan shell bridge'ler olarak `admin.js` içinde kalır.
+B1 ile students domaini `public/admin/js/students.js`, B2 ile roles domaini `public/admin/js/roles.js`, B3 ile attendance domaini `public/admin/js/attendance.js` içine ayrıldı. B4.1 ile slide management read/render, B4.2 ile active toggle ownership'i `public/admin/js/slides.js` içine ayrıldı. `fetchStudents()`, `fetchRoles()` ve `fetchSlides()` ilgili domain modüllerine veri taşıyan shell bridge'ler olarak `admin.js` içinde kalır; B4.2 slide state/refresh bağımlılığını `getSlides` ve `refreshSlides` callback'leriyle açıkça enjekte eder.
 
 Slides tarafında sıradaki kontrollü extraction alanları:
 
-- B4.2 active toggle,
 - B4.3 drag/reorder,
 - B4.4 form open/close/edit,
 - B4.5 media preview,
 - B4.6 create/update/delete,
 - B4.7 slide settings.
 
-System/logs tarafında mevcut `error-logs.js` ayrımı korunur. Sıradaki aktif dalga **B4.2 active toggle**'dır; B4 tek seferde taşınmayacaktır.
+System/logs tarafında mevcut `error-logs.js` ayrımı korunur. Sıradaki aktif dalga **B4.3 drag/reorder**'dır; B4 tek seferde taşınmayacaktır.
 
 ## 21.3 Admin inline CSS
 
@@ -4967,7 +5008,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 26 | P3-5B1 admin students module extraction | P3 | 🟩 |
 | 27 | P3-5B2 admin roles module extraction | P3 | 🟩 |
 | 28 | P3-5B3 admin attendance module extraction | P3 | 🟩 |
-| 29 | P3-5B4 admin slides module extraction — B4.1 read/render tamamlandı, B4.2 sırada | P3 | 🟨 |
+| 29 | P3-5B4 admin slides module extraction — B4.1 read/render + B4.2 active toggle tamamlandı, B4.3 drag/reorder sırada | P3 | 🟨 |
 
 Durum simgeleri:
 

@@ -668,7 +668,7 @@ Auth refactor ayrı security regression turu gerektirir.
 
 ## 7. P3-5B — Admin JavaScript modülerleştirme
 
-**Durum:** 🟨 Uygulanıyor — B1 Students, B2 Roles, B3 Attendance ve B4.1 Slides read/render tamamlandı/doğrulandı; B4 sürüyor ve sıradaki alt dalga B4.2 active toggle.
+**Durum:** 🟨 Uygulanıyor — B1 Students, B2 Roles, B3 Attendance ile B4.1 Slides read/render ve B4.2 active toggle tamamlandı/doğrulandı; B4 sürüyor ve sıradaki alt dalga B4.3 drag/reorder.
 
 Mevcut `error-logs.js` dosyası admin tarafında domain ayrımının çalışan örneğidir.
 
@@ -840,12 +840,12 @@ Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B3 sırasında deği�
 
 Slides yaklaşık dosyanın yarısını oluşturan en yoğun admin alanıdır. Drag/drop, form state, media preview, active toggle ve slide settings aynı anda taşınmamalıdır.
 
-**Durum:** 🟨 9 Ağustos 2026 — B4.1 read/render tamamlandı ve doğrulandı; B4.2 active toggle sırada.
+**Durum:** 🟨 9 Ağustos 2026 — B4.1 read/render ve B4.2 active toggle tamamlandı/doğrulandı; B4.3 drag/reorder sırada.
 
 Önerilen alt sıra:
 
 1. read/render — 🟩 B4.1 tamamlandı,
-2. active toggle,
+2. active toggle — 🟩 B4.2 tamamlandı,
 3. drag/reorder,
 4. form open/close/edit,
 5. media preview,
@@ -896,7 +896,34 @@ TDD ve regresyon kanıtı:
 
 Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B4.1 sırasında değiştirilmedi. P2-6 gerçek 55" 4K fiziksel kabul kapısı da ayrı biçimde açık kalır.
 
-**B4 tamamlanmış değildir. Sıradaki alt dalga B4.2 — active toggle ownership extraction'dır.** Drag/reorder, form/media, CRUD ve settings sırası bundan sonra da korunacaktır.
+#### B4.2 — active toggle uygulama sonucu
+
+Slides domaininin yalnız active/passive toggle ownership'i `admin.js` dışına çıkarıldı. Drag/reorder, form open/close/edit, media preview, create/update/delete ve slide settings bu alt dalgada bilerek shell'de bırakıldı.
+
+- `toggleSlideActive(id)` artık `public/admin/js/slides.js` içinde yaşıyor ve inline HTML sözleşmesi için `window.toggleSlideActive = toggleSlideActive` adaptörü korunuyor.
+- Slide state erişimi ve refresh bağımlılığı global değişken kopyalamak yerine `AdminSlides.init({ getSlides: () => allSlides, refreshSlides: fetchSlides, setupDragAndDrop })` ile açık callback injection üzerinden veriliyor.
+- Mevcut `PUT /api/slides/:id` çağrısı ve `{ is_active: 0|1 }` payload sözleşmesi aynen korundu.
+- Existing success/error feedback, `logger.warn/debug/info/error` kayıtları ve successful update sonrası `fetchSlides()` refresh davranışı korundu.
+- Aktif/pasif render işaretleri ile `Pasif Yap` / `Aktif Yap` buton metinleri değişmedi.
+- B4.3–B4.7 ownership sınırı structural regression ile kilitlendi; drag/drop, reorder, form, media preview, CRUD ve settings hâlâ `public/admin/admin.js` içinde.
+- `public/admin/admin.js` **827 → 779 satıra** indi; `public/admin/js/slides.js` **85 → 145 satıra** çıktı.
+
+TDD ve regresyon kanıtı:
+
+1. Değişiklik öncesi focused slide/admin baseline **54/54 pass**, full core baseline **1411/1411 pass** verdi.
+2. B4.2 structural/behavior testi production değişikliğinden önce yazıldı; RED koşusunda B4.1 testi geçti, yeni structural test `slides.js` içinde `toggleSlideActive` olmadığı için fail oldu ve 5 behavior alt testi `window.toggleSlideActive is not a function` nedeniyle beklenen biçimde fail verdi (**1 pass / 7 fail**).
+3. Minimal extraction sonrası `npm run test:admin-slide-module` **8/8 pass** verdi.
+4. Geniş focused slide/admin kapısı **61/61 pass** verdi.
+5. Tam core **1418/1418 pass** verdi.
+6. `npm run test:system-smoke` PASS; `npm audit --omit=dev` **0 vulnerability**; `admin.js`, `slides.js` ve B4.2 test syntax kontrolleri ile `git diff --check` temiz.
+7. İzole temp SQLite + gerçek admin browser smoke: teacher-managed `B4.2 Browser Smoke` slaytı aktif başladı; aktif→pasif PUT **200** / `{ "is_active": 0 }`, ardından pasif→aktif PUT **200** / `{ "is_active": 1 }`; UI `✓ Aktif / Pasif Yap → ✗ Pasif / Aktif Yap → ✓ Aktif / Pasif Yap` olarak refresh oldu ve DB final state `is_active=1` verdi.
+8. Playwright gerçek UI doğrulamasında iki PUT da **200**, payload'lar doğru, refresh sonrası state/label doğru; 1366×768 ve 1920×1080 ölçülerinde `scrollWidth === clientWidth`, horizontal overflow **0**.
+9. Chrome DevTools isolated context doğrulamasında iki PUT da **200**; request body'leri sırasıyla `{ "is_active": 0 }` ve `{ "is_active": 1 }`; başarı notification'ı ve her toggle sonrası `/api/admin/slides` refresh görüldü. Toggle ile ilişkili console error yok; yalnız önceden var olan form-label/autocomplete DevTools issue kayıtları non-blocking kaldı.
+10. Product/test commit `b8971f692113c2365de85b11b81aa825d2be65ad` exact SHA'sında GitHub Actions `31318593581`: Node 22 **PASS (33 sn)**, Node 24 **PASS (28 sn)**.
+
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B4.2 sırasında değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+
+**B4 tamamlanmış değildir. Sıradaki alt dalga B4.3 — drag/reorder ownership extraction'dır.** Form open/close/edit → media preview → create/update/delete → slide settings sırası bundan sonra da korunacaktır.
 
 ## 8. P3-5C — Admin inline CSS temizliği
 
