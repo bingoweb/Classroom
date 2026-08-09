@@ -31,6 +31,18 @@ Yeni çalışma düzeni:
 - Aynı oturumda alternatif geliştirme aracına geçmek yerine **yeni sohbet oturumuna devir yapılacaktır**.
 - Geliştirmeye yeni oturumda DevSpace erişimi yeniden sağlandıktan ve gerçek yerel checkout (`git status`, `HEAD`, `origin/main`) tekrar doğrulandıktan sonra devam edilecektir.
 
+### 0.2 Çalışma sırasında tesadüfen bulunan gerçek hataları anında düzeltme kuralı
+
+- Geliştirme, refactor, test veya gerçek browser doğrulaması sırasında ana görevin dışında **tesadüfen tespit edilen gerçek ürün hatası, runtime hatası, güvenlik açığı, veri bütünlüğü sorunu veya kullanıcıya görünür bozulma açık bırakılmayacaktır**.
+- Böyle bir bulgu “bu dalganın kapsamı değil”, “önceden vardı” veya “sonra düzeltilir” denilerek ertelenmeyecektir. Ana dalga geçici olarak durdurulacak ve bulgu önce doğrulanacaktır.
+- Düzeltmeden önce kök neden araştırılacak; mümkün olan her durumda hatayı yeniden üreten **RED regresyon testi** yazılıp doğru nedenle fail verdiği görülecektir.
+- Ardından yalnız kök nedeni gideren en küçük güvenli düzeltme uygulanacak; focused testler, ilgili komşu regresyonlar ve gerekiyorsa **Playwright MCP + Chrome DevTools MCP gerçek browser doğrulaması** ile GREEN kanıtı alınacaktır.
+- Güvenlik veya veri bütünlüğü bulgularında yalnız semptom gizlenmeyecek; veri girişinden render/API/DB sınırına kadar gerçek kaynak düzeltilip regresyon testi `test:core` zincirine dahil edilecektir.
+- Bulunan hata düzeltme sırasında yeni bir gerçek hata ortaya çıkarırsa aynı kural zincir halinde uygulanacaktır; doğrulanmış açık bırakılarak ana refactor'a geri dönülmeyecektir.
+- Tool-side/MCP kaynaklı, production kodundan bağımsız olduğu kanıtlanan sorunlar ürün hatası sayılmayacaktır; ancak bunun tool-side olduğu kanıt/evidence ile ayrıştırılacaktır.
+- Hata düzeltmesi gerekiyorsa ana refactor commit'inden ayrı **bugfix product/test commit'i** tercih edilecek; exact-SHA Node 22 + Node 24 CI yeşil olmadan ana dalgaya geri dönülmeyecektir.
+- Bu kural bundan sonraki bütün Classroom geliştirme oturumlarında **bağlayıcı ve kalıcıdır**.
+
 ---
 
 # 1. Bu planın amacı
