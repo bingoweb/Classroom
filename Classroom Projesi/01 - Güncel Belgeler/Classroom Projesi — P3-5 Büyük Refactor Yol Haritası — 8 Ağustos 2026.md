@@ -653,7 +653,7 @@ Kod/test milestone:
 
 Bilinen fresh-DB `error_logs` cleanup-order bug'ı A7 sırasında kasıtlı olarak değiştirilmedi. P2-6 gerçek 55" 4K fiziksel kabul kapısı da ayrı biçimde açık kalır.
 
-**Backend domain extraction A1–A7 ve P3-5B Admin JavaScript modülerleştirme tamamlandı/doğrulandı.** A8 auth/session ancak ayrı security regression turuyla değerlendirilecektir. Sıradaki planlı refactor fazı **P3-5C — Admin inline CSS temizliği**dir; P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+**Backend domain extraction A1–A7 ve P3-5B Admin JavaScript modülerleştirme tamamlandı/doğrulandı.** A8 auth/session ancak ayrı security regression turuyla değerlendirilecektir. **P3-5C — Admin inline CSS temizliği uygulanıyor; C1 tamamlandı, C2 Students template styles sırada.** P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
 #### A8 — Admin auth/session — ayrıca ve en son değerlendir
 
@@ -1077,20 +1077,52 @@ TDD ve regresyon kanıtı:
 
 Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B4.7 sırasında değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
-**P3-5B tamamlandı ve doğrulandı.** B1 Students, B2 Roles, B3 Attendance ve B4 Slides B4.1–B4.7 artık 🟩 durumundadır. Sıradaki planlı refactor fazı **P3-5C — Admin inline CSS temizliği**dir; fiziksel 55" 4K kabul kapısı bu refactor kapanışından bağımsız olarak açık kalır.
+**P3-5B tamamlandı ve doğrulandı.** B1 Students, B2 Roles, B3 Attendance ve B4 Slides B4.1–B4.7 artık 🟩 durumundadır. **P3-5C başladı; C1 `index.html` static styles tamamlandı ve C2 Students template styles sıradadır.** Fiziksel 55" 4K kabul kapısı bu refactor kapanışından bağımsız olarak açık kalır.
 
 ## 8. P3-5C — Admin inline CSS temizliği
 
-**Durum:** Planlandı, backend/admin JS modülerleşmesinden sonra uygulanmalı.
+**Durum:** 🟨 9 Ağustos 2026 — uygulanıyor. C1 `index.html` static inline CSS extraction tamamlandı/doğrulandı; sıradaki kontrollü dalga C2 Students template static styles.
 
 Amaç görsel redesign değildir. Amaç mevcut görünümü class tabanlı hale getirmektir.
 
 Sıra:
 
-1. `public/admin/index.html` içindeki statik inline stilleri domain bazında CSS class'larına taşı.
-2. `public/admin/admin.js` template string içindeki statik inline stilleri class'lara taşı.
-3. Runtime'a bağlı `display`, progress width, media preview state gibi dinamik stilleri ilk turda koru.
-4. Daha sonra yalnız test varsa state class modeline geçir.
+1. `public/admin/index.html` içindeki statik inline stilleri domain bazında CSS class'larına taşı — 🟩 **C1 tamamlandı**.
+2. JS template string içindeki statik inline stilleri domain bazında küçük dalgalarla taşı — sıradaki **C2 Students**; ardından Slides → Attendance → admin shell.
+3. Runtime'a bağlı `display`, progress width, media preview state, hover state gibi dinamik stilleri ilk turda koru.
+4. Daha sonra yalnız davranış testi ve browser kanıtı varsa state class modeline geçir.
+
+### C1 — `index.html` static inline CSS uygulama sonucu
+
+Admin HTML içindeki statik presentation ownership'i DOM/behavior sözleşmeleri değiştirilmeden `public/admin/style.css` içine taşındı. Bu dalga redesign değildir; mevcut computed-style değerleri korunmuştur.
+
+- `public/admin/index.html` içindeki **195** `style="..."` attribute'u semantic/domain CSS class'larına taşındı; final inline-style sayısı **0**.
+- Page-local `<style>` bloğu kaldırıldı; body font smoothing/text-rendering/font-feature ayarları `public/admin/style.css` içine taşındı.
+- Students, Roles, Attendance, Slides, Error Logs, QR/photo modal ve slide form yüzeyleri admin-prefixed semantic class'larla temsil ediliyor.
+- Runtime hook ID'leri ve classic-script callback sözleşmeleri korunuyor; `slideFormModal`, `slideUploadProgress`, `slideProgressBar`, `slideTextContentDiv`, `slideVideoSettings`, `slideTransitionManualDiv` gibi state yüzeyleri aynı ID'lerle yaşamaya devam ediyor.
+- İlk `display:none` / progress `width:0%` presentation state'i CSS'e taşındı; JavaScript'in runtime `element.style.*` yazımları bu dalgada değiştirilmedi.
+- C1 sonrası `public/admin/index.html` **837 → 763 satır**, `public/admin/style.css` **389 → 1290 satır** oldu. Stylesheet büyümesi yeni görsel tasarımdan değil, HTML'deki 195 statik declaration'ın açık class kurallarına taşınmasından kaynaklanıyor.
+- JS/template tarafındaki kalan inline-style envanteri bilerek sonraki dalgalara bırakıldı: `students.js` **46**, `slides.js` **35**, `attendance.js` **7**, `admin.js` **8**; toplam **96**.
+
+TDD ve regresyon kanıtı:
+
+1. Production değişikliğinden önce `tests/admin-inline-style-refactor.test.js` yazıldı. İlk RED'de iki C1 sözleşmesi de doğru nedenle kırıldı: HTML'de **195 inline style** vardı ve runtime başlangıç-state CSS kuralları henüz stylesheet'te değildi (**0 pass / 2 fail**).
+2. İlk extraction sonrası focused paket **2/2 pass** ve `git diff --check` temizdi; `index.html` inline-style sayısı **0** oldu.
+3. 1366×768 Chrome DevTools computed-style karşılaştırması tek gerçek cascade regresyonu buldu: slide modal shell baseline'da **30px** padding iken generic `.qr-content` source-order nedeniyle **40px** kazanıyordu.
+4. Bu browser bulgusu için ayrı RED regresyonu eklendi; focused sonuç **2 pass / 1 fail** oldu. Selector `.qr-content.slide-form-shell` yapılarak baseline 30px specificity açıkça korundu; final focused paket **3/3 pass** verdi.
+5. Geniş admin/domain/notification/error-log/DOM-safety regresyon kapısı **88/88 pass** verdi.
+6. Yeni C1 testi `package.json` içindeki `test:core` zincirine dahil edildi; tam core **1453/1453 pass** verdi.
+7. `npm run test:system-smoke` PASS; `npm audit --omit=dev` **0 vulnerability**; `package.json` parse ve `git diff --check` temiz.
+8. Chrome DevTools 1366×768 final computed-style setinde students hero/stats, role select, attendance date, slide settings, modal shell, basic/media/text/video/transition state yüzeyleri pre-change baseline ile eşleşti; horizontal overflow **0**.
+9. Chrome'da 1920×1080 istenen window inner viewport **1920×863** oldu; horizontal overflow yine **0**. Students/Görevler/Yoklama/Slaytlar ve Sistem/Error Logs tab yüzeyleri açıldı.
+10. Gerçek authenticated slide feedback smoke C1 sonrası create → edit → delete akışını doğruladı: `POST /api/slides` **200**, `PUT /api/slides/8` **200**, `DELETE /api/slides/8` **200**; UI sırasıyla `Slayt başarıyla eklendi!`, `Slayt başarıyla güncellendi!`, `Slayt başarıyla silindi!` gösterdi ve final management readback kaydı kaldırılmış buldu.
+11. Chrome network'te `/admin/style.css`, admin scripts ve ilgili management API'leri **200/304**; final console error/warn **0**.
+12. Playwright MCP korumalı `/admin/` erişimini `admin-login.html?next=/admin/` yüzeyine yönlendirerek auth boundary'yi doğruladı; takip snapshot'ında bilinen tool-side `about:blank` davranışı tekrarlandı, authenticated visual/network kanıtı Chrome DevTools ile tamamlandı.
+13. Product/test commit `61d10237688647698c01c9bbd735216d4cdf7bda` exact SHA'sında GitHub Actions `31323081934`: Node 22 **PASS (30 sn)**, Node 24 **PASS (29 sn)**.
+
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı C1 sırasında değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+
+**P3-5C tamamlanmış değildir. Sıradaki dalga C2 — `students.js` template static style extraction'dır.** Dinamik hover/state yazımları bu dalgada yalnız ayrı test/browser kanıtıyla değerlendirilecektir.
 
 Her görsel dalgada en az:
 

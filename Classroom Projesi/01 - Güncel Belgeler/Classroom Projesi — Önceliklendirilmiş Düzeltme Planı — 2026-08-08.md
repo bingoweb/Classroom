@@ -4888,7 +4888,7 @@ Kanıtlar:
 - exact product/test commit `d9376fee556470124ff0c1f4ab13e8cd58f959ee`,
 - GitHub Actions `31321996082`: Node 22 PASS (29 sn), Node 24 PASS (29 sn).
 
-Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B tamamlandı/doğrulandı; sıradaki planlı refactor P3-5C Admin inline CSS temizliği**dir.
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B tamamlandı/doğrulandı; P3-5C başladı, C1 HTML static inline CSS tamamlandı ve C2 Students template styles sıradadır.**
 
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
@@ -4917,13 +4917,46 @@ P3-5B sonunda `admin.js` ortak/shell sorumluluklarına yaklaşmıştır:
 - tab navigation,
 - QR/modal gibi ortak admin yüzeyleri.
 
-System/logs tarafında mevcut `error-logs.js` ayrımı korunur. **P3-5B tamamlanmıştır. Sıradaki planlı refactor P3-5C Admin inline CSS temizliği**dir.
+System/logs tarafında mevcut `error-logs.js` ayrımı korunur. **P3-5B tamamlanmıştır. P3-5C Admin inline CSS temizliği uygulanıyor; C1 HTML static inline CSS tamamlandı, sıradaki dalga C2 Students template styles**dir.
 
-## 21.3 Admin inline CSS
+## 21.3 Admin inline CSS — C1 sonrası
 
-Slayt listesi başta olmak üzere JS template'lerinde çok fazla inline style var.
+`public/admin/index.html` içindeki statik presentation C1 ile class tabanlı hale getirildi:
 
-Bunlar CSS class'larına taşınmalıdır.
+- `index.html` inline `style="..."`: **195 → 0**,
+- local `<style>` block: kaldırıldı,
+- `index.html`: **837 → 763 satır**,
+- `public/admin/style.css`: **389 → 1290 satır**,
+- body font-smoothing/text-rendering declaration'ları stylesheet'e taşındı,
+- Students / Roles / Attendance / Slides / Error Logs / QR-photo modal / slide form için semantic admin class'ları eklendi,
+- runtime `element.style.*` behavior'ları ve DOM ID/callback sözleşmeleri değiştirilmedi.
+
+TDD/browser kanıtı:
+
+- initial structural RED: **0 pass / 2 fail**; 195 inline style ve eksik CSS-owned initial state doğru nedenle yakalandı,
+- ilk GREEN: **2/2**,
+- Chrome computed-style karşılaştırması slide modal padding regression'ını yakaladı (`30px → 40px`); ayrı regression testi **2 pass / 1 fail** RED verdi,
+- `.qr-content.slide-form-shell` specificity düzeltmesi sonrası final focused **3/3**,
+- geniş admin/domain/notification/error-log/DOM-safety **88/88**,
+- full core **1453/1453**,
+- system smoke PASS,
+- `npm audit --omit=dev` **0 vulnerability**,
+- 1366×768 ve 1920-wide Chrome kontrollerinde horizontal overflow **0**, final console error/warn **0**,
+- Students/Görevler/Yoklama/Slaytlar ve Sistem/Error Logs tab smoke PASS,
+- gerçek slide create/update/delete browser smoke: POST/PUT/DELETE **200**, üç success feedback metni doğru,
+- Playwright `/admin/` auth redirect PASS; takip snapshot'ında bilinen tool-side `about:blank`,
+- product/test commit `61d10237688647698c01c9bbd735216d4cdf7bda`, GitHub Actions `31323081934`: Node 22 PASS (30 sn), Node 24 PASS (29 sn).
+
+JS template tarafında kalan inline-style envanteri **96** attribute'tur:
+
+- `public/admin/js/students.js`: **46**,
+- `public/admin/js/slides.js`: **35**,
+- `public/admin/js/attendance.js`: **7**,
+- `public/admin/admin.js`: **8**.
+
+Sıradaki aktif kontrollü dalga **P3-5C2 — Students template static style extraction** olacaktır. Static base presentation class'a taşınacak; hover/runtime state yazımları ancak ayrı davranış/browser testi varsa ele alınacaktır.
+
+Bilinen fresh-DB `error_logs` cleanup-order mesajı kapsam dışıdır. P2-6 fiziksel 55\" 4K kabul kapısı açık kalır.
 
 ## 21.4 Kiosk CSS
 
@@ -5198,6 +5231,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 27 | P3-5B2 admin roles module extraction | P3 | 🟩 |
 | 28 | P3-5B3 admin attendance module extraction | P3 | 🟩 |
 | 29 | P3-5B4 admin slides module extraction — B4.1–B4.7 tamamlandı ve doğrulandı; P3-5B kapandı | P3 | 🟩 |
+| 30 | P3-5C admin inline CSS — C1 index.html static styles tamamlandı; C2 Students template styles sırada | P3 | 🟨 |
 
 Durum simgeleri:
 
