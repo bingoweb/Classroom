@@ -22,6 +22,13 @@ Yeni çalışma düzeni:
 - Kod değiştikçe bu belge “yapıldı / doğrulandı / bekliyor” durumlarıyla güncellenecektir.
 - Bir düzeltme yalnız kod yazıldığı için tamamlanmış sayılmayacaktır. İlgili testler, `npm run test:core` ve gerekiyorsa gerçek browser/kiosk doğrulaması geçmeden madde kapatılmayacaktır.
 
+### 0.1 DevSpace zorunlu operasyon kapısı
+
+- Classroom geliştirmesi yalnız **DevSpace** üzerinden yapılacaktır.
+- DevSpace erişilemezse, disabled mesajı verirse, araç kataloğunda görünmezse veya çağrıya cevap vermezse geliştirme **hemen durdurulacaktır**.
+- Bu durumda GitHub connector, başka MCP, container veya herhangi bir alternatif geliştirme aracıyla dosya/Git/test/commit işlemlerine devam edilmeyecektir.
+- Geliştirmeye ancak DevSpace erişimi yeniden sağlandıktan ve gerçek yerel checkout (`git status`, `HEAD`, `origin/main`) tekrar doğrulandıktan sonra devam edilecektir.
+
 ---
 
 # 1. Bu planın amacı
@@ -4698,7 +4705,51 @@ Kanıtlar:
 - exact product/test commit `b8971f692113c2365de85b11b81aa825d2be65ad`,
 - GitHub Actions run `31318593581`: Node 22 PASS (33 sn), Node 24 PASS (28 sn).
 
-Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B4 henüz tamamlanmadı; sıradaki alt dalga B4.3 — drag/reorder** olacaktır.
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **B4.2 kapanışında sıradaki alt dalga B4.3 — drag/reorder idi; bu alt dalga aşağıdaki 21.0.13 kaydında tamamlanmıştır.**
+
+### 21.0.13 9 Ağustos 2026 — P3-5B4.3 admin slides drag/reorder extraction
+
+B4 Slides üçüncü alt dalgasında drag/drop binding ve reorder ownership'i `public/admin/js/slides.js` içine taşındı. Form open/close/edit, media preview, create/update/delete ve slide settings bu değişikliğin dışında bırakıldı.
+
+Uygulanan sınır:
+
+- `public/admin/js/slides.js`: `setupDragAndDrop`, dört drag handler ve `reorderSlides` ownership'i,
+- `renderSlides()`: render sonrasında artık shell callback'i yerine doğrudan modül içi `setupDragAndDrop()` çağrısı,
+- `AdminSlides.init({ getSlides: () => allSlides, refreshSlides: fetchSlides })`: state ve refresh için iki açık dependency injection; eski `setupDragAndDrop` callback injection'ı kaldırıldı,
+- reorder listesi `getSlidesHandler()` üzerinden üretiliyor ve başarı/hata refresh'i `refreshSlidesHandler()` üzerinden mevcut shell `fetchSlides()` köprüsüne dönüyor,
+- form/edit, media preview, create/update/delete ve slide settings kodları `admin.js` içinde korunuyor,
+- `tests/admin-slide-module.test.js`: ownership sınırı, handler binding, swap payload, success, HTTP failure ve network failure regresyonları.
+
+Korunan kritik sözleşmeler:
+
+- `.slide-item` için `dragstart`, `dragover`, `drop`, `dragend` wiring'i,
+- drag opacity/effect davranışı,
+- yalnız dragged ve target `display_order` değerlerinin swap edilmesi,
+- `PUT /api/slides/reorder` + `{ slideOrders: [...] }`,
+- success `Sıralama başarıyla güncellendi` feedback'i,
+- safe HTTP error ve generic network error feedback'i,
+- existing debug/info/error logger mesajları,
+- success ve error sonrasında management-list refresh'i,
+- B4.4–B4.7'nin erken taşınmaması.
+
+Kanıtlar:
+
+- pre-change focused baseline **8/8**, full core baseline **1418/1418**,
+- TDD RED: önceki B4.1/B4.2 kontratları geçerken yeni B4.3 structural + dört behavior alt testi doğru nedenle kırıldı; toplam **8 pass / 6 fail**,
+- minimal GREEN `npm run test:admin-slide-module` **14/14**,
+- geniş admin/slide/reorder focused kapısı **137/137**,
+- tam core **1424/1424**,
+- system smoke PASS,
+- `npm audit --omit=dev` **0 vulnerability**,
+- `admin.js`, `slides.js`, ilgili test syntax ve `git diff --check` temiz,
+- `public/admin/admin.js` **779 → 658 satır**, `public/admin/js/slides.js` **145 → 262 satır**,
+- DevSpace'te Playwright/Puppeteer package'ı yok; DevSpace-only operasyon kuralı nedeniyle başka MCP'ye geçilmedi. DevSpace komutundan sistem Google Chrome **151.0.7922.109** headless CDP ile gerçek browser smoke yürütüldü,
+- temp SQLite gerçek browser drag: başlangıç `id=8/#1 → id=9/#2`; tek reorder PUT **200**, payload `id=8→2`, `id=9→1`; API + SQLite readback ve final UI `id=9/#1 → id=8/#2`; success notification görünür; horizontal overflow **0 → 0**; console/page problem **0**,
+- browser harness'in ilk turundaki tek kırılma yanlış notification selector'ıydı; gerçek reorder/DB swap başarılıydı. Gerçek `adminNotificationRegion` selector'ı ile final smoke PASS,
+- exact product/test commit `365aa84511d94eb464b93b8458216de8b8d49d30`,
+- GitHub Actions run `31319187815`: Node 22 PASS (36 sn), Node 24 PASS (36 sn).
+
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B4 henüz tamamlanmadı; sıradaki alt dalga B4.4 — form open/close/edit** olacaktır.
 
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
@@ -4716,19 +4767,18 @@ Domain route extraction tamamlandı:
 
 Admin auth/session composition root içinde kalır. Bu sınır sırf dosya daha da küçülsün diye taşınmayacak; A8 ancak ayrı security regression turuyla değerlendirilecektir.
 
-## 21.2 `public/admin/admin.js` — B4.2 sonrası 779 satır
+## 21.2 `public/admin/admin.js` — B4.3 sonrası 658 satır
 
-B1 ile students domaini `public/admin/js/students.js`, B2 ile roles domaini `public/admin/js/roles.js`, B3 ile attendance domaini `public/admin/js/attendance.js` içine ayrıldı. B4.1 ile slide management read/render, B4.2 ile active toggle ownership'i `public/admin/js/slides.js` içine ayrıldı. `fetchStudents()`, `fetchRoles()` ve `fetchSlides()` ilgili domain modüllerine veri taşıyan shell bridge'ler olarak `admin.js` içinde kalır; B4.2 slide state/refresh bağımlılığını `getSlides` ve `refreshSlides` callback'leriyle açıkça enjekte eder.
+B1 ile students domaini `public/admin/js/students.js`, B2 ile roles domaini `public/admin/js/roles.js`, B3 ile attendance domaini `public/admin/js/attendance.js` içine ayrıldı. B4.1 ile slide management read/render, B4.2 ile active toggle, B4.3 ile drag/reorder ownership'i `public/admin/js/slides.js` içine ayrıldı. `fetchStudents()`, `fetchRoles()` ve `fetchSlides()` ilgili domain modüllerine veri taşıyan shell bridge'ler olarak `admin.js` içinde kalır; slide state/refresh bağımlılığı `getSlides` ve `refreshSlides` callback'leriyle açıkça enjekte edilir. Drag binding artık shell callback'i değildir ve slide modülü içinde kurulur.
 
 Slides tarafında sıradaki kontrollü extraction alanları:
 
-- B4.3 drag/reorder,
 - B4.4 form open/close/edit,
 - B4.5 media preview,
 - B4.6 create/update/delete,
 - B4.7 slide settings.
 
-System/logs tarafında mevcut `error-logs.js` ayrımı korunur. Sıradaki aktif dalga **B4.3 drag/reorder**'dır; B4 tek seferde taşınmayacaktır.
+System/logs tarafında mevcut `error-logs.js` ayrımı korunur. Sıradaki aktif dalga **B4.4 form open/close/edit**'tir; B4 tek seferde taşınmayacaktır.
 
 ## 21.3 Admin inline CSS
 
@@ -5008,7 +5058,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 26 | P3-5B1 admin students module extraction | P3 | 🟩 |
 | 27 | P3-5B2 admin roles module extraction | P3 | 🟩 |
 | 28 | P3-5B3 admin attendance module extraction | P3 | 🟩 |
-| 29 | P3-5B4 admin slides module extraction — B4.1 read/render + B4.2 active toggle tamamlandı, B4.3 drag/reorder sırada | P3 | 🟨 |
+| 29 | P3-5B4 admin slides module extraction — B4.1 read/render + B4.2 active toggle + B4.3 drag/reorder tamamlandı, B4.4 form open/close/edit sırada | P3 | 🟨 |
 
 Durum simgeleri:
 

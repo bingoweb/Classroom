@@ -14,6 +14,7 @@ Değişen teknik gerçeklerde kaynak-of-truth sırası:
 
 ## 2. Bağlayıcı güvenlik ve ürün sınırları
 
+- **DevSpace zorunlu operasyon kapısı:** Classroom geliştirmesi yalnız DevSpace üzerinden yürütülecektir. DevSpace erişilemezse, disabled mesajı verirse, araç kataloğunda görünmezse veya çağrıya cevap vermezse geliştirme derhal durdurulacaktır; GitHub connector, başka MCP, container veya herhangi bir alternatif geliştirme aracıyla dosya/Git/test/commit işlemlerine devam edilmeyecektir. Devam etmeden önce DevSpace erişimi yeniden sağlanmalı ve gerçek yerel checkout durumu tekrar doğrulanmalıdır.
 - Mevcut `main` davranışı korunacaktır; büyük-bang yeniden yazım yapılmayacaktır.
 - Backend `/api/settings` endpoint'i korunacaktır.
 - SQLite `settings` tablosu korunacaktır.
@@ -668,7 +669,7 @@ Auth refactor ayrı security regression turu gerektirir.
 
 ## 7. P3-5B — Admin JavaScript modülerleştirme
 
-**Durum:** 🟨 Uygulanıyor — B1 Students, B2 Roles, B3 Attendance ile B4.1 Slides read/render ve B4.2 active toggle tamamlandı/doğrulandı; B4 sürüyor ve sıradaki alt dalga B4.3 drag/reorder.
+**Durum:** 🟨 Uygulanıyor — B1 Students, B2 Roles, B3 Attendance ile B4.1 Slides read/render, B4.2 active toggle ve B4.3 drag/reorder tamamlandı/doğrulandı; B4 sürüyor ve sıradaki alt dalga B4.4 form open/close/edit.
 
 Mevcut `error-logs.js` dosyası admin tarafında domain ayrımının çalışan örneğidir.
 
@@ -840,13 +841,13 @@ Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B3 sırasında deği�
 
 Slides yaklaşık dosyanın yarısını oluşturan en yoğun admin alanıdır. Drag/drop, form state, media preview, active toggle ve slide settings aynı anda taşınmamalıdır.
 
-**Durum:** 🟨 9 Ağustos 2026 — B4.1 read/render ve B4.2 active toggle tamamlandı/doğrulandı; B4.3 drag/reorder sırada.
+**Durum:** 🟨 9 Ağustos 2026 — B4.1 read/render, B4.2 active toggle ve B4.3 drag/reorder tamamlandı/doğrulandı; B4.4 form open/close/edit sırada.
 
 Önerilen alt sıra:
 
 1. read/render — 🟩 B4.1 tamamlandı,
 2. active toggle — 🟩 B4.2 tamamlandı,
-3. drag/reorder,
+3. drag/reorder — 🟩 B4.3 tamamlandı,
 4. form open/close/edit,
 5. media preview,
 6. create/update/delete,
@@ -923,7 +924,37 @@ TDD ve regresyon kanıtı:
 
 Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B4.2 sırasında değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
-**B4 tamamlanmış değildir. Sıradaki alt dalga B4.3 — drag/reorder ownership extraction'dır.** Form open/close/edit → media preview → create/update/delete → slide settings sırası bundan sonra da korunacaktır.
+**B4.2 kapanışındaki sıradaki alt dalga B4.3 — drag/reorder ownership extraction idi; bu alt dalga aşağıdaki B4.3 kaydında tamamlanmıştır.** Form open/close/edit → media preview → create/update/delete → slide settings sırası korunur.
+
+#### B4.3 — drag/reorder uygulama sonucu
+
+Slides domaininin drag/drop binding ve reorder ownership'i `admin.js` dışına çıkarıldı. Form open/close/edit, media preview, create/update/delete ve slide settings bu alt dalgada bilerek shell'de bırakıldı.
+
+- `setupDragAndDrop()`, `handleDragStart()`, `handleDragOver()`, `handleDrop()`, `handleDragEnd()` ve `reorderSlides()` artık `public/admin/js/slides.js` içinde yaşıyor.
+- Render sonrası drag binding artık shell callback injection'ına dönmüyor; `renderSlides()` doğrudan modül içindeki `setupDragAndDrop()` çağrısını yapıyor.
+- `AdminSlides.init(...)` yalnız mevcut slide state'i için `getSlides: () => allSlides` ve management-list refresh'i için `refreshSlides: fetchSlides` bağımlılıklarını alıyor; `setupDragAndDrop` injection'ı kaldırıldı.
+- Reorder payload üretimi shell'deki `allSlides` yerine enjekte edilen `getSlidesHandler()` listesini kullanıyor; başarı/hata sonrası refresh `refreshSlidesHandler()` üzerinden aynı `fetchSlides()` davranışına dönüyor.
+- Mevcut `PUT /api/slides/reorder` ve `{ slideOrders: [...] }` sözleşmesi, yalnız dragged/target `display_order` swap mantığı, logger mesajları ve kullanıcı feedback metinleri korunuyor.
+- B4.4–B4.7 ownership sınırı structural regression ile kilitlendi; form/edit, media preview, CRUD ve settings hâlâ `public/admin/admin.js` içinde.
+- `public/admin/admin.js` **779 → 658 satıra** indi; `public/admin/js/slides.js` **145 → 262 satıra** çıktı.
+
+TDD ve regresyon kanıtı:
+
+1. Değişiklik öncesi `npm run test:admin-slide-module` **8/8 pass**, full core baseline **1418/1418 pass** verdi.
+2. B4.3 structural + behavior testleri production değişikliğinden önce yazıldı. RED koşusunda önceki B4.1/B4.2 sözleşmeleri geçerken yeni ownership ve dört drag/reorder behavior alt testi beklenen nedenle kırıldı: toplam **8 pass / 6 fail**.
+3. Minimal extraction sonrası `npm run test:admin-slide-module` **14/14 pass** verdi.
+4. Admin/slide/reorder komşu kapısı **137/137 pass** verdi.
+5. Tam core yeni alt testlerle **1424/1424 pass** verdi.
+6. `npm run test:system-smoke` PASS; `npm audit --omit=dev` **0 vulnerability**; `admin.js`, `slides.js` ve B4.3 test syntax kontrolleri ile `git diff --check` temiz.
+7. DevSpace ortamında Playwright/Puppeteer package'ı bulunmadığı doğrulandı; bağlayıcı DevSpace-only kuralı gereği başka MCP/browser aracına geçilmedi. Bunun yerine aynı DevSpace oturumundan sistemdeki **Google Chrome 151.0.7922.109** doğrudan headless CDP ile sürüldü.
+8. İzole temp SQLite + gerçek Chrome drag/reorder smoke: browser admin login **200**; başlangıç UI sırası `id=8/#1 → id=9/#2`; gerçek `dragstart → dragover → drop → dragend` dispatch'i tek `PUT /api/slides/reorder` üretti; body `{ "slideOrders": [{"id":8,"display_order":2},{"id":9,"display_order":1}] }`; response **200**.
+9. Aynı smoke'da authenticated management API readback ve doğrudan SQLite readback `id=9/#1 → id=8/#2` verdi; UI refresh aynı sırayı gösterdi ve `Sıralama başarıyla güncellendi` notification'ı görünür oldu.
+10. Browser smoke başlangıç/final horizontal overflow **0 → 0**; console warning/error **0**, page error **0**. İlk smoke harness turunda yalnız yanlış notification DOM id'si kullanıldığı için harness assertion'ı kırıldı; gerçek reorder PUT/DB swap o turda da başarılıydı. Selector gerçek `adminNotificationRegion` sözleşmesine düzeltildikten sonra final smoke PASS verdi.
+11. Product/test commit `365aa84511d94eb464b93b8458216de8b8d49d30` exact SHA'sında GitHub Actions `31319187815`: Node 22 **PASS (36 sn)**, Node 24 **PASS (36 sn)**.
+
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B4.3 sırasında değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+
+**B4 tamamlanmış değildir. Sıradaki alt dalga B4.4 — form open/close/edit ownership extraction'dır.** Media preview → create/update/delete → slide settings sırası bundan sonra da korunacaktır.
 
 ## 8. P3-5C — Admin inline CSS temizliği
 
