@@ -717,6 +717,7 @@ Bu karar ancak aşağıdaki gerçek ihtiyaçlardan biri ortaya çıkarsa yeniden
 - `npm run test:system-smoke` → **SYSTEM_SMOKE_PASS**; admin login 200, CSRF 64.
 - `npm audit --omit=dev` → **0 vulnerability**.
 - A8 sırasında production auth/session kodunda **0 değişiklik** yapıldı.
+- A8 karar commit'i `eae46d5301e2f70278a9572a98c48ed14215a397`; GitHub Actions `31330329809`: Node 22 **PASS (28 sn)**, Node 24 **PASS (31 sn)**.
 
 ## 7. P3-5B — Admin JavaScript modülerleştirme
 

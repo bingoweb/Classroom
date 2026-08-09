@@ -4983,7 +4983,8 @@ Security-regression kanıtı:
 - Playwright `/admin/` auth redirect + login title PASS, warning/error **0**; sonraki console çağrısındaki `about:blank` bilinen tool-side davranıştır,
 - full core **1485/1485 PASS**, lifecycle/lock taraması **NONE**,
 - system smoke **PASS**, audit **0**,
-- production auth/session dosyalarında **0 değişiklik**.
+- production auth/session dosyalarında **0 değişiklik**,
+- A8 karar commit'i `eae46d5301e2f70278a9572a98c48ed14215a397`, GitHub Actions `31330329809`: Node 22 **PASS (28 sn)**, Node 24 **PASS (31 sn)**.
 
 A8 ancak ikinci auth surface, harici session backend, SSO/identity provider, auth middleware reuse veya composition root'un yeniden büyümesi gibi gerçek bir ihtiyaç ortaya çıkarsa yeniden açılacaktır.
 
