@@ -1,5 +1,7 @@
 (function () {
     let setupDragAndDropHandler = () => {};
+    let getSlidesHandler = () => [];
+    let refreshSlidesHandler = () => {};
 
     function renderSlides(slides) {
         const container = document.getElementById('slidesList');
@@ -72,7 +74,63 @@
         setupDragAndDropHandler();
     }
 
-    function init({ setupDragAndDrop } = {}) {
+    async function toggleSlideActive(id) {
+        const slide = getSlidesHandler().find(s => s.id === id);
+        if (!slide) {
+            logger.warn(COMPONENTS.ADMIN, 'Slide not found for toggle', null, { slideId: id });
+            return;
+        }
+
+        const newActiveState = slide.is_active ? 0 : 1;
+        logger.debug(COMPONENTS.ADMIN, 'Toggling slide active state', null, {
+            slideId: id,
+            currentState: slide.is_active,
+            newState: newActiveState
+        });
+
+        try {
+            const response = await fetch(`${CONFIG.API_URL}/slides/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_active: newActiveState })
+            });
+
+            if (!response.ok) {
+                let errorMessage = 'Slayt durumu güncellenirken hata oluştu';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    // Ignore
+                }
+                const error = new Error(errorMessage);
+                logger.error(COMPONENTS.ADMIN, 'Failed to toggle slide active state', error, {
+                    slideId: id,
+                    status: response.status
+                });
+                Utils.showError(errorMessage);
+                return;
+            }
+
+            logger.info(COMPONENTS.ADMIN, 'Slide active state toggled successfully', null, {
+                slideId: id,
+                newState: newActiveState
+            });
+            Utils.showSuccess('Slayt durumu başarıyla güncellendi!');
+            refreshSlidesHandler();
+        } catch (e) {
+            logger.error(COMPONENTS.ADMIN, 'Error toggling slide active state', e, { slideId: id });
+            Utils.showError('Slayt durumu güncellenirken hata oluştu.');
+        }
+    }
+
+    function init({ getSlides, refreshSlides, setupDragAndDrop } = {}) {
+        if (typeof getSlides === 'function') {
+            getSlidesHandler = getSlides;
+        }
+        if (typeof refreshSlides === 'function') {
+            refreshSlidesHandler = refreshSlides;
+        }
         if (typeof setupDragAndDrop === 'function') {
             setupDragAndDropHandler = setupDragAndDrop;
         }
@@ -80,6 +138,8 @@
 
     window.AdminSlides = {
         init,
-        renderSlides
+        renderSlides,
+        toggleSlideActive
     };
+    window.toggleSlideActive = toggleSlideActive;
 })();
