@@ -142,4 +142,9 @@ test('current documentation source-of-truth contract', async (t) => {
         assert.match(livingPlan, /\| 14 \| Stale bakım scriptleri \| P3 \| 🟩 \|/);
         assert.match(livingPlan, /\| 15 \| README\/context\/docs güncelleme \| P3 \| 🟩 \|/);
     });
+
+    await t.test('living P3-4 heading matches its completed implementation evidence', () => {
+        assert.match(livingPlan, /# 20\. P3-4[^\n]*Kullanılmayan backend config\/utils kopyalarını temizle[\s\S]{0,180}\*\*Durum:\*\* 🟩 Tamamlandı ve doğrulandı/);
+        assert.match(livingPlan, /\| 17 \| Orphan backend config\/utils \| P3 \| 🟩 \|/);
+    });
 });
