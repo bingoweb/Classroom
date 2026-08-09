@@ -654,7 +654,7 @@ Kod/test milestone:
 
 Bilinen fresh-DB `error_logs` cleanup-order bug'ı A7 sırasında kasıtlı olarak değiştirilmedi. P2-6 gerçek 55" 4K fiziksel kabul kapısı da ayrı biçimde açık kalır.
 
-**Backend domain extraction A1–A7 ve P3-5B Admin JavaScript modülerleştirme tamamlandı/doğrulandı.** A8 auth/session ancak ayrı security regression turuyla değerlendirilecektir. **P3-5C — Admin inline CSS temizliği uygulanıyor; C1, C2, C3 ve C4 tamamlandı, sıradaki kontrollü dalga C5 `admin.js` shell template static styles.** C3 sırasında tespit edilen stored slide admin XSS, fresh-DB `error_logs` cleanup-order ve admin-login favicon 404; C4 sırasında tespit edilen admin form label/autocomplete erişilebilirlik kusurları ayrı bugfix commit'leriyle düzeltilip doğrulandı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+**Backend domain extraction A1–A7, P3-5B Admin JavaScript modülerleştirme ve P3-5C Admin inline CSS temizliği tamamlandı/doğrulandı.** A8 auth/session ancak ayrı security regression turuyla değerlendirilecektir. C1–C5 sonunda admin HTML/JS template statik `style="..."` attribute envanteri **0** oldu; runtime state yazımları yaşayan planın sınırı gereği behavior-owned bırakıldı. C3 sırasında stored slide admin XSS, fresh-DB `error_logs` cleanup-order ve admin-login favicon 404; C4 sırasında admin form accessibility ve SQLite test-harness yarışları; C5 sırasında QR fallback URL kusuru ayrı bugfix commit'leriyle kapatıldı. **P3-5D kiosk CSS cleanup P2-6 gerçek 55" 4K fiziksel kabul kapısına bağlı olduğu için şu anda başlatılmayacaktır.**
 
 #### A8 — Admin auth/session — ayrıca ve en son değerlendir
 
@@ -1078,18 +1078,18 @@ TDD ve regresyon kanıtı:
 
 Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B4.7 sırasında değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
-**P3-5B tamamlandı ve doğrulandı.** B1 Students, B2 Roles, B3 Attendance ve B4 Slides B4.1–B4.7 artık 🟩 durumundadır. **P3-5C başladı; C1 `index.html`, C2 Students, C3 Slides ve C4 Attendance template static styles tamamlandı; C5 `admin.js` shell template static styles sıradadır.** Fiziksel 55" 4K kabul kapısı bu refactor kapanışından bağımsız olarak açık kalır.
+**P3-5B ve P3-5C tamamlandı ve doğrulandı.** B1 Students, B2 Roles, B3 Attendance, B4 Slides B4.1–B4.7 ve C1–C5 admin inline CSS dalgaları artık 🟩 durumundadır. P3-5D kiosk CSS cleanup fiziksel 55" 4K kabul kapısı nedeniyle beklemededir.
 
 ## 8. P3-5C — Admin inline CSS temizliği
 
-**Durum:** 🟨 9 Ağustos 2026 — uygulanıyor. C1 `index.html`, C2 Students, C3 Slides ve C4 Attendance template static inline CSS extraction tamamlandı/doğrulandı; sıradaki kontrollü dalga C5 `admin.js` shell template static styles.
+**Durum:** 🟩 9 Ağustos 2026 — tamamlandı ve doğrulandı. C1 `index.html`, C2 Students, C3 Slides, C4 Attendance ve C5 `admin.js` shell template static inline CSS extraction kapatıldı.
 
 Amaç görsel redesign değildir. Amaç mevcut görünümü class tabanlı hale getirmektir.
 
 Sıra:
 
 1. `public/admin/index.html` içindeki statik inline stilleri domain bazında CSS class'larına taşı — 🟩 **C1 tamamlandı**.
-2. JS template string içindeki statik inline stilleri domain bazında küçük dalgalarla taşı — 🟩 **C2 Students tamamlandı**, 🟩 **C3 Slides tamamlandı**, 🟩 **C4 Attendance tamamlandı**; sıradaki **C5 admin shell**.
+2. JS template string içindeki statik inline stilleri domain bazında küçük dalgalarla taşı — 🟩 **C2 Students**, 🟩 **C3 Slides**, 🟩 **C4 Attendance**, 🟩 **C5 admin shell tamamlandı**.
 3. Runtime'a bağlı `display`, progress width, media preview state, hover state gibi dinamik stilleri ilk turda koru.
 4. Daha sonra yalnız davranış testi ve browser kanıtı varsa state class modeline geçir.
 
@@ -1241,7 +1241,41 @@ C4 evidence commit'i `883ae6fb536f31fd89f96ea8a13dc668c2edde5c` sonrası GitHub 
 - System smoke PASS, `npm audit --omit=dev` **0 vulnerability**, package parse/diff-check temiz.
 - Ayrı test-harness bugfix commit `23bccf8a8955900e3348b7e9b45b64b4d705ed67`, GitHub Actions `31326738654`: Node 22 **PASS (30 sn)**, Node 24 **PASS (30 sn)**.
 
-**P3-5C tamamlanmış değildir. Sıradaki dalga C5 — `public/admin/admin.js` shell template static style extraction'dır.** `admin.js` içinde kalan **8** static inline-style attribute küçük ve ayrı bir dalgada class'lara taşınacaktır. Dinamik state-class dönüşümü ancak ayrı TDD + browser kanıtıyla yapılacaktır.
+### C5 sırasında tespit edilen QR fallback URL kusuru — ayrı bugfix sonucu
+
+C5 pre-change browser baseline'ı alınırken `/api/network-info` isteği zorla fail ettirildi. Fallback QR içeriğinin public kiosk yerine mevcut admin URL'sini (`/admin/`) gösterdiği doğrulandı. Yeni bağlayıcı incidental-bug kuralı gereği style extraction durduruldu ve hata ayrı TDD dalgasıyla kapatıldı.
+
+- Kök neden legacy `window.location.href.replace('/admin/index.html', '/index.html')` varsayımıydı; modern korumalı admin route'u `/admin/` olduğu için replace eşleşmiyordu.
+- `tests/admin-qr-fallback.test.js` ilk RED'de **0/2 pass** verdi: forced network failure `/admin/` adresini üretiyor ve source hâlâ legacy path replacement kullanıyordu.
+- Fallback URL artık `new URL('/index.html', window.location.origin).href` ile origin tabanlı üretiliyor.
+- Cache-bypass reload sonrası Chrome forced-failure smoke `http://127.0.0.1:49375/index.html` gösterdi ve beklenen public kiosk URL'siyle birebir eşleşti.
+- Focused **2/2**, full core **1472/1472**, system smoke PASS, `npm audit --omit=dev` **0 vulnerability**, syntax/package/diff temiz.
+- Ayrı bugfix commit `74b0e81f009b987a1acd44acb45b4e52b3951ef9`, GitHub Actions `31327035378`: Node 22 **PASS (28 sn)**, Node 24 **PASS (28 sn)**.
+
+### C5 — `admin.js` shell template static CSS uygulama sonucu
+
+Admin composition shell içinde kalan son statik presentation yalnız QR / “Ana Ekran Adresi” success ve fallback template'lerindeydi. C5 bu iki kopyayı aynı semantic class sözleşmesine taşıdı; modal runtime state ownership'i ve C5 sırasında düzeltilen fallback davranışı korundu.
+
+- `public/admin/admin.js` template `style="..."` attribute sayısı **8 → 0** oldu.
+- Success ve fallback template'lerinin ikisi de `admin-qr-address`, `admin-qr-address__title`, `admin-qr-address__value`, `admin-qr-address__note` class'larını kullanıyor.
+- Runtime `qrModal.style.display = 'flex'/'none'` yazımları bilinçli olarak JavaScript'te kaldı; C5 style-only sınırını aşmadı.
+- `admin.js` **171 satır**, `style.css` **1804 satır** oldu.
+- C5 sonunda admin statik inline-style envanteri tamamıyla sıfırlandı: `index.html` **0**, `admin.js` **0**, `students.js` **0**, `attendance.js` **0**, `slides.js` **0**.
+- Behavior-owned runtime state yazımları statik inline-CSS borcu sayılmıyor: `admin.js` QR modal display; Students hover/photo-preview state; Slides drag/modal/form visibility/upload progress gibi state değişimleri planın 3. maddesi gereği yerinde tutuldu.
+
+TDD ve browser doğrulaması:
+
+1. `tests/admin-shell-style-refactor.test.js` production değişikliğinden önce **1 pass / 2 fail** RED verdi: runtime-state koruma baştan PASS; 8 inline style ve eksik class/CSS ownership beklenen şekilde fail verdi.
+2. Minimal extraction sonrası C5 + QR fallback focused paket **5/5 pass**; C5 focused **3/3**.
+3. C1–C5 + accessibility/QR/notification/error-log/DOM-safety komşu grup **43/43 pass** verdi.
+4. C5 testi `test:core` zincirine eklendi; final full core **1475/1475 pass**, **0 fail** ve SQLite lifecycle/lock log taraması **NONE**. System smoke PASS, audit **0**, syntax/package/diff temiz.
+5. Chrome 1366×768 success-path pre/post computed-style karşılaştırmasında QR root/title/value/note değerleri birebir aynı kaldı; subtree inline style **0**, overflow **0**.
+6. Forced-failure fallback de aynı computed-style değerlerini ve public `/index.html` URL'sini verdi; subtree inline style **0**.
+7. Chrome 1920×1080 istenen window inner viewport **1920×863**; Students/Görevler/Yoklama/Slaytlar + Sistem/Error Logs smoke PASS, overflow **0**, final warning/error/issue **0**, ilgili API network istekleri **200/304**.
+8. Playwright `/admin/` auth redirect PASS ve warning/error **0**.
+9. Product/test commit `5e983d759ab356d7ff1aa0b7ffb610104ab6a10e`, GitHub Actions `31327284550`: Node 22 **PASS (27 sn)**, Node 24 **PASS (30 sn)**.
+
+**P3-5C tamamlandı ve doğrulandı.** Statik admin inline-CSS temizliği C1–C5 ile kapandı. Runtime state yazımları yalnız davranış testi + browser kanıtı gerektiren ayrı bir ürün davranışı kararı olmadan class'a çevrilmeyecektir. **Sıradaki P3-5D kiosk CSS cleanup, P2-6 gerçek 55" 4K fiziksel kabul kapısı nedeniyle şu anda bloke/beklemededir.**
 
 Her görsel dalgada en az:
 
