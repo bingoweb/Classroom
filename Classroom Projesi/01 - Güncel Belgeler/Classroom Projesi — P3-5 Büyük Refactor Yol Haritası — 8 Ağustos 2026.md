@@ -670,7 +670,7 @@ Auth refactor ayrı security regression turu gerektirir.
 
 ## 7. P3-5B — Admin JavaScript modülerleştirme
 
-**Durum:** 🟨 Uygulanıyor — B1 Students, B2 Roles, B3 Attendance ile B4.1 Slides read/render, B4.2 active toggle, B4.3 drag/reorder ve B4.4 form open/close/edit tamamlandı/doğrulandı; B4 sürüyor ve sıradaki alt dalga B4.5 media preview.
+**Durum:** 🟨 Uygulanıyor — B1 Students, B2 Roles, B3 Attendance ile B4.1 Slides read/render, B4.2 active toggle, B4.3 drag/reorder, B4.4 form open/close/edit ve B4.5 media preview tamamlandı/doğrulandı; B4 sürüyor ve sıradaki alt dalga B4.6 create/update/delete.
 
 Mevcut `error-logs.js` dosyası admin tarafında domain ayrımının çalışan örneğidir.
 
@@ -842,7 +842,7 @@ Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B3 sırasında deği�
 
 Slides yaklaşık dosyanın yarısını oluşturan en yoğun admin alanıdır. Drag/drop, form state, media preview, active toggle ve slide settings aynı anda taşınmamalıdır.
 
-**Durum:** 🟨 9 Ağustos 2026 — B4.1 read/render, B4.2 active toggle, B4.3 drag/reorder ve B4.4 form open/close/edit tamamlandı/doğrulandı; B4.5 media preview sırada.
+**Durum:** 🟨 9 Ağustos 2026 — B4.1 read/render, B4.2 active toggle, B4.3 drag/reorder, B4.4 form open/close/edit ve B4.5 media preview tamamlandı/doğrulandı; B4.6 create/update/delete sırada.
 
 Önerilen alt sıra:
 
@@ -850,7 +850,7 @@ Slides yaklaşık dosyanın yarısını oluşturan en yoğun admin alanıdır. D
 2. active toggle — 🟩 B4.2 tamamlandı,
 3. drag/reorder — 🟩 B4.3 tamamlandı,
 4. form open/close/edit — 🟩 B4.4 tamamlandı,
-5. media preview,
+5. media preview — 🟩 B4.5 tamamlandı,
 6. create/update/delete,
 7. slide settings.
 
@@ -988,7 +988,39 @@ TDD ve regresyon kanıtı:
 
 Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B4.4 sırasında değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
-**B4 tamamlanmış değildir. Sıradaki alt dalga B4.5 — media preview ownership extraction'dır.** Create/update/delete → slide settings sırası bundan sonra da korunacaktır.
+**B4.4 kapanışında sıradaki alt dalga B4.5 — media preview ownership extraction idi; bu alt dalga aşağıdaki B4.5 kaydında tamamlanmıştır.** Create/update/delete → slide settings sırası korunur.
+
+#### B4.5 — media preview uygulama sonucu
+
+Slides domaininin mevcut medya hazırlama/reset, file-input change binding ve FileReader tabanlı yeni medya preview ownership'i `admin.js` dışına çıkarıldı. Create/update/delete submit akışı ile slide settings bu alt dalgada bilerek shell'de bırakıldı.
+
+- `prepareSlideMediaForm(slide)`, `resetSlideMediaForm()`, `handleSlideMediaChange(e)` ve ortak `renderExistingMediaPreview(slide)` artık `public/admin/js/slides.js` içinde yaşıyor.
+- `showSlideForm()` ve `closeSlideForm()` artık B4.4'teki shell callback seam'ine dönmeden doğrudan modül içindeki media prepare/reset fonksiyonlarını çağırıyor.
+- `AdminSlides.init(...)` içinden `prepareMediaForm` ve `resetMediaForm` callback injection'ları kaldırıldı; yalnız slide state/refresh ile B4.6+ kapsamındaki content/transition senkron callback'leri kaldı.
+- `slideMedia` için `change` event binding ownership'i de slide modülünün `init()` fonksiyonuna taşındı; `admin.js` artık bu listener'ı bağlamıyor.
+- Edit sırasında mevcut media path `Utils.normalizePath(slide.media_path, true)` ile normalize edilmeye devam ediyor; image/GIF/video preview metin ve markup sözleşmeleri korunuyor.
+- Yeni medya seçiminde 100 MB sınırı, `Yeni dosya: <name> (<MB> MB)` bilgisi, mevcut medya bilgisinin gizlenmesi ve FileReader data-URL preview davranışı korunuyor.
+- Edit sırasında file input boşaltılırsa mevcut medya preview'ının geri gelmesi modül içi `currentEditingSlide` + `getSlidesHandler()` state'i üzerinden korunuyor.
+- B4.6 create/update/delete ve B4.7 slide settings ownership'i structural regression ile hâlâ `public/admin/admin.js` içinde kilitli.
+- `public/admin/admin.js` **624 → 481 satıra** indi; `public/admin/js/slides.js` **346 → 453 satıra** çıktı.
+
+TDD ve regresyon kanıtı:
+
+1. Değişiklik öncesi `npm run test:admin-slide-module` **19/19 pass** verdi.
+2. B4.5 structural + media behavior testleri production değişikliğinden önce yazıldı. Önceki B4.1–B4.4/active/reorder sözleşmeleri geçerken yeni ownership/change-binding/form-internalization testleri doğru nedenle kırıldı: toplam **15 pass / 10 fail**.
+3. Minimal extraction sonrası `npm run test:admin-slide-module` **25/25 pass** verdi; `admin.js`, `slides.js`, test syntax kontrolleri ve `git diff --check` temizdi.
+4. Admin/slide/media/cache/notification/DOM-safety komşu kapısı **139/139 pass** verdi.
+5. Tam core yeni testlerle **1435/1435 pass** verdi.
+6. `npm run test:system-smoke` PASS; `npm audit --omit=dev` **0 vulnerability**.
+7. İzole temp SQLite + Chrome DevTools gerçek admin UI baseline'ında `B4.5 Media Smoke` slaytı editte mevcut `default_boy.png` image preview'ını ve opsiyonel media-input state'ini doğru gösterdi.
+8. Aynı gerçek browser oturumunda `File` + `DataTransfer` ile `browser.png` image seçimi gerçek `change` event'ini tetikledi; `Yeni dosya: browser.png (0.00 MB)`, boş current-media info, FileReader data URL ve `Yeni Resim Önizlemesi` doğrulandı. Input tekrar boşaltıldığında mevcut `default_boy.png` preview ve `Mevcut Resim` bilgisi geri geldi.
+9. Chrome DevTools network: `/admin/js/slides.js` **200**, `/admin/admin.js` **200**, `/api/admin/slides` **200**; console error/warn **0**, horizontal overflow **0**.
+10. Playwright MCP final koda karşı korumalı `/admin/` erişiminin `admin-login.html?next=/admin/` yüzeyine yönlendiğini doğruladı; takip eden çağrıda bilinen tool-side `about:blank` davranışı tekrarlandığı için authenticated media UI/network kanıtı Chrome DevTools ile tamamlandı.
+11. Product/test commit `1247e4775950c2236517cd7afe8ad546016b4a88` exact SHA'sında GitHub Actions `31320857054`: Node 24 **PASS (27 sn)**, Node 22 **PASS (29 sn)**.
+
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B4.5 sırasında değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+
+**B4 tamamlanmış değildir. Sıradaki alt dalga B4.6 — create/update/delete ownership extraction'dır.** Slide settings B4.7 olarak bundan sonra ele alınacaktır.
 
 ## 8. P3-5C — Admin inline CSS temizliği
 
