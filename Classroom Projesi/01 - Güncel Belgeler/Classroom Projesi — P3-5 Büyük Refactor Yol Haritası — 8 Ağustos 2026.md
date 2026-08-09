@@ -158,7 +158,7 @@ Bu bölümdeki A1 → A8 sırası **uygulama/commit sırasıdır**. Mevcut Expre
 
 ### P3-5A — Backend route modülerleştirme
 
-**Durum:** 🟨 Uygulanıyor — A1, A2, A3, A4, A5 ve A6 tamamlandı ve doğrulandı; sıradaki dalga A7 slides extraction.
+**Durum:** 🟩 Backend domain extraction A1–A7 tamamlandı ve doğrulandı. A8 admin auth/session ayrı güvenlik refactor değerlendirmesi olarak bekliyor; sıradaki aktif refactor fazı P3-5B admin JavaScript modülerleştirmedir.
 
 #### A0 — Contract baseline
 
@@ -576,6 +576,8 @@ Bilinen fresh-DB `error_logs` cleanup-order logu extraction sırasında kasıtl�
 
 #### A7 — Slides — en son
 
+**Durum:** 🟩 9 Ağustos 2026 — tamamlandı ve doğrulandı.
+
 Önerilen başlangıç dosyaları:
 
 ```text
@@ -596,6 +598,60 @@ Korunacak kritik sözleşmeler:
 - canonical slide media path,
 - raw database error redaction,
 - `/api/slides/active` route'unun `/:id` route'undan önce kayıt edilmesi.
+
+##### A7 uygulama sonucu
+
+Backend extraction serisinin en riskli domaini, mevcut route davranışları yeniden tasarlanmadan iki modüle ayrıldı:
+
+- `backend/routes/slide-routes.js` oluşturuldu ve slide + slide-settings HTTP yüzeyini devraldı.
+- `backend/slide-media-paths.js` oluşturuldu ve canonical/public/managed media-path yardımcılarını devraldı.
+- `backend/server.js`, eski slide bloğunun göreli kayıt noktasında yalnız `registerSlideRoutes(app, deps)` çağrısını tutuyor.
+- slide active cache state'i route registration closure'ına taşındı; başarılı create/update/reorder/delete sonrası invalidation davranışı korundu.
+- fallback seed/reconciliation ve sistem sahipliği DB katmanında bırakıldı; bu extraction sırasında veri modeli veya reconciliation algoritması değiştirilmedi.
+- `backend/server.js` 1460 satırdan **416 satıra** indi; `backend/routes/slide-routes.js` 994 satır, `backend/slide-media-paths.js` 66 satır.
+
+Korunan kritik sözleşmeler:
+
+- route sırası: `GET /api/slides/active` → `GET /api/slides` → `GET /api/admin/slides` → `GET /api/slides/:id`,
+- write sırası: `PUT /api/slides/reorder`, parameterized `PUT /api/slides/:id` route'undan önce kayıtlı,
+- admin write middleware sırası `requireAdminSession → requireCsrfToken → requireAdminWriteRateLimit`,
+- public active list ile authenticated admin management list ayrımı,
+- admin-created aktif slayt varsa fallback setinin gizlenmesi; aktif öğretmen slaytı kalmadığında permanent fallback setine dönülmesi,
+- `is_fallback = 1` sistem slaytlarının update/delete/reorder ile değiştirilememesi,
+- active-slide 5 dakikalık cache'in yalnız başarılı create/update/reorder/delete sonrasında invalidasyonu,
+- reorder için isolated connection + transaction/rollback davranışı,
+- delete için transaction sonrası display-order compaction ve ancak başarılı commit sonrasında media cleanup,
+- update sırasında yeni media DB'ye başarıyla yazılmadan eski managed media'nın silinmemesi,
+- canonical `/uploads/slides/<filename>` URL sözleşmesi ve dış/data URL passthrough davranışı,
+- path traversal / nested filename değerlerinin managed file deletion hedefi olamaması,
+- slide ve slide-settings DB hatalarında raw SQLite/stack ayrıntılarının HTTP response'a sızmaması,
+- atomik üçlü slide-settings PUT transaction davranışı,
+- mevcut slideshow transition-lock frontend davranışının değişmemesi.
+
+TDD ve regresyon kanıtı:
+
+1. `tests/backend-route-extraction.test.js` içine A7 sözleşmesi production dosyalarından önce eklendi ve `backend/routes/slide-routes.js must exist` nedeniyle RED verdi.
+2. Extraction sonrası A1–A7 structural testleri **7/7 pass** verdi.
+3. Slide/settings/admin auth/rate-limit/CORS odak grubu, extraction öncesi baseline ile birebir **354/354 pass** verdi.
+4. İlk modular koşuda üç source/semantics farkı sistematik olarak ayrıştırıldı: exact active-slide SQL whitespace sözleşmesi, eski non-strict callback `this` semantiği ve taşınmış route'u hâlâ `server.js` içinde arayan source guard. Davranış yeniden tasarlanmadan minimal düzeltmelerle baseline'a dönüldü.
+5. `normalizePath` aktif backend dependency'si kaldırılmadı; tüketim noktası `server.js`ten `slide-media-paths.js`e taşındığı için P3-4 source-contract testi yeni gerçek konumu izleyecek şekilde güncellendi.
+6. Tam core **1407/1407 pass** verdi.
+7. System smoke PASS; npm audit 0; üç backend dosyasının syntax kontrolü ve `git diff --check` temiz.
+8. İzole temp DB gerçek HTTP smoke: başlangıçta 7 fallback; admin login/session 200 + CSRF 64; slide-settings GET/atomik PUT 200; iki gerçek multipart PNG create 200; active/admin list 2; single GET canonical `/uploads/slides/...`; reorder 200; `is_active=false` update 200 ve active list 1; son aktif öğretmen slaytı delete edilince active list yeniden 7 fallback; ikinci delete sonrası admin list 0.
+9. İki multipart smoke upload'ının delete sonrasında `backend/uploads/slides` altında fiziksel olarak kalmadığı doğrulandı.
+10. Playwright kiosk navigasyonu `2/D Sihirli Pano` başlığıyla başarılı oldu. Console sorgusunda tool-side `about:blank` davranışı tekrar görüldüğü için browser API/console kanıtı Chrome DevTools ile tamamlandı.
+11. Chrome DevTools isolated context: `/api/slides/active` 200/304, login/session 200, `/api/admin/slides` 200, `/api/slide-settings` 200, CSRF 64, console error/warn/issue **0**.
+
+Kod/test milestone:
+
+- Commit: `facb944a6363f0bb464d1a4457fd90217674169a`
+- GitHub Actions: `31314361667`
+- Node 24: PASS (27 sn)
+- Node 22: PASS (31 sn)
+
+Bilinen fresh-DB `error_logs` cleanup-order bug'ı A7 sırasında kasıtlı olarak değiştirilmedi. P2-6 gerçek 55" 4K fiziksel kabul kapısı da ayrı biçimde açık kalır.
+
+**Backend domain extraction A1–A7 tamamlandı.** A8 auth/session ancak ayrı security regression turuyla değerlendirilecektir. Sıradaki aktif refactor fazı **P3-5B — Admin JavaScript modülerleştirme**dir.
 
 #### A8 — Admin auth/session — ayrıca ve en son değerlendir
 

@@ -4437,21 +4437,68 @@ Kanıtlar:
 
 `backend/server.js` 1617 → 1460 satıra indi; `backend/routes/log-routes.js` 182 satır. Bilinen fresh-DB `error_logs` cleanup-order bug'ı kasıtlı olarak düzeltilmedi ve ayrı bugfix olarak kalıyor. Sıradaki extraction dalgası **P3-5A7 — slides** olacaktır. P2-6 gerçek 55\" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
+### 21.0.7 9 Ağustos 2026 — P3-5A7 slides route extraction
+
+Backend domain extraction serisinin son ve en riskli dalgası tamamlandı. Slide HTTP yüzeyi, active cache state'i, slide-settings route'ları ve media-path yardımcıları `server.js` dışına taşındı; fallback reconciliation/veri modeli yeniden tasarlanmadı.
+
+Uygulanan sınır:
+
+- `backend/routes/slide-routes.js`: active/list/admin list/single GET, create, reorder, update, delete ve GET/POST/PUT slide-settings route'ları,
+- `backend/slide-media-paths.js`: canonical public URL, public-path normalization ve managed media deletion path çözümleme,
+- `backend/server.js`: eski göreli noktada `registerSlideRoutes(app, deps)`,
+- `tests/backend-route-extraction.test.js`: A7 fiziksel extraction + route-order + media-helper sınırı,
+- `tests/slides-update-id.test.js` ve `tests/backend-orphan-cleanup.test.js`: taşınmış source-contract'ların yeni gerçek modül konumunu izlemesi.
+
+Korunan kritik sözleşmeler:
+
+- `/api/slides/active` parameterized `/:id` route'undan önce,
+- `/api/slides/reorder` parameterized PUT `/:id` route'undan önce,
+- write route'larında auth → CSRF → write rate-limit sırası,
+- public active list / authenticated admin management list ayrımı,
+- permanent fallback setin yalnız aktif öğretmen slaytı olmadığında görünmesi,
+- system-owned fallback update/delete/reorder koruması,
+- başarılı create/update/reorder/delete sonrası cache invalidation; failure/no-op yollarında mevcut cache'in korunması,
+- reorder ve delete transaction/rollback davranışı,
+- başarılı DB/transaction sonucu olmadan eski media'nın silinmemesi,
+- canonical `/uploads/slides/<filename>` ve güvenli managed-path cleanup,
+- atomik slide-settings PUT,
+- raw DB hata ayrıntılarının HTTP response'a sızmaması,
+- slideshow transition-lock davranışının değişmemesi.
+
+Kanıtlar:
+
+- TDD extraction testi RED → GREEN,
+- extraction **7/7**,
+- extraction öncesi ve sonrası slide/settings/admin güvenlik odak grubu **354/354**,
+- tam core **1407/1407**,
+- system smoke PASS,
+- audit 0,
+- syntax ve diff check temiz,
+- izole temp DB HTTP smoke: 7 fallback → iki multipart create sonrası 2 active → reorder → bir slide inactive sonrası 1 active → son aktif öğretmen slide delete sonrası yeniden 7 fallback; admin list final 0,
+- slide-settings GET + atomik PUT 200; admin login/session 200; CSRF 64,
+- oluşturulan iki multipart upload delete sonrasında diskte kalmadı,
+- Playwright kiosk navigasyonu PASS; console sorgusundaki tool-side `about:blank` davranışı nedeniyle browser API/console kanıtı Chrome DevTools ile tamamlandı,
+- Chrome DevTools isolated context: active/admin/settings istekleri 200/304, console error/warn/issue 0,
+- exact milestone commit `facb944a6363f0bb464d1a4457fd90217674169a`,
+- GitHub Actions run `31314361667`: Node 24 PASS (27 sn), Node 22 PASS (31 sn).
+
+`backend/server.js` 1460 → **416 satıra** indi; yeni `backend/routes/slide-routes.js` 994 satır ve `backend/slide-media-paths.js` 66 satır. Böylece P3-5 backend domain extraction **A1–A7 tamamlandı**. A8 admin auth/session ancak ayrı güvenlik regresyon turuyla değerlendirilecektir; sıradaki aktif refactor fazı **P3-5B — admin JavaScript modülerleştirme**dir. Bilinen fresh-DB `error_logs` cleanup-order bug'ı ve P2-6 gerçek 55\" 4K fiziksel kabul kapısı ayrı olarak açık kalır.
+
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
-## 21.1 `backend/server.js` — ~2800 satır
+## 21.1 `backend/server.js` — A1–A7 sonrası 416 satır
 
-Uzun vadede alanlara bölünebilir:
+Domain route extraction tamamlandı:
 
-- admin auth routes
-- students routes/service
-- roles routes/service
-- attendance routes/service
-- schedule routes/service
-- slides routes/service
-- logs routes/service
+- settings/system
+- schedule
+- students
+- roles
+- attendance
+- logs
+- slides
 
-Ancak önce mevcut endpoint davranışları testlerle tamamen sabitlenmelidir.
+Admin auth/session composition root içinde kalır. Bu sınır sırf dosya daha da küçülsün diye taşınmayacak; A8 ancak ayrı security regression turuyla değerlendirilecektir.
 
 ## 21.2 `public/admin/admin.js` — ~1800 satır
 
@@ -4739,7 +4786,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 22 | P3-5A4 roles route extraction | P3 | 🟩 |
 | 23 | P3-5A5 attendance route extraction | P3 | 🟩 |
 | 24 | P3-5A6 logs route extraction | P3 | 🟩 |
-| 25 | P3-5A7 slides route extraction | P3 | ⬜ |
+| 25 | P3-5A7 slides route extraction | P3 | 🟩 |
 
 Durum simgeleri:
 
