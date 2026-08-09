@@ -4960,7 +4960,32 @@ Domain route extraction tamamlandı:
 - logs
 - slides
 
-Admin auth/session composition root içinde kalır. Bu sınır sırf dosya daha da küçülsün diye taşınmayacak; A8 ancak ayrı security regression turuyla değerlendirilecektir.
+Admin auth/session composition root içinde kalır. **A8 ayrı security-regression turunda değerlendirilmiş ve yeni auth route extraction yapılmaması bilinçli mimari karar olarak kapatılmıştır.** `/admin` guard'ın static serving'den önce, login/logout/session endpoint'lerinin ise static/upload setup'tan sonra kayıtlı olması ve aynı auth middleware'lerinin yedi domain route modülüne dependency olarak dağıtılması nedeniyle tek `registerAdminAuthRoutes()` modülü gerçek coupling azaltımı sağlamayacaktır.
+
+### 21.1.1 9 Ağustos 2026 — P3-5A8 admin auth/session refactor değerlendirmesi
+
+A8 bir “mutlaka dosya çıkarma” işi değil, güvenlik sınırını ayrı turda değerlendirme kapısı olarak ele alındı. Sonuç: mevcut composition root **korunacak**.
+
+Kararı destekleyen teknik gerçekler:
+
+- `backend/server.js` yaklaşık **420 satır**; auth'ın policy/store/cookie/limiter parçaları zaten `admin-auth-config.js`, `admin-session-store.js`, `admin-session-cookie.js`, `request-rate-limiter.js` içinde ayrılmış durumda.
+- Server'da kalan auth parçaları CSRF secret/token, tek session-store instance'ı, `requireAdminSession`, write limiter instance'ı ve üç auth endpoint'inin composition/registration sorumluluklarıdır.
+- `/admin` guard satırı static middleware'den önce; login/logout/session endpoint'leri static/upload setup'tan sonra kayıtlıdır. Tek-fazlı auth registration source-order'ı değiştirir; iki-fazlı factory/registration ise mevcut düzenden daha fazla indirection getirir.
+- `requireAdminSession`, `requireCsrfToken`, `requireAdminWriteRateLimit` yedi domain route modülüne dependency injection ile verilmektedir; auth'ı başka dosyaya taşımak bu bağımlılığı ortadan kaldırmaz.
+
+Security-regression kanıtı:
+
+- auth/session/rate-limit/CORS/JSON focused grup **67/67 PASS**,
+- Chrome gerçek UI login **200**, authenticated admin **200**, session `authenticated:true`, CSRF **64**, HttpOnly nedeniyle `document.cookie` boş,
+- admin fetch wrapper'ı otomatik CSRF eklediği için backend kapısı ayrıca ham XHR ile test edildi: tokensız settings write **403**, doğru token ile **200**,
+- UI logout **200**; logout sonrası session `false`, korumalı admin JSON isteği **401**,
+- negatif 403/401 denemelerinden sonraki temiz login reload console error/warn/issue **0**,
+- Playwright `/admin/` auth redirect + login title PASS, warning/error **0**; sonraki console çağrısındaki `about:blank` bilinen tool-side davranıştır,
+- full core **1485/1485 PASS**, lifecycle/lock taraması **NONE**,
+- system smoke **PASS**, audit **0**,
+- production auth/session dosyalarında **0 değişiklik**.
+
+A8 ancak ikinci auth surface, harici session backend, SSO/identity provider, auth middleware reuse veya composition root'un yeniden büyümesi gibi gerçek bir ihtiyaç ortaya çıkarsa yeniden açılacaktır.
 
 C3 sırasında tespit edilen fresh-DB `error_logs` cleanup-order hatası için server startup cleanup artık `db.errorLogsReadyPromise` sonrasında çalışır. Bu değişiklik route extraction sınırını bozmaz; yalnız schema readiness sırasını güvenli hale getirir.
 
@@ -5450,6 +5475,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 29 | P3-5B4 admin slides module extraction — B4.1–B4.7 tamamlandı ve doğrulandı; P3-5B kapandı | P3 | 🟩 |
 | 30 | P3-5C admin inline CSS — C1–C5 tamamlandı; admin statik inline-style envanteri 0, runtime state yazımları behavior-owned | P3 | 🟩 |
 | 31 | P3-5D0 kiosk CSS analiz/baseline hazırlığı — analyzer + duplicate/override/unused aday raporu + 4 viewport browser baseline; CSS değişikliği 0 | P3 | 🟩 |
+| 32 | P3-5A8 admin auth/session security refactor değerlendirmesi — no-extraction kararı; mevcut composition root korunuyor | P3 | 🟩 |
 
 Durum simgeleri:
 

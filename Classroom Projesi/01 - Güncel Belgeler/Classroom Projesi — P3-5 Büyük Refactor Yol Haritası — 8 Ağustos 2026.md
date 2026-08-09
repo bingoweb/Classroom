@@ -158,11 +158,11 @@ Admin CSS ve kiosk CSS aynı risk sınıfında değildir.
 
 ## 6. Refactor dalgaları
 
-Bu bölümdeki A1 → A8 sırası **uygulama/commit sırasıdır**. Mevcut Express route registration sırasını yeniden düzenleme talimatı değildir. Bir domain başka dosyaya taşınırken route'lar `server.js` içindeki mevcut göreli kayıt noktasında çağrılmalı; özellikle statik middleware, `/admin` auth middleware, schedule storage guard ve `/api/slides/active` / `/:id` sırası korunmalıdır.
+Bu bölümdeki A1 → A7 sırası **domain extraction uygulama/commit sırasıdır**. A8 ise extraction zorunluluğu değil, auth/session sınırını tüm domain extraction'lardan sonra ayrı security-regression turunda değerlendirme kapısıdır. Mevcut Express route registration sırasını yeniden düzenleme talimatı değildir. Bir domain başka dosyaya taşınırken route'lar `server.js` içindeki mevcut göreli kayıt noktasında çağrılmalı; özellikle statik middleware, `/admin` auth middleware, schedule storage guard ve `/api/slides/active` / `/:id` sırası korunmalıdır.
 
 ### P3-5A — Backend route modülerleştirme
 
-**Durum:** 🟩 Backend domain extraction A1–A7 tamamlandı ve doğrulandı. A8 admin auth/session ayrı güvenlik refactor değerlendirmesi olarak bekliyor; sıradaki aktif refactor fazı P3-5B admin JavaScript modülerleştirmedir.
+**Durum:** 🟩 Backend domain extraction A1–A7 tamamlandı ve doğrulandı. A8 admin auth/session ayrı security-regression turunda değerlendirildi ve yeni route extraction yapılmaması bilinçli mimari karar olarak kapatıldı. Backend refactor fazı bu sınırla tamamlanmıştır.
 
 #### A0 — Contract baseline
 
@@ -655,11 +655,13 @@ Kod/test milestone:
 
 Bilinen fresh-DB `error_logs` cleanup-order bug'ı A7 sırasında kasıtlı olarak değiştirilmedi. P2-6 gerçek 55" 4K fiziksel kabul kapısı da ayrı biçimde açık kalır.
 
-**Backend domain extraction A1–A7, P3-5B Admin JavaScript modülerleştirme ve P3-5C Admin inline CSS temizliği tamamlandı/doğrulandı.** A8 auth/session ancak ayrı security regression turuyla değerlendirilecektir. C1–C5 sonunda admin HTML/JS template statik `style="..."` attribute envanteri **0** oldu; runtime state yazımları yaşayan planın sınırı gereği behavior-owned bırakıldı. C3 sırasında stored slide admin XSS, fresh-DB `error_logs` cleanup-order ve admin-login favicon 404; C4 sırasında admin form accessibility ve SQLite test-harness yarışları; C5 sırasında QR fallback URL kusuru ayrı bugfix commit'leriyle kapatıldı. **P3-5D0 kiosk CSS analiz/baseline hazırlığı tamamlandı; gerçek P3-5D selector/declaration cleanup P2-6 gerçek 55" 4K fiziksel kabul kapısına bağlı olduğu için başlatılmayacaktır.**
+**Backend domain extraction A1–A7, A8 auth/session security refactor değerlendirmesi, P3-5B Admin JavaScript modülerleştirme ve P3-5C Admin inline CSS temizliği tamamlandı/doğrulandı.** A8 sonunda auth/session composition root'un `server.js` içinde kalması bilinçli karar olarak sabitlendi; yeni auth route extraction yapılmadı. C1–C5 sonunda admin HTML/JS template statik `style="..."` attribute envanteri **0** oldu; runtime state yazımları yaşayan planın sınırı gereği behavior-owned bırakıldı. C3 sırasında stored slide admin XSS, fresh-DB `error_logs` cleanup-order ve admin-login favicon 404; C4 sırasında admin form accessibility ve SQLite test-harness yarışları; C5 sırasında QR fallback URL kusuru ayrı bugfix commit'leriyle kapatıldı. **P3-5D0 kiosk CSS analiz/baseline hazırlığı tamamlandı; gerçek P3-5D selector/declaration cleanup P2-6 gerçek 55" 4K fiziksel kabul kapısına bağlı olduğu için başlatılmayacaktır.**
 
 #### A8 — Admin auth/session — ayrıca ve en son değerlendir
 
-Auth/session kodu güvenlik sınırı olduğu için sırf dosya küçülsün diye erken taşınmayacaktır.
+**Durum:** 🟩 9 Ağustos 2026 — ayrı security-regression değerlendirmesi tamamlandı; **yeni extraction yapılmaması** bilinçli mimari karar olarak kapatıldı.
+
+Auth/session kodu güvenlik sınırı olduğu için sırf dosya küçülsün diye taşınmadı.
 
 Ancak tüm domain extraction tamamlandıktan sonra aşağıdaki mevcut modüllerle birlikte ayrı bir auth route registration modülü değerlendirilebilir:
 
@@ -668,7 +670,53 @@ Ancak tüm domain extraction tamamlandıktan sonra aşağıdaki mevcut modüller
 - `admin-session-store.js`
 - `request-rate-limiter.js`
 
-Auth refactor ayrı security regression turu gerektirir.
+### A8 değerlendirme sonucu
+
+Mevcut sınır zaten katmanlıdır:
+
+- `backend/admin-auth-config.js` — credential/fail-closed policy,
+- `backend/admin-session-cookie.js` — cookie serialization/parsing,
+- `backend/admin-session-store.js` — session yaşam döngüsü,
+- `backend/request-rate-limiter.js` — login/write limiter primitives.
+
+`backend/server.js` A1–A7 sonrasında yaklaşık **420 satırdır**. Auth tarafında burada kalan sorumluluklar esas olarak composition-root sorumluluklarıdır:
+
+- process başına CSRF secret + HMAC token üretimi/doğrulaması,
+- tek `adminSessionStore` instance'ı,
+- `requireAdminSession`,
+- session-keyed admin write limiter instance'ı,
+- `/admin` koruma middleware registration'ı,
+- `POST /api/admin/login`, `POST /api/admin/logout`, `GET /api/admin/session`,
+- bu middleware'lerin yedi domain route modülüne dependency injection'ı.
+
+Tek bir `registerAdminAuthRoutes()` extraction'ı mevcut mimariyi sadeleştirmemektedir. `/admin` guard **static serving'den önce** kayıtlıyken login/logout/session endpoint'leri static/upload setup'tan **sonra** kayıtlıdır. Aynı modülün bu iki farklı source-order noktasını koruması için iki fazlı registration/factory API'si gerekir; bu da güvenlik sınırını azaltmak yerine ek indirection ve coupling üretir. Ayrıca `requireAdminSession`, `requireCsrfToken` ve `requireAdminWriteRateLimit` yedi domain route modülüne dependency olarak dağıtılmaya devam edeceği için composition root bağımlılığı ortadan kalkmaz.
+
+Bu nedenle A8 kararı:
+
+> **Mevcut auth/session composition root korunacak; sırf `server.js` birkaç satır daha küçülsün diye yeni auth route registration modülü oluşturulmayacaktır.**
+
+Bu karar ancak aşağıdaki gerçek ihtiyaçlardan biri ortaya çıkarsa yeniden açılmalıdır:
+
+- ikinci bağımsız admin/auth surface'i,
+- memory store dışında harici session backend ihtiyacı,
+- SSO / identity-provider entegrasyonu,
+- auth middleware'lerinin başka bir Express app/server tarafından yeniden kullanılması,
+- `server.js` composition root'unun tekrar belirgin biçimde büyümesi.
+
+### A8 security-regression kanıtı
+
+- Auth/session/rate-limit/CORS/JSON focused grup: **67/67 PASS**.
+- Fail-closed password, 32-byte base64url session ID, exact expiry boundary, logout invalidation, `HttpOnly`, `SameSite=Strict`, optional `Secure`, login/write rate-limit ve auth → CSRF → write-rate middleware sırası mevcut testlerle korunuyor.
+- Chrome DevTools gerçek UI: `/admin/` → login redirect; `admin` + temp parola ile login **200**; authenticated admin page **200**.
+- `GET /api/admin/session` → `authenticated:true`, CSRF token uzunluğu **64**, `document.cookie` boş (session cookie HttpOnly).
+- Admin sayfasının `window.fetch` wrapper'ı write isteklerine CSRF token'ını otomatik ekliyor. Wrapper bypass edilerek ham `XMLHttpRequest` ile doğrulama yapıldığında tokensız `POST /api/settings` **403**, doğru token ile **200** ve temp DB readback doğru.
+- UI logout **200**; logout sonrası session `authenticated:false`, korumalı `/admin/` JSON erişimi **401**.
+- Negatif 403/401 proplarından sonra temiz login reload'unda Chrome console error/warn/issue **0**.
+- Playwright bağımsız `/admin/` erişiminde login redirect + `Yönetici Girişi` title doğrulandı; warning/error **0**. Takip console çağrısındaki bilinen tool-side `about:blank` davranışı ürün hatası değildir.
+- Final full core: **1485/1485 PASS**, SQLite lifecycle/lock taraması **NONE**.
+- `npm run test:system-smoke` → **SYSTEM_SMOKE_PASS**; admin login 200, CSRF 64.
+- `npm audit --omit=dev` → **0 vulnerability**.
+- A8 sırasında production auth/session kodunda **0 değişiklik** yapıldı.
 
 ## 7. P3-5B — Admin JavaScript modülerleştirme
 
