@@ -309,6 +309,16 @@ function loadSlidesModule({
             normalizePath(value, forAdmin) {
                 calls.normalize.push({ value, forAdmin });
                 return `/normalized/${value}`;
+            },
+            escapeHtml(value) {
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return String(value == null ? '' : value).replace(/[&<>"']/g, match => map[match]);
             }
         },
         logger: {

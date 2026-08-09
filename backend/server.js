@@ -379,7 +379,11 @@ function cleanupOldLogs() {
 setInterval(cleanupOldLogs, 24 * 60 * 60 * 1000); // Every 24 hours
 
 // Run cleanup on startup
-cleanupOldLogs();
+db.errorLogsReadyPromise
+    .then(() => cleanupOldLogs())
+    .catch((err) => {
+        logger.error(COMPONENTS.DATABASE, 'Error preparing old log cleanup on startup', err);
+    });
 
 // Global error handlers
 process.on('unhandledRejection', (reason, promise) => {

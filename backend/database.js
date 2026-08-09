@@ -8,10 +8,17 @@ const dbPath = configuredDbPath
     : path.resolve(__dirname, 'classroom.db');
 let resolveScheduleMigration;
 let rejectScheduleMigration;
+let resolveErrorLogsReady;
+let rejectErrorLogsReady;
 
 const scheduleMigrationPromise = new Promise((resolve, reject) => {
     resolveScheduleMigration = resolve;
     rejectScheduleMigration = reject;
+});
+
+const errorLogsReadyPromise = new Promise((resolve, reject) => {
+    resolveErrorLogsReady = resolve;
+    rejectErrorLogsReady = reject;
 });
 
 // Do not swallow rejection, but log it
@@ -19,10 +26,15 @@ scheduleMigrationPromise.catch((err) => {
     console.error('Fatal: Schedule schema migration failed', err);
 });
 
+errorLogsReadyPromise.catch((err) => {
+    console.error('Fatal: Error logs schema initialization failed', err);
+});
+
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database', err.message);
         rejectScheduleMigration(err);
+        rejectErrorLogsReady(err);
     } else {
         console.log('Connected to the SQLite database.');
         // Enable foreign keys for this connection (must be done for every connection)
@@ -38,6 +50,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
 });
 
 db.scheduleMigrationPromise = scheduleMigrationPromise;
+db.errorLogsReadyPromise = errorLogsReadyPromise;
 
 function initDatabase() {
     db.serialize(() => {
@@ -121,7 +134,13 @@ function initDatabase() {
             user_agent TEXT,
             url TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )`);
+        )`, (err) => {
+            if (err) {
+                rejectErrorLogsReady(err);
+            } else {
+                resolveErrorLogsReady();
+            }
+        });
 
         // Create indexes for better query performance
         db.run(`CREATE INDEX IF NOT EXISTS idx_roles_student_id ON roles(student_id)`);

@@ -20,3 +20,11 @@ test('admin login request sends both username and password', () => {
     assert.match(loginHtml, /body: JSON\.stringify\(\{ username, password \}\)/);
     assert.match(loginHtml, /passwordInput\.value = '';/);
 });
+
+test('admin login declares the existing app favicon instead of triggering /favicon.ico fallback', () => {
+    assert.match(
+        loginHtml,
+        /<link[^>]+rel="(?:shortcut )?icon"[^>]+href="\/assets\/favicon\.png"[^>]*>/,
+        'login page should use the bundled favicon and avoid a browser /favicon.ico 404'
+    );
+});

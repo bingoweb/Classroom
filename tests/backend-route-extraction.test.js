@@ -172,7 +172,7 @@ test('P3-5A6 extracts log route registration from server.js without moving start
 
     assert.match(serverSource, /function\s+cleanupOldLogs\s*\(/);
     assert.match(serverSource, /setInterval\(cleanupOldLogs,\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000\)/);
-    assert.match(serverSource, /cleanupOldLogs\(\)/);
+    assert.match(serverSource, /db\.errorLogsReadyPromise[\s\S]*?\.then\(\(\)\s*=>\s*cleanupOldLogs\(\)\)/);
     assert.doesNotMatch(logSource, /function\s+cleanupOldLogs\s*\(/);
 });
 
