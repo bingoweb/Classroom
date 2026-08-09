@@ -1336,9 +1336,12 @@ Bu faz P3-5B sırasında geçici uyumluluk için korunan inline HTML/template ev
 E fazı başlangıç envanteri:
 
 - `public/admin/index.html`: **27** inline event attribute,
-- `public/admin/js/students.js`: **8**,
-- `public/admin/js/slides.js`: **3**,
-- toplam: **38**.
+- `public/admin/js/students.js`: **9**,
+- `public/admin/js/slides.js`: **4**,
+- `public/admin/js/attendance.js`: **1**,
+- toplam: **41**.
+
+İlk E1 raporunda kullanılan olay-adı listesi `onerror` attribute'unu kapsamıyordu ve toplamı **38** olarak eksik saymıştı. E2 hazırlığında geniş `\son[a-zA-Z]+=` taraması bu metodoloji açığını görünür hale getirdi; yaşayan envanter **41** olarak düzeltildi. E1'in gerçek kapsamı/değişikliği değişmez: kaldırılan sekiz shell handler aynı sekiz kontroldür.
 
 Dalga sırası küçük tutulacaktır:
 
@@ -1366,9 +1369,10 @@ E1 sonrası inline event envanteri:
 
 - shell hedef grubu: **8 → 0**,
 - `public/admin/index.html`: **27 → 19**,
-- `students.js`: **8**,
-- `slides.js`: **3**,
-- toplam: **38 → 30**.
+- `students.js`: **9**,
+- `slides.js`: **4**,
+- `attendance.js`: **1**,
+- toplam: **41 → 33**.
 
 TDD / regresyon / browser kanıtı:
 

@@ -5218,11 +5218,14 @@ Fiziksel 4K kabul turundan **önce** büyük CSS temizliği yapılmamalıdır.
 
 P3-5B domain extraction sırasında HTML/template inline handler global adaptörleri bilinçli olarak korunmuştu. P3-5C static CSS tamamlandıktan ve A8 security değerlendirmesi kapandıktan sonra fiziksel 4K kapısından bağımsız ilk ertelenmiş refactor olarak **P3-5E** açıldı.
 
-Başlangıç envanteri **38** inline event attribute'tur:
+Başlangıç envanteri geniş `on*=` taramasına göre **41** inline event attribute'tur:
 
 - `public/admin/index.html`: 27,
-- `public/admin/js/students.js`: 8,
-- `public/admin/js/slides.js`: 3.
+- `public/admin/js/students.js`: 9,
+- `public/admin/js/slides.js`: 4,
+- `public/admin/js/attendance.js`: 1.
+
+E1 kapanışındaki ilk rapor **38** sayısını vermişti; E2 hazırlığında `onerror` handler'larının ilk regex listesinde olmadığı fark edildi. Geniş `\son[a-zA-Z]+=` taraması source-of-truth kabul edilerek başlangıç **41**, E1 sonrası **33** olarak düzeltildi. E1'in kaldırdığı shell handler sayısı yine sekizdir.
 
 ### 21.5.1 E1 — shell/navigation/QR/logout — 🟩
 
@@ -5239,7 +5242,7 @@ Sonuç:
 
 - shell inline handler **8 → 0**,
 - index HTML **27 → 19**,
-- toplam admin inline handler **38 → 30**,
+- toplam admin inline handler **41 → 33**,
 - E1 RED **0/3** → GREEN **3/3**,
 - E1 + Error Logs **15/15**,
 - ilk full core'da yeni DOM mock contract'ını modellemeyen eski test harness'leri görünür oldu; kök neden test-only idi ve ilgili grup **32/32** ile kapandı,
@@ -5514,7 +5517,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 30 | P3-5C admin inline CSS — C1–C5 tamamlandı; admin statik inline-style envanteri 0, runtime state yazımları behavior-owned | P3 | 🟩 |
 | 31 | P3-5D0 kiosk CSS analiz/baseline hazırlığı — analyzer + duplicate/override/unused aday raporu + 4 viewport browser baseline; CSS değişikliği 0 | P3 | 🟩 |
 | 32 | P3-5A8 admin auth/session security refactor değerlendirmesi — no-extraction kararı; mevcut composition root korunuyor | P3 | 🟩 |
-| 33 | P3-5E admin inline event handler cleanup — E1 shell tamamlandı; 38 → 30, sıradaki E2 Students | P3 | 🟨 |
+| 33 | P3-5E admin inline event handler cleanup — E1 shell tamamlandı; 41 → 33, sıradaki E2 Students | P3 | 🟨 |
 
 Durum simgeleri:
 
