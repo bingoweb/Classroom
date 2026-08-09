@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const root = path.join(__dirname, '..');
 const adminPath = path.join(root, 'public/admin/admin.js');
@@ -50,4 +51,43 @@ test('P3-5B3 extracts admin attendance behavior into a classic-script module', (
     assert.doesNotMatch(adminSource, /function renderAttendanceList\(/);
     assert.doesNotMatch(adminSource, /function updateAttendanceSummary\(/);
     assert.doesNotMatch(adminSource, /window\.saveAttendance\s*=/);
+});
+
+test('attendance avatar rendering does not create protocol-relative //uploads URLs', () => {
+    const attendanceList = { innerHTML: '' };
+    const attendanceSource = fs.readFileSync(attendancePath, 'utf8');
+    const context = {
+        window: {},
+        document: {
+            getElementById(id) {
+                if (id === 'attendanceList') return attendanceList;
+                return { value: '', innerHTML: '', textContent: '' };
+            },
+            querySelectorAll() {
+                return [];
+            }
+        },
+        Utils: {
+            getAvatarPath(student) {
+                return student.photo || '/assets/default_boy.png';
+            },
+            normalizePath(value) {
+                return value;
+            },
+            escapeHtml(value) {
+                return String(value);
+            }
+        },
+        console,
+        fetch: async () => { throw new Error('unexpected fetch'); }
+    };
+
+    vm.runInNewContext(attendanceSource, context, { filename: 'attendance.js' });
+    context.window.AdminAttendance.renderAttendanceList([
+        { id: 1, name: 'Test Öğrenci', gender: 'M', photo: '/uploads/student.jpg' }
+    ], {});
+
+    assert.match(attendanceList.innerHTML, /src="\.\.\/uploads\/student\.jpg"/);
+    assert.doesNotMatch(attendanceList.innerHTML, /src="\.\.\/\/uploads\//,
+        'attendance must not prepend ../ to an already absolute avatar path');
 });

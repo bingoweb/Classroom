@@ -44,10 +44,17 @@
         const list = document.getElementById('attendanceList');
         list.innerHTML = students.map(s => {
             const avatarPath = Utils.getAvatarPath(s);
+            let displayPath = avatarPath;
+            if (Utils.normalizePath) {
+                displayPath = Utils.normalizePath(avatarPath, false);
+            }
+            if (!displayPath.startsWith('http') && !displayPath.startsWith('../') && !displayPath.startsWith('data:')) {
+                displayPath = displayPath.startsWith('/') ? '..' + displayPath : '../' + displayPath;
+            }
             const currentStatus = attendanceMap[s.id] || 'present';
             return `
         <div class="student-item admin-attendance-student">
-            <img src="../${avatarPath}" class="student-thumb admin-attendance-avatar" onerror="this.src='../assets/default_boy.png'">
+            <img src="${displayPath}" class="student-thumb admin-attendance-avatar" onerror="this.src='../assets/default_boy.png'">
             <span class="admin-attendance-name">${Utils.escapeHtml(s.name)} (${s.gender === 'M' ? 'Erkek' : 'Kız'})</span>
             <label class="admin-attendance-choice">
                 <input type="radio" name="attendance_${s.id}" value="present" ${currentStatus === 'present' ? 'checked' : ''} data-student-id="${s.id}">
