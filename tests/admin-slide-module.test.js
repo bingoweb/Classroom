@@ -47,8 +47,7 @@ test('P3-5B4.1 extracts admin slide read/render behavior into a classic-script m
     assert.match(adminSource, /AdminSlides\.renderSlides\(allSlides\)/);
     assert.doesNotMatch(adminSource, /function renderSlides\(slides\)/);
 
-    // B4.1-B4.4 are cumulative. Later slide behaviors stay in the shell for their own sub-waves.
-    assert.match(adminSource, /window\.deleteSlide\s*=/);
+    // B4.1-B4.6 are cumulative. Settings stays in the shell for B4.7.
     assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
 
     assert.strictEqual(
@@ -79,8 +78,7 @@ test('P3-5B4.2 extracts active toggle ownership with explicit slide state and re
     );
     assert.doesNotMatch(adminSource, /window\.toggleSlideActive\s*=/);
 
-    // B4.5-B4.7 remain intentionally owned by admin.js.
-    assert.match(adminSource, /window\.deleteSlide\s*=/);
+    // B4.7 settings remains intentionally owned by admin.js after B4.6.
     assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
 });
 
@@ -99,8 +97,7 @@ test('P3-5B4.3 extracts drag/reorder ownership into slides.js without shell call
     assert.doesNotMatch(adminSource, /async function reorderSlides\(/);
     assert.doesNotMatch(adminSource, /setupDragAndDrop\s*[,}]/);
 
-    // B4.6-B4.7 still belong to the shell after the cumulative B4.5 extraction.
-    assert.match(adminSource, /window\.deleteSlide\s*=/);
+    // B4.7 settings still belongs to the shell after the cumulative B4.6 extraction.
     assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
 });
 
@@ -122,11 +119,8 @@ test('P3-5B4.4 extracts slide form open/close/edit ownership while media preview
     assert.doesNotMatch(adminSource, /window\.closeSlideForm\s*=/);
     assert.doesNotMatch(adminSource, /window\.editSlide\s*=/);
 
-    // B4.6-B4.7 write/settings behavior remain shell-owned after B4.5.
-    assert.match(adminSource, /async function handleSlideSubmit\(e\)/);
-    assert.match(adminSource, /window\.deleteSlide\s*=/);
+    // B4.7 settings remains shell-owned after B4.6.
     assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
-    assert.match(adminSource, /AdminSlides\.getCurrentEditingSlideId\(\)/);
 });
 
 test('P3-5B4.5 extracts media preview ownership and change binding into slides.js', () => {
@@ -147,10 +141,28 @@ test('P3-5B4.5 extracts media preview ownership and change binding into slides.j
     assert.doesNotMatch(adminSource, /prepareMediaForm:\s*prepareSlideMediaForm/);
     assert.doesNotMatch(adminSource, /resetMediaForm:\s*resetSlideMediaForm/);
 
-    // B4.6 CRUD and B4.7 settings remain shell-owned.
-    assert.match(adminSource, /async function handleSlideSubmit\(e\)/);
-    assert.match(adminSource, /window\.deleteSlide\s*=/);
+    // B4.7 settings remains shell-owned.
     assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
+});
+
+test('P3-5B4.6 extracts create/update/delete ownership and submit binding into slides.js', () => {
+    const adminSource = fs.readFileSync(adminPath, 'utf8');
+    const slidesSource = fs.readFileSync(slidesPath, 'utf8');
+
+    assert.match(slidesSource, /async function handleSlideSubmit\(e\)/);
+    assert.match(slidesSource, /async function deleteSlide\(id\)/);
+    assert.match(slidesSource, /slideForm\.addEventListener\('submit', handleSlideSubmit\)/);
+    assert.match(slidesSource, /window\.deleteSlide\s*=\s*deleteSlide/);
+    assert.match(slidesSource, /new XMLHttpRequest\(\)/);
+    assert.match(slidesSource, /window\.getAdminCsrfToken/);
+
+    assert.doesNotMatch(adminSource, /async function handleSlideSubmit\(e\)/);
+    assert.doesNotMatch(adminSource, /window\.deleteSlide\s*=/);
+    assert.doesNotMatch(adminSource, /slideForm\.addEventListener\('submit', handleSlideSubmit\)/);
+
+    // B4.7 settings remains shell-owned until the final sub-wave.
+    assert.match(adminSource, /async function fetchSlideSettings\(\)/);
+    assert.match(adminSource, /async function handleSlideSettingsSubmit\(e\)/);
 });
 
 function loadSlidesModule({
@@ -159,7 +171,11 @@ function loadSlidesModule({
     documentImpl,
     syncContentType,
     syncTransitionMode,
-    FileReaderImpl
+    FileReaderImpl,
+    FormDataImpl,
+    XMLHttpRequestImpl,
+    confirmImpl,
+    getAdminCsrfToken
 }) {
     const calls = {
         fetch: [],
@@ -203,8 +219,14 @@ function loadSlidesModule({
         },
         FileReader: FileReaderImpl || class {
             readAsDataURL() {}
-        }
+        },
+        FormData: FormDataImpl || class {
+            append() {}
+        },
+        XMLHttpRequest: XMLHttpRequestImpl || class {},
+        confirm: confirmImpl || (() => true)
     };
+    context.window.getAdminCsrfToken = getAdminCsrfToken;
 
     vm.createContext(context);
     vm.runInContext(fs.readFileSync(slidesPath, 'utf8'), context, { filename: slidesPath });
@@ -240,7 +262,9 @@ function createSlideFormDocument() {
         'slideMediaPreview',
         'slideMediaInfo',
         'slideCurrentMediaInfo',
-        'slideUploadProgress'
+        'slideUploadProgress',
+        'slideProgressBar',
+        'slideProgressText'
     ];
 
     ids.forEach((id) => {
@@ -491,6 +515,272 @@ test('P3-5B4.5 media preview preserves existing-media restore, validation and Fi
         assert.strictEqual(elements.get('slideMediaInfo').textContent, 'Yeni dosya: clip.mp4 (2.00 MB)');
         assert.match(elements.get('slideMediaPreview').innerHTML, /<video src="data:video\/mp4;base64,VIDEO"/);
         assert.match(elements.get('slideMediaPreview').innerHTML, /Yeni Video Önizlemesi/);
+    });
+});
+
+function createRecordingFormDataClass() {
+    return class RecordingFormData {
+        constructor() {
+            this.entries = [];
+        }
+
+        append(name, value) {
+            this.entries.push([name, value]);
+        }
+    };
+}
+
+function createRecordingXhrClass(instances) {
+    return class RecordingXMLHttpRequest {
+        constructor() {
+            this.upload = {};
+            this.headers = {};
+            this.status = 0;
+            this.statusText = '';
+            this.responseText = '';
+            instances.push(this);
+        }
+
+        open(method, url) {
+            this.method = method;
+            this.url = url;
+        }
+
+        setRequestHeader(name, value) {
+            this.headers[name] = value;
+        }
+
+        send(body) {
+            this.sentBody = body;
+        }
+    };
+}
+
+test('P3-5B4.6 CRUD preserves validation, upload request, feedback and delete behavior', async (t) => {
+    await t.test('init owns form submit binding and missing content type performs no request', async () => {
+        const { elements, document } = createSlideFormDocument();
+        const xhrInstances = [];
+        loadSlidesModule({
+            slides: [],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            documentImpl: document,
+            syncContentType() {},
+            syncTransitionMode() {},
+            FormDataImpl: createRecordingFormDataClass(),
+            XMLHttpRequestImpl: createRecordingXhrClass(xhrInstances)
+        });
+
+        const submitHandler = elements.get('slideForm').listeners.get('submit');
+        assert.strictEqual(typeof submitHandler, 'function');
+        await submitHandler({ preventDefault() {} });
+
+        assert.strictEqual(xhrInstances.length, 0);
+    });
+
+    await t.test('new slide without media is rejected before XMLHttpRequest creation', async () => {
+        const { elements, document } = createSlideFormDocument();
+        const xhrInstances = [];
+        const { calls } = loadSlidesModule({
+            slides: [],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            documentImpl: document,
+            syncContentType() {},
+            syncTransitionMode() {},
+            FormDataImpl: createRecordingFormDataClass(),
+            XMLHttpRequestImpl: createRecordingXhrClass(xhrInstances)
+        });
+        elements.get('slideContentType').value = 'rule';
+
+        await elements.get('slideForm').listeners.get('submit')({ preventDefault() {} });
+
+        assert.deepStrictEqual(calls.error, ['Yeni slayt için medya dosyası gereklidir!']);
+        assert.strictEqual(xhrInstances.length, 0);
+    });
+
+    await t.test('new image slide uses POST, CSRF, FormData media type, progress and success refresh', async () => {
+        const { elements, document } = createSlideFormDocument();
+        const xhrInstances = [];
+        const RecordingFormData = createRecordingFormDataClass();
+        const { calls } = loadSlidesModule({
+            slides: [],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            documentImpl: document,
+            syncContentType() {},
+            syncTransitionMode() {},
+            FormDataImpl: RecordingFormData,
+            XMLHttpRequestImpl: createRecordingXhrClass(xhrInstances),
+            getAdminCsrfToken: async () => 'csrf-b46'
+        });
+        elements.get('slideTitle').value = 'B4.6 create';
+        elements.get('slideContentType').value = 'rule';
+        elements.get('slideTextContent').value = 'Create text';
+        elements.get('slideDisplayDuration').value = '12';
+        elements.get('slideVideoAutoAdvance').checked = true;
+        elements.get('slideTransitionMode').value = 'manual';
+        elements.get('slideTransitionType').value = 'fade';
+        elements.get('slideTransitionDuration').value = '1.5';
+        const file = { name: 'poster.png', type: 'image/png', size: 1024 };
+        elements.get('slideMedia').files = [file];
+
+        await elements.get('slideForm').listeners.get('submit')({ preventDefault() {} });
+
+        assert.strictEqual(xhrInstances.length, 1);
+        const xhr = xhrInstances[0];
+        assert.strictEqual(xhr.method, 'POST');
+        assert.strictEqual(xhr.url, '/api/slides');
+        assert.strictEqual(xhr.headers['X-CSRF-Token'], 'csrf-b46');
+        assert.ok(xhr.sentBody instanceof RecordingFormData);
+        assert.deepStrictEqual(xhr.sentBody.entries, [
+            ['slide', file],
+            ['title', 'B4.6 create'],
+            ['content_type', 'rule'],
+            ['text_content', 'Create text'],
+            ['display_duration', '12'],
+            ['video_auto_advance', true],
+            ['transition_mode', 'manual'],
+            ['transition_type', 'fade'],
+            ['transition_duration', '1.5'],
+            ['media_type', 'image']
+        ]);
+        assert.strictEqual(elements.get('slideUploadProgress').style.display, 'block');
+        assert.strictEqual(elements.get('slideProgressBar').style.width, '0%');
+        assert.strictEqual(elements.get('slideProgressText').textContent, 'Yükleniyor...');
+
+        xhr.upload.onprogress({ lengthComputable: true, loaded: 1, total: 2 });
+        assert.strictEqual(elements.get('slideProgressBar').style.width, '50%');
+        assert.strictEqual(elements.get('slideProgressText').textContent, 'Yükleniyor... 50%');
+
+        xhr.status = 201;
+        xhr.responseText = '{"id":71}';
+        xhr.onload();
+
+        assert.deepStrictEqual(calls.success, ['Slayt başarıyla eklendi!']);
+        assert.deepStrictEqual(calls.error, []);
+        assert.strictEqual(calls.refresh, 1);
+        assert.strictEqual(elements.get('slideUploadProgress').style.display, 'none');
+        assert.strictEqual(elements.get('slideFormModal').style.display, 'none');
+    });
+
+    await t.test('editing without a new file uses PUT and preserves the existing media type', async () => {
+        const { elements, document } = createSlideFormDocument();
+        const xhrInstances = [];
+        const RecordingFormData = createRecordingFormDataClass();
+        loadSlidesModule({
+            slides: [{ id: 72, media_type: 'video' }],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            documentImpl: document,
+            syncContentType() {},
+            syncTransitionMode() {},
+            FormDataImpl: RecordingFormData,
+            XMLHttpRequestImpl: createRecordingXhrClass(xhrInstances)
+        });
+        elements.get('slideId').value = '72';
+        elements.get('slideContentType').value = 'celebration';
+        elements.get('slideMedia').files = [];
+
+        await elements.get('slideForm').listeners.get('submit')({ preventDefault() {} });
+
+        const xhr = xhrInstances[0];
+        assert.strictEqual(xhr.method, 'PUT');
+        assert.strictEqual(xhr.url, '/api/slides/72');
+        assert.deepStrictEqual(
+            xhr.sentBody.entries.filter(([name]) => name === 'media_type'),
+            [['media_type', 'video']]
+        );
+        assert.deepStrictEqual(
+            xhr.sentBody.entries.filter(([name]) => name === 'slide'),
+            []
+        );
+        assert.notStrictEqual(elements.get('slideUploadProgress').style.display, 'block');
+    });
+
+    await t.test('XHR HTTP and network failures preserve bounded user feedback', async () => {
+        const { elements, document } = createSlideFormDocument();
+        const xhrInstances = [];
+        const { calls } = loadSlidesModule({
+            slides: [],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            documentImpl: document,
+            syncContentType() {},
+            syncTransitionMode() {},
+            FormDataImpl: createRecordingFormDataClass(),
+            XMLHttpRequestImpl: createRecordingXhrClass(xhrInstances)
+        });
+        elements.get('slideContentType').value = 'photo';
+        elements.get('slideMedia').files = [{ name: 'photo.jpg', type: 'image/jpeg', size: 100 }];
+
+        await elements.get('slideForm').listeners.get('submit')({ preventDefault() {} });
+        const xhr = xhrInstances[0];
+        xhr.status = 400;
+        xhr.responseText = '{"error":"Kaydetme reddedildi"}';
+        xhr.onload();
+        assert.deepStrictEqual(calls.error, ['Kaydetme reddedildi']);
+
+        calls.error.length = 0;
+        xhr.onerror();
+        assert.deepStrictEqual(calls.error, ['Slayt kaydedilirken hata oluştu.']);
+        assert.ok(calls.logger.some(entry => entry[0] === 'error' && entry[2] === 'Network error saving slide'));
+    });
+
+    await t.test('delete cancellation performs no request', async () => {
+        const { context, calls } = loadSlidesModule({
+            slides: [],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            confirmImpl: () => false
+        });
+
+        await context.window.deleteSlide(80);
+
+        assert.strictEqual(calls.fetch.length, 0);
+        assert.strictEqual(calls.refresh, 0);
+    });
+
+    await t.test('successful delete uses DELETE, shows success and refreshes', async () => {
+        const { context, calls } = loadSlidesModule({
+            slides: [],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            confirmImpl: () => true
+        });
+
+        await context.window.deleteSlide(81);
+
+        assert.strictEqual(calls.fetch.length, 1);
+        assert.strictEqual(calls.fetch[0].url, '/api/slides/81');
+        assert.strictEqual(calls.fetch[0].options.method, 'DELETE');
+        assert.deepStrictEqual(calls.success, ['Slayt başarıyla silindi!']);
+        assert.strictEqual(calls.refresh, 1);
+    });
+
+    await t.test('delete HTTP and network failures keep safe feedback and diagnostics', async () => {
+        let mode = 'http';
+        const networkError = new Error('delete network detail');
+        const { context, calls } = loadSlidesModule({
+            slides: [],
+            fetchImpl: async () => {
+                if (mode === 'network') throw networkError;
+                return {
+                    ok: false,
+                    status: 409,
+                    clone() {
+                        return {
+                            async json() { return { error: 'Silme reddedildi' }; },
+                            async text() { return 'unused'; }
+                        };
+                    }
+                };
+            },
+            confirmImpl: () => true
+        });
+
+        await context.window.deleteSlide(82);
+        assert.deepStrictEqual(calls.error, ['Silme reddedildi']);
+        assert.strictEqual(calls.refresh, 0);
+
+        calls.error.length = 0;
+        mode = 'network';
+        await context.window.deleteSlide(82);
+        assert.deepStrictEqual(calls.error, ['Slayt silinirken hata oluştu.']);
+        assert.ok(calls.logger.some(entry => entry[0] === 'error' && entry[2] === 'Error deleting slide' && entry.includes(networkError)));
     });
 });
 

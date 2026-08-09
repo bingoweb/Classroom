@@ -360,6 +360,172 @@
         return currentEditingSlide;
     }
 
+    async function handleSlideSubmit(e) {
+        e.preventDefault();
+
+        const slideId = document.getElementById('slideId').value;
+        const formData = new FormData();
+
+        const fileInput = document.getElementById('slideMedia');
+        const contentType = document.getElementById('slideContentType').value;
+
+        if (!contentType) {
+            Utils.showError('İçerik tipi seçilmelidir!');
+            return;
+        }
+
+        if (!slideId && fileInput.files.length === 0) {
+            Utils.showError('Yeni slayt için medya dosyası gereklidir!');
+            return;
+        }
+
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const maxSize = 100 * 1024 * 1024;
+            if (file.size > maxSize) {
+                Utils.showError('Dosya boyutu 100 MB\'dan büyük olamaz!');
+                return;
+            }
+            formData.append('slide', file);
+        }
+
+        formData.append('title', document.getElementById('slideTitle').value);
+        formData.append('content_type', contentType);
+        formData.append('text_content', document.getElementById('slideTextContent').value);
+        formData.append('display_duration', document.getElementById('slideDisplayDuration').value);
+        formData.append('video_auto_advance', document.getElementById('slideVideoAutoAdvance').checked);
+        formData.append('transition_mode', document.getElementById('slideTransitionMode').value);
+        formData.append('transition_type', document.getElementById('slideTransitionType').value);
+        formData.append('transition_duration', document.getElementById('slideTransitionDuration').value);
+
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            if (file.type.startsWith('video/')) {
+                formData.append('media_type', 'video');
+            } else if (file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')) {
+                formData.append('media_type', 'gif');
+            } else if (file.type.startsWith('image/')) {
+                formData.append('media_type', 'image');
+            } else {
+                const ext = file.name.toLowerCase().split('.').pop();
+                if (['mp4', 'webm', 'mov', 'avi'].includes(ext)) {
+                    formData.append('media_type', 'video');
+                } else if (ext === 'gif') {
+                    formData.append('media_type', 'gif');
+                } else {
+                    formData.append('media_type', 'image');
+                }
+            }
+        } else if (slideId) {
+            const slide = getSlidesHandler().find(s => s.id === parseInt(slideId));
+            if (slide) {
+                formData.append('media_type', slide.media_type);
+            }
+        }
+
+        const progressDiv = document.getElementById('slideUploadProgress');
+        const progressBar = document.getElementById('slideProgressBar');
+        const progressText = document.getElementById('slideProgressText');
+
+        if (fileInput.files.length > 0) {
+            progressDiv.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressText.textContent = 'Yükleniyor...';
+        }
+
+        try {
+            const url = slideId ? `${CONFIG.API_URL}/slides/${slideId}` : `${CONFIG.API_URL}/slides`;
+            const method = slideId ? 'PUT' : 'POST';
+
+            const xhr = new XMLHttpRequest();
+            xhr.open(method, url);
+            if (window.getAdminCsrfToken) {
+                const token = await window.getAdminCsrfToken();
+                if (token) xhr.setRequestHeader('X-CSRF-Token', token);
+            }
+
+            xhr.upload.onprogress = function (event) {
+                if (event.lengthComputable) {
+                    const percentComplete = (event.loaded / event.total) * 100;
+                    progressBar.style.width = percentComplete + '%';
+                    progressText.textContent = `Yükleniyor... ${Math.round(percentComplete)}%`;
+                }
+            };
+
+            xhr.onload = function () {
+                progressDiv.style.display = 'none';
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        JSON.parse(xhr.responseText);
+                        Utils.showSuccess(slideId ? 'Slayt başarıyla güncellendi!' : 'Slayt başarıyla eklendi!');
+                        closeSlideForm();
+                        refreshSlidesHandler();
+                    } catch (parseErr) {
+                        Utils.showError('Yanıt işlenirken hata oluştu');
+                    }
+                } else {
+                    let errorMessage = 'Slayt kaydedilirken hata oluştu';
+                    try {
+                        const errorData = JSON.parse(xhr.responseText);
+                        errorMessage = errorData.error || errorMessage;
+                    } catch (error) {
+                        errorMessage = xhr.statusText || xhr.responseText || errorMessage;
+                    }
+                    Utils.showError(errorMessage);
+                }
+            };
+
+            xhr.onerror = function () {
+                progressDiv.style.display = 'none';
+                const error = new Error('Network error during slide save');
+                logger.error(COMPONENTS.ADMIN, 'Network error saving slide', error, {
+                    method,
+                    slideId,
+                    url
+                });
+                Utils.showError('Slayt kaydedilirken hata oluştu.');
+            };
+
+            xhr.send(formData);
+        } catch (error) {
+            progressDiv.style.display = 'none';
+            if (typeof logger !== 'undefined') { logger.error(COMPONENTS.ADMIN, 'Error saving slide', error); }
+            Utils.showError('Slayt kaydedilirken hata oluştu.');
+        }
+    }
+
+    async function deleteSlide(id) {
+        if (!confirm('Bu slaytı silmek istediğinize emin misiniz?')) return;
+
+        try {
+            const response = await fetch(`${CONFIG.API_URL}/slides/${id}`, { method: 'DELETE' });
+
+            if (!response.ok) {
+                let errorMessage = 'Slayt silinirken hata oluştu';
+                const responseClone = response.clone();
+                try {
+                    const errorData = await responseClone.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (parseError) {
+                    try {
+                        const errorText = await responseClone.text();
+                        errorMessage = errorText || errorMessage;
+                    } catch (textError) {
+                        // Silent - nested error
+                    }
+                }
+                Utils.showError(errorMessage);
+                return;
+            }
+
+            Utils.showSuccess('Slayt başarıyla silindi!');
+            refreshSlidesHandler();
+        } catch (error) {
+            if (typeof logger !== 'undefined') { logger.error(COMPONENTS.ADMIN, 'Error deleting slide', error); }
+            Utils.showError('Slayt silinirken hata oluştu.');
+        }
+    }
+
     async function toggleSlideActive(id) {
         const slide = getSlidesHandler().find(s => s.id === id);
         if (!slide) {
@@ -433,6 +599,11 @@
         if (slideMedia) {
             slideMedia.addEventListener('change', handleSlideMediaChange);
         }
+
+        const slideForm = document.getElementById('slideForm');
+        if (slideForm) {
+            slideForm.addEventListener('submit', handleSlideSubmit);
+        }
     }
 
     window.AdminSlides = {
@@ -444,10 +615,13 @@
         showSlideForm,
         closeSlideForm,
         editSlide,
-        getCurrentEditingSlideId
+        getCurrentEditingSlideId,
+        handleSlideSubmit,
+        deleteSlide
     };
     window.toggleSlideActive = toggleSlideActive;
     window.showSlideForm = showSlideForm;
     window.closeSlideForm = closeSlideForm;
     window.editSlide = editSlide;
+    window.deleteSlide = deleteSlide;
 })();
