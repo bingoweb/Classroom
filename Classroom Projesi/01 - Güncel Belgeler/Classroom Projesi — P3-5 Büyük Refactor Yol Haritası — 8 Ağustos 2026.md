@@ -655,7 +655,7 @@ Kod/test milestone:
 
 Bilinen fresh-DB `error_logs` cleanup-order bug'ı A7 sırasında kasıtlı olarak değiştirilmedi. P2-6 gerçek 55" 4K fiziksel kabul kapısı da ayrı biçimde açık kalır.
 
-**Backend domain extraction A1–A7, P3-5B Admin JavaScript modülerleştirme ve P3-5C Admin inline CSS temizliği tamamlandı/doğrulandı.** A8 auth/session ancak ayrı security regression turuyla değerlendirilecektir. C1–C5 sonunda admin HTML/JS template statik `style="..."` attribute envanteri **0** oldu; runtime state yazımları yaşayan planın sınırı gereği behavior-owned bırakıldı. C3 sırasında stored slide admin XSS, fresh-DB `error_logs` cleanup-order ve admin-login favicon 404; C4 sırasında admin form accessibility ve SQLite test-harness yarışları; C5 sırasında QR fallback URL kusuru ayrı bugfix commit'leriyle kapatıldı. **P3-5D kiosk CSS cleanup P2-6 gerçek 55" 4K fiziksel kabul kapısına bağlı olduğu için şu anda başlatılmayacaktır.**
+**Backend domain extraction A1–A7, P3-5B Admin JavaScript modülerleştirme ve P3-5C Admin inline CSS temizliği tamamlandı/doğrulandı.** A8 auth/session ancak ayrı security regression turuyla değerlendirilecektir. C1–C5 sonunda admin HTML/JS template statik `style="..."` attribute envanteri **0** oldu; runtime state yazımları yaşayan planın sınırı gereği behavior-owned bırakıldı. C3 sırasında stored slide admin XSS, fresh-DB `error_logs` cleanup-order ve admin-login favicon 404; C4 sırasında admin form accessibility ve SQLite test-harness yarışları; C5 sırasında QR fallback URL kusuru ayrı bugfix commit'leriyle kapatıldı. **P3-5D0 kiosk CSS analiz/baseline hazırlığı tamamlandı; gerçek P3-5D selector/declaration cleanup P2-6 gerçek 55" 4K fiziksel kabul kapısına bağlı olduğu için başlatılmayacaktır.**
 
 #### A8 — Admin auth/session — ayrıca ve en son değerlendir
 
@@ -1079,7 +1079,7 @@ TDD ve regresyon kanıtı:
 
 Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B4.7 sırasında değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
-**P3-5B ve P3-5C tamamlandı ve doğrulandı.** B1 Students, B2 Roles, B3 Attendance, B4 Slides B4.1–B4.7 ve C1–C5 admin inline CSS dalgaları artık 🟩 durumundadır. P3-5D kiosk CSS cleanup fiziksel 55" 4K kabul kapısı nedeniyle beklemededir.
+**P3-5B ve P3-5C tamamlandı ve doğrulandı.** B1 Students, B2 Roles, B3 Attendance, B4 Slides B4.1–B4.7 ve C1–C5 admin inline CSS dalgaları artık 🟩 durumundadır. **P3-5D0 kiosk CSS analiz/baseline hazırlığı da 🟩 tamamlandı; gerçek P3-5D cleanup fiziksel 55" 4K kabul kapısı nedeniyle beklemededir.**
 
 ## 8. P3-5C — Admin inline CSS temizliği
 
@@ -1276,7 +1276,7 @@ TDD ve browser doğrulaması:
 8. Playwright `/admin/` auth redirect PASS ve warning/error **0**.
 9. Product/test commit `5e983d759ab356d7ff1aa0b7ffb610104ab6a10e`, GitHub Actions `31327284550`: Node 22 **PASS (27 sn)**, Node 24 **PASS (30 sn)**.
 
-**P3-5C tamamlandı ve doğrulandı.** Statik admin inline-CSS temizliği C1–C5 ile kapandı. Runtime state yazımları yalnız davranış testi + browser kanıtı gerektiren ayrı bir ürün davranışı kararı olmadan class'a çevrilmeyecektir. **Sıradaki P3-5D kiosk CSS cleanup, P2-6 gerçek 55" 4K fiziksel kabul kapısı nedeniyle şu anda bloke/beklemededir.**
+**P3-5C tamamlandı ve doğrulandı.** Statik admin inline-CSS temizliği C1–C5 ile kapandı. Runtime state yazımları yalnız davranış testi + browser kanıtı gerektiren ayrı bir ürün davranışı kararı olmadan class'a çevrilmeyecektir. **P3-5D0 analiz/baseline hazırlığı tamamlandı; gerçek P3-5D kiosk CSS cleanup P2-6 gerçek 55" 4K fiziksel kabul kapısı nedeniyle bloke/beklemededir.**
 
 Her görsel dalgada en az:
 
@@ -1291,15 +1291,74 @@ Her görsel dalgada en az:
 
 ## 9. P3-5D — Kiosk CSS küçültme ve dead-style temizliği
 
-**Durum:** **P2-6 fiziksel 55" 4K kabulüne bağlı; şu anda uygulanmayacak.**
+**Durum:** **D0 analiz/baseline hazırlığı 🟩 tamamlandı. Gerçek selector/declaration cleanup P2-6 fiziksel 55" 4K kabulüne bağlı; şu anda uygulanmayacak.**
 
-P2-6 yeşil olmadan yapılabilecek tek çalışma:
+P2-6 yeşil olmadan yapılabilecek hazırlık işleri D0 ile tamamlandı:
 
-- selector envanteri,
-- duplicate declaration raporu,
-- hiç eşleşmeyen selector aday listesi,
-- CSS source-order/override haritası,
-- screenshot baseline hazırlığı.
+- selector envanteri — 🟩
+- duplicate declaration raporu — 🟩
+- hiç eşleşmeyen selector aday listesi — 🟩
+- CSS source-order/override haritası — 🟩
+- screenshot/browser baseline hazırlığı — 🟩
+
+### D0 — Kiosk CSS analiz/baseline hazırlığı uygulama sonucu
+
+D0 sırasında kiosk CSS dosyalarının hiçbir selector/declaration/source-order değeri değiştirilmedi. Tekrar üretilebilir dependency-free analiz aracı ve browser baseline evidence üretildi.
+
+- yeni araç: `scripts/analyze-kiosk-css.js`
+- yeni regression: `tests/kiosk-css-analysis.test.js`
+- `npm run test:kiosk-css-analysis` ve `test:core` entegrasyonu
+- ayrıntılı rapor: `Classroom Projesi/03 - Tasarım ve Kiosk/Classroom Projesi — P3-5D0 Kiosk CSS Analiz Raporu — 9 Ağustos 2026.md`
+
+Gerçek envanter:
+
+- `public/css/style.css`: **4740 satır / 565 rule / 681 selector / 2310 declaration**
+- `public/css/kiosk-mode.css`: **19 / 3 / 4 / 6**
+- `public/css/kiosk-magic-park.css`: **1433 / 145 / 219 / 868**
+- toplam: **713 rule / 904 selector / 3184 declaration**
+- duplicate selector: **198**
+- same-selector property chain: **248**
+- gerçek distinct-rule duplicate declaration block: **22**
+- static-unused candidate occurrence: **40**, benzersiz selector: **32**
+
+Analyzer TDD sırasında iki metodoloji hatası yakalanıp düzeltildi: trailing-newline satır sayımı yaşayan `wc -l` envanteriyle eşitlendi ve tek comma-separated selector rule'unun duplicate declaration sayısını yapay biçimde şişirmesi engellendi. Final focused paket **7/7 PASS**.
+
+Chrome DevTools temp-DB kiosk baseline:
+
+- 1366×768 → horizontal overflow **0**
+- emüle 1920×1080 → **0**
+- emüle 2560×1440 → **0**
+- emüle 3840×2160 → **0**
+- final console error/warn/issue **0**
+- ilgili static/API network zinciri **200/304**
+- 1366×768 ve 3840×2160 full-page screenshot evidence alındı.
+
+Static-unused 32 benzersiz selector'ın class/id token'ları mevcut fallback kiosk DOM'unda canlı olarak tarandı; mevcut senaryoda **32/32 runtime eşleşmesi yoktu**. Bu yalnız aday kanıtıdır; farklı slide/state/legacy yolları ve fiziksel kullanım görülmeden selector silme onayı değildir.
+
+Playwright `/` → `2/D Sihirli Pano`, default viewport overflow **0**, console error/warning **0**. `browser_resize`/screenshot sonrası bilinen tool-side `about:blank` davranışı yeniden görüldü; fresh navigate kiosk'u geri açtı ve Chrome'da tekrarlanmadı.
+
+Tooling/test final kapıları:
+
+- kiosk analysis **7/7**
+- kiosk Magic Park/icon **12/12**
+- titlebar resize **4/4**
+- full core **1482/1482**
+- SQLite lifecycle/lock taraması **NONE**
+- system smoke **PASS**
+- audit **0 vulnerability**
+- syntax/package/diff temiz
+- tooling commit `67b4c28c801bcf5bcd5003a1252ef53acd9bec31`
+- GitHub Actions `31328518565`: Node 24 **PASS (24 sn)**, Node 22 **PASS (27 sn)**
+
+D0 başı/sonu CSS SHA-256 değerleri birebir aynıdır:
+
+```text
+0ade192f13a1db201881117e45e627475cc588f70604cb6cd168d379141f9673  public/css/style.css
+340d61733fcc8a9def7143179d93f681967162f9ea5b8fda1f080ac935c6047a  public/css/kiosk-mode.css
+379f9dea5c54ca09569e8480bdbef2e1e7782191255a1990d44d090c6e23f9ba  public/css/kiosk-magic-park.css
+```
+
+**D0 tamamlanmıştır; bu evidence gerçek cleanup başlatma izni değildir.**
 
 P2-6 sonrası gerçek temizlik sırası:
 

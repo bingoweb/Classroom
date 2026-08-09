@@ -5116,7 +5116,7 @@ Admin HTML/JS template tarafında kalan statik inline-style envanteri **0** attr
 - `public/admin/js/attendance.js`: **0**,
 - `public/admin/admin.js`: **0** template attribute (+ runtime QR modal display yazımları).
 
-**P3-5C tamamlandı ve doğrulandı.** Runtime state-class dönüşümü yalnız ayrı davranış testi + browser kanıtıyla gerekli olduğunda yapılacaktır; mevcut state yazımları C kapsamındaki statik inline-CSS borcu değildir. **P3-5D kiosk CSS cleanup P2-6 fiziksel 55\" 4K kabul kapısı nedeniyle beklemededir.**
+**P3-5C tamamlandı ve doğrulandı.** Runtime state-class dönüşümü yalnız ayrı davranış testi + browser kanıtıyla gerekli olduğunda yapılacaktır; mevcut state yazımları C kapsamındaki statik inline-CSS borcu değildir. **P3-5D0 kiosk CSS analiz/baseline hazırlığı tamamlandı; gerçek P3-5D cleanup P2-6 fiziksel 55\" 4K kabul kapısı nedeniyle beklemededir.**
 
 Fresh-DB `error_logs` cleanup-order hatası **C3 sırasında kapatıldı ve regression test + fresh server startup ile doğrulandı**. P2-6 fiziksel 55\" 4K kabul kapısı açık kalır.
 
@@ -5125,7 +5125,28 @@ Fresh-DB `error_logs` cleanup-order hatası **C3 sırasında kapatıldı ve regr
 - `style.css` yaklaşık 4740 satır
 - Magic Park override yaklaşık 1433 satır
 
-Uzun vadede eski artık kullanılmayan stiller tespit edilip CSS küçültülmelidir.
+### 21.4.1 9 Ağustos 2026 — P3-5D0 analiz/baseline hazırlığı
+
+P2-6 fiziksel 55" 4K kabulünden önce izin verilen non-destructive hazırlık tamamlandı. Kiosk CSS içeriği değiştirilmeden dependency-free Node analyzer ve browser baseline üretildi.
+
+- `scripts/analyze-kiosk-css.js` + `tests/kiosk-css-analysis.test.js`
+- stylesheet load order: `style.css` → `kiosk-mode.css` → `kiosk-magic-park.css`
+- toplam **713 rule / 904 selector / 3184 declaration**
+- **198** duplicate selector
+- **248** same-selector property chain
+- **22** distinct-rule duplicate declaration-block grubu
+- **40 occurrence / 32 unique** static-unused candidate
+- mevcut fallback runtime DOM'da 32 unique adayın token eşleşmesi **0/32**; bu yalnız aday kanıtıdır, silme onayı değildir
+- Chrome 1366×768, 1920×1080, 2560×1440, 3840×2160 baseline overflow **0**
+- Chrome console error/warn/issue **0**, network **200/304**
+- Playwright kiosk title + overflow **0**, warning/error **0**; resize/screenshot sonrası bilinen tool-side `about:blank`
+- focused analysis **7/7**, Magic Park/icon **12/12**, titlebar resize **4/4**
+- full core **1482/1482**, lifecycle/lock **NONE**, system smoke PASS, audit **0**
+- CSS SHA-256 değerleri D0 başı/sonu birebir aynı; CSS diff **0**
+- tooling commit `67b4c28c801bcf5bcd5003a1252ef53acd9bec31`, GitHub Actions `31328518565`: Node 24 PASS (24 sn), Node 22 PASS (27 sn)
+- ayrıntılı rapor: `Classroom Projesi/03 - Tasarım ve Kiosk/Classroom Projesi — P3-5D0 Kiosk CSS Analiz Raporu — 9 Ağustos 2026.md`
+
+Uzun vadede eski artık kullanılmayan stiller yalnız P2-6 fiziksel kabul sonrası bu envanter/baseline kullanılarak küçük commit'lerle doğrulanıp temizlenmelidir.
 
 ### Uyarı
 
@@ -5394,6 +5415,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 28 | P3-5B3 admin attendance module extraction | P3 | 🟩 |
 | 29 | P3-5B4 admin slides module extraction — B4.1–B4.7 tamamlandı ve doğrulandı; P3-5B kapandı | P3 | 🟩 |
 | 30 | P3-5C admin inline CSS — C1–C5 tamamlandı; admin statik inline-style envanteri 0, runtime state yazımları behavior-owned | P3 | 🟩 |
+| 31 | P3-5D0 kiosk CSS analiz/baseline hazırlığı — analyzer + duplicate/override/unused aday raporu + 4 viewport browser baseline; CSS değişikliği 0 | P3 | 🟩 |
 
 Durum simgeleri:
 
