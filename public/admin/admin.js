@@ -134,8 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     AdminAttendance.init();
     AdminSlides.init({
         getSlides: () => allSlides,
-        refreshSlides: fetchSlides,
-        setupDragAndDrop
+        refreshSlides: fetchSlides
     });
 
     fetchStudents();
@@ -218,126 +217,6 @@ async function fetchSlideSettings() {
         }
     } catch (e) {
         if (typeof logger !== 'undefined') { logger.error(COMPONENTS.ADMIN, 'Error fetching slide settings', e); }
-    }
-}
-
-function setupDragAndDrop() {
-    const container = document.getElementById('slidesList');
-    if (!container) return;
-
-    const items = container.querySelectorAll('.slide-item');
-    items.forEach(item => {
-        item.addEventListener('dragstart', handleDragStart);
-        item.addEventListener('dragover', handleDragOver);
-        item.addEventListener('drop', handleDrop);
-        item.addEventListener('dragend', handleDragEnd);
-    });
-}
-
-let draggedElement = null;
-
-function handleDragStart(e) {
-    draggedElement = this;
-    this.style.opacity = '0.5';
-    e.dataTransfer.effectAllowed = 'move';
-}
-
-function handleDragOver(e) {
-    if (e.preventDefault) {
-        e.preventDefault();
-    }
-    e.dataTransfer.dropEffect = 'move';
-    return false;
-}
-
-function handleDrop(e) {
-    if (e.stopPropagation) {
-        e.stopPropagation();
-    }
-
-    if (draggedElement !== this) {
-        const draggedOrder = parseInt(draggedElement.getAttribute('data-order'));
-        const targetOrder = parseInt(this.getAttribute('data-order'));
-
-        // Swap display orders
-        const draggedId = parseInt(draggedElement.getAttribute('data-id'));
-        const targetId = parseInt(this.getAttribute('data-id'));
-
-        // Update in database
-        reorderSlides(draggedId, draggedOrder, targetId, targetOrder);
-    }
-
-    return false;
-}
-
-function handleDragEnd(e) {
-    this.style.opacity = '1';
-    draggedElement = null;
-}
-
-async function reorderSlides(draggedId, draggedOrder, targetId, targetOrder) {
-    logger.debug(COMPONENTS.ADMIN, 'Reordering slides', null, {
-        draggedId,
-        draggedOrder,
-        targetId,
-        targetOrder
-    });
-
-    // Create new order array
-    const newOrders = allSlides.map(slide => {
-        if (slide.id === draggedId) {
-            return { id: slide.id, display_order: targetOrder };
-        } else if (slide.id === targetId) {
-            return { id: slide.id, display_order: draggedOrder };
-        } else {
-            return { id: slide.id, display_order: slide.display_order };
-        }
-    });
-
-    try {
-        const response = await fetch(`${CONFIG.API_URL}/slides/reorder`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ slideOrders: newOrders })
-        });
-
-        if (!response.ok) {
-            let errorMessage = 'Sıralama güncellenirken hata oluştu';
-            const responseClone = response.clone();
-            try {
-                const errorData = await responseClone.json();
-                errorMessage = errorData.error || errorMessage;
-            } catch (parseError) {
-                try {
-                    errorMessage = await responseClone.text() || errorMessage;
-                } catch (textError) {
-                    // Ignore
-                }
-            }
-            const error = new Error(errorMessage);
-            logger.error(COMPONENTS.ADMIN, 'Failed to reorder slides', error, {
-                status: response.status,
-                draggedId,
-                targetId
-            });
-            Utils.showError(errorMessage);
-            fetchSlides(); // Refresh on error
-            return;
-        }
-
-        logger.info(COMPONENTS.ADMIN, 'Slides reordered successfully', null, {
-            draggedId,
-            targetId
-        });
-        Utils.showSuccess('Sıralama başarıyla güncellendi');
-        fetchSlides();
-    } catch (e) {
-        logger.error(COMPONENTS.ADMIN, 'Error reordering slides', e, {
-            draggedId,
-            targetId
-        });
-        Utils.showError('Sıralama güncellenirken hata oluştu');
-        fetchSlides(); // Refresh on error
     }
 }
 

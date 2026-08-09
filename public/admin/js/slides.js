@@ -1,7 +1,7 @@
 (function () {
-    let setupDragAndDropHandler = () => {};
     let getSlidesHandler = () => [];
     let refreshSlidesHandler = () => {};
+    let draggedElement = null;
 
     function renderSlides(slides) {
         const container = document.getElementById('slidesList');
@@ -71,7 +71,125 @@
         `;
         }).join('');
 
-        setupDragAndDropHandler();
+        setupDragAndDrop();
+    }
+
+    function setupDragAndDrop() {
+        const container = document.getElementById('slidesList');
+        if (!container) return;
+
+        const items = container.querySelectorAll('.slide-item');
+        items.forEach(item => {
+            item.addEventListener('dragstart', handleDragStart);
+            item.addEventListener('dragover', handleDragOver);
+            item.addEventListener('drop', handleDrop);
+            item.addEventListener('dragend', handleDragEnd);
+        });
+    }
+
+    function handleDragStart(e) {
+        draggedElement = this;
+        this.style.opacity = '0.5';
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+    }
+
+    function handleDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation();
+        }
+
+        if (draggedElement !== this) {
+            const draggedOrder = parseInt(draggedElement.getAttribute('data-order'));
+            const targetOrder = parseInt(this.getAttribute('data-order'));
+
+            // Swap display orders
+            const draggedId = parseInt(draggedElement.getAttribute('data-id'));
+            const targetId = parseInt(this.getAttribute('data-id'));
+
+            // Update in database
+            reorderSlides(draggedId, draggedOrder, targetId, targetOrder);
+        }
+
+        return false;
+    }
+
+    function handleDragEnd(e) {
+        this.style.opacity = '1';
+        draggedElement = null;
+    }
+
+    async function reorderSlides(draggedId, draggedOrder, targetId, targetOrder) {
+        logger.debug(COMPONENTS.ADMIN, 'Reordering slides', null, {
+            draggedId,
+            draggedOrder,
+            targetId,
+            targetOrder
+        });
+
+        // Create new order array
+        const newOrders = getSlidesHandler().map(slide => {
+            if (slide.id === draggedId) {
+                return { id: slide.id, display_order: targetOrder };
+            } else if (slide.id === targetId) {
+                return { id: slide.id, display_order: draggedOrder };
+            } else {
+                return { id: slide.id, display_order: slide.display_order };
+            }
+        });
+
+        try {
+            const response = await fetch(`${CONFIG.API_URL}/slides/reorder`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slideOrders: newOrders })
+            });
+
+            if (!response.ok) {
+                let errorMessage = 'Sıralama güncellenirken hata oluştu';
+                const responseClone = response.clone();
+                try {
+                    const errorData = await responseClone.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (parseError) {
+                    try {
+                        errorMessage = await responseClone.text() || errorMessage;
+                    } catch (textError) {
+                        // Ignore
+                    }
+                }
+                const error = new Error(errorMessage);
+                logger.error(COMPONENTS.ADMIN, 'Failed to reorder slides', error, {
+                    status: response.status,
+                    draggedId,
+                    targetId
+                });
+                Utils.showError(errorMessage);
+                refreshSlidesHandler(); // Refresh on error
+                return;
+            }
+
+            logger.info(COMPONENTS.ADMIN, 'Slides reordered successfully', null, {
+                draggedId,
+                targetId
+            });
+            Utils.showSuccess('Sıralama başarıyla güncellendi');
+            refreshSlidesHandler();
+        } catch (e) {
+            logger.error(COMPONENTS.ADMIN, 'Error reordering slides', e, {
+                draggedId,
+                targetId
+            });
+            Utils.showError('Sıralama güncellenirken hata oluştu');
+            refreshSlidesHandler(); // Refresh on error
+        }
     }
 
     async function toggleSlideActive(id) {
@@ -124,22 +242,21 @@
         }
     }
 
-    function init({ getSlides, refreshSlides, setupDragAndDrop } = {}) {
+    function init({ getSlides, refreshSlides } = {}) {
         if (typeof getSlides === 'function') {
             getSlidesHandler = getSlides;
         }
         if (typeof refreshSlides === 'function') {
             refreshSlidesHandler = refreshSlides;
         }
-        if (typeof setupDragAndDrop === 'function') {
-            setupDragAndDropHandler = setupDragAndDrop;
-        }
     }
 
     window.AdminSlides = {
         init,
         renderSlides,
-        toggleSlideActive
+        toggleSlideActive,
+        setupDragAndDrop,
+        reorderSlides
     };
     window.toggleSlideActive = toggleSlideActive;
 })();

@@ -43,13 +43,11 @@ test('P3-5B4.1 extracts admin slide read/render behavior into a classic-script m
     assert.match(slidesSource, /Pasif Yap/);
     assert.match(slidesSource, /Aktif Yap/);
 
-    assert.match(adminSource, /AdminSlides\.init\(\{[\s\S]*setupDragAndDrop[\s\S]*\}\)/);
+    assert.match(adminSource, /AdminSlides\.init\(\{/);
     assert.match(adminSource, /AdminSlides\.renderSlides\(allSlides\)/);
     assert.doesNotMatch(adminSource, /function renderSlides\(slides\)/);
 
-    // B4.1 is read/render only. Behaviors after B4.2 must stay in the shell for their own sub-waves.
-    assert.match(adminSource, /function setupDragAndDrop\(\)/);
-    assert.match(adminSource, /async function reorderSlides\(/);
+    // B4.1-B4.3 are cumulative. Later slide behaviors stay in the shell for their own sub-waves.
     assert.match(adminSource, /window\.showSlideForm\s*=/);
     assert.match(adminSource, /window\.deleteSlide\s*=/);
     assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
@@ -78,19 +76,38 @@ test('P3-5B4.2 extracts active toggle ownership with explicit slide state and re
 
     assert.match(
         adminSource,
-        /AdminSlides\.init\(\{[\s\S]*getSlides:\s*\(\)\s*=>\s*allSlides[\s\S]*refreshSlides:\s*fetchSlides[\s\S]*setupDragAndDrop[\s\S]*\}\)/
+        /AdminSlides\.init\(\{[\s\S]*getSlides:\s*\(\)\s*=>\s*allSlides[\s\S]*refreshSlides:\s*fetchSlides[\s\S]*\}\)/
     );
     assert.doesNotMatch(adminSource, /window\.toggleSlideActive\s*=/);
 
-    // B4.3-B4.7 remain intentionally owned by admin.js.
-    assert.match(adminSource, /function setupDragAndDrop\(\)/);
-    assert.match(adminSource, /async function reorderSlides\(/);
+    // B4.4-B4.7 remain intentionally owned by admin.js.
     assert.match(adminSource, /window\.showSlideForm\s*=/);
     assert.match(adminSource, /window\.deleteSlide\s*=/);
     assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
 });
 
-function loadSlidesModule({ slides, fetchImpl }) {
+test('P3-5B4.3 extracts drag/reorder ownership into slides.js without shell callback injection', () => {
+    const adminSource = fs.readFileSync(adminPath, 'utf8');
+    const slidesSource = fs.readFileSync(slidesPath, 'utf8');
+
+    assert.match(slidesSource, /function setupDragAndDrop\(\)/);
+    assert.match(slidesSource, /function handleDragStart\(e\)/);
+    assert.match(slidesSource, /function handleDrop\(e\)/);
+    assert.match(slidesSource, /async function reorderSlides\(/);
+    assert.match(slidesSource, /setupDragAndDrop\(\);/);
+    assert.match(slidesSource, /reorderSlides/);
+
+    assert.doesNotMatch(adminSource, /function setupDragAndDrop\(\)/);
+    assert.doesNotMatch(adminSource, /async function reorderSlides\(/);
+    assert.doesNotMatch(adminSource, /setupDragAndDrop\s*[,}]/);
+
+    // B4.4-B4.7 still belong to the shell after this sub-wave.
+    assert.match(adminSource, /window\.showSlideForm\s*=/);
+    assert.match(adminSource, /window\.deleteSlide\s*=/);
+    assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
+});
+
+function loadSlidesModule({ slides, fetchImpl, documentImpl }) {
     const calls = {
         fetch: [],
         refresh: 0,
@@ -101,7 +118,7 @@ function loadSlidesModule({ slides, fetchImpl }) {
 
     const context = {
         window: {},
-        document: {
+        document: documentImpl || {
             getElementById() {
                 return null;
             }
@@ -139,6 +156,127 @@ function loadSlidesModule({ slides, fetchImpl }) {
 
     return { context, calls };
 }
+
+test('P3-5B4.3 drag/reorder preserves binding, swap payload, feedback, logger and refresh behavior', async (t) => {
+    await t.test('setupDragAndDrop binds the four existing handlers and dragend restores opacity', () => {
+        const listeners = new Map();
+        const item = {
+            style: {},
+            addEventListener(type, handler) {
+                listeners.set(type, handler);
+            }
+        };
+        const documentImpl = {
+            getElementById(id) {
+                if (id !== 'slidesList') return null;
+                return {
+                    querySelectorAll(selector) {
+                        assert.strictEqual(selector, '.slide-item');
+                        return [item];
+                    }
+                };
+            }
+        };
+        const { context } = loadSlidesModule({
+            slides: [],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            documentImpl
+        });
+
+        context.window.AdminSlides.setupDragAndDrop();
+
+        assert.deepStrictEqual(
+            [...listeners.keys()].sort(),
+            ['dragend', 'dragover', 'dragstart', 'drop']
+        );
+        const dataTransfer = {};
+        listeners.get('dragstart').call(item, { dataTransfer });
+        assert.strictEqual(item.style.opacity, '0.5');
+        assert.strictEqual(dataTransfer.effectAllowed, 'move');
+        listeners.get('dragend').call(item, {});
+        assert.strictEqual(item.style.opacity, '1');
+    });
+
+    await t.test('successful reorder swaps only dragged and target display orders and refreshes', async () => {
+        const { context, calls } = loadSlidesModule({
+            slides: [
+                { id: 11, display_order: 1 },
+                { id: 12, display_order: 2 },
+                { id: 13, display_order: 3 }
+            ],
+            fetchImpl: async () => ({ ok: true, status: 200 })
+        });
+
+        await context.window.AdminSlides.reorderSlides(11, 1, 12, 2);
+
+        assert.strictEqual(calls.fetch.length, 1);
+        assert.strictEqual(calls.fetch[0].url, '/api/slides/reorder');
+        assert.strictEqual(calls.fetch[0].options.method, 'PUT');
+        assert.deepStrictEqual(
+            JSON.parse(calls.fetch[0].options.body),
+            {
+                slideOrders: [
+                    { id: 11, display_order: 2 },
+                    { id: 12, display_order: 1 },
+                    { id: 13, display_order: 3 }
+                ]
+            }
+        );
+        assert.deepStrictEqual(calls.success, ['Sıralama başarıyla güncellendi']);
+        assert.deepStrictEqual(calls.error, []);
+        assert.strictEqual(calls.refresh, 1);
+        assert.ok(calls.logger.some(entry => entry[0] === 'info' && entry[2] === 'Slides reordered successfully'));
+    });
+
+    await t.test('HTTP failure surfaces server error and refreshes the management list', async () => {
+        const { context, calls } = loadSlidesModule({
+            slides: [
+                { id: 21, display_order: 1 },
+                { id: 22, display_order: 2 }
+            ],
+            fetchImpl: async () => ({
+                ok: false,
+                status: 409,
+                clone() {
+                    return {
+                        async json() {
+                            return { error: 'Sıralama reddedildi' };
+                        },
+                        async text() {
+                            return 'unused';
+                        }
+                    };
+                }
+            })
+        });
+
+        await context.window.AdminSlides.reorderSlides(21, 1, 22, 2);
+
+        assert.deepStrictEqual(calls.success, []);
+        assert.deepStrictEqual(calls.error, ['Sıralama reddedildi']);
+        assert.strictEqual(calls.refresh, 1);
+        assert.ok(calls.logger.some(entry => entry[0] === 'error' && entry[2] === 'Failed to reorder slides'));
+    });
+
+    await t.test('network failure keeps generic error, logs diagnostics and refreshes', async () => {
+        const { context, calls } = loadSlidesModule({
+            slides: [
+                { id: 31, display_order: 1 },
+                { id: 32, display_order: 2 }
+            ],
+            fetchImpl: async () => {
+                throw new Error('network down');
+            }
+        });
+
+        await context.window.AdminSlides.reorderSlides(31, 1, 32, 2);
+
+        assert.deepStrictEqual(calls.success, []);
+        assert.deepStrictEqual(calls.error, ['Sıralama güncellenirken hata oluştu']);
+        assert.strictEqual(calls.refresh, 1);
+        assert.ok(calls.logger.some(entry => entry[0] === 'error' && entry[2] === 'Error reordering slides'));
+    });
+});
 
 test('P3-5B4.2 active toggle preserves PUT payload, feedback, logger and refresh behavior', async (t) => {
     await t.test('active slide becomes passive with is_active: 0 and refreshes after success', async () => {
