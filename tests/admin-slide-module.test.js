@@ -47,8 +47,8 @@ test('P3-5B4.1 extracts admin slide read/render behavior into a classic-script m
     assert.match(adminSource, /AdminSlides\.renderSlides\(allSlides\)/);
     assert.doesNotMatch(adminSource, /function renderSlides\(slides\)/);
 
-    // B4.1-B4.6 are cumulative. Settings stays in the shell for B4.7.
-    assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
+    // B4.1-B4.7 are cumulative. Slide-domain behavior lives in slides.js.
+    assert.doesNotMatch(adminSource, /async function handleSlideSettingsSubmit\(/);
 
     assert.strictEqual(
         packageJson.scripts['test:admin-slide-module'],
@@ -78,8 +78,7 @@ test('P3-5B4.2 extracts active toggle ownership with explicit slide state and re
     );
     assert.doesNotMatch(adminSource, /window\.toggleSlideActive\s*=/);
 
-    // B4.7 settings remains intentionally owned by admin.js after B4.6.
-    assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
+    assert.doesNotMatch(adminSource, /async function handleSlideSettingsSubmit\(/);
 });
 
 test('P3-5B4.3 extracts drag/reorder ownership into slides.js without shell callback injection', () => {
@@ -97,8 +96,7 @@ test('P3-5B4.3 extracts drag/reorder ownership into slides.js without shell call
     assert.doesNotMatch(adminSource, /async function reorderSlides\(/);
     assert.doesNotMatch(adminSource, /setupDragAndDrop\s*[,}]/);
 
-    // B4.7 settings still belongs to the shell after the cumulative B4.6 extraction.
-    assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
+    assert.doesNotMatch(adminSource, /async function handleSlideSettingsSubmit\(/);
 });
 
 test('P3-5B4.4 extracts slide form open/close/edit ownership while media preview stays in the shell', () => {
@@ -119,8 +117,7 @@ test('P3-5B4.4 extracts slide form open/close/edit ownership while media preview
     assert.doesNotMatch(adminSource, /window\.closeSlideForm\s*=/);
     assert.doesNotMatch(adminSource, /window\.editSlide\s*=/);
 
-    // B4.7 settings remains shell-owned after B4.6.
-    assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
+    assert.doesNotMatch(adminSource, /async function handleSlideSettingsSubmit\(/);
 });
 
 test('P3-5B4.5 extracts media preview ownership and change binding into slides.js', () => {
@@ -141,8 +138,7 @@ test('P3-5B4.5 extracts media preview ownership and change binding into slides.j
     assert.doesNotMatch(adminSource, /prepareMediaForm:\s*prepareSlideMediaForm/);
     assert.doesNotMatch(adminSource, /resetMediaForm:\s*resetSlideMediaForm/);
 
-    // B4.7 settings remains shell-owned.
-    assert.match(adminSource, /async function handleSlideSettingsSubmit\(/);
+    assert.doesNotMatch(adminSource, /async function handleSlideSettingsSubmit\(/);
 });
 
 test('P3-5B4.6 extracts create/update/delete ownership and submit binding into slides.js', () => {
@@ -160,17 +156,125 @@ test('P3-5B4.6 extracts create/update/delete ownership and submit binding into s
     assert.doesNotMatch(adminSource, /window\.deleteSlide\s*=/);
     assert.doesNotMatch(adminSource, /slideForm\.addEventListener\('submit', handleSlideSubmit\)/);
 
-    // B4.7 settings remains shell-owned until the final sub-wave.
-    assert.match(adminSource, /async function fetchSlideSettings\(\)/);
-    assert.match(adminSource, /async function handleSlideSettingsSubmit\(e\)/);
+    // B4.7 completes the remaining slide-domain ownership.
+    assert.doesNotMatch(adminSource, /async function fetchSlideSettings\(\)/);
+    assert.doesNotMatch(adminSource, /async function handleSlideSettingsSubmit\(e\)/);
+});
+
+test('P3-5B4.7 extracts slide settings and form visibility ownership into slides.js', () => {
+    const adminSource = fs.readFileSync(adminPath, 'utf8');
+    const slidesSource = fs.readFileSync(slidesPath, 'utf8');
+
+    assert.match(slidesSource, /async function fetchSlideSettings\(\)/);
+    assert.match(slidesSource, /function handleContentTypeChange\(\)/);
+    assert.match(slidesSource, /function handleTransitionModeChange\(\)/);
+    assert.match(slidesSource, /async function handleSlideSettingsSubmit\(e\)/);
+    assert.match(slidesSource, /slideContentType\.addEventListener\('change', handleContentTypeChange\)/);
+    assert.match(slidesSource, /slideTransitionMode\.addEventListener\('change', handleTransitionModeChange\)/);
+    assert.match(slidesSource, /slideSettingsForm\.addEventListener\('submit', handleSlideSettingsSubmit\)/);
+
+    assert.doesNotMatch(adminSource, /async function fetchSlideSettings\(\)/);
+    assert.doesNotMatch(adminSource, /function handleContentTypeChange\(\)/);
+    assert.doesNotMatch(adminSource, /function handleTransitionModeChange\(\)/);
+    assert.doesNotMatch(adminSource, /async function handleSlideSettingsSubmit\(e\)/);
+    assert.doesNotMatch(adminSource, /syncContentType:\s*handleContentTypeChange/);
+    assert.doesNotMatch(adminSource, /syncTransitionMode:\s*handleTransitionModeChange/);
+    assert.doesNotMatch(adminSource, /slideContentType\.addEventListener\('change', handleContentTypeChange\)/);
+    assert.doesNotMatch(adminSource, /slideTransitionMode\.addEventListener\('change', handleTransitionModeChange\)/);
+    assert.doesNotMatch(adminSource, /slideSettingsForm\.addEventListener\('submit', handleSlideSettingsSubmit\)/);
+
+    assert.match(
+        adminSource,
+        /AdminSlides\.init\(\{[\s\S]*getSlides:\s*\(\)\s*=>\s*allSlides[\s\S]*refreshSlides:\s*fetchSlides[\s\S]*\}\)/
+    );
+    assert.match(adminSource, /AdminSlides\.fetchSlideSettings\(\);/);
+    assert.match(adminSource, /let allSlides\s*=\s*\[\]/);
+    assert.match(adminSource, /async function fetchSlides\(\)/);
+    assert.match(adminSource, /AdminSlides\.renderSlides\(allSlides\)/);
+});
+
+test('P3-5B4.7 settings read and slide-only visibility bindings preserve behavior', async (t) => {
+    await t.test('init binds content type, transition mode and settings submit handlers', () => {
+        const { elements, document } = createSlideFormDocument();
+        loadSlidesModule({
+            slides: [],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            documentImpl: document
+        });
+
+        assert.strictEqual(typeof elements.get('slideContentType').listeners.get('change'), 'function');
+        assert.strictEqual(typeof elements.get('slideTransitionMode').listeners.get('change'), 'function');
+        assert.strictEqual(typeof elements.get('slideSettingsForm').listeners.get('submit'), 'function');
+    });
+
+    await t.test('fetchSlideSettings normalizes millisecond settings into form seconds', async () => {
+        const { elements, document } = createSlideFormDocument();
+        const { context, calls } = loadSlidesModule({
+            slides: [],
+            fetchImpl: async () => ({
+                ok: true,
+                status: 200,
+                async json() {
+                    return {
+                        default_duration: '14000',
+                        default_transition_mode: 'random',
+                        default_transition_duration: '1750'
+                    };
+                }
+            }),
+            documentImpl: document
+        });
+
+        await context.window.AdminSlides.fetchSlideSettings();
+
+        assert.strictEqual(calls.fetch.length, 1);
+        assert.strictEqual(calls.fetch[0].url, '/api/slide-settings');
+        assert.strictEqual(calls.fetch[0].options, undefined);
+        assert.strictEqual(elements.get('defaultDuration').value, 14);
+        assert.strictEqual(elements.get('defaultTransitionMode').value, 'random');
+        assert.strictEqual(elements.get('defaultTransitionDuration').value, 1.75);
+    });
+
+    await t.test('editing video and subsequent form changes update only slide visibility surfaces', () => {
+        const { elements, document } = createSlideFormDocument();
+        const slide = {
+            id: 91,
+            content_type: 'announcement',
+            media_type: 'video',
+            media_path: '/uploads/slides/video.mp4',
+            transition_mode: 'manual'
+        };
+        const { context } = loadSlidesModule({
+            slides: [slide],
+            fetchImpl: async () => ({ ok: true, status: 200 }),
+            documentImpl: document
+        });
+
+        context.window.editSlide(91);
+        assert.strictEqual(elements.get('slideTextContentDiv').style.display, 'none');
+        assert.strictEqual(elements.get('slideVideoSettings').style.display, 'block');
+        assert.strictEqual(elements.get('slideTransitionManualDiv').style.display, 'block');
+
+        elements.get('slideContentType').value = 'rule';
+        elements.get('slideMedia').files = [{ type: 'image/png' }];
+        elements.get('slideContentType').listeners.get('change')();
+        assert.strictEqual(elements.get('slideTextContentDiv').style.display, 'block');
+        assert.strictEqual(elements.get('slideVideoSettings').style.display, 'none');
+
+        elements.get('slideMedia').files = [{ type: 'video/mp4' }];
+        elements.get('slideContentType').listeners.get('change')();
+        assert.strictEqual(elements.get('slideVideoSettings').style.display, 'block');
+
+        elements.get('slideTransitionMode').value = 'auto';
+        elements.get('slideTransitionMode').listeners.get('change')();
+        assert.strictEqual(elements.get('slideTransitionManualDiv').style.display, 'none');
+    });
 });
 
 function loadSlidesModule({
     slides,
     fetchImpl,
     documentImpl,
-    syncContentType,
-    syncTransitionMode,
     FileReaderImpl,
     FormDataImpl,
     XMLHttpRequestImpl,
@@ -234,9 +338,7 @@ function loadSlidesModule({
         getSlides: () => slides,
         refreshSlides: () => {
             calls.refresh += 1;
-        },
-        syncContentType,
-        syncTransitionMode
+        }
     });
 
     return { context, calls };
@@ -264,7 +366,14 @@ function createSlideFormDocument() {
         'slideCurrentMediaInfo',
         'slideUploadProgress',
         'slideProgressBar',
-        'slideProgressText'
+        'slideProgressText',
+        'slideTextContentDiv',
+        'slideVideoSettings',
+        'slideTransitionManualDiv',
+        'defaultDuration',
+        'defaultTransitionMode',
+        'defaultTransitionDuration',
+        'slideSettingsForm'
     ];
 
     ids.forEach((id) => {
@@ -307,18 +416,15 @@ function createSlideFormDocument() {
     };
 }
 
-test('P3-5B4.4 form ownership preserves add/edit/close state with B4.5 media behavior internalized', async (t) => {
+test('P3-5B4.4 form ownership preserves add/edit/close state with B4.5-B4.7 slide behavior internalized', async (t) => {
     await t.test('new slide opens a reset form with required media and keeps editing state null', () => {
         const { elements, document } = createSlideFormDocument();
         elements.get('slideId').value = 88;
-        let contentSync = 0;
-        let transitionSync = 0;
+        elements.get('slideTransitionMode').value = 'auto';
         const { context } = loadSlidesModule({
             slides: [],
             fetchImpl: async () => ({ ok: true, status: 200 }),
-            documentImpl: document,
-            syncContentType() { contentSync += 1; },
-            syncTransitionMode() { transitionSync += 1; }
+            documentImpl: document
         });
 
         context.window.showSlideForm();
@@ -331,8 +437,9 @@ test('P3-5B4.4 form ownership preserves add/edit/close state with B4.5 media beh
         assert.strictEqual(elements.get('slideMedia').hasAttribute('required'), true);
         assert.strictEqual(elements.get('slideMediaLabel').textContent, 'Medya Dosyası * (Resim, GIF veya Video - Max 100 MB)');
         assert.strictEqual(elements.get('slideMediaPreview').innerHTML, '');
-        assert.strictEqual(contentSync, 1);
-        assert.strictEqual(transitionSync, 1);
+        assert.strictEqual(elements.get('slideTextContentDiv').style.display, 'none');
+        assert.strictEqual(elements.get('slideVideoSettings').style.display, 'none');
+        assert.strictEqual(elements.get('slideTransitionManualDiv').style.display, 'none');
     });
 
     await t.test('editing a slide populates fields and renders normalized existing media preview', () => {
@@ -350,14 +457,10 @@ test('P3-5B4.4 form ownership preserves add/edit/close state with B4.5 media beh
             media_type: 'image',
             media_path: 'assets/default_boy.png'
         };
-        let contentSync = 0;
-        let transitionSync = 0;
         const { context, calls } = loadSlidesModule({
             slides: [slide],
             fetchImpl: async () => ({ ok: true, status: 200 }),
-            documentImpl: document,
-            syncContentType() { contentSync += 1; },
-            syncTransitionMode() { transitionSync += 1; }
+            documentImpl: document
         });
 
         context.window.editSlide(47);
@@ -378,8 +481,9 @@ test('P3-5B4.4 form ownership preserves add/edit/close state with B4.5 media beh
         assert.match(elements.get('slideMediaPreview').innerHTML, /<img src="\/normalized\/assets\/default_boy\.png"/);
         assert.match(elements.get('slideCurrentMediaInfo').innerHTML, /Mevcut medya: Resim/);
         assert.deepStrictEqual(calls.normalize, [{ value: 'assets/default_boy.png', forAdmin: true }]);
-        assert.strictEqual(contentSync, 1);
-        assert.strictEqual(transitionSync, 1);
+        assert.strictEqual(elements.get('slideTextContentDiv').style.display, 'block');
+        assert.strictEqual(elements.get('slideVideoSettings').style.display, 'none');
+        assert.strictEqual(elements.get('slideTransitionManualDiv').style.display, 'block');
     });
 
     await t.test('close clears editing state, resets media fields and hides upload progress', () => {
@@ -387,9 +491,7 @@ test('P3-5B4.4 form ownership preserves add/edit/close state with B4.5 media beh
         const { context } = loadSlidesModule({
             slides: [{ id: 51, title: 'Close test' }],
             fetchImpl: async () => ({ ok: true, status: 200 }),
-            documentImpl: document,
-            syncContentType() {},
-            syncTransitionMode() {}
+            documentImpl: document
         });
 
         context.window.showSlideForm(51);

@@ -1,8 +1,6 @@
 (function () {
     let getSlidesHandler = () => [];
     let refreshSlidesHandler = () => {};
-    let syncContentTypeHandler = () => {};
-    let syncTransitionModeHandler = () => {};
     let draggedElement = null;
     let currentEditingSlide = null;
 
@@ -328,16 +326,16 @@
                 document.getElementById('slideTransitionDuration').value = slide.transition_duration ? slide.transition_duration / 1000 : '';
 
                 prepareSlideMediaForm(slide);
-                syncContentTypeHandler();
-                syncTransitionModeHandler();
+                handleContentTypeChange();
+                handleTransitionModeChange();
             }
         } else {
             formTitle.textContent = 'Yeni Slayt Ekle';
             form.reset();
             document.getElementById('slideId').value = '';
             prepareSlideMediaForm(null);
-            syncContentTypeHandler();
-            syncTransitionModeHandler();
+            handleContentTypeChange();
+            handleTransitionModeChange();
         }
 
         modal.style.display = 'flex';
@@ -358,6 +356,115 @@
 
     function getCurrentEditingSlideId() {
         return currentEditingSlide;
+    }
+
+    async function fetchSlideSettings() {
+        try {
+            const res = await fetch(`${CONFIG.API_URL}/slide-settings`);
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
+            const settings = await res.json();
+            if (settings.default_duration) {
+                document.getElementById('defaultDuration').value = parseInt(settings.default_duration) / 1000;
+            }
+            if (settings.default_transition_mode) {
+                document.getElementById('defaultTransitionMode').value = settings.default_transition_mode;
+            }
+            if (settings.default_transition_duration) {
+                document.getElementById('defaultTransitionDuration').value = parseInt(settings.default_transition_duration) / 1000;
+            }
+        } catch (e) {
+            if (typeof logger !== 'undefined') { logger.error(COMPONENTS.ADMIN, 'Error fetching slide settings', e); }
+        }
+    }
+
+    function handleContentTypeChange() {
+        const contentType = document.getElementById('slideContentType').value;
+        const textContentDiv = document.getElementById('slideTextContentDiv');
+        const videoSettings = document.getElementById('slideVideoSettings');
+
+        if (contentType === 'rule') {
+            textContentDiv.style.display = 'block';
+        } else {
+            textContentDiv.style.display = 'none';
+        }
+
+        const mediaInput = document.getElementById('slideMedia');
+        if (mediaInput.files.length > 0) {
+            const file = mediaInput.files[0];
+            if (file.type.startsWith('video/')) {
+                videoSettings.style.display = 'block';
+            } else {
+                videoSettings.style.display = 'none';
+            }
+        } else if (currentEditingSlide) {
+            const slide = getSlidesHandler().find(s => s.id === currentEditingSlide);
+            if (slide && slide.media_type === 'video') {
+                videoSettings.style.display = 'block';
+            } else {
+                videoSettings.style.display = 'none';
+            }
+        } else {
+            videoSettings.style.display = 'none';
+        }
+    }
+
+    function handleTransitionModeChange() {
+        const mode = document.getElementById('slideTransitionMode').value;
+        const manualDiv = document.getElementById('slideTransitionManualDiv');
+        if (mode === 'manual') {
+            manualDiv.style.display = 'block';
+        } else {
+            manualDiv.style.display = 'none';
+        }
+    }
+
+    async function handleSlideSettingsSubmit(e) {
+        e.preventDefault();
+
+        const duration = document.getElementById('defaultDuration').value;
+        const transitionMode = document.getElementById('defaultTransitionMode').value;
+        const transitionDuration = document.getElementById('defaultTransitionDuration').value;
+
+        try {
+            const response = await fetch(`${CONFIG.API_URL}/slide-settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    default_duration: Number(duration) * 1000,
+                    default_transition_mode: transitionMode,
+                    default_transition_duration: Number(transitionDuration) * 1000
+                })
+            });
+
+            if (!response.ok) {
+                const statusLabel = `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
+                let userMessage = `Ayarlar kaydedilirken hata oluştu (${statusLabel}).`;
+
+                try {
+                    const errorData = await response.json();
+                    if (errorData && typeof errorData.error === 'string' && errorData.error.trim()) {
+                        userMessage = errorData.error.trim();
+                    }
+                } catch (parseError) {
+                    // Fall back to the bounded HTTP status message above.
+                }
+
+                const requestError = new Error(`Atomic slide settings update failed with HTTP ${statusLabel}`);
+                requestError.userMessage = userMessage;
+                throw requestError;
+            }
+
+            Utils.showSuccess('Ayarlar başarıyla kaydedildi!');
+        } catch (error) {
+            if (typeof logger !== 'undefined') {
+                logger.error(COMPONENTS.ADMIN, 'Error saving slide settings', error);
+            }
+            Utils.showError(error && typeof error.userMessage === 'string'
+                ? error.userMessage
+                : 'Ayarlar kaydedilirken hata oluştu.');
+        }
     }
 
     async function handleSlideSubmit(e) {
@@ -576,23 +683,12 @@
         }
     }
 
-    function init({
-        getSlides,
-        refreshSlides,
-        syncContentType,
-        syncTransitionMode
-    } = {}) {
+    function init({ getSlides, refreshSlides } = {}) {
         if (typeof getSlides === 'function') {
             getSlidesHandler = getSlides;
         }
         if (typeof refreshSlides === 'function') {
             refreshSlidesHandler = refreshSlides;
-        }
-        if (typeof syncContentType === 'function') {
-            syncContentTypeHandler = syncContentType;
-        }
-        if (typeof syncTransitionMode === 'function') {
-            syncTransitionModeHandler = syncTransitionMode;
         }
 
         const slideMedia = document.getElementById('slideMedia');
@@ -603,6 +699,21 @@
         const slideForm = document.getElementById('slideForm');
         if (slideForm) {
             slideForm.addEventListener('submit', handleSlideSubmit);
+        }
+
+        const slideContentType = document.getElementById('slideContentType');
+        if (slideContentType) {
+            slideContentType.addEventListener('change', handleContentTypeChange);
+        }
+
+        const slideTransitionMode = document.getElementById('slideTransitionMode');
+        if (slideTransitionMode) {
+            slideTransitionMode.addEventListener('change', handleTransitionModeChange);
+        }
+
+        const slideSettingsForm = document.getElementById('slideSettingsForm');
+        if (slideSettingsForm) {
+            slideSettingsForm.addEventListener('submit', handleSlideSettingsSubmit);
         }
     }
 
@@ -616,6 +727,10 @@
         closeSlideForm,
         editSlide,
         getCurrentEditingSlideId,
+        fetchSlideSettings,
+        handleContentTypeChange,
+        handleTransitionModeChange,
+        handleSlideSettingsSubmit,
         handleSlideSubmit,
         deleteSlide
     };

@@ -34,7 +34,7 @@ function makeResponse({ ok, status = 200, statusText = 'OK', jsonValue = {} }) {
     };
 }
 
-function loadAdminSandbox(fetchImpl) {
+function loadSlidesSandbox(fetchImpl) {
     const elements = new Map([
         ['defaultDuration', createElement('10')],
         ['defaultTransitionMode', createElement('auto')],
@@ -88,8 +88,8 @@ function loadAdminSandbox(fetchImpl) {
     sandbox.window.addEventListener = () => {};
 
     vm.createContext(sandbox);
-    const source = fs.readFileSync(path.join(__dirname, '../public/admin/admin.js'), 'utf8');
-    vm.runInContext(source, sandbox, { filename: 'public/admin/admin.js' });
+    const source = fs.readFileSync(path.join(__dirname, '../public/admin/js/slides.js'), 'utf8');
+    vm.runInContext(source, sandbox, { filename: 'public/admin/js/slides.js' });
 
     return { sandbox, elements, notifications, logErrors };
 }
@@ -101,12 +101,12 @@ function submitEvent() {
 test('Admin slide settings atomic submit', async (t) => {
     await t.test('successful save uses exactly one PUT with the three normalized settings', async () => {
         const calls = [];
-        const { sandbox, notifications } = loadAdminSandbox(async (url, options) => {
+        const { sandbox, notifications } = loadSlidesSandbox(async (url, options) => {
             calls.push({ url, options });
             return makeResponse({ ok: true, jsonValue: { message: 'ok' } });
         });
 
-        await sandbox.handleSlideSettingsSubmit(submitEvent());
+        await sandbox.AdminSlides.handleSlideSettingsSubmit(submitEvent());
 
         assert.equal(calls.length, 1, 'settings must be persisted with one atomic HTTP request');
         assert.equal(calls[0].url, '/api/slide-settings');
@@ -122,7 +122,7 @@ test('Admin slide settings atomic submit', async (t) => {
 
     await t.test('HTTP 500 shows the safe server error and never shows success', async () => {
         const calls = [];
-        const { sandbox, notifications } = loadAdminSandbox(async (url, options) => {
+        const { sandbox, notifications } = loadSlidesSandbox(async (url, options) => {
             calls.push({ url, options });
             return makeResponse({
                 ok: false,
@@ -132,7 +132,7 @@ test('Admin slide settings atomic submit', async (t) => {
             });
         });
 
-        await sandbox.handleSlideSettingsSubmit(submitEvent());
+        await sandbox.AdminSlides.handleSlideSettingsSubmit(submitEvent());
 
         assert.equal(calls.length, 1);
         assert.equal(calls[0].options.method, 'PUT');
@@ -142,7 +142,7 @@ test('Admin slide settings atomic submit', async (t) => {
 
     await t.test('HTTP 400 validation error is surfaced and no success appears', async () => {
         const calls = [];
-        const { sandbox, notifications } = loadAdminSandbox(async (url, options) => {
+        const { sandbox, notifications } = loadSlidesSandbox(async (url, options) => {
             calls.push({ url, options });
             return makeResponse({
                 ok: false,
@@ -152,7 +152,7 @@ test('Admin slide settings atomic submit', async (t) => {
             });
         });
 
-        await sandbox.handleSlideSettingsSubmit(submitEvent());
+        await sandbox.AdminSlides.handleSlideSettingsSubmit(submitEvent());
 
         assert.equal(calls.length, 1);
         assert.deepEqual(notifications.success, []);
@@ -161,7 +161,7 @@ test('Admin slide settings atomic submit', async (t) => {
 
     await t.test('malformed 503 response uses a bounded generic HTTP error and no success', async () => {
         const calls = [];
-        const { sandbox, notifications } = loadAdminSandbox(async (url, options) => {
+        const { sandbox, notifications } = loadSlidesSandbox(async (url, options) => {
             calls.push({ url, options });
             return makeResponse({
                 ok: false,
@@ -171,7 +171,7 @@ test('Admin slide settings atomic submit', async (t) => {
             });
         });
 
-        await sandbox.handleSlideSettingsSubmit(submitEvent());
+        await sandbox.AdminSlides.handleSlideSettingsSubmit(submitEvent());
 
         assert.equal(calls.length, 1);
         assert.deepEqual(notifications.success, []);
@@ -181,12 +181,12 @@ test('Admin slide settings atomic submit', async (t) => {
     await t.test('network failure logs diagnostics and shows only the generic user message', async () => {
         const calls = [];
         const networkError = new Error('ECONNRESET internal detail');
-        const { sandbox, notifications, logErrors } = loadAdminSandbox(async (url, options) => {
+        const { sandbox, notifications, logErrors } = loadSlidesSandbox(async (url, options) => {
             calls.push({ url, options });
             throw networkError;
         });
 
-        await sandbox.handleSlideSettingsSubmit(submitEvent());
+        await sandbox.AdminSlides.handleSlideSettingsSubmit(submitEvent());
 
         assert.equal(calls.length, 1);
         assert.deepEqual(notifications.success, []);
@@ -198,7 +198,7 @@ test('Admin slide settings atomic submit', async (t) => {
     await t.test('non-string or blank server error does not become a user-facing message', async () => {
         for (const serverError of [null, '', '   ', 42, { detail: 'internal' }]) {
             const calls = [];
-            const { sandbox, notifications } = loadAdminSandbox(async (url, options) => {
+            const { sandbox, notifications } = loadSlidesSandbox(async (url, options) => {
                 calls.push({ url, options });
                 return makeResponse({
                     ok: false,
@@ -208,7 +208,7 @@ test('Admin slide settings atomic submit', async (t) => {
                 });
             });
 
-            await sandbox.handleSlideSettingsSubmit(submitEvent());
+            await sandbox.AdminSlides.handleSlideSettingsSubmit(submitEvent());
             assert.equal(calls.length, 1);
             assert.deepEqual(notifications.success, []);
             assert.deepEqual(notifications.error, ['Ayarlar kaydedilirken hata oluştu (500 Internal Server Error).']);
@@ -216,7 +216,7 @@ test('Admin slide settings atomic submit', async (t) => {
     });
 
     await t.test('source contract contains a single PUT and no per-setting POST loop', () => {
-        const source = fs.readFileSync(path.join(__dirname, '../public/admin/admin.js'), 'utf8');
+        const source = fs.readFileSync(path.join(__dirname, '../public/admin/js/slides.js'), 'utf8');
         const start = source.indexOf('async function handleSlideSettingsSubmit');
         const end = source.length;
         const fnSource = source.slice(start, end);
