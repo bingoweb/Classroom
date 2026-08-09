@@ -116,6 +116,17 @@
         const rolesSection = document.getElementById('roles');
         if (rolesSection) {
             rolesSection.addEventListener('click', function (e) {
+                const assignButton = e.target && typeof e.target.closest === 'function'
+                    ? e.target.closest('.assign-role-btn')
+                    : null;
+                if (assignButton) {
+                    const roleType = assignButton.dataset.roleType;
+                    if (roleType) {
+                        assignRole(roleType);
+                    }
+                    return;
+                }
+
                 if (e.target && e.target.classList.contains('remove-role-btn')) {
                     const id = e.target.getAttribute('data-id');
                     window.removeRole(id);

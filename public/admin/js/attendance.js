@@ -54,7 +54,7 @@
             const currentStatus = attendanceMap[s.id] || 'present';
             return `
         <div class="student-item admin-attendance-student">
-            <img src="${displayPath}" class="student-thumb admin-attendance-avatar" onerror="this.src='../assets/default_boy.png'">
+            <img src="${displayPath}" class="student-thumb admin-attendance-avatar" data-default-avatar="../assets/default_boy.png">
             <span class="admin-attendance-name">${Utils.escapeHtml(s.name)} (${s.gender === 'M' ? 'Erkek' : 'Kız'})</span>
             <label class="admin-attendance-choice">
                 <input type="radio" name="attendance_${s.id}" value="present" ${currentStatus === 'present' ? 'checked' : ''} data-student-id="${s.id}">
@@ -149,7 +149,45 @@
         }
     }
 
+    function handleAttendanceActionClick(event) {
+        const target = event.target;
+        if (!target || typeof target.closest !== 'function') return;
+
+        const actionButton = target.closest('[data-attendance-action]');
+        if (!actionButton) return;
+
+        const action = actionButton.dataset.attendanceAction;
+        if (action === 'load') {
+            loadAttendanceForDate();
+        } else if (action === 'today') {
+            setTodayDate();
+        } else if (action === 'save') {
+            saveAttendance();
+        }
+    }
+
+    function handleAttendanceAvatarError(event) {
+        const avatar = event.target;
+        if (!avatar || !avatar.classList || !avatar.classList.contains('admin-attendance-avatar')) return;
+
+        const defaultAvatar = avatar.getAttribute('data-default-avatar');
+        if (!defaultAvatar) return;
+
+        avatar.removeAttribute('data-default-avatar');
+        avatar.src = defaultAvatar;
+    }
+
     function init() {
+        const attendanceSection = document.getElementById('attendance');
+        if (attendanceSection) {
+            attendanceSection.addEventListener('click', handleAttendanceActionClick);
+        }
+
+        const attendanceList = document.getElementById('attendanceList');
+        if (attendanceList) {
+            attendanceList.addEventListener('error', handleAttendanceAvatarError, true);
+        }
+
         setTodayDate();
     }
 

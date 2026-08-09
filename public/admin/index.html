@@ -211,7 +211,7 @@
                         <option value="">Öğrenci seçin...</option>
                     </select>
 
-                    <button onclick="assignRole('president')" class="role-card__assign-button">
+                    <button data-role-type="president" class="role-card__assign-button assign-role-btn">
                         ✅ Başkan Ata
                     </button>
 
@@ -238,7 +238,7 @@
                         <option value="">Öğrenci seçin...</option>
                     </select>
 
-                    <button onclick="assignRole('vice_president')" class="role-card__assign-button">
+                    <button data-role-type="vice_president" class="role-card__assign-button assign-role-btn">
                         ➕ Yardımcı Ekle
                     </button>
 
@@ -265,7 +265,7 @@
                         <option value="">Öğrenci seçin...</option>
                     </select>
 
-                    <button onclick="assignRole('duty')" class="role-card__assign-button">
+                    <button data-role-type="duty" class="role-card__assign-button assign-role-btn">
                         ➕ Nöbetçi Ekle
                     </button>
 
@@ -297,7 +297,7 @@
                         <option value="">Yıldız öğrenci seçin...</option>
                     </select>
 
-                    <button onclick="assignRole('star')" class="role-stars-card__button">
+                    <button data-role-type="star" class="role-stars-card__button assign-role-btn">
                         ⭐ Yıldız Ekle
                     </button>
                 </div>
@@ -316,12 +316,12 @@
                 <div class="attendance-toolbar">
                     <label for="attendanceDate">Tarih:</label>
                     <input type="date" id="attendanceDate" class="attendance-date-input">
-                    <button onclick="loadAttendanceForDate()" class="attendance-toolbar__button attendance-toolbar__button--load">Yükle</button>
-                    <button onclick="setTodayDate()" class="attendance-toolbar__button attendance-toolbar__button--today">Bugün</button>
+                    <button data-attendance-action="load" class="attendance-toolbar__button attendance-toolbar__button--load">Yükle</button>
+                    <button data-attendance-action="today" class="attendance-toolbar__button attendance-toolbar__button--today">Bugün</button>
                 </div>
                 <div id="attendanceList" class="student-list"></div>
                 <div class="attendance-save-row">
-                    <button onclick="saveAttendance()" class="admin-primary-action attendance-save-button">Yoklamayı
+                    <button data-attendance-action="save" class="admin-primary-action attendance-save-button">Yoklamayı
                         Kaydet</button>
                 </div>
                 <div id="attendanceSummary" class="attendance-summary">
