@@ -668,7 +668,7 @@ Auth refactor ayrı security regression turu gerektirir.
 
 ## 7. P3-5B — Admin JavaScript modülerleştirme
 
-**Durum:** 🟨 Uygulanıyor — B1 Students ve B2 Roles tamamlandı/doğrulandı; sıradaki dalga B3 Attendance.
+**Durum:** 🟨 Uygulanıyor — B1 Students, B2 Roles ve B3 Attendance tamamlandı/doğrulandı; sıradaki dalga B4 Slides.
 
 Mevcut `error-logs.js` dosyası admin tarafında domain ayrımının çalışan örneğidir.
 
@@ -793,6 +793,48 @@ Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B2 sırasında deği�
 `setTodayDate`, `loadAttendanceForDate`, `renderAttendanceList`, `updateAttendanceSummary`, `saveAttendance` aynı modülde tutulur.
 
 Istanbul tarih davranışı regression testle korunur.
+
+**Durum:** 🟩 9 Ağustos 2026 — tamamlandı ve doğrulandı.
+
+#### B3 uygulama sonucu
+
+Admin yoklama domaini klasik script düzeni korunarak `admin.js` dışına ayrıldı:
+
+- `public/admin/js/attendance.js` oluşturuldu.
+- Istanbul `Bugün` tarihi, tarih bazlı yoklama load, attendance list render, özet ve bulk save akışları aynı modülde tutuldu.
+- Modül `window.AdminAttendance = { init, setTodayDate, loadAttendanceForDate, renderAttendanceList, updateAttendanceSummary, saveAttendance }` namespace'ini kullanıyor; ES module/framework eklenmedi.
+- Mevcut inline/global HTML çağrıları için `window.setTodayDate`, `window.loadAttendanceForDate` ve `window.saveAttendance` adaptörleri korunuyor.
+- Attendance state (`allStudentsForAttendance`, `currentAttendanceDate`) modül closure'ına taşındı.
+- Ana bootstrap yalnız `AdminAttendance.init()` çağırıyor; `init()` önceki DOMContentLoaded davranışıyla aynı şekilde Istanbul gününü seçip yoklamayı yüklüyor.
+- Script sırası `error-logs.js → js/students.js → js/roles.js → js/attendance.js → admin.js` oldu.
+- `public/admin/admin.js` **1052 → 897 satıra** indi; yeni `public/admin/js/attendance.js` **161 satır**.
+
+TDD ve regresyon kanıtı:
+
+1. `tests/admin-attendance-module.test.js` production modülünden önce yazıldı ve `public/admin/js/attendance.js must exist` nedeniyle beklenen RED verdi.
+2. Minimal extraction sonrası B3 structural test **1/1 pass** verdi.
+3. Extraction öncesi Istanbul/attendance DOM + ortak admin harness baseline grubu **34/34 pass** idi.
+4. İlk modular focused koşusunda eski VM harness'lerinin `attendance.js` yüklememesi ve Istanbul source-contract testinin taşınmış fonksiyonu hâlâ `admin.js` içinde araması doğrulandı. Harness'ler gerçek script zincirine geçirildi; Istanbul testinde gerçek `AdminAttendance` modülü çalıştırılıp `/api/attendance/2026-08-09` isteği doğrulandı.
+5. Attendance focused grup structural dahil **35/35 pass** verdi; commit öncesi slide-settings source-contract regresyonu da dahil geniş B3 odak kapısı **43/43 pass** verdi.
+6. İlk full core koşusunda yalnız `tests/admin-slide-settings-submit.test.js` eski `// Attendance Functions` yorumunu fonksiyon bitiş işareti olarak kullandığı için stale source-contract hatası verdi; slide settings davranışı değişmeden test dosya sonunu izleyecek şekilde güncellendi.
+7. Final tam core **1410/1410 pass** verdi.
+8. System smoke PASS; npm audit 0; `admin.js`, `students.js`, `roles.js`, `attendance.js` syntax kontrolleri, package JSON parse ve `git diff --check` temiz.
+9. İzole temp DB + gerçek admin browser smoke: login 200; `AdminAttendance` namespace/global adaptörleri mevcut; `Bugün` tarihi `2026-08-09`; iki öğrenci UI create sonrası yoklama load özeti 2 toplam / 2 var / 0 yok; ikinci öğrenci `Yok` seçilip bulk save edildiğinde POST 200 ve refresh sonrası özet 2 / 1 / 1 olarak korundu.
+10. API readback aynı tarihte ilk öğrenciyi `present`, ikinci öğrenciyi `absent` döndürdü; DOM radio checked-state de aynı sonucu gösterdi.
+11. Chrome DevTools network: `/admin/js/attendance.js` 200, attendance GET 200/304 ve bulk POST 200; clean reload'da console error/warn 0, yalnız önceden var olan form label/autocomplete issue kayıtları ve normal slide info logu.
+12. 1366×768 ve 1920×1080 admin viewport'larında horizontal overflow **0**.
+13. Playwright `/admin/` auth redirect PASS.
+
+Kod/test milestone:
+
+- Commit: `83d81ecd1184bfa36ead67b9f7a14b6e91d58dca`
+- GitHub Actions: `31316702669`
+- Node 22: PASS (28 sn)
+- Node 24: PASS (28 sn)
+
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B3 sırasında değiştirilmedi. P2-6 gerçek 55" 4K fiziksel kabul kapısı da ayrı biçimde açık kalır.
+
+**Sıradaki admin JS dalgası: B4 — Slides.** B4 en yoğun frontend domainidir; read/render → active toggle → reorder → form/media → CRUD → settings alt sırası korunacak ve tek big-bang taşıma yapılmayacaktır.
 
 ### B4 — Slides — en son
 

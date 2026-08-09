@@ -4570,6 +4570,51 @@ Kanıtlar:
 
 `public/admin/admin.js` **1176 → 1052 satıra** indi; yeni `public/admin/js/roles.js` **137 satır**. Bilinen fresh-DB `error_logs` cleanup-order bug'ı değiştirilmedi; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. Sıradaki admin JS dalgası **P3-5B3 — Attendance** olacaktır.
 
+### 21.0.10 9 Ağustos 2026 — P3-5B3 admin attendance module extraction
+
+Admin attendance domaini `admin.js` dışına ayrıldı; backend attendance transaction/date sözleşmelerine dokunulmadı.
+
+Uygulanan sınır:
+
+- `public/admin/js/attendance.js`: Istanbul today, tarih bazlı load, render, summary ve bulk save,
+- `public/admin/admin.js`: yalnız `AdminAttendance.init()` bootstrap'ı,
+- `public/admin/index.html`: `js/attendance.js`, `js/roles.js` sonrasında ve `admin.js` öncesinde,
+- `tests/admin-attendance-module.test.js`: B3 fiziksel extraction, script sırası, namespace/global adaptör ve shell ownership sözleşmesi,
+- mevcut VM Istanbul/DOM/error-log/Excel harness'leri gerçek `students.js → roles.js → attendance.js → admin.js` script zincirini izleyecek şekilde güncellendi,
+- slide-settings source-contract testi artık kaldırılmış attendance yorumuna değil gerçek dosya sonuna göre kendi fonksiyon sınırını belirliyor.
+
+Korunan kritik sözleşmeler:
+
+- `window.setTodayDate`, `window.loadAttendanceForDate`, `window.saveAttendance` inline/global API'leri,
+- `Utils.getIstanbulDateKey()` ile Europe/Istanbul gün anahtarı,
+- boş tarih validation ve kullanıcı feedback'i,
+- öğrenci adlarında `Utils.escapeHtml` DOM safety,
+- kayıt olmayan öğrenciler için varsayılan `present` davranışı,
+- attendance radio checked-state ve toplam/var/yok özeti,
+- bulk save payload `{ date, attendanceList }`,
+- JSON/text HTTP error fallback ve success feedback,
+- save sonrası aynı tarihin yeniden yüklenmesi,
+- classic script düzeni; ES module/framework eklenmemesi.
+
+Kanıtlar:
+
+- TDD structural test RED → GREEN,
+- extraction öncesi ilgili baseline **34/34**,
+- B3 structural **1/1**,
+- attendance focused **35/35**; commit öncesi geniş B3 odak kapısı **43/43**,
+- tam core **1410/1410**,
+- system smoke PASS,
+- audit 0,
+- dört frontend JS syntax + package parse + diff check temiz,
+- izole temp DB gerçek admin UI: `Bugün=2026-08-09`; iki öğrenci sonrası load özeti 2/2/0; ikinci öğrenci `Yok` seçilip bulk POST 200; refresh/readback sonrası 2/1/1 ve present/absent state doğru,
+- Chrome DevTools: `/admin/js/attendance.js` 200; attendance GET 200/304, POST 200; clean reload console error/warn 0; yalnız önceden var olan label/autocomplete issue kayıtları,
+- 1366×768 ve 1920×1080 viewport horizontal overflow 0,
+- Playwright admin auth redirect PASS,
+- exact milestone commit `83d81ecd1184bfa36ead67b9f7a14b6e91d58dca`,
+- GitHub Actions run `31316702669`: Node 22 PASS (28 sn), Node 24 PASS (28 sn).
+
+`public/admin/admin.js` **1052 → 897 satıra** indi; yeni `public/admin/js/attendance.js` **161 satır**. Bilinen fresh-DB `error_logs` cleanup-order bug'ı değiştirilmedi; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. Sıradaki admin JS dalgası **P3-5B4 — Slides** olacaktır.
+
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
 ## 21.1 `backend/server.js` — A1–A7 sonrası 416 satır
@@ -4586,17 +4631,16 @@ Domain route extraction tamamlandı:
 
 Admin auth/session composition root içinde kalır. Bu sınır sırf dosya daha da küçülsün diye taşınmayacak; A8 ancak ayrı security regression turuyla değerlendirilecektir.
 
-## 21.2 `public/admin/admin.js` — B2 sonrası 1052 satır
+## 21.2 `public/admin/admin.js` — B3 sonrası 897 satır
 
-B1 ile students domaini `public/admin/js/students.js`, B2 ile roles domaini `public/admin/js/roles.js` içine ayrıldı. `fetchStudents()` ve `fetchRoles()` shell bridge olarak `admin.js` içinde kalır ve domain modüllerine veri fan-out'u yapar.
+B1 ile students domaini `public/admin/js/students.js`, B2 ile roles domaini `public/admin/js/roles.js`, B3 ile attendance domaini `public/admin/js/attendance.js` içine ayrıldı. `fetchStudents()` ve `fetchRoles()` shell bridge olarak `admin.js` içinde kalır ve domain modüllerine veri fan-out'u yapar.
 
 Kalan alan modülleri:
 
-- attendance
 - slides
 - system/logs
 
-olarak ayrılabilir. Sıradaki aktif dalga **B3 Attendance**'dır.
+olarak ayrılabilir. Sıradaki aktif dalga **B4 Slides**'dır.
 
 ## 21.3 Admin inline CSS
 
@@ -4875,7 +4919,8 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 25 | P3-5A7 slides route extraction | P3 | 🟩 |
 | 26 | P3-5B1 admin students module extraction | P3 | 🟩 |
 | 27 | P3-5B2 admin roles module extraction | P3 | 🟩 |
-| 28 | P3-5B3 admin attendance module extraction | P3 | ⬜ |
+| 28 | P3-5B3 admin attendance module extraction | P3 | 🟩 |
+| 29 | P3-5B4 admin slides module extraction | P3 | ⬜ |
 
 Durum simgeleri:
 
