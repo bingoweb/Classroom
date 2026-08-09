@@ -264,7 +264,7 @@ test('Excel Import DOM Safety Tests', async (t) => {
         // Assert intended HTML is preserved
         assert.ok(resultHtml.includes('<ul'), 'List markup is preserved');
         assert.ok(resultHtml.includes('<li>'), 'List item markup is preserved');
-        assert.ok(resultHtml.includes('<p style="color: #d32f2f;">2 öğrenci eklenemedi</p>'), 'Numeric count is unmodified');
+        assert.ok(resultHtml.includes('<p class="admin-excel-result admin-excel-result--error">2 öğrenci eklenemedi</p>'), 'Numeric count is unmodified');
     });
 
     await t.test('6. Failed import response text fallback', async () => {

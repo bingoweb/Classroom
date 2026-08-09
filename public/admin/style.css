@@ -1288,3 +1288,296 @@ button:hover {
         align-items: stretch;
     }
 }
+
+/* P3-5C2: Students template presentation */
+.admin-student-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.admin-student-empty__icon {
+    font-size: 4rem;
+    margin-bottom: 15px;
+}
+
+.admin-student-empty__title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.admin-student-empty__copy {
+    font-size: 0.95rem;
+}
+
+.admin-student-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+    border: 2px solid transparent;
+    position: relative;
+}
+
+.admin-student-card__badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    z-index: 1;
+}
+
+.admin-student-card--male .admin-student-card__badge {
+    background: #2196F3;
+}
+
+.admin-student-card--female .admin-student-card__badge {
+    background: #E91E63;
+}
+
+.admin-student-card__visual {
+    position: relative;
+    padding-top: 100%;
+    overflow: hidden;
+}
+
+.admin-student-card--male .admin-student-card__visual {
+    background: linear-gradient(135deg, #2196F320 0%, #2196F310 100%);
+}
+
+.admin-student-card--female .admin-student-card__visual {
+    background: linear-gradient(135deg, #E91E6320 0%, #E91E6310 100%);
+}
+
+.admin-student-card__avatar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.admin-student-card__body {
+    padding: 15px;
+}
+
+.admin-student-card__name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.admin-student-card__actions {
+    display: flex;
+    gap: 8px;
+}
+
+.admin-student-card__photo-button,
+.admin-student-card__delete-button {
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.admin-student-card__photo-button {
+    flex: 1;
+    padding: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.admin-student-card__delete-button {
+    padding: 8px 12px;
+    background: #f44336;
+}
+
+.admin-excel-selected {
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+}
+
+.admin-excel-selected__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.admin-excel-selected__label {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.admin-excel-selected__name {
+    font-size: 0.9rem;
+}
+
+.admin-excel-selected__size {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin-top: 3px;
+}
+
+.admin-excel-selected__clear {
+    padding: 8px 15px;
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.admin-excel-selected__preview {
+    margin-top: 15px;
+}
+
+.admin-excel-message {
+    padding: 10px;
+    border-radius: 6px;
+}
+
+.admin-excel-message--error {
+    color: #d32f2f;
+    background: rgba(211, 47, 47, 0.1);
+}
+
+.admin-excel-message--warning {
+    color: #ff9800;
+    background: rgba(255, 152, 0, 0.1);
+}
+
+.admin-excel-message__detail {
+    opacity: 0.8;
+}
+
+.admin-excel-preview-block {
+    margin-top: 10px;
+}
+
+.admin-excel-preview-heading {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.admin-excel-preview-scroll {
+    overflow-x: auto;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.admin-excel-preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    background: white;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.admin-excel-preview-cell {
+    padding: 8px;
+    border: 1px solid #ddd;
+    white-space: nowrap;
+}
+
+.admin-excel-preview-cell--header {
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+}
+
+.admin-excel-preview-cell--body {
+    color: #333;
+    background: white;
+}
+
+.admin-excel-preview-more {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.admin-excel-preview-summary {
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.admin-excel-result--loading {
+    color: #666;
+}
+
+.admin-excel-result--error,
+.admin-excel-errors--error {
+    color: #d32f2f;
+}
+
+.admin-excel-result--success {
+    color: #2e7d32;
+    font-weight: bold;
+}
+
+.admin-excel-errors {
+    margin-top: 10px;
+    padding-left: 20px;
+}
+
+.admin-photo-preview__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.admin-photo-preview__title {
+    font-weight: 600;
+}
+
+.admin-photo-preview__clear {
+    padding: 6px 12px;
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.admin-photo-preview__body {
+    text-align: center;
+}
+
+.admin-photo-preview__image {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.admin-photo-preview__meta {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #666;
+}

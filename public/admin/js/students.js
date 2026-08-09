@@ -25,10 +25,10 @@
 
         if (students.length === 0) {
             list.innerHTML = `
-                <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: #999;">
-                    <div style="font-size: 4rem; margin-bottom: 15px;">📭</div>
-                    <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 8px;">Henüz öğrenci yok</div>
-                    <div style="font-size: 0.95rem;">Yukarıdaki formdan öğrenci ekleyebilirsiniz</div>
+                <div class="admin-student-empty">
+                    <div class="admin-student-empty__icon">📭</div>
+                    <div class="admin-student-empty__title">Henüz öğrenci yok</div>
+                    <div class="admin-student-empty__copy">Yukarıdaki formdan öğrenci ekleyebilirsiniz</div>
                 </div>
             `;
             return;
@@ -47,34 +47,32 @@
             const defaultAvatar = s.gender === 'F' ? '../assets/default_girl.png' : '../assets/default_boy.png';
             const genderIcon = s.gender === 'M' ? '👦' : '👧';
             const genderText = s.gender === 'M' ? 'Erkek' : 'Kız';
-            const genderColor = s.gender === 'M' ? '#2196F3' : '#E91E63';
+            const genderClass = s.gender === 'M' ? 'admin-student-card--male' : 'admin-student-card--female';
 
             return `
-                <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s; border: 2px solid transparent; position: relative;"
+                <div class="admin-student-card ${genderClass}"
                      onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.15)'; this.style.borderColor='var(--primary)'"
                      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'; this.style.borderColor='transparent'"
                      data-gender="${s.gender}">
-                    <div style="position: absolute; top: 10px; right: 10px; background: ${genderColor}; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; z-index: 1;">
+                    <div class="admin-student-card__badge">
                         ${genderIcon} ${genderText}
                     </div>
-                    <div style="position: relative; padding-top: 100%; background: linear-gradient(135deg, ${genderColor}20 0%, ${genderColor}10 100%); overflow: hidden;">
+                    <div class="admin-student-card__visual">
                         <img src="${displayPath}"
                              onerror="this.onerror=null; this.src='${defaultAvatar}'"
-                             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
+                             class="admin-student-card__avatar">
                     </div>
-                    <div style="padding: 15px;">
-                        <div style="font-size: 1.1rem; font-weight: 600; color: #333; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${Utils.escapeHtml(s.name)}">
+                    <div class="admin-student-card__body">
+                        <div class="admin-student-card__name" title="${Utils.escapeHtml(s.name)}">
                             ${Utils.escapeHtml(s.name)}
                         </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="upload-photo-btn" data-id="${s.id}"
-                                style="flex: 1; padding: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;"
+                        <div class="admin-student-card__actions">
+                            <button class="upload-photo-btn admin-student-card__photo-button" data-id="${s.id}"
                                 onmouseover="this.style.opacity='0.9'"
                                 onmouseout="this.style.opacity='1'">
                                 📷 Resim
                             </button>
-                            <button class="delete-btn" data-id="${s.id}"
-                                style="padding: 8px 12px; background: #f44336; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;"
+                            <button class="delete-btn admin-student-card__delete-button" data-id="${s.id}"
                                 onmouseover="this.style.opacity='0.9'"
                                 onmouseout="this.style.opacity='1'">
                                 🗑️
@@ -182,7 +180,7 @@
     function parseExcelFile(file) {
         if (typeof XLSX === 'undefined') {
             document.getElementById('excelContentPreview').innerHTML = `
-                <div style="color: #d32f2f; padding: 10px; background: rgba(211, 47, 47, 0.1); border-radius: 6px;">
+                <div class="admin-excel-message admin-excel-message--error">
                     ⚠️ Excel kütüphanesi yüklenemedi. Lütfen sayfayı yenileyin.
                 </div>
             `;
@@ -214,15 +212,15 @@
 
                 if (!jsonData || jsonData.length === 0) {
                     document.getElementById('excelContentPreview').innerHTML = `
-                        <div style="color: #ff9800; padding: 10px; background: rgba(255, 152, 0, 0.1); border-radius: 6px;">
+                        <div class="admin-excel-message admin-excel-message--warning">
                             ⚠️ Excel dosyası boş görünüyor. Lütfen başlık ve veri satırları içeren bir dosya seçin.
                         </div>
                     `;
                     return;
                 }
 
-                let tableHTML = '<div style="margin-top: 10px;"><div style="font-weight: 600; margin-bottom: 8px;">📋 İçerik Önizlemesi (İlk 10 satır):</div>';
-                tableHTML += '<div style="overflow-x: auto; max-height: 300px; overflow-y: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; background: white; border-radius: 6px; overflow: hidden;">';
+                let tableHTML = '<div class="admin-excel-preview-block"><div class="admin-excel-preview-heading">📋 İçerik Önizlemesi (İlk 10 satır):</div>';
+                tableHTML += '<div class="admin-excel-preview-scroll"><table class="admin-excel-preview-table">';
 
                 const maxCols = Math.max(...jsonData.map(row => row ? row.length : 0));
                 const nonEmptyCols = [];
@@ -248,10 +246,10 @@
                     tableHTML += '<tr>';
                     for (const colIndex of nonEmptyCols) {
                         const cellValue = row[colIndex] !== undefined && row[colIndex] !== null ? row[colIndex] : '';
-                        const cellStyle = i === 0
-                            ? 'padding: 8px; border: 1px solid #ddd; background: var(--primary); color: white; font-weight: 600; white-space: nowrap;'
-                            : 'padding: 8px; border: 1px solid #ddd; white-space: nowrap; color: #333; background: white;';
-                        tableHTML += `<td style="${cellStyle}">${Utils.escapeHtml(cellValue)}</td>`;
+                        const cellClass = i === 0
+                            ? 'admin-excel-preview-cell admin-excel-preview-cell--header'
+                            : 'admin-excel-preview-cell admin-excel-preview-cell--body';
+                        tableHTML += `<td class="${cellClass}">${Utils.escapeHtml(cellValue)}</td>`;
                     }
                     tableHTML += '</tr>';
                 }
@@ -259,10 +257,10 @@
                 tableHTML += '</table></div>';
 
                 if (jsonData.length > 10) {
-                    tableHTML += `<div style="margin-top: 8px; font-size: 0.85rem; color: #666;">... ve ${jsonData.length - 10} satır daha</div>`;
+                    tableHTML += `<div class="admin-excel-preview-more">... ve ${jsonData.length - 10} satır daha</div>`;
                 }
 
-                tableHTML += `<div style="margin-top: 10px; padding: 10px; background: rgba(102, 126, 234, 0.1); border-radius: 6px; font-size: 0.85rem;">
+                tableHTML += `<div class="admin-excel-preview-summary">
                     <strong>📊 Toplam:</strong> ${jsonData.length} satır (${jsonData.length > 1 ? jsonData.length - 1 + ' öğrenci' : 'başlık satırı'})
                 </div></div>`;
 
@@ -281,9 +279,9 @@
             } catch (error) {
                 console.error('Excel parse error:', error);
                 document.getElementById('excelContentPreview').innerHTML = `
-                    <div style="color: #d32f2f; padding: 10px; background: rgba(211, 47, 47, 0.1); border-radius: 6px;">
+                    <div class="admin-excel-message admin-excel-message--error">
                         ⚠️ Excel dosyası okunamadı: ${Utils.escapeHtml(error.message)}
-                        <br><small style="opacity: 0.8;">Tarayıcı console'unu kontrol edin (F12)</small>
+                        <br><small class="admin-excel-message__detail">Tarayıcı console'unu kontrol edin (F12)</small>
                     </div>
                 `;
             }
@@ -292,7 +290,7 @@
         reader.onerror = function (error) {
             console.error('FileReader error:', error);
             document.getElementById('excelContentPreview').innerHTML = `
-                <div style="color: #d32f2f; padding: 10px; background: rgba(211, 47, 47, 0.1); border-radius: 6px;">
+                <div class="admin-excel-message admin-excel-message--error">
                     ⚠️ Dosya okunamadı. Lütfen başka bir dosya deneyin.
                 </div>
             `;
@@ -446,22 +444,21 @@
                 if (file) {
                     excelImportResult.style.display = 'block';
                     excelImportResult.innerHTML = `
-                        <div style="padding: 15px; background: rgba(255,255,255,0.3); border-radius: 8px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div class="admin-excel-selected">
+                            <div class="admin-excel-selected__header">
                                 <div>
-                                    <div style="font-weight: 600; margin-bottom: 5px;">📄 Seçilen dosya:</div>
-                                    <div style="font-size: 0.9rem;">${Utils.escapeHtml(file.name)}</div>
-                                    <div style="font-size: 0.85rem; opacity: 0.9; margin-top: 3px;">
+                                    <div class="admin-excel-selected__label">📄 Seçilen dosya:</div>
+                                    <div class="admin-excel-selected__name">${Utils.escapeHtml(file.name)}</div>
+                                    <div class="admin-excel-selected__size">
                                         ${(file.size / 1024).toFixed(2)} KB
                                     </div>
                                 </div>
-                                <button onclick="clearExcelFile()" type="button"
-                                    style="padding: 8px 15px; background: #f44336; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600;">
+                                <button onclick="clearExcelFile()" type="button" class="admin-excel-selected__clear">
                                     ✖ Temizle
                                 </button>
                             </div>
-                            <div id="excelContentPreview" style="margin-top: 15px;">
-                                <div style="color: #666;">📊 İçerik yükleniyor...</div>
+                            <div id="excelContentPreview" class="admin-excel-selected__preview">
+                                <div class="admin-excel-result admin-excel-result--loading">📊 İçerik yükleniyor...</div>
                             </div>
                         </div>
                     `;
@@ -493,7 +490,7 @@
                 formData.append('excel', file);
 
                 resultDiv.style.display = 'block';
-                resultDiv.innerHTML = '<p style="color: #666;">Yükleniyor...</p>';
+                resultDiv.innerHTML = '<p class="admin-excel-result admin-excel-result--loading">Yükleniyor...</p>';
 
                 try {
                     const response = await fetch(`${CONFIG.API_URL}/students/import`, {
@@ -508,7 +505,7 @@
                             const errorData = await responseClone.json();
                             errorMessage = errorData.error ? Utils.escapeHtml(errorData.error) : errorMessage;
                             if (errorData.errors && Array.isArray(errorData.errors)) {
-                                errorMessage += '<br><ul style="margin-top: 10px; padding-left: 20px;">';
+                                errorMessage += '<br><ul class="admin-excel-errors">';
                                 errorData.errors.forEach(err => {
                                     errorMessage += `<li>${Utils.escapeHtml(err)}</li>`;
                                 });
@@ -522,20 +519,20 @@
                                 errorMessage = Utils.escapeHtml(`Excel yüklenirken hata oluştu (${response.status} ${response.statusText})`);
                             }
                         }
-                        resultDiv.innerHTML = `<p style="color: #d32f2f;">${errorMessage}</p>`;
+                        resultDiv.innerHTML = `<p class="admin-excel-result admin-excel-result--error">${errorMessage}</p>`;
                         Utils.showError('Excel yüklenirken hata oluştu');
                         return;
                     }
 
                     const data = await response.json();
-                    let resultHtml = `<p style="color: #2e7d32; font-weight: bold;">${Utils.escapeHtml(data.message)}</p>`;
+                    let resultHtml = `<p class="admin-excel-result admin-excel-result--success">${Utils.escapeHtml(data.message)}</p>`;
 
                     if (data.failed > 0) {
-                        resultHtml += `<p style="color: #d32f2f;">${data.failed} öğrenci eklenemedi</p>`;
+                        resultHtml += `<p class="admin-excel-result admin-excel-result--error">${data.failed} öğrenci eklenemedi</p>`;
                     }
 
                     if (data.errors && data.errors.length > 0) {
-                        resultHtml += '<ul style="margin-top: 10px; padding-left: 20px; color: #d32f2f;">';
+                        resultHtml += '<ul class="admin-excel-errors admin-excel-errors--error">';
                         data.errors.forEach(err => {
                             resultHtml += `<li>${Utils.escapeHtml(err)}</li>`;
                         });
@@ -548,7 +545,7 @@
                     refreshStudents();
                 } catch (e) {
                     if (typeof logger !== 'undefined') { logger.error(COMPONENTS.ADMIN, 'Error importing Excel', e); }
-                    resultDiv.innerHTML = '<p style="color: #d32f2f;">Excel yüklenirken hata oluştu.</p>';
+                    resultDiv.innerHTML = '<p class="admin-excel-result admin-excel-result--error">Excel yüklenirken hata oluştu.</p>';
                     Utils.showError('Excel yüklenirken hata oluştu.');
                 }
             });
@@ -572,17 +569,15 @@
                         }
 
                         previewContainer.innerHTML = `
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-                                <div style="font-weight: 600;">📷 Yüklenecek Resim Önizlemesi:</div>
-                                <button onclick="clearPhotoFile()" type="button"
-                                    style="padding: 6px 12px; background: #f44336; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">
+                            <div class="admin-photo-preview__header">
+                                <div class="admin-photo-preview__title">📷 Yüklenecek Resim Önizlemesi:</div>
+                                <button onclick="clearPhotoFile()" type="button" class="admin-photo-preview__clear">
                                     ✖ Temizle
                                 </button>
                             </div>
-                            <div style="text-align: center;">
-                                <img src="${event.target.result}"
-                                     style="max-width: 100%; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-                                <div style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+                            <div class="admin-photo-preview__body">
+                                <img src="${event.target.result}" class="admin-photo-preview__image">
+                                <div class="admin-photo-preview__meta">
                                     ${file.name} (${(file.size / 1024).toFixed(2)} KB)
                                 </div>
                             </div>
