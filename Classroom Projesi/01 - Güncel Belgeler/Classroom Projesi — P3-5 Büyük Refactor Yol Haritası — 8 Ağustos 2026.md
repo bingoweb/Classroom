@@ -14,7 +14,8 @@ Değişen teknik gerçeklerde kaynak-of-truth sırası:
 
 ## 2. Bağlayıcı güvenlik ve ürün sınırları
 
-- **DevSpace zorunlu operasyon kapısı:** Classroom geliştirmesi yalnız DevSpace üzerinden yürütülecektir. DevSpace erişilemezse, disabled mesajı verirse, araç kataloğunda görünmezse veya çağrıya cevap vermezse geliştirme derhal durdurulacaktır; GitHub connector, başka MCP, container veya herhangi bir alternatif geliştirme aracıyla dosya/Git/test/commit işlemlerine devam edilmeyecektir. Devam etmeden önce DevSpace erişimi yeniden sağlanmalı ve gerçek yerel checkout durumu tekrar doğrulanmalıdır.
+- **Zorunlu geliştirme araç zinciri:** Classroom geliştirmesinin her dalgasında **DevSpace + Playwright MCP + Chrome DevTools MCP** birlikte kullanılacaktır. Dosya/Git/test/server/commit işlemlerinin source-of-truth yürütücüsü DevSpace'tir; Playwright ve Chrome DevTools ise ilgili gerçek browser/auth/UI/network/console/regresyon doğrulamalarında birlikte kullanılacaktır.
+- **DevSpace zorunlu operasyon kapısı:** DevSpace erişilemezse, disabled mesajı verirse, araç kataloğunda görünmezse veya çağrıya cevap vermezse geliştirme derhal durdurulacaktır; GitHub connector, başka MCP, container veya herhangi bir alternatif geliştirme aracıyla dosya/Git/test/commit işlemlerine devam edilmeyecektir. Aynı oturumda alternatif geliştirme yoluna geçmek yerine yeni sohbet oturumuna devir yapılacak; yeni oturumda DevSpace erişimi sağlandıktan ve gerçek yerel checkout durumu tekrar doğrulandıktan sonra devam edilecektir.
 - Mevcut `main` davranışı korunacaktır; büyük-bang yeniden yazım yapılmayacaktır.
 - Backend `/api/settings` endpoint'i korunacaktır.
 - SQLite `settings` tablosu korunacaktır.
@@ -669,7 +670,7 @@ Auth refactor ayrı security regression turu gerektirir.
 
 ## 7. P3-5B — Admin JavaScript modülerleştirme
 
-**Durum:** 🟨 Uygulanıyor — B1 Students, B2 Roles, B3 Attendance ile B4.1 Slides read/render, B4.2 active toggle ve B4.3 drag/reorder tamamlandı/doğrulandı; B4 sürüyor ve sıradaki alt dalga B4.4 form open/close/edit.
+**Durum:** 🟨 Uygulanıyor — B1 Students, B2 Roles, B3 Attendance ile B4.1 Slides read/render, B4.2 active toggle, B4.3 drag/reorder ve B4.4 form open/close/edit tamamlandı/doğrulandı; B4 sürüyor ve sıradaki alt dalga B4.5 media preview.
 
 Mevcut `error-logs.js` dosyası admin tarafında domain ayrımının çalışan örneğidir.
 
@@ -841,14 +842,14 @@ Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B3 sırasında deği�
 
 Slides yaklaşık dosyanın yarısını oluşturan en yoğun admin alanıdır. Drag/drop, form state, media preview, active toggle ve slide settings aynı anda taşınmamalıdır.
 
-**Durum:** 🟨 9 Ağustos 2026 — B4.1 read/render, B4.2 active toggle ve B4.3 drag/reorder tamamlandı/doğrulandı; B4.4 form open/close/edit sırada.
+**Durum:** 🟨 9 Ağustos 2026 — B4.1 read/render, B4.2 active toggle, B4.3 drag/reorder ve B4.4 form open/close/edit tamamlandı/doğrulandı; B4.5 media preview sırada.
 
 Önerilen alt sıra:
 
 1. read/render — 🟩 B4.1 tamamlandı,
 2. active toggle — 🟩 B4.2 tamamlandı,
 3. drag/reorder — 🟩 B4.3 tamamlandı,
-4. form open/close/edit,
+4. form open/close/edit — 🟩 B4.4 tamamlandı,
 5. media preview,
 6. create/update/delete,
 7. slide settings.
@@ -954,7 +955,40 @@ TDD ve regresyon kanıtı:
 
 Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B4.3 sırasında değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
 
-**B4 tamamlanmış değildir. Sıradaki alt dalga B4.4 — form open/close/edit ownership extraction'dır.** Media preview → create/update/delete → slide settings sırası bundan sonra da korunacaktır.
+**B4.3 kapanışındaki sıradaki alt dalga B4.4 — form open/close/edit idi; bu alt dalga aşağıdaki B4.4 kaydında tamamlanmıştır.** Media preview → create/update/delete → slide settings sırası korunur.
+
+#### B4.4 — form open/close/edit uygulama sonucu
+
+Slides domaininin form açma/kapatma/edit alias'ı ve aktif düzenleme state ownership'i `admin.js` dışına çıkarıldı. Media preview/reset üretimi, dosya değişimi, submit/create/update/delete ve slide settings bu alt dalgada bilerek shell'de bırakıldı.
+
+- `currentEditingSlide` state'i artık `public/admin/js/slides.js` closure'ında yaşıyor.
+- `showSlideForm(slideId)`, `closeSlideForm()`, `editSlide(id)` ve `getCurrentEditingSlideId()` slide modülüne taşındı.
+- Mevcut inline HTML sözleşmesi için `window.showSlideForm`, `window.closeSlideForm` ve `window.editSlide` adaptörleri korundu.
+- Edit akışında title/content/text/duration/video-auto-advance/transition alanları modül tarafından dolduruluyor; milisaniye tabanlı sürelerin saniye alanlarına dönüşümü korunuyor.
+- B4.5'i erken taşımamak için mevcut medya preview/reset davranışı shell'de `prepareSlideMediaForm(slide)` ve `resetSlideMediaForm()` olarak tutuldu; bunlar `AdminSlides.init(...)` üzerinden callback olarak enjekte ediliyor.
+- Content-type ve transition-mode görünürlük senkronizasyonu da mevcut shell handler'larına callback ile delege ediliyor.
+- `handleSlideMediaChange()` ve `handleContentTypeChange()` artık global editing değişkeni yerine `AdminSlides.getCurrentEditingSlideId()` kullanıyor.
+- Chrome gerçek UI kontrolünde eski akıştan kalan bir form-state açığı bulundu: edit → iptal → yeni slayt akışında hidden `slideId` değeri resetlenmiyordu. Ayrı RED regresyonu yazıldı ve hem new-form hem close akışında `slideId=''` açıkça garanti altına alındı.
+- `public/admin/admin.js` **658 → 624 satıra** indi; `public/admin/js/slides.js` **262 → 346 satıra** çıktı.
+
+TDD ve regresyon kanıtı:
+
+1. Değişiklik öncesi `npm run test:admin-slide-module` **14/14 pass** verdi.
+2. B4.4 structural + add/edit/close behavior testleri production değişikliğinden önce yazıldı. Önceki B4.1–B4.3 sözleşmeleri yeşil kalırken yeni B4.4 ownership'i doğru nedenle kırıldı: toplam **14 pass / 5 fail**.
+3. Minimal extraction sonrası focused paket **19/19 pass** verdi.
+4. Chrome DevTools gerçek edit→close→new akışında stale hidden `slideId` keşfedildi. Bu kusur için ikinci RED turu **16 pass / 3 fail** verdi; iki anlamlı failure stale ID'nin `88` ve `51` olarak kaldığını kanıtladı.
+5. Minimal hidden-ID düzeltmesinden sonra focused paket yeniden **19/19 pass** verdi.
+6. Admin/slide/notification/DOM-safety komşu kapısı **72/72 pass** verdi.
+7. Tam core **1429/1429 pass** verdi.
+8. `npm run test:system-smoke` PASS; `npm audit --omit=dev` **0 vulnerability**; `admin.js`, `slides.js`, ilgili test syntax kontrolleri ve `git diff --check` temiz.
+9. İzole temp SQLite + Chrome DevTools gerçek admin UI: edit modalı `B4.4 Form Smoke` slaydını doğru alanlarla açtı; editing state `8`, hidden ID `8`, mevcut image preview görünür ve media input editte opsiyonel. Close sonrası editing `null`, hidden ID boş, modal kapalı ve media input tekrar required. New form sonrası editing `null`, hidden ID boş, preview temiz ve başlık `Yeni Slayt Ekle`.
+10. Chrome DevTools network: `/admin/js/slides.js` **200**, `/admin/admin.js` **200**, `/api/admin/slides` **200**; console error/warn **0**. 1366×768 window kontrolünde horizontal overflow **0**; 1920×1080 window kontrolünde inner viewport 1920×863 ve horizontal overflow yine **0**.
+11. Playwright MCP final koda karşı korumalı `/admin/` erişiminin `admin-login.html?next=/admin/` yüzeyine yönlendiğini doğruladı. Takip eden çağrıda daha önce de bilinen tool-side `about:blank` davranışı tekrarlandığı için authenticated form-state/UI/network kanıtı Chrome DevTools ile tamamlandı.
+12. Product/test commit `02bdabf569f40727236d34408334c09e606714b2` exact SHA'sında GitHub Actions `31320136399`: Node 24 **PASS (27 sn)**, Node 22 **PASS (28 sn)**.
+
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı B4.4 sırasında değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı. P2-6 gerçek 55" 4K fiziksel kabul kapısı ayrı biçimde açık kalır.
+
+**B4 tamamlanmış değildir. Sıradaki alt dalga B4.5 — media preview ownership extraction'dır.** Create/update/delete → slide settings sırası bundan sonra da korunacaktır.
 
 ## 8. P3-5C — Admin inline CSS temizliği
 

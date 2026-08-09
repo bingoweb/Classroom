@@ -24,10 +24,12 @@ Yeni çalışma düzeni:
 
 ### 0.1 DevSpace zorunlu operasyon kapısı
 
-- Classroom geliştirmesi yalnız **DevSpace** üzerinden yapılacaktır.
+- Classroom geliştirmesinin her dalgasında **DevSpace + Playwright MCP + Chrome DevTools MCP** birlikte kullanılacaktır.
+- Dosya/Git/test/server/commit işlemlerinin source-of-truth yürütücüsü **DevSpace** olacaktır; Playwright ve Chrome DevTools ilgili gerçek browser/auth/UI/network/console doğrulamalarında birlikte kullanılacaktır.
 - DevSpace erişilemezse, disabled mesajı verirse, araç kataloğunda görünmezse veya çağrıya cevap vermezse geliştirme **hemen durdurulacaktır**.
 - Bu durumda GitHub connector, başka MCP, container veya herhangi bir alternatif geliştirme aracıyla dosya/Git/test/commit işlemlerine devam edilmeyecektir.
-- Geliştirmeye ancak DevSpace erişimi yeniden sağlandıktan ve gerçek yerel checkout (`git status`, `HEAD`, `origin/main`) tekrar doğrulandıktan sonra devam edilecektir.
+- Aynı oturumda alternatif geliştirme aracına geçmek yerine **yeni sohbet oturumuna devir yapılacaktır**.
+- Geliştirmeye yeni oturumda DevSpace erişimi yeniden sağlandıktan ve gerçek yerel checkout (`git status`, `HEAD`, `origin/main`) tekrar doğrulandıktan sonra devam edilecektir.
 
 ---
 
@@ -4749,7 +4751,48 @@ Kanıtlar:
 - exact product/test commit `365aa84511d94eb464b93b8458216de8b8d49d30`,
 - GitHub Actions run `31319187815`: Node 22 PASS (36 sn), Node 24 PASS (36 sn).
 
-Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B4 henüz tamamlanmadı; sıradaki alt dalga B4.4 — form open/close/edit** olacaktır.
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **B4.3 kapanışında sıradaki alt dalga B4.4 — form open/close/edit idi; bu alt dalga aşağıdaki 21.0.14 kaydında tamamlanmıştır.**
+
+### 21.0.14 9 Ağustos 2026 — P3-5B4.4 admin slides form open/close/edit extraction
+
+B4 Slides dördüncü alt dalgasında form open/close/edit ownership'i ve aktif editing state `public/admin/js/slides.js` içine taşındı. Media preview/reset üretimi, media-change/upload, create/update/delete ve slide settings bu değişikliğin dışında bırakıldı.
+
+Uygulanan sınır:
+
+- `public/admin/js/slides.js`: `currentEditingSlide`, `showSlideForm`, `closeSlideForm`, `editSlide`, `getCurrentEditingSlideId` ownership'i,
+- inline HTML uyumluluğu için `window.showSlideForm`, `window.closeSlideForm`, `window.editSlide` global adaptörleri,
+- edit sırasında non-media form alanlarının doldurulması ve ms→s duration dönüşümleri,
+- `public/admin/admin.js`: B4.5 media davranışı `prepareSlideMediaForm(slide)` ve `resetSlideMediaForm()` olarak shell'de kaldı,
+- `AdminSlides.init(...)`: media prepare/reset ile content-type/transition-mode sync callback'lerini açık dependency injection olarak alıyor,
+- `handleSlideMediaChange` ve `handleContentTypeChange`: editing ID'yi `AdminSlides.getCurrentEditingSlideId()` üzerinden okuyor,
+- submit/create/update/delete ve settings kodları shell'de korunuyor.
+
+Ek form-state düzeltmesi:
+
+- Gerçek Chrome edit → iptal → yeni slayt akışında hidden `slideId` değerinin edit ID'si olarak kaldığı tespit edildi.
+- B4.4 form-state ownership'i kapsamında önce RED regression eklendi.
+- New ve close yollarında hidden ID artık açıkça boşaltılıyor; böylece yeni formun yanlışlıkla update semantiğine kayma riski kapatıldı.
+
+Kanıtlar:
+
+- pre-change focused baseline **14/14**,
+- ilk TDD RED **14 pass / 5 fail**; yeni form ownership API'leri eksik olduğu için doğru nedenle kırıldı,
+- minimal extraction GREEN **19/19**,
+- Chrome ile keşfedilen hidden-ID leak için ikinci TDD RED **16 pass / 3 fail**; anlamlı iki failure stale `88` ve `51` değerlerini gösterdi,
+- hidden-ID fix sonrası focused paket **19/19**,
+- geniş admin/slide/notification/DOM-safety kapısı **72/72**,
+- tam core **1429/1429**,
+- system smoke PASS,
+- `npm audit --omit=dev` **0 vulnerability**,
+- syntax + `git diff --check` temiz,
+- `public/admin/admin.js` **658 → 624 satır**, `public/admin/js/slides.js` **262 → 346 satır**,
+- Chrome DevTools gerçek temp-DB UI: edit state/alanlar/media optional doğru; close sonrası editing null + hidden ID boş + required medya; new form sonrası hidden ID boş + temiz preview,
+- Chrome network: `slides.js` 200, `admin.js` 200, `/api/admin/slides` 200; console error/warn 0; 1366×768 ve 1920-wide kontrollerde horizontal overflow 0,
+- Playwright MCP `/admin/` → `admin-login.html?next=/admin/` auth redirect PASS; sonraki çağrıda bilinen tool-side `about:blank` davranışı tekrarlandı, authenticated form/UI kanıtı Chrome DevTools ile tamamlandı,
+- exact product/test commit `02bdabf569f40727236d34408334c09e606714b2`,
+- GitHub Actions run `31320136399`: Node 24 PASS (27 sn), Node 22 PASS (28 sn).
+
+Bilinen fresh-DB `error_logs` startup cleanup-order bug'ı değiştirilmedi. Korunan untracked devir belgeleri ve `docs/superpowers/` commit kapsamına alınmadı; P2-6 fiziksel 55\" 4K kabul kapısı açık kalır. **P3-5B4 henüz tamamlanmadı; sıradaki alt dalga B4.5 — media preview** olacaktır.
 
 Bu işler gerçek teknik borçtur fakat ilk yapılmamalıdır.
 
@@ -4767,18 +4810,17 @@ Domain route extraction tamamlandı:
 
 Admin auth/session composition root içinde kalır. Bu sınır sırf dosya daha da küçülsün diye taşınmayacak; A8 ancak ayrı security regression turuyla değerlendirilecektir.
 
-## 21.2 `public/admin/admin.js` — B4.3 sonrası 658 satır
+## 21.2 `public/admin/admin.js` — B4.4 sonrası 624 satır
 
-B1 ile students domaini `public/admin/js/students.js`, B2 ile roles domaini `public/admin/js/roles.js`, B3 ile attendance domaini `public/admin/js/attendance.js` içine ayrıldı. B4.1 ile slide management read/render, B4.2 ile active toggle, B4.3 ile drag/reorder ownership'i `public/admin/js/slides.js` içine ayrıldı. `fetchStudents()`, `fetchRoles()` ve `fetchSlides()` ilgili domain modüllerine veri taşıyan shell bridge'ler olarak `admin.js` içinde kalır; slide state/refresh bağımlılığı `getSlides` ve `refreshSlides` callback'leriyle açıkça enjekte edilir. Drag binding artık shell callback'i değildir ve slide modülü içinde kurulur.
+B1 ile students domaini `public/admin/js/students.js`, B2 ile roles domaini `public/admin/js/roles.js`, B3 ile attendance domaini `public/admin/js/attendance.js` içine ayrıldı. B4.1 ile slide management read/render, B4.2 ile active toggle, B4.3 ile drag/reorder, B4.4 ile form open/close/edit state ownership'i `public/admin/js/slides.js` içine ayrıldı. `fetchStudents()`, `fetchRoles()` ve `fetchSlides()` ilgili domain modüllerine veri taşıyan shell bridge'ler olarak `admin.js` içinde kalır. Slide media preview/reset davranışı B4.5'e kadar callback seam'i olarak shell'dedir.
 
 Slides tarafında sıradaki kontrollü extraction alanları:
 
-- B4.4 form open/close/edit,
 - B4.5 media preview,
 - B4.6 create/update/delete,
 - B4.7 slide settings.
 
-System/logs tarafında mevcut `error-logs.js` ayrımı korunur. Sıradaki aktif dalga **B4.4 form open/close/edit**'tir; B4 tek seferde taşınmayacaktır.
+System/logs tarafında mevcut `error-logs.js` ayrımı korunur. Sıradaki aktif dalga **B4.5 media preview**'dır; B4 tek seferde taşınmayacaktır.
 
 ## 21.3 Admin inline CSS
 
@@ -5058,7 +5100,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 26 | P3-5B1 admin students module extraction | P3 | 🟩 |
 | 27 | P3-5B2 admin roles module extraction | P3 | 🟩 |
 | 28 | P3-5B3 admin attendance module extraction | P3 | 🟩 |
-| 29 | P3-5B4 admin slides module extraction — B4.1 read/render + B4.2 active toggle + B4.3 drag/reorder tamamlandı, B4.4 form open/close/edit sırada | P3 | 🟨 |
+| 29 | P3-5B4 admin slides module extraction — B4.1 read/render + B4.2 active toggle + B4.3 drag/reorder + B4.4 form open/close/edit tamamlandı, B4.5 media preview sırada | P3 | 🟨 |
 
 Durum simgeleri:
 
