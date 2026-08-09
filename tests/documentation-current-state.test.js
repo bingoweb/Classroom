@@ -8,6 +8,24 @@ const path = require('node:path');
 const root = path.join(__dirname, '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
+function findFileByNormalizedBasename(startDirectory, targetBasename) {
+    const normalizedTarget = targetBasename.normalize('NFC');
+    const entries = fs.readdirSync(startDirectory, { withFileTypes: true });
+
+    for (const entry of entries) {
+        const entryPath = path.join(startDirectory, entry.name);
+        if (entry.isFile() && entry.name.normalize('NFC') === normalizedTarget) {
+            return entryPath;
+        }
+        if (entry.isDirectory()) {
+            const nested = findFileByNormalizedBasename(entryPath, targetBasename);
+            if (nested) return nested;
+        }
+    }
+
+    return null;
+}
+
 const readme = read('README.md');
 const aiContext = read('AI_PROJECT_CONTEXT.md');
 const projectSummary = read('docs/PROJE_OZETI.md');
@@ -15,7 +33,9 @@ const packageJson = JSON.parse(read('package.json'));
 
 const livingPlanName = 'Classroom Projesi — Önceliklendirilmiş Düzeltme Planı — 2026-08-08.md';
 const tomographyName = 'CLASSROOM_PROJE_TOMOGRAFISI_2026-08-08.md';
-const livingPlan = read(`Classroom Projesi/01 - Güncel Belgeler/${livingPlanName}`);
+const livingPlanPath = findFileByNormalizedBasename(path.join(root, 'Classroom Projesi'), livingPlanName);
+assert.ok(livingPlanPath, `Unable to locate ${livingPlanName}`);
+const livingPlan = fs.readFileSync(livingPlanPath, 'utf8');
 
 function markdownVersionPattern(name, version) {
     const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -34,6 +54,22 @@ function assertNoLegacyActiveClaims(text, label) {
 }
 
 test('current documentation source-of-truth contract', async (t) => {
+    await t.test('living-plan discovery is independent of Unicode normalization in parent folder names', () => {
+        const tempRoot = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'classroom-doc-path-'));
+        try {
+            const decomposedDirectory = path.join(tempRoot, 'Gu\u0308ncel Belgeler');
+            fs.mkdirSync(decomposedDirectory, { recursive: true });
+            const fixtureName = 'Önceliklendirilmiş Plan.md';
+            fs.writeFileSync(path.join(decomposedDirectory, fixtureName), 'ok');
+
+            const found = findFileByNormalizedBasename(tempRoot, fixtureName.normalize('NFC'));
+            assert.ok(found);
+            assert.equal(fs.readFileSync(found, 'utf8'), 'ok');
+        } finally {
+            fs.rmSync(tempRoot, { recursive: true, force: true });
+        }
+    });
+
     await t.test('README describes the current runtime, product surfaces, and local dependency model', () => {
         assert.equal(packageJson.engines.node, '>=22 <25');
         assert.match(readme, /Node(?:\.js)?\s+22[^\n]*24|Node(?:\.js)?\s+22\s*\/\s*24/i);
