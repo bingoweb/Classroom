@@ -1329,7 +1329,7 @@ TDD ve browser doğrulaması:
 
 ## 8.1 P3-5E — Admin inline event handler temizliği
 
-**Durum:** 🟨 9 Ağustos 2026 — uygulanıyor. E1 shell/navigation/QR/logout ve E2 Students handler temizliği tamamlandı/doğrulandı; sıradaki kontrollü dalga **E3 Roles + Attendance**.
+**Durum:** 🟨 9 Ağustos 2026 — uygulanıyor. E1 shell/navigation/QR/logout, E2 Students ve E3 Roles + Attendance handler temizliği tamamlandı/doğrulandı; sıradaki kontrollü dalga **E4 Slides**.
 
 Bu faz P3-5B sırasında geçici uyumluluk için korunan inline HTML/template event handler'larını domain bazında kaldırır. Amaç framework değişimi veya behavior redesign değildir; mevcut classic-script davranışı açık `addEventListener` / event-delegation ownership'ine taşınacaktır.
 
@@ -1347,8 +1347,8 @@ Dalga sırası küçük tutulacaktır:
 
 1. **E1 shell/navigation/QR/logout — 🟩 tamamlandı**,
 2. **E2 Students — 🟩 tamamlandı**,
-3. **E3 Roles + Attendance — sıradaki**,
-4. Slides,
+3. **E3 Roles + Attendance — 🟩 tamamlandı**,
+4. **E4 Slides — sıradaki**,
 5. Error Logs ve kalan modal/domain handler'ları.
 
 Runtime hover/state davranışları yalnız mevcut computed-style/interaction sözleşmesi test + browser kanıtıyla korunabiliyorsa inline handler dışına taşınacaktır; E fazı runtime `.style.*` state ownership'ini otomatik olarak CSS refactor kapsamına almaz.
@@ -1427,6 +1427,41 @@ TDD / regresyon / browser kanıtı:
 11. Aynı checkout'ta E2 dışında ortaya çıkan Attendance avatar-path işi E2 stage'ine alınmadı; ayrı commit `191c061ed0a030ba0333e93343fb00e3db34c2da` base'e geldi. E2 yalnız kendi Students dosya/test sınırında commitlendi.
 12. Local full core dış Attendance testini de içeren ağaçta **1493/1493 PASS**, lifecycle/lock **NONE**; system smoke PASS, audit **0**, syntax/package/diff temiz.
 13. Product/test commit `f5997f8d88b168b33fe9eb370b5216bf86a9cb2e`; GitHub Actions `31332151627`: Node 24 **PASS (25 sn)**, Node 22 **PASS (41 sn)**.
+
+### E3 — Roles + Attendance inline event handler ownership uygulama sonucu
+
+E3 Roles + Attendance domainlerine ait **8** inline event handler'ı kaldırdı:
+
+- `index.html` dört role assign `onclick`: **4 → 0**,
+- `index.html` Attendance Yükle/Bugün/Kaydet `onclick`: **3 → 0**,
+- `attendance.js` avatar fallback `onerror`: **1 → 0**.
+
+Davranış ownership'i mevcut classic-script mimarisi korunarak açık event delegation modeline taşındı:
+
+- role assignment → `.assign-role-btn` + `data-role-type`, mevcut `rolesSection` delegated click listener'ı,
+- Attendance toolbar/save → `data-attendance-action="load|today|save"` + `attendanceSection` delegated click listener'ı,
+- Attendance avatar fallback → `data-default-avatar` + capture-phase delegated `error`; fallback attribute'u src değişiminden önce kaldırılarak tek-seferlik davranış korunuyor.
+
+E3 sonunda:
+
+- Roles + Attendance-owned inline handler: **8 → 0**,
+- `public/admin/index.html`: **17 → 10**,
+- `public/admin/js/attendance.js`: **1 → 0**,
+- toplam admin inline handler envanteri: **22 → 14**.
+
+TDD / regresyon / browser kanıtı:
+
+1. `tests/admin-role-attendance-event-handler-refactor.test.js` production değişikliğinden önce **0/3 PASS RED** verdi; role data hook'ları, Attendance action hook'ları ve delegated avatar fallback henüz yoktu.
+2. Minimal delegation değişikliği sonrası focused E3 **3/3 PASS**; Roles + Attendance komşu paketi **401/401 PASS**.
+3. E3 regression testi `test:admin-role-attendance-events` olarak `test:core` zincirine eklendi.
+4. Geniş admin regresyonu **187/187 PASS**; fresh full core **1496/1496 PASS**, SQLite lifecycle/lock taraması **NONE**.
+5. `npm run test:system-smoke` PASS; `npm audit --omit=dev` **0 vulnerability**; syntax/package/diff temiz.
+6. Chrome gerçek role delegated click boş seçim doğrulamasında mevcut “Lütfen bir öğrenci seçin.” feedback'ini aynen üretti; kalıcı role verisi değiştirilmedi.
+7. Chrome Attendance “Bugün” aksiyonu tarihi **2026-08-09** değerine döndürdü; “Yükle” gerçek `/api/students` ve `/api/attendance/2026-08-09` istekleriyle başarıyla çalıştı.
+8. Missing-src avatar probunda delegated fallback `../assets/default_boy.png` değerine döndü; `data-default-avatar` kaldırıldı ve inline `onerror` yoktu.
+9. Chrome final cache-bypass: 1366×768 ve 1920-wide (inner 1920×863) horizontal overflow **0**; Students → Roles → Attendance → Slides → Sistem → Students smoke PASS; final console error/warn/issue **0**.
+10. Playwright `/admin/` → `/admin-login.html?next=/admin/` ve `Yönetici Girişi` title PASS.
+11. Product/test commit `6084b62a4804f92f9178fcb2bcf458c1dd1695e4`; GitHub Actions `31332670604`: Node 24 **PASS (26 sn)**, Node 22 **PASS (30 sn)**.
 
 Her görsel dalgada en az:
 

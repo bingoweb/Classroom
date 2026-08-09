@@ -5269,7 +5269,25 @@ Sonuç:
 - local full core **1493/1493**, lifecycle/lock **NONE**, system smoke PASS, audit **0**,
 - product/test commit `f5997f8d88b168b33fe9eb370b5216bf86a9cb2e`, GitHub Actions `31332151627`: Node 24 PASS (25 sn), Node 22 PASS (41 sn).
 
-**P3-5E devam ediyor. Sıradaki kontrollü dalga E3 — Roles + Attendance inline event handler ownership'idir.**
+### 21.5.3 E3 — Roles + Attendance — 🟩
+
+Roles + Attendance domainindeki **8 inline event handler → 0** oldu. Dört role assign butonu `data-role-type` + existing roles-section click delegation'a; Attendance Yükle/Bugün/Kaydet kontrolleri `data-attendance-action` delegation'a; avatar fallback ise capture-phase delegated `error` + `data-default-avatar` modeline taşındı. API/SQL/role/attendance iş mantığı ve CSS değiştirilmedi.
+
+Sonuç:
+
+- index Roles + Attendance handler'ları **7 → 0**,
+- `attendance.js` avatar `onerror` **1 → 0**,
+- toplam admin inline handler **22 → 14**,
+- E3 RED **0/3** → focused **3/3**,
+- Roles + Attendance komşu regresyonu **401/401**,
+- geniş admin **187/187**, full core **1496/1496**, lifecycle/lock **NONE**,
+- system smoke PASS, audit **0**, syntax/package/diff temiz,
+- Chrome role empty-selection feedback, Attendance Bugün/Yükle ve delegated avatar fallback davranışları PASS,
+- 1366×768 + 1920-wide overflow **0**, tab smoke PASS, final console issue **0**,
+- Playwright auth redirect PASS,
+- product/test commit `6084b62a4804f92f9178fcb2bcf458c1dd1695e4`, GitHub Actions `31332670604`: Node 24 PASS (26 sn), Node 22 PASS (30 sn).
+
+**P3-5E devam ediyor. Sıradaki kontrollü dalga E4 — Slides inline event handler ownership'idir.**
 
 ---
 
@@ -5534,7 +5552,7 @@ Bu tablo geliştirme sırasında güncellenecektir.
 | 30 | P3-5C admin inline CSS — C1–C5 tamamlandı; admin statik inline-style envanteri 0, runtime state yazımları behavior-owned | P3 | 🟩 |
 | 31 | P3-5D0 kiosk CSS analiz/baseline hazırlığı — analyzer + duplicate/override/unused aday raporu + 4 viewport browser baseline; CSS değişikliği 0 | P3 | 🟩 |
 | 32 | P3-5A8 admin auth/session security refactor değerlendirmesi — no-extraction kararı; mevcut composition root korunuyor | P3 | 🟩 |
-| 33 | P3-5E admin inline event handler cleanup — E1 + E2 tamamlandı; 41 → 22, sıradaki E3 Roles + Attendance | P3 | 🟨 |
+| 33 | P3-5E admin inline event handler cleanup — E1 + E2 + E3 tamamlandı; 41 → 14, sıradaki E4 Slides | P3 | 🟨 |
 
 Durum simgeleri:
 
