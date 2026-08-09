@@ -5053,6 +5053,24 @@ TDD/browser kanıtı:
 - Chrome final error/warn/issue **0**, ilgili API request'leri **200/304**; Playwright auth redirect warning/error **0**,
 - product/test commit `e3f189256d81d8b1c09c2613b7cb470436754e46`, GitHub Actions `31326122652`: Node 22 PASS (27 sn), Node 24 PASS (34 sn).
 
+### C4 evidence CI sırasında kapatılan SQLite test-harness stabilite kusurları
+
+C4 docs/evidence SHA `883ae6fb536f31fd89f96ea8a13dc668c2edde5c` için GitHub Actions `31326254441` Node 24 PASS, Node 22 FAIL verdi. C5'e geçilmeden kök neden incelendi:
+
+- role test helper'larındaki 100/500 ms gerçek-handler watchdog'ları full-suite scheduler yükünde false timeout üretiyordu,
+- bazı DB-backed testler `scheduleMigrationPromise` + `errorLogsReadyPromise` readiness tamamlanmadan teardown yaparak PASS sonucu yanında `SQLITE_MISUSE` / closed-handle initialization logları bırakıyordu,
+- `admin-rate-limit.test.js` server'ı DB readiness tamamlanmadan başlatabildiği için initialization yazılarıyla API write yükü yarışabiliyordu.
+
+Düzeltme:
+
+- ortak `tests/helpers/database-test-utils.js::awaitDatabaseReady(db)` eklendi ve ilgili admin/log/role/slide/student SQLite integration testlerine bağlandı,
+- role no-response self-test watchdog'u 50 ms; gerçek SQLite handler watchdog'u 5000 ms olarak ayrıştırıldı,
+- `tests/sqlite-test-harness-stability.test.js` RED **0/2** → GREEN **2/2**, core zincirine dahil,
+- Node 22 role stress **12 tur × 93/93 PASS**,
+- final full core **1470/1470 PASS** ve log-level lifecycle/lock taraması **NONE**,
+- system smoke PASS, audit **0**,
+- bugfix commit `23bccf8a8955900e3348b7e9b45b64b4d705ed67`, GitHub Actions `31326738654`: Node 22 PASS (30 sn), Node 24 PASS (30 sn).
+
 Admin JS template tarafında kalan inline-style envanteri **8** attribute'tur:
 
 - `public/admin/js/students.js`: **0** template attribute (+ ayrı tutulan 1 runtime `style.cssText`),

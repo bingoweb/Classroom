@@ -1228,6 +1228,19 @@ TDD ve browser doğrulaması:
 8. Chrome final warning/error/issue **0**; ilgili students/roles/slides/attendance/logs network çağrıları **200/304**. Playwright `/admin/` auth redirect PASS ve warning/error **0**.
 9. Product/test commit `e3f189256d81d8b1c09c2613b7cb470436754e46`, GitHub Actions `31326122652`: Node 22 **PASS (27 sn)**, Node 24 **PASS (34 sn)**.
 
+### C4 evidence CI sırasında tespit edilen SQLite test-harness yarışları — ayrı bugfix sonucu
+
+C4 evidence commit'i `883ae6fb536f31fd89f96ea8a13dc668c2edde5c` sonrası GitHub Actions `31326254441` Node 24'te PASS olurken Node 22'de role/SQLite integration testlerinde timeout verdi. Yeni bağlayıcı incidental-bug kuralı gereği C5'e geçilmedi; CI kırılması kök nedene kadar incelendi.
+
+- Node 22 fail'i ürün role davranışından değil iki test-harness kusurundan kaynaklanıyordu: gerçek SQLite handler'lar için **100 ms / 500 ms** sabit watchdog kullanılması ve bazı server/database tabanlı testlerin schema/migration readiness tamamlanmadan route çalıştırıp DB teardown'a geçmesi.
+- Local Node sürümü de **v22.23.1** idi; role testleri tek başına hızlı PASS verirken full-suite paralel yükte watchdog false-negative üretebiliyordu. `role-create` + `role-limit-atomicity` Node 22'de **12 ardışık tur × 93/93 PASS** stress ile doğrulandı.
+- `tests/helpers/database-test-utils.js` içindeki ortak `awaitDatabaseReady(db)` helper'ı schedule migration + error-log schema readiness sinyallerini birlikte bekliyor. Admin rate-limit, logs, roles, slides cache ve student photo/import/read integration testleri bu readiness kapısına alındı.
+- Role helper self-regression no-response kontrolleri **50 ms** kısa watchdog ile korunurken gerçek handler çağrıları **5000 ms** test-harness watchdog'a ayrıldı; bu bir ürün performans SLA'sı değildir, full-suite scheduler yükünü ürün hatası saymamak içindir.
+- `tests/sqlite-test-harness-stability.test.js` önce **0/2 RED**, final **2/2 PASS** verdi ve `test:core` zincirine eklendi.
+- Daha önce tek başına PASS olsa bile `SQLITE_MISUSE` üreten testler yeniden çalıştırıldığında lifecycle/lock error **0** oldu. Final full core **1470/1470 PASS** ve ayrıca log taramasında `SQLITE_MISUSE`, `SQLITE_BUSY`, premature schema callback hatası **NONE** verdi.
+- System smoke PASS, `npm audit --omit=dev` **0 vulnerability**, package parse/diff-check temiz.
+- Ayrı test-harness bugfix commit `23bccf8a8955900e3348b7e9b45b64b4d705ed67`, GitHub Actions `31326738654`: Node 22 **PASS (30 sn)**, Node 24 **PASS (30 sn)**.
+
 **P3-5C tamamlanmış değildir. Sıradaki dalga C5 — `public/admin/admin.js` shell template static style extraction'dır.** `admin.js` içinde kalan **8** static inline-style attribute küçük ve ayrı bir dalgada class'lara taşınacaktır. Dinamik state-class dönüşümü ancak ayrı TDD + browser kanıtıyla yapılacaktır.
 
 Her görsel dalgada en az:
