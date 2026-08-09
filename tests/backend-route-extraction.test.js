@@ -14,6 +14,8 @@ const studentRoutesPath = path.join(root, 'backend', 'routes', 'student-routes.j
 const roleRoutesPath = path.join(root, 'backend', 'routes', 'role-routes.js');
 const attendanceRoutesPath = path.join(root, 'backend', 'routes', 'attendance-routes.js');
 const logRoutesPath = path.join(root, 'backend', 'routes', 'log-routes.js');
+const slideRoutesPath = path.join(root, 'backend', 'routes', 'slide-routes.js');
+const slideMediaPathsPath = path.join(root, 'backend', 'slide-media-paths.js');
 
 test('P3-5A1 extracts settings and system route registration from server.js', () => {
     assert.equal(
@@ -172,4 +174,57 @@ test('P3-5A6 extracts log route registration from server.js without moving start
     assert.match(serverSource, /setInterval\(cleanupOldLogs,\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000\)/);
     assert.match(serverSource, /cleanupOldLogs\(\)/);
     assert.doesNotMatch(logSource, /function\s+cleanupOldLogs\s*\(/);
+});
+
+test('P3-5A7 extracts slide routes and media-path helpers while preserving route ordering', () => {
+    assert.equal(
+        fs.existsSync(slideRoutesPath),
+        true,
+        'backend/routes/slide-routes.js must exist'
+    );
+    assert.equal(
+        fs.existsSync(slideMediaPathsPath),
+        true,
+        'backend/slide-media-paths.js must exist'
+    );
+
+    const serverSource = fs.readFileSync(serverPath, 'utf8');
+    const slideSource = fs.readFileSync(slideRoutesPath, 'utf8');
+    const mediaSource = fs.readFileSync(slideMediaPathsPath, 'utf8');
+
+    assert.match(slideSource, /function\s+registerSlideRoutes\s*\(app,\s*deps\)/);
+    assert.match(serverSource, /registerSlideRoutes\s*\(app,/);
+
+    for (const directRoute of [
+        /app\.get\(['"]\/api\/slides\/active['"]/,
+        /app\.get\(['"]\/api\/slides['"]/,
+        /app\.get\(['"]\/api\/admin\/slides['"]/,
+        /app\.get\(['"]\/api\/slides\/:id['"]/,
+        /app\.post\(['"]\/api\/slides['"]/,
+        /app\.put\(['"]\/api\/slides\/reorder['"]/,
+        /app\.put\(['"]\/api\/slides\/:id['"]/,
+        /app\.delete\(['"]\/api\/slides\/:id['"]/,
+        /app\.get\(['"]\/api\/slide-settings['"]/,
+        /app\.post\(['"]\/api\/slide-settings['"]/,
+        /app\.put\(['"]\/api\/slide-settings['"]/
+    ]) {
+        assert.doesNotMatch(serverSource, directRoute);
+        assert.match(slideSource, directRoute);
+    }
+
+    const activeIndex = slideSource.indexOf("app.get('/api/slides/active'");
+    const listIndex = slideSource.indexOf("app.get('/api/slides'");
+    const idIndex = slideSource.indexOf("app.get('/api/slides/:id'");
+    const reorderIndex = slideSource.indexOf("app.put('/api/slides/reorder'");
+    const updateIdIndex = slideSource.indexOf("app.put('/api/slides/:id'");
+
+    assert.ok(activeIndex !== -1 && activeIndex < listIndex && listIndex < idIndex);
+    assert.ok(reorderIndex !== -1 && reorderIndex < updateIdIndex);
+
+    assert.doesNotMatch(serverSource, /function\s+getCanonicalSlideMediaUrl\s*\(/);
+    assert.doesNotMatch(serverSource, /function\s+resolvePublicSlideMediaUrl\s*\(/);
+    assert.doesNotMatch(serverSource, /function\s+resolveManagedSlideMediaPath\s*\(/);
+    assert.match(mediaSource, /function\s+getCanonicalSlideMediaUrl\s*\(/);
+    assert.match(mediaSource, /function\s+resolvePublicSlideMediaUrl\s*\(/);
+    assert.match(mediaSource, /function\s+resolveManagedSlideMediaPath\s*\(/);
 });

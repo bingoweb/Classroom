@@ -653,7 +653,7 @@ test('Slides Update Route ID Validation', async (t) => {
     });
 
     await t.test('12. Source guard against err.message in lookup error path', () => {
-        const sourcePath = path.join(__dirname, '../backend/server.js');
+        const sourcePath = path.join(__dirname, '../backend/routes/slide-routes.js');
         const sourceCode = fs.readFileSync(sourcePath, 'utf8');
 
         const startIndex = sourceCode.indexOf('// Update slide');

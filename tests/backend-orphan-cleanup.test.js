@@ -8,6 +8,7 @@ const path = require('node:path');
 const root = path.join(__dirname, '..');
 const backendConfigPath = path.join(root, 'backend', 'config.js');
 const backendUtilsPath = path.join(root, 'backend', 'utils.js');
+const slideMediaPathsPath = path.join(root, 'backend', 'slide-media-paths.js');
 const publicConfigPath = path.join(root, 'public', 'js', 'config.js');
 const publicUtilsPath = path.join(root, 'public', 'js', 'utils.js');
 
@@ -18,10 +19,13 @@ test('P3-4 removes only the orphan backend config copy', () => {
 
 test('P3-4 preserves the active backend utils dependency', () => {
     assert.equal(fs.existsSync(backendUtilsPath), true,
-        'backend/utils.js is still required by backend/server.js');
+        'backend/utils.js is still required by the backend slide media-path layer');
+    assert.equal(fs.existsSync(slideMediaPathsPath), true,
+        'backend/slide-media-paths.js must exist as the active normalizePath consumer');
 
-    const serverSource = fs.readFileSync(path.join(root, 'backend', 'server.js'), 'utf8');
-    assert.match(serverSource, /const\s*\{\s*normalizePath\s*\}\s*=\s*require\(['"]\.\/utils['"]\)/);
+    const slideMediaSource = fs.readFileSync(slideMediaPathsPath, 'utf8');
+    assert.match(slideMediaSource, /const\s*\{\s*normalizePath\s*\}\s*=\s*require\(['"]\.\/utils['"]\)/);
+    assert.match(slideMediaSource, /normalizePath\s*\(dbPath,\s*true\)/);
 
     const { normalizePath } = require(backendUtilsPath);
     assert.equal(normalizePath('uploads\\student.jpg'), '/uploads/student.jpg');
