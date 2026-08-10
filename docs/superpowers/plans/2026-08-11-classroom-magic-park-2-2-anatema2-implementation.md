@@ -6,7 +6,7 @@
 
 **Architecture:** Keep the existing theme registry/manifest contract and the stable dynamic element IDs used by `script.js`, `noise-meter.js`, and `kiosk-motion.js`. Add a versioned one-time localStorage migration in `kiosk-theme.js`, then refactor Magic Park's presentation DOM into explicit scene wrappers while preserving behavioral hooks. Split Magic Park styling into layout/components/state files imported by the theme package so the new `AnaTema2.png` geometry and visual language stay isolated from Garden and Science.
 
-**Tech Stack:** Static HTML, CSS container units, vanilla JavaScript, Node `node:test`, existing kiosk runtime, Playwright MCP, Chrome DevTools MCP.
+**Tech Stack:** Static HTML, CSS container units, vanilla JavaScript, Three.js `0.185.1`, pinned GSAP `3.15.0`, Node `node:test`, existing kiosk runtime, Playwright MCP, Chrome DevTools MCP.
 
 ## Global Constraints
 
@@ -20,6 +20,8 @@
 - Backend/API contracts do not change.
 - Visual quality is prioritized; do not simplify the design merely for performance convenience.
 - Browser acceptance requires Playwright and Chrome DevTools at 3840×2160, 2560×1440, and 1920×1080.
+- 3D motion is automatic and mouse-independent; pointer/cursor position must never be required for the intended kiosk experience.
+- The shared Three.js renderer is Magic-Park-only and must suspend/teardown cleanly when Garden or Science is selected.
 
 ---
 
@@ -493,6 +495,108 @@ Quiet/medium PIP must leave most of the current programme readable. High takeove
 - [ ] **Step 8: Run GREEN**
 
 Run role and Magic Park targeted tests.
+
+---
+
+### Task 7A: Build the shared Three.js Magic Park scene system
+
+**Files:**
+- Modify: `package.json`
+- Modify: `package-lock.json`
+- Modify: `backend/server.js`
+- Create: `public/js/magic-3d-scene.js`
+- Modify: `public/index.html`
+- Modify: `public/js/kiosk-theme.js`
+- Modify: `public/themes/magic-park/magic-layout.css`
+- Modify: `public/themes/magic-park/magic-components.css`
+- Create: `tests/magic-3d-scene.test.js`
+- Modify: `tests/kiosk-theme-system.test.js`
+- Modify: `tests/kiosk-magic-park.test.js`
+
+**Interfaces:**
+- Exact dependency: `three@0.185.1`.
+- Backend exposes only the required Three.js build directory under a narrow local `/vendor/three/` static route; do not expose the whole `node_modules` tree.
+- `#magic-3d-stage` is a transparent, pointer-inert WebGL layer beneath live DOM content and above the base ambience.
+- `window.Magic3DScene` exposes `start()`, `stop()`, `resize()`, `setNoiseState(detail)` and `destroy()`.
+- `kiosk-theme.js` emits a stable semantic `classroom:theme-change` event with the active theme id after a theme has actually been applied.
+
+- [ ] **Step 1: Write RED package/lifecycle tests**
+
+Require exact Three.js dependency, the narrow local vendor route, one unique `magic-3d-stage` mount, local module loading, no pointer-driven motion selectors/listeners, and one theme-change event boundary. Add a small VM harness proving repeated `start()` calls do not create duplicate RAF loops and `stop()` cancels the active loop.
+
+- [ ] **Step 2: Run RED**
+
+```bash
+node --test tests/magic-3d-scene.test.js
+npm run test:kiosk-theme-system
+npm run test:kiosk-magic-park
+```
+
+Expected: Three.js package/mount/runtime/event contracts are absent.
+
+- [ ] **Step 3: Install exact Three.js dependency**
+
+Use DevSpace:
+
+```bash
+npm install --save-exact three@0.185.1
+```
+
+Keep the dependency local to the project; do not use a runtime CDN.
+
+- [ ] **Step 4: Expose only the local Three.js build**
+
+Add a narrowly scoped Express static route before the public static middleware:
+
+```js
+app.use('/vendor/three', express.static(path.join(__dirname, '../node_modules/three/build')));
+```
+
+Do not expose all of `node_modules`.
+
+- [ ] **Step 5: Add the shared transparent WebGL stage**
+
+Place a single `<canvas id="magic-3d-stage" ...>` inside `.bento-grid`, below the live cards and below the AnaTema2 foreground frame. `magic-layout.css` owns its absolute geometry/z-index and `pointer-events: none` contract.
+
+- [ ] **Step 6: Implement one shared Three.js renderer**
+
+Create `magic-3d-scene.js` as an ES module importing `/vendor/three/three.module.min.js`. Use one transparent `WebGLRenderer`, one perspective camera and one scene. Build eight artwork-aligned panel groups/meshes corresponding to Clock, Attendance, Lesson Flow, Noise, Class TV, President, Duty and Stars. The meshes provide dimensional recess/surface lighting and animated accents behind the semantic DOM, not duplicate text.
+
+Use bounded automatic choreography only:
+
+- slow sinusoidal camera drift;
+- very small per-panel z/rotation breathing;
+- moving key/rim lights;
+- lightweight particles for Class TV/Stars/Noise only;
+- no `pointermove`, `mousemove`, drag or hover ownership.
+
+- [ ] **Step 7: Add Magic-Park-only lifecycle control**
+
+Emit `classroom:theme-change` from `kiosk-theme.js` after a manifest/safe theme is applied. `magic-3d-scene.js` starts only for `magic-park`, stops RAF/GPU updates for Garden/Science and resumes idempotently when Magic Park returns. Pagehide/beforeunload destroys the renderer cleanly.
+
+- [ ] **Step 8: Give Class TV a stronger television treatment**
+
+Use its Three.js panel group for deeper screen recess, soft glass/specular movement and subtle broadcast particles. Keep CRT scanline/chromatic/vignette effects restrained and keep text/faces in DOM. Do not convert programme DOM to canvas textures.
+
+- [ ] **Step 9: Apply the shared 3D language to the seven supporting panels**
+
+Tune mesh depth/light/ambient motion by hierarchy:
+
+- Noise: strongest supporting panel, reactive light/equalizer ambience.
+- Attendance/President/Duty/Stars: clear dimensional surfaces and portrait depth.
+- Clock/Lesson flow: minimal depth and slow motion for maximum readability.
+
+All meshes stay behind the AnaTema2 foreground frame.
+
+- [ ] **Step 10: Run GREEN and leak guards**
+
+```bash
+node --test tests/magic-3d-scene.test.js
+npm run test:kiosk-theme-system
+npm run test:kiosk-magic-park
+```
+
+Verify no duplicate RAF loop on repeated Magic Park activation and no active loop after switching to Garden/Science.
 
 ---
 

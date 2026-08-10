@@ -110,6 +110,50 @@ The eight regions should derive their accent treatment from the artwork instead 
 - Duty: aqua/blue accent.
 - Stars: berry/pink/gold accent.
 
+## 3D Scene Language and Current Reference Research
+
+On 11 August 2026 the current official TRT Çocuk home page was inspected in both Playwright and Chrome DevTools as a visual-language reference. The useful principles are its saturated purple/blue broadcast palette, one very large 3D-character hero, high-contrast yellow display lettering, circular character/channel selectors, large simple calls to action and a composition that keeps one dominant focal point while the surrounding UI remains playful. Magic Park must not copy TRT assets, characters, logos, layouts or proprietary graphics; it may borrow only these broad child-centred presentation principles.
+
+Magic Park 2.2 now uses a shared **3D scene language** across every suitable panel, not only Class TV. The chosen engine is **Three.js 0.185.1** together with the already-pinned GSAP runtime.
+
+The architecture is deliberately hybrid rather than turning text and student data into WebGL textures:
+
+- one transparent Three.js/WebGL stage renders depth, illuminated panel meshes, volumetric-looking accents, particles and automatic camera/light drift for the eight artwork openings;
+- existing live DOM remains the source of truth for names, counts, schedule copy, ARIA semantics and safe dynamic text;
+- DOM content visually sits on/inside the Three.js panel surfaces while remaining fully readable and accessible;
+- Class TV may own an additional bounded Three.js effect layer for screen-space CRT glow/distortion/particles when that produces a materially better television illusion;
+- the transparent `AnaTema2` foreground frame remains above both WebGL and DOM so curtains, wood, foliage, props and decorative rims physically occlude the live scenes;
+- Three.js canvases are `pointer-events: none` and never require mouse input.
+
+### Automatic movement instead of pointer interaction
+
+The kiosk has no mouse-driven interaction. All 3D motion therefore comes from bounded automatic choreography:
+
+- slow camera drift and breathing perspective;
+- low-amplitude panel depth movement;
+- moving key/rim lights and soft specular sweeps;
+- ambient particles where appropriate;
+- programme-transition camera/lighting beats in Class TV;
+- subtle idle motion in student/role scenes;
+- noise-reactive intensity only where it improves meaning.
+
+The motion system must never depend on pointer position, cursor hover or drag gestures. It must also respect reduced-motion preferences by switching to a much calmer static/low-motion state.
+
+### 3D intensity hierarchy
+
+The visual hierarchy is intentionally unequal:
+
+1. **Class TV** is the strongest 3D scene: television body/depth, glass, CRT-like screen effects, broadcast transitions and Lavunu interventions.
+2. **Noise instrument** is the second strongest: luminous meter/equalizer depth, LED-like accents and reactive illumination.
+3. **Attendance mini channel / President / Duty / Stars** use clearly dimensional surfaces, portrait depth and restrained particles/light movement.
+4. **Clock / Lesson flow** use the calmest 3D treatment so distance readability remains dominant.
+
+The target is a living child-focused broadcast world, not eight independent technology demos competing for attention.
+
+### Runtime and theme lifecycle
+
+Three.js is Magic-Park-only. Switching to Garden or Science must stop its animation frame loop, release or suspend GPU work and hide the WebGL stage. Returning to Magic Park must resume safely without creating duplicate renderers, event handlers or animation loops. Theme changes therefore need one stable runtime notification boundary rather than polling body classes forever.
+
 ## Component Architecture
 
 The current single large Magic Park stylesheet and mixed card markup will no longer be treated as the ideal internal structure.
