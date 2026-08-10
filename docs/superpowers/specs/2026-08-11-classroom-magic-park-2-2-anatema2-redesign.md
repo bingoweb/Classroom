@@ -135,21 +135,28 @@ Recommended component structure:
    - after-school/weekend mode
    - current/next lesson context
 
-4. **Noise scene**
-   - mascot/status cluster
-   - level meter
-   - equalizer state
+4. **Noise instrument scene**
+   - full-width level meter
+   - full-width equalizer
+   - compact listening/status copy
    - retry action
+   - no mascot artwork inside this top panel
 
-5. **Slideshow scene**
-   - media stage
-   - caption plate
-   - text-only story state
-   - media fallback state
+5. **Class TV / broadcast scene**
+   - rotating information programmes
+   - Atatürk image + quote programmes
+   - class attendance/statistics programmes
+   - absent-student programmes with portraits
+   - vice-president programmes with portraits
+   - announcement/poster programmes
+   - student-photo celebration programmes
+   - Lavunu mascot picture-in-picture interventions
+   - high-noise full-screen mascot takeover
+   - CRT/television presentation layer
 
 6. **President scene**
-   - president hero
-   - two vice-presidents
+   - president hero only
+   - no vice-presidents in this panel
    - empty/fallback state
 
 7. **Duty scene**
@@ -207,7 +214,7 @@ The time becomes the dominant visual. Date is a quiet top cluster; weekend count
 
 ### Class statistics
 
-Attendance becomes a clearer information hierarchy rather than several equal-weight boxes. Present/total count is the hero. Gender counts become compact supporting chips. Attendance status and absent roster occupy a lower structured zone.
+The narrow class-statistics panel becomes a **mini rotating information screen** rather than carrying the entire attendance hierarchy at once. It may cycle through a small number of compact views such as present/total, girl/boy split, attendance state and a concise absent summary. The larger, portrait-rich versions of these stories belong on Class TV. The mini screen must feel lively without becoming visually noisy or unreadable from classroom distance.
 
 ### Lesson flow
 
@@ -215,15 +222,40 @@ The active state must be readable from several metres away. Countdown/remaining 
 
 ### Noise
 
-The mascot should remain recognizable without dominating the entire panel. Status copy, meter and equalizer must visually read as one instrument rather than separate cards. Idle/requesting/unavailable states remain designed states, not accidental blanks.
+The top noise panel is now a dedicated **listening instrument**. Lavunu is removed from this panel completely. The level meter, equalizer and compact status/retry UI use the full available opening and visually read as one playful instrument rather than several small cards. Idle/requesting/unavailable/low/medium/high states remain designed states, not accidental blanks.
 
-### Slideshow
+### Class TV / former slideshow panel
 
-The panel should feel like a framed exhibit. Media gets maximum useful area. Captions use an artwork-compatible plate rather than a large generic overlay. Long story text remains a valid first-class state.
+The large centre panel becomes the **primary classroom information and announcement screen**, not a conventional photo slideshow. Existing slideshow media remains one programme family inside a broader broadcast scheduler.
+
+Class TV cycles through cheerful, highly visual programmes such as:
+
+- Atatürk artwork and short quote cards;
+- present/total attendance stories;
+- girl/boy class-composition stories;
+- absent students with student portraits when available;
+- the two vice-presidents with portraits and names;
+- classroom announcements/posters;
+- student-photo celebration/highlight scenes;
+- existing uploaded media/text slides and curated fallbacks.
+
+The presentation should evoke a colourful child-friendly television, including restrained CRT traits such as slight glass curvature, scanline/beam texture, edge glow, phosphor-like bloom and transition wipes. These effects must remain subtle enough that text and faces stay sharp.
+
+Class TV owns a **broadcast director** rather than a simple sequential slideshow timer. The director chooses the next eligible programme, prevents immediate repetition of the same programme family and allows priority interventions without destroying the underlying programme state.
+
+#### Lavunu broadcast behaviour
+
+Lavunu moves from the top noise panel into Class TV and is driven by the existing noise state machine.
+
+- **Normal/quiet:** Lavunu appears only occasionally as a short picture-in-picture/sticker-style guest. It must not pause or cover the main information programme for long.
+- **Rising/attention:** the shushing/attention mascot appears more frequently and more prominently, but still as a bounded overlay so the underlying programme remains readable.
+- **Very loud/high:** Class TV performs a short full-screen takeover with the loud/angry mascot, stronger CRT shake/pulse treatment and a clear quiet-down message. This takeover lasts only a few seconds, then restores the programme that was interrupted.
+
+The director must apply cooldowns and coalescing so continuous microphone sampling cannot permanently monopolise Class TV. Repeated high-noise samples during an active takeover extend/refresh only within a bounded limit instead of restarting animation every frame.
 
 ### President
 
-The president gets a clear portrait/name hierarchy. Vice-presidents remain visible as secondary roles without making the panel feel like a list. Empty and transient-failure states must still feel intentionally designed.
+The president panel shows **only the class president** with a clear portrait/name hierarchy. Vice-presidents move to Class TV where the larger screen can present them with appropriate portraits and typography. Empty and transient-failure states must still feel intentionally designed.
 
 ### Duty
 
@@ -262,6 +294,24 @@ Preserve:
 
 DOM refactoring is allowed only with corresponding JavaScript updates and regression coverage.
 
+## Broadcast Data Flow
+
+Class TV is a presentation coordinator over existing data sources; it does not introduce a new backend API.
+
+Inputs:
+
+- `/api/stats` for present/total, girl/boy and attendance information;
+- the existing absent-student state already derived by the dashboard;
+- `/api/roles` for vice-presidents and other role-driven stories;
+- `/api/slides/active` plus curated Atatürk fallback media;
+- existing noise-meter state/score for Lavunu interventions.
+
+The dashboard should maintain a small serialisable **broadcast snapshot** containing the latest eligible content. Class TV renders from that snapshot and keeps schedule/timer ownership inside one module/bounded set of functions rather than scattering timers across attendance, roles and noise code.
+
+Noise integration should use a stable event/hook boundary (for example a custom DOM event carrying semantic state plus normalized score) instead of the broadcast layer polling the microphone implementation directly. This keeps `noise-meter.js` responsible for sensing/classification and keeps Class TV responsible for presentation priority.
+
+When data is temporarily unavailable, the director skips unavailable programme families and keeps rotating through valid content. A transient API failure must not blank the screen or erase the last valid broadcast snapshot.
+
 ## Testing Strategy
 
 Implementation follows TDD and must preserve the existing dirty checkout without resetting unrelated work.
@@ -294,6 +344,21 @@ Cover:
 
 New or updated tests should lock the stable semantic hooks needed by JavaScript after DOM refactoring, without overfitting to incidental wrapper nesting.
 
+### Class TV / noise integration tests
+
+Cover at minimum:
+
+- the top noise panel contains meter/equalizer/status controls but no `noise-character-img` mascot;
+- the president panel renders the president only;
+- vice-presidents remain available to the Class TV programme generator;
+- Class TV programme generation can include attendance, gender split, absent roster, Atatürk and vice-president stories;
+- normal noise produces only a bounded occasional mascot overlay;
+- attention noise can increase intervention frequency without replacing every normal programme;
+- high noise triggers a full-screen takeover;
+- takeover has a bounded duration/cooldown and restores the interrupted programme;
+- repeated microphone samples do not spawn overlapping takeover timers/animations;
+- Class TV remains usable when one programme data source is absent or stale.
+
 ### Browser acceptance
 
 Both Playwright and Chrome DevTools are mandatory for final acceptance.
@@ -314,7 +379,9 @@ For Magic Park, inspect all eight regions in representative states:
 - after-school;
 - weekend;
 - noise idle/requesting/unavailable/low/medium/high;
-- slideshow normal, no-slide fallback, broken-media fallback, long story text;
+- Class TV attendance/gender/absence/vice-president/Atatürk/media programmes;
+- Class TV normal Lavunu picture-in-picture, attention intervention and high-noise takeover;
+- broadcast no-slide fallback, broken-media fallback and long story text;
 - president/duty/stars populated;
 - long names;
 - empty roles;
@@ -346,7 +413,10 @@ Magic Park 2.2 is complete only when:
 1. the one-time theme migration fixes existing installations without breaking future persistence;
 2. `AnaTema2.png` is the sole active Magic Park shell artwork;
 3. all eight Magic Park card interiors have been deliberately redesigned for the new artwork geometry and visual language;
-4. necessary DOM/JS refactoring is covered by regression tests;
+4. the centre panel operates as Class TV with multiple data-driven programme families and bounded Lavunu noise interventions;
+5. the top noise panel is a dedicated meter/equalizer instrument with no resident mascot;
+6. the president panel contains only the president and vice-presidents are presented through Class TV;
+7. necessary DOM/JS refactoring is covered by regression tests;
 5. Garden and Science still work;
 6. Playwright + Chrome DevTools acceptance is clean at 4K, 1440p and 1080p;
 7. project-wide regression and documentation gates pass;
