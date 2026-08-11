@@ -31,16 +31,49 @@ Bu belge transparan foreground, maske, alpha, anti-aliasing, halo/fringe, raster
 | pngcheck | 4.0.1 | PNG yapısal doğrulama |
 | NumPy | 2.5.2 | piksel matrisleri, mask/istatistik ve custom analiz |
 | Pillow | 12.3.0 | PNG/RGBA okuma-yazma, crop, channel ve teşhis çıktıları |
+| FFmpeg | 8.1.2_1 | video/sequence/frame extraction, dönüştürme ve medya teşhisi |
+| librsvg | 2.62.3 | SVG render/convert ve vector-to-raster doğrulama |
+| OpenImageIO | 3.1.16.0 | profesyonel image I/O, metadata/channel/format ve yüksek doğruluklu asset pipeline |
+| ExifTool | 13.55_1 | görsel/medya metadata inceleme ve temizleme |
+| potrace | 1.16 | bitmap mask/shape'i kontrollü vektör path'e dönüştürme |
+| resvg | 0.48.1 | yüksek doğruluklu SVG render ve regression çıktısı |
+| SVGO | 4.0.2 | SVG temizleme/optimizasyon |
+| Inkscape | 1.4.4 | profesyonel SVG/vector düzenleme, path ve export |
+| Blender | 5.2.0 | 3D modelleme, procedural geometry, material/light/texture ve headless asset üretimi |
+| Assimp | 6.0.5 | 3D format inceleme/import/export ve model pipeline smoke |
+| glslang | 16.5.0 | GLSL/OpenGL ES shader derleme/doğrulama ve SPIR-V üretimi |
+| shaderc / glslc | 2026.3 | alternatif shader compiler front-end ve SPIR-V üretimi |
+| SPIR-V Tools | 1.4.357.0 | `spirv-val` ile SPIR-V validation ve düşük seviye shader tooling |
+| SPIRV-Cross | 1.4.357.0 | SPIR-V reflection, disassembly ve cross-language inceleme |
+| Basis Universal | 2.50 | GPU texture compression ve KTX2 üretimi |
+| glTF Transform CLI | 4.4.2 | glTF inspect/optimize/meshopt ve pipeline dönüşümleri; global npm geliştirme CLI'sı |
+| gltfpack | 1.2 | meshoptimizer tabanlı native glTF optimizasyonu; global npm geliştirme CLI'sı |
 
 ## Homebrew kurulumu
 
 Eksik kurulum için tercih edilen komut:
 
 ```bash
-brew install imagemagick vips opencv gmic pngquant oxipng pngcheck numpy
+brew install \
+  imagemagick vips opencv gmic pngquant oxipng pngcheck numpy \
+  openimageio ffmpeg exiftool potrace librsvg resvg svgo \
+  assimp glslang shaderc spirv-tools spirv-cross basis_universal
+
+brew install --cask blender inkscape
 ```
 
 Pillow Homebrew Python ortamında import edilemiyorsa proje runtime dependency'si yapmadan geliştirme Python ortamına kurulmalıdır.
+
+Homebrew core'da `meshoptimizer/gltfpack` ve KTX-Software için doğrudan formula bulunmadığı doğrulandı. glTF/mesh optimization boşluğu resmi araçlarla, proje `package.json`'ına dokunmadan global geliştirme CLI'sı olarak kapatıldı:
+
+```bash
+SHARP_IGNORE_GLOBAL_LIBVIPS=1 \
+  npm install --global --include=optional --os=darwin --cpu=arm64 @gltf-transform/cli@4.4.2
+
+npm install --global gltfpack@1.2.0
+```
+
+`SHARP_IGNORE_GLOBAL_LIBVIPS=1`, Homebrew libvips bulunan bu Mac'te glTF Transform'ın `sharp` bağımlılığının gereksiz kaynak derlemeye düşmesini önler. Bu yalnız global geliştirme CLI kurulumu içindir; Classroom runtime paketi değildir.
 
 ## Doğrulama
 
@@ -52,6 +85,20 @@ pngquant --version
 oxipng --version
 pngcheck public/assets/sontema.png
 python3 -c 'import numpy, cv2; from PIL import Image; print(numpy.__version__, cv2.__version__, Image.__version__)'
+oiiotool --version
+exiftool -ver
+resvg --version
+svgo --version
+inkscape --version
+blender --version
+assimp version
+glslangValidator --version
+glslc --version
+spirv-val --version
+brew list --versions spirv-cross
+basisu -version
+gltf-transform --version
+gltfpack -v
 ```
 
 Homebrew OpenCV Python binding'i standart site-packages yolunda bulunamazsa önce gerçek Cellar yolunu doğrula; rastgele başka OpenCV pip paketi kurarak ortamı çoğaltma.
@@ -86,6 +133,93 @@ Homebrew OpenCV Python binding'i standart site-packages yolunda bulunamazsa önc
 - `pngcheck` ile yapı doğrula.
 - `oxipng` yalnız lossless son optimizasyon gerektiğinde kullan.
 - `pngquant` kayıplı/palette dönüşümü yapabildiğinden Magic Park ana RGBA foreground üzerinde otomatik son adım değildir.
+
+## Profesyonel vector / 3D / shader pipeline
+
+### SVG / vector
+
+- Inkscape: elle veya CLI üzerinden gerçek vector path düzenleme ve kontrollü export.
+- potrace: bitmap maskelerini vector path adayına dönüştürme.
+- resvg: browser'dan bağımsız, tutarlı SVG rasterizasyonu ve regression görüntüsü.
+- SVGO: SVG metadata/path/markup optimizasyonu; görsel eşdeğerlik doğrulanmadan destructive ayar kullanılmaz.
+- librsvg: SVG render/convert için ikinci, olgun doğrulama hattı.
+
+### 3D model üretimi
+
+- Blender: geometry, bevel, curve, material, normal, lighting, baked texture ve procedural asset üretimi.
+- Blender headless modu script tabanlı deterministik asset üretiminde kullanılabilir.
+- Assimp: OBJ/FBX/glTF ve diğer yaygın model formatlarının import/inspection smoke'u.
+
+Three.js için üretilecek gerçek 3D asset mümkün olduğunda glTF/GLB olarak normalize edilir; custom binary format sırf daha küçük diye tercih edilmez.
+
+### glTF optimize / validate-disiplini
+
+Kurulu iki tamamlayıcı araç:
+
+- `gltf-transform`: inspect, transform, meshopt ve kontrollü glTF pipeline.
+- `gltfpack`: meshoptimizer'ın resmi, agresif performans/size optimizasyon CLI'sı.
+
+11 Ağustos 2026 smoke testinde Blender ile üretilen sentetik cube GLB:
+
+- `gltf-transform inspect` ile okundu,
+- `gltf-transform meshopt` ile optimize edildi,
+- `gltfpack` ile ikinci bağımsız optimize hattından geçirildi,
+- her iki çıktı yeniden `gltf-transform inspect` ile başarıyla açıldı.
+
+Sentetik boyutlar yalnız smoke kanıtıdır ve kalite benchmark'ı değildir:
+
+```text
+input GLB      = 3448 B
+meshopt GLB    = 3828 B
+gltfpack GLB   = 2236 B
+```
+
+Küçük sentetik bir modelde meshopt container/extension overhead nedeniyle girişten büyük olabilir; gerçek asset kararını yalnız dosya boyutuna göre verme. Draw call, decode maliyeti, geometry/texture kalite kaybı ve browser GPU davranışı birlikte ölçülmelidir.
+
+### Shader pipeline
+
+WebGL shader geliştirmesinde asıl hedef Three.js/WebGL GLSL uyumluluğudur. Yerel shader tooling şu amaçlarla kullanılır:
+
+- `glslangValidator`: syntax/semantic compile ve SPIR-V üretimi,
+- `glslc`: bağımsız ikinci compiler path,
+- `spirv-val`: derlenen SPIR-V modülünü doğrulama,
+- `spirv-cross`: reflection ve generated interface inceleme.
+
+Bu araçların geçmesi browser WebGL kabulünün yerine geçmez. Final shader mutlaka gerçek Chromium/Three.js runtime'ında Playwright MCP + Chrome DevTools MCP ile doğrulanır.
+
+### GPU texture / KTX2
+
+Basis Universal 2.50 ile sentetik PNG'den gerçek `.ktx2` çıktısı üretildi. Bu nedenle KTX-Software Homebrew formula'sı bulunmaması mevcut web texture pipeline'ını bloklamaz.
+
+KTX2/Basis kullanırken:
+
+- source texture korunur,
+- kalite/artefact kıyası yapılır,
+- alpha gereken assette transparency regression kontrol edilir,
+- Three.js KTX2 loader/transcoder gereksinimi uygulama mimarisine ayrıca dahil edilir,
+- sadece dosya boyutu küçüldüğü için mevcut PNG/WebP asset körlemesine dönüştürülmez.
+
+## 11 Ağustos 2026 toolchain smoke sonucu
+
+Gerçek temp assetlerle doğrulanan işlemler:
+
+- OpenImageIO: 8×8 RGB PNG üretme ve info okuma,
+- ExifTool: image metadata okuma,
+- potrace: PBM → SVG,
+- resvg: SVG → PNG,
+- SVGO: SVG optimize,
+- Assimp: sentetik OBJ parse,
+- glslang + `spirv-val`: GLSL → SPIR-V → validation,
+- glslc + `spirv-val`: bağımsız ikinci shader compile/validation,
+- SPIRV-Cross: reflection,
+- BasisU: PNG → KTX2,
+- Blender: headless Python smoke,
+- Inkscape: CLI SVG → PNG export,
+- glTF Transform: inspect + meshopt,
+- gltfpack: GLB optimize,
+- `pngcheck public/assets/sontema.png`: OK.
+
+Bu smoke'lar repo dosyasını değiştirmeden `/tmp` altında çalıştırıldı.
 
 ## Magic Park özel sözleşmesi
 

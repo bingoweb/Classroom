@@ -208,9 +208,59 @@ Gerekli bir uygulama, CLI, Python paketi veya görüntü işleme kütüphanesi e
 - NumPy 2.5.2
 - Pillow 12.3.0
 
+11 Ağustos 2026 profesyonel toolchain genişletmesinde ayrıca kuruldu ve gerçek smoke ile doğrulandı:
+
+### Kod geliştirme / analiz
+
+- Semgrep 1.172.0
+- ast-grep 0.45.1
+- fd 10.4.2
+- jq 1.8.2
+- yq 4.53.3
+- hyperfine 1.20.0
+- ShellCheck 0.11.0
+- shfmt 3.13.1
+- Graphviz 15.1.1
+- scc 3.7.0
+- Universal Ctags 6.2.1
+- codespell 2.4.3
+- Biome 2.5.8
+- jscpd 5.0.14
+- lizard-analyzer 1.23.0
+- Gitleaks 8.30.1
+- actionlint 1.7.12
+
+### Grafik / 3D / shader / model pipeline
+
+- FFmpeg 8.1.2_1
+- librsvg 2.62.3
+- OpenImageIO 3.1.16.0
+- ExifTool 13.55_1
+- potrace 1.16
+- resvg 0.48.1
+- SVGO 4.0.2
+- Inkscape 1.4.4
+- Blender 5.2.0
+- Assimp 6.0.5
+- glslang 16.5.0
+- shaderc/glslc 2026.3
+- SPIR-V Tools 1.4.357.0
+- SPIRV-Cross 1.4.357.0
+- Basis Universal 2.50
+- glTF Transform CLI 4.4.2 — global development CLI
+- gltfpack 1.2 — meshoptimizer resmi global development CLI
+
+Bu araçlar bundan sonraki Classroom geliştirmesinde ihtiyaç oldukça aktif olarak kullanılabilir. Amaç “eldeki araçla idare etmek” değil, probleme uygun en güçlü profesyonel aracı seçmektir. Aynı işi yapan gereksiz paket yığını oluşturulmaz; araç runtime'da gerekmiyorsa `package.json` içine eklenmez.
+
+Homebrew SVGO kurulumu kendi bağımlılığı olarak Node 26.7.0 da kurmuştur; ancak Classroom aktif shell/runtime'ı NVM üzerinden `/Users/bingoweb/.nvm/versions/node/v22.23.1/bin/node` kullanmaya devam etmektedir. Proje engine sözleşmesi nedeniyle yeni oturumlarda şüphe varsa `command -v node && node -v` doğrulanmalıdır.
+
 Araçların amaçları, yeniden kurulum komutları ve kullanım sınırları:
 
 `docs/GRAPHICS_ASSET_TOOLCHAIN.md`
+
+Kod analizi/refactor/security/profiling araçlarının kullanım sözleşmesi:
+
+`docs/DEVELOPMENT_TOOLCHAIN.md`
 
 Kullanıcı bir mevcut proje görselindeki hata, transparanlık veya maske problemi için crop/referans görsel gönderirse bunu yeni grafik üretme isteği sayma. Gerçek düzeltme source-of-truth asset, foreground/mask üretim zinciri ve testlerde yapılır; referans crop yalnız teşhis içindir.
 
