@@ -61,58 +61,92 @@
                 </div>
 
                 <div class="stats-body magic-scene attendance-scene">
-                    <!-- Today's presence and fixed class capacity -->
-                    <div class="attendance-hero attendance-mini-page attendance-mini-page--hero" id="attendance-hero">
-                        <div class="present-students-panel">
-                            <div class="present-students-kicker">
-                                <span class="presence-dot" aria-hidden="true"></span>
-                                Bugün Sınıfta
-                            </div>
-                            <div class="present-students-value-row">
-                                <span class="present-students-value" id="present-students">--</span>
-                                <span class="present-students-unit">öğrenci</span>
-                            </div>
-                        </div>
+                    <div class="magic-attendance" id="magic-attendance-box" data-attendance-box hidden>
+                        <div class="magic-attendance__webgl" data-attendance-webgl aria-hidden="true"></div>
+                        <div class="magic-attendance__stage">
+                            <section class="magic-attendance__scene magic-attendance__scene--total is-active"
+                                data-attendance-scene="total" aria-hidden="false">
+                                <div class="magic-attendance__copy">
+                                    <span class="magic-attendance__label">SINIF MEVCUDU</span>
+                                    <strong class="magic-attendance__number" data-attendance-value="total">--</strong>
+                                </div>
+                            </section>
 
-                        <div class="class-capacity-panel">
-                            <span class="class-capacity-label">Sınıf Mevcudu</span>
-                            <span class="class-capacity-value" id="total-students">--</span>
-                            <span class="class-capacity-unit">öğrenci</span>
+                            <section class="magic-attendance__scene magic-attendance__scene--girls"
+                                data-attendance-scene="girls" aria-hidden="true">
+                                <div class="magic-attendance__copy">
+                                    <span class="magic-attendance__label">KIZ ÖĞRENCİ</span>
+                                    <strong class="magic-attendance__number" data-attendance-value="girls">--</strong>
+                                </div>
+                                <img class="magic-attendance__character magic-attendance__character--girl"
+                                    src="themes/magic-park/boxes/attendance/assets/attendance-girl.png"
+                                    alt="El sallayan kız öğrenci">
+                            </section>
+
+                            <section class="magic-attendance__scene magic-attendance__scene--boys"
+                                data-attendance-scene="boys" aria-hidden="true">
+                                <div class="magic-attendance__copy">
+                                    <span class="magic-attendance__label">ERKEK ÖĞRENCİ</span>
+                                    <strong class="magic-attendance__number" data-attendance-value="boys">--</strong>
+                                </div>
+                                <img class="magic-attendance__character magic-attendance__character--boy"
+                                    src="themes/magic-park/boxes/attendance/assets/attendance-boy.png"
+                                    alt="El sallayan erkek öğrenci">
+                            </section>
                         </div>
                     </div>
 
-                    <!-- Gender Split -->
-                    <div class="stat-gender-row attendance-mini-page attendance-mini-page--gender">
-                        <div class="gender-box girl-box">
-                            <img class="gender-icon" src="assets/ui-icons-3d/student-girl.png" alt="Kız öğrenci">
-                            <div class="gender-info">
-                                <span class="gender-count" id="girl-students">--</span>
-                                <span class="gender-label">Kız</span>
+                    <div class="attendance-legacy-details">
+                        <!-- Today's presence and fixed class capacity for non-Magic themes -->
+                        <div class="attendance-hero attendance-mini-page attendance-mini-page--hero" id="attendance-hero">
+                            <div class="present-students-panel">
+                                <div class="present-students-kicker">
+                                    <span class="presence-dot" aria-hidden="true"></span>
+                                    Bugün Sınıfta
+                                </div>
+                                <div class="present-students-value-row">
+                                    <span class="present-students-value" id="present-students">--</span>
+                                    <span class="present-students-unit">öğrenci</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="gender-box boy-box">
-                            <img class="gender-icon" src="assets/ui-icons-3d/student-boy.png" alt="Erkek öğrenci">
-                            <div class="gender-info">
-                                <span class="gender-count" id="boy-students">--</span>
-                                <span class="gender-label">Erkek</span>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Attendance -->
-                    <div class="attendance-wrapper attendance-mini-page attendance-mini-page--status">
-                        <div class="attendance-box" id="attendance-stat">
-                            <div class="attendance-header">
-                                <span class="attendance-title">BUGÜNÜN YOKLAMASI</span>
-                                <span class="attendance-status" id="today-attendance">--</span>
+                            <div class="class-capacity-panel">
+                                <span class="class-capacity-label">Sınıf Mevcudu</span>
+                                <span class="class-capacity-value" id="total-students">--</span>
+                                <span class="class-capacity-unit">öğrenci</span>
                             </div>
                         </div>
 
-                        <!-- Absent Students Storybook Roster -->
-                        <div class="absent-marquee-container" id="absent-container" style="display: none;">
-                            <div class="absent-label">DEVAMSIZLAR</div>
-                            <div class="marquee-wrapper">
-                                <div class="marquee-content" id="absent-list"></div>
+                        <div class="stat-gender-row attendance-mini-page attendance-mini-page--gender">
+                            <div class="gender-box girl-box">
+                                <img class="gender-icon" src="assets/ui-icons-3d/student-girl.png" alt="Kız öğrenci">
+                                <div class="gender-info">
+                                    <span class="gender-count" id="girl-students">--</span>
+                                    <span class="gender-label">Kız</span>
+                                </div>
+                            </div>
+                            <div class="gender-box boy-box">
+                                <img class="gender-icon" src="assets/ui-icons-3d/student-boy.png" alt="Erkek öğrenci">
+                                <div class="gender-info">
+                                    <span class="gender-count" id="boy-students">--</span>
+                                    <span class="gender-label">Erkek</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="attendance-wrapper attendance-mini-page attendance-mini-page--status">
+                            <div class="attendance-box" id="attendance-stat">
+                                <div class="attendance-header">
+                                    <span class="attendance-title">BUGÜNÜN YOKLAMASI</span>
+                                    <span class="attendance-status" id="today-attendance">--</span>
+                                </div>
+                            </div>
+
+                            <div class="absent-marquee-container" id="absent-container" style="display: none;">
+                                <div class="absent-label">DEVAMSIZLAR</div>
+                                <div class="marquee-wrapper">
+                                    <div class="marquee-content" id="absent-list"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -284,6 +318,7 @@
     <script src="vendor/canvas-confetti/canvas-confetti-1.9.4.js"></script>
     <script src="js/time-provider.js"></script>
     <script src="themes/magic-park/boxes/clock/clock.js?v=2"></script>
+    <script src="themes/magic-park/boxes/attendance/attendance.js?v=1"></script>
     <script src="js/utils.js"></script>
     <script src="js/confetti.js"></script>
     <script src="js/kiosk-motion.js?v=5"></script>

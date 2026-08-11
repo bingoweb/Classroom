@@ -67,6 +67,9 @@ function requireCsrfToken(req, res, next) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 const XLSX_BROWSER_BUNDLE_PATH = require.resolve('xlsx/dist/xlsx.full.min.js');
+const THREE_BUILD_DIR = path.dirname(require.resolve('three'));
+const THREE_MODULE_PATH = path.join(THREE_BUILD_DIR, 'three.module.min.js');
+const THREE_CORE_PATH = path.join(THREE_BUILD_DIR, 'three.core.min.js');
 
 // Initialize logger
 const logger = new Logger();
@@ -118,6 +121,19 @@ app.get('/vendor/sheetjs/xlsx.full.min.js', (req, res) => {
     res.set('Cache-Control', REVALIDATE_PUBLIC);
     res.type('application/javascript');
     res.sendFile(XLSX_BROWSER_BUNDLE_PATH);
+});
+
+// Expose only the two browser modules required by the Magic Park attendance box.
+app.get('/vendor/three/three.module.min.js', (req, res) => {
+    res.set('Cache-Control', REVALIDATE_PUBLIC);
+    res.type('application/javascript');
+    res.sendFile(THREE_MODULE_PATH);
+});
+
+app.get('/vendor/three/three.core.min.js', (req, res) => {
+    res.set('Cache-Control', REVALIDATE_PUBLIC);
+    res.type('application/javascript');
+    res.sendFile(THREE_CORE_PATH);
 });
 
 // Serve static files from PUBLIC directory (Frontend)

@@ -1,0 +1,220 @@
+/* Magic Park attendance box: complete, box-local visual surface. */
+
+body.magic-park-theme.theme-magic-park .attendance-scene {
+    position: relative;
+    display: block !important;
+    padding: 0;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 52% 39%, rgba(255, 250, 210, 0.96), rgba(200, 239, 205, 0.92) 48%, rgba(139, 211, 223, 0.96) 100%),
+        #c8efcd;
+    color: #18324a;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-legacy-details {
+    display: none !important;
+}
+
+.magic-attendance[hidden] {
+    display: none !important;
+}
+
+.magic-attendance {
+    position: absolute;
+    inset: 0;
+    isolation: isolate;
+    overflow: hidden;
+    background:
+        radial-gradient(ellipse at 50% 31%, rgba(255, 255, 236, 0.94), transparent 52%),
+        linear-gradient(145deg, #8bd3df 0%, #c8efcd 52%, #fff2b6 100%);
+    color: #18324a;
+}
+
+.magic-attendance::before {
+    content: '';
+    position: absolute;
+    inset: 3.5% 2.5%;
+    z-index: 0;
+    border-radius: 9%;
+    opacity: 0.58;
+    background:
+        radial-gradient(circle at 9% 18%, rgba(255, 255, 255, 0.76) 0 0.5%, transparent 0.72%),
+        radial-gradient(circle at 86% 19%, rgba(255, 239, 106, 0.72) 0 0.46%, transparent 0.68%),
+        radial-gradient(circle at 64% 69%, rgba(255, 255, 255, 0.66) 0 0.42%, transparent 0.64%);
+    background-size: 15% 19%, 21% 24%, 17% 21%;
+    pointer-events: none;
+}
+
+.magic-attendance__webgl,
+.magic-attendance__stage {
+    position: absolute;
+    inset: 0;
+}
+
+.magic-attendance__webgl {
+    z-index: 1;
+    pointer-events: none;
+}
+
+.magic-attendance__webgl canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.magic-attendance__stage {
+    z-index: 2;
+    perspective: 900px;
+}
+
+.magic-attendance__scene {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translate3d(-6%, 0, -80px) rotateY(5deg) scale(0.96);
+    transform-origin: 50% 55%;
+    pointer-events: none;
+}
+
+.magic-attendance__scene.is-active {
+    opacity: 1;
+    visibility: visible;
+    transform: translate3d(0, 0, 0) rotateY(0) scale(1);
+}
+
+.magic-attendance__copy {
+    position: absolute;
+    left: 52%;
+    top: 25%;
+    z-index: 7;
+    display: flex;
+    width: 42%;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.6cqh;
+    text-align: center;
+    filter: drop-shadow(0 0.7cqh 0.65cqh rgba(40, 76, 83, 0.35));
+}
+
+.magic-attendance__scene--total .magic-attendance__copy {
+    left: 17%;
+    top: 25%;
+    width: 66%;
+}
+
+.magic-attendance__scene--girls .magic-attendance__copy,
+.magic-attendance__scene--boys .magic-attendance__copy {
+    left: 41%;
+    width: 43%;
+}
+
+.magic-attendance__label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 8.8cqh;
+    padding: 1.1cqh 2.8cqw;
+    border: 0.34cqh solid rgba(255, 255, 224, 0.94);
+    border-radius: 999px;
+    background: linear-gradient(180deg, #fff36a 0%, #e7ba2f 46%, #e36d22 100%);
+    box-shadow:
+        inset 0 0.8cqh 0.65cqh rgba(255, 255, 255, 0.66),
+        inset 0 -0.65cqh 0.75cqh rgba(134, 61, 13, 0.38),
+        0 0.65cqh 0 #a44b16,
+        0 1.25cqh 1.25cqh rgba(44, 83, 85, 0.38);
+    color: #fffceb;
+    font: 950 clamp(0.72rem, 4.15cqw, 2.25rem)/0.94 'Fredoka Classroom', 'Trebuchet MS', sans-serif;
+    letter-spacing: 0.025em;
+    text-shadow: 0 0.22cqh 0 #7f3714, 0 0.48cqh 0.28cqh rgba(255, 250, 165, 0.72);
+    white-space: nowrap;
+}
+
+.magic-attendance__scene--girls .magic-attendance__label {
+    min-height: 8.2cqh;
+    padding-inline: 1.5cqw;
+    background: linear-gradient(180deg, #ff92d4 0%, #dc4fae 48%, #9b338d 100%);
+    box-shadow: inset 0 0.8cqh 0.65cqh rgba(255, 255, 255, 0.66), inset 0 -0.65cqh 0.75cqh rgba(91, 22, 80, 0.34), 0 0.65cqh 0 #7c286f, 0 1.25cqh 1.25cqh rgba(44, 83, 85, 0.32);
+    font-size: clamp(0.74rem, 3.65cqw, 2.05rem);
+}
+
+.magic-attendance__scene--boys .magic-attendance__label {
+    min-height: 8.2cqh;
+    padding-inline: 1.5cqw;
+    background: linear-gradient(180deg, #74e7ff 0%, #349ecf 48%, #1d63af 100%);
+    box-shadow: inset 0 0.8cqh 0.65cqh rgba(255, 255, 255, 0.66), inset 0 -0.65cqh 0.75cqh rgba(17, 65, 123, 0.34), 0 0.65cqh 0 #18528f, 0 1.25cqh 1.25cqh rgba(44, 83, 85, 0.32);
+    font-size: clamp(0.74rem, 3.65cqw, 2.05rem);
+}
+
+.magic-attendance__number {
+    display: block;
+    background: linear-gradient(180deg, #fff76c 0%, #ffb52e 38%, #ed5b24 76%, #b52d22 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    font: 950 clamp(3.4rem, 24.5cqw, 10rem)/0.75 'Fredoka Classroom', 'Trebuchet MS', sans-serif;
+    letter-spacing: -0.08em;
+    -webkit-text-stroke: 0.28cqh rgba(255, 255, 229, 0.92);
+    paint-order: stroke fill;
+    text-shadow:
+        0 0.35cqh 0 #d34d20,
+        0 0.78cqh 0 #8c2e1b,
+        0 1.35cqh 1.2cqh rgba(55, 91, 88, 0.45);
+    filter: drop-shadow(0 -0.3cqh 0 rgba(255, 255, 255, 0.52));
+}
+
+.magic-attendance__scene--girls .magic-attendance__number {
+    background: linear-gradient(180deg, #ffd1f0 0%, #ff75ca 34%, #c84eae 72%, #852c83 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-stroke-color: rgba(255, 174, 231, 0.78);
+    font-size: clamp(3.4rem, 24.5cqw, 10rem);
+    text-shadow: 0 0.35cqh 0 #9b398e, 0 0.78cqh 0 #65215f, 0 1.35cqh 1.2cqh rgba(55, 91, 88, 0.42);
+}
+
+.magic-attendance__scene--boys .magic-attendance__number {
+    background: linear-gradient(180deg, #d7f8ff 0%, #6cddfa 34%, #258fc9 72%, #185a9d 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-stroke-color: rgba(181, 237, 255, 0.78);
+    font-size: clamp(3.4rem, 24.5cqw, 10rem);
+    text-shadow: 0 0.35cqh 0 #247ca8, 0 0.78cqh 0 #174f80, 0 1.35cqh 1.2cqh rgba(55, 91, 88, 0.42);
+}
+
+.magic-attendance__character {
+    position: absolute;
+    left: 4%;
+    bottom: -10%;
+    z-index: 4;
+    width: 58%;
+    height: auto;
+    max-height: 108%;
+    object-fit: contain;
+    object-position: left bottom;
+    filter: drop-shadow(1.2cqw 1.1cqh 1.1cqh rgba(37, 79, 83, 0.42));
+    transform-origin: 30% 82%;
+}
+
+.magic-attendance__character--girl {
+    left: -2%;
+    bottom: -11%;
+    width: 59%;
+}
+
+.magic-attendance__character--boy {
+    left: 0;
+    bottom: -9%;
+    width: 56%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .magic-attendance__scene,
+    .magic-attendance__character,
+    .magic-attendance__number {
+        transition: none !important;
+        animation: none !important;
+    }
+}

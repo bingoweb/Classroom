@@ -148,7 +148,7 @@
             const roles = this.snapshot.roles;
             const families = [];
 
-            if (stats) families.push('attendance', 'gender');
+            if (stats) families.push('attendance');
             if (stats?.absentStudents?.length) families.push('absent');
             if (roles.some(role => role.role_type === 'vice_president')) families.push('vice-presidents');
             if (roles.some(role => role.role_type === 'duty')) families.push('duty');
@@ -222,17 +222,6 @@
                             <div class="class-tv-kicker">BUGÜN SINIFTA</div>
                             <div class="class-tv-hero-number">${totalToday ? present : '—'}<span> / ${Number(stats.total) || 0}</span></div>
                             <div class="class-tv-message">${totalToday ? (absent ? `${absent} arkadaşımız bugün aramızda değil` : 'Tam kadro, harika!') : 'Yoklama birazdan burada'}</div>
-                        </section>`;
-                }
-                case 'gender': {
-                    if (!stats) return '';
-                    return `
-                        <section class="class-tv-card class-tv-card--gender">
-                            <div class="class-tv-kicker">2/D RENKLİ TAKIMI</div>
-                            <div class="class-tv-split">
-                                <div class="class-tv-stat class-tv-stat--girl"><img src="assets/ui-icons-3d/student-girl.png" alt=""><strong>${Number(stats.girls) || 0}</strong><span>Kız Öğrenci</span></div>
-                                <div class="class-tv-stat class-tv-stat--boy"><img src="assets/ui-icons-3d/student-boy.png" alt=""><strong>${Number(stats.boys) || 0}</strong><span>Erkek Öğrenci</span></div>
-                            </div>
                         </section>`;
                 }
                 case 'absent': {

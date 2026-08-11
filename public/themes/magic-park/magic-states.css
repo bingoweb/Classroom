@@ -29,7 +29,3 @@ body.magic-park-theme.theme-magic-park #noise-meter-card.state-medium .noise-sce
 body.magic-park-theme.theme-magic-park #noise-meter-card.state-high .noise-scene {
     background: linear-gradient(145deg, #fff0ed, #f2ccc8 55%, #dca6a6);
 }
-
-body.magic-park-theme.theme-magic-park .attendance-scene .attendance-hero.is-pending {
-    opacity: 0.72;
-}

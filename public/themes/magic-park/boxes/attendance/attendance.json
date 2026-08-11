@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "id": "magic-park-attendance",
+  "version": "1.0.0",
+  "theme": "magic-park",
+  "css": "attendance.css",
+  "script": "attendance.js",
+  "visibleFields": [
+    "total",
+    "girls",
+    "boys"
+  ],
+  "sceneOrder": [
+    "total",
+    "girls",
+    "boys"
+  ],
+  "timingMs": {
+    "scene": 6000,
+    "enter": 700,
+    "holdUntil": 5200,
+    "overlap": 450,
+    "numberSettle": 650
+  },
+  "motion": {
+    "direction": "left-to-right",
+    "genderRevealOrder": [
+      "character",
+      "label",
+      "number"
+    ]
+  },
+  "palette": {
+    "ink": "#18324A",
+    "backdropSky": "#8BD3DF",
+    "backdropMint": "#C8EFCD",
+    "backdropCream": "#FFF2B6",
+    "yellow": "#C8B53C",
+    "cream": "#CCCCB5",
+    "red": "#AB4121",
+    "blue": "#1D63AF",
+    "orange": "#DD5C19",
+    "cyan": "#47A2C7",
+    "leaf": "#1F5F0B",
+    "green": "#579D12",
+    "flower": "#BF54B6"
+  },
+  "capabilities": {
+    "three": true,
+    "gsap": true,
+    "cssFallback": true,
+    "reducedMotion": true
+  },
+  "characterPresentation": {
+    "anchor": "left",
+    "horizontalFlip": false,
+    "foregroundOcclusion": "none"
+  },
+  "assets": {
+    "girl": "assets/attendance-girl.png",
+    "boy": "assets/attendance-boy.png"
+  }
+}

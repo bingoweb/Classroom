@@ -108,6 +108,31 @@ test('vice presidents leave the narrow president panel and remain available to C
     assert.match(source, /role_type\s*===\s*['"]duty['"]/);
 });
 
+test('Class TV keeps attendance and absence programmes but never duplicates the box-owned gender counts', () => {
+    const harness = createHarness();
+    const director = harness.window.createClassTV({
+        document: harness.window.document,
+        setTimeout: harness.window.setTimeout,
+        clearTimeout: harness.window.clearTimeout
+    });
+    director.init();
+    director.updateStats({
+        total: 24,
+        girls: 12,
+        boys: 12,
+        todayPresent: 22,
+        todayAbsent: 2,
+        absentStudents: [{ name: 'Ada' }]
+    });
+
+    const families = director.getProgrammeFamilies();
+    assert.ok(families.includes('attendance'));
+    assert.ok(families.includes('absent'));
+    assert.ok(!families.includes('gender'));
+    assert.equal(director.renderProgramme('gender'), '');
+    assert.doesNotMatch(source, /class-tv-card--gender/);
+});
+
 test('high noise takeover is coalesced and restores the interrupted programme', () => {
     const harness = createHarness();
     assert.equal(typeof harness.window.createClassTV, 'function');
@@ -149,7 +174,7 @@ test('programme selection skips unavailable families and avoids immediate family
     const next = director.pickNextProgramme();
 
     assert.notEqual(next, 'attendance');
-    assert.ok(['gender', 'ataturk', 'base-media'].includes(next));
+    assert.ok(['ataturk', 'base-media'].includes(next));
 });
 
 test('Class TV escapes role names before rendering vice-president programme HTML', () => {

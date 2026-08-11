@@ -1643,15 +1643,29 @@ async function updateStats(preloadedStats) {
 
         if (!hasDataChanged('stats', stats)) return;
 
-        const totalStudents = Number(stats.total) || 0;
+        const normalizeCount = (value) => {
+            const count = Number(value);
+            return Number.isFinite(count) && count >= 0 ? Math.floor(count) : 0;
+        };
+        const normalizedStats = {
+            ...stats,
+            total: normalizeCount(stats.total),
+            girls: normalizeCount(stats.girls),
+            boys: normalizeCount(stats.boys),
+            todayPresent: normalizeCount(stats.todayPresent),
+            todayAbsent: normalizeCount(stats.todayAbsent),
+            absentStudents: Array.isArray(stats.absentStudents) ? stats.absentStudents : []
+        };
+
+        const totalStudents = normalizedStats.total;
         document.getElementById('total-students').textContent = totalStudents;
-        document.getElementById('girl-students').textContent = stats.girls || 0;
-        document.getElementById('boy-students').textContent = stats.boys || 0;
+        document.getElementById('girl-students').textContent = normalizedStats.girls;
+        document.getElementById('boy-students').textContent = normalizedStats.boys;
 
         // Today's attendance
-        const todayPresent = stats.todayPresent || 0;
-        const todayAbsent = stats.todayAbsent || 0;
-        const absentStudents = stats.absentStudents || [];
+        const todayPresent = normalizedStats.todayPresent;
+        const todayAbsent = normalizedStats.todayAbsent;
+        const absentStudents = normalizedStats.absentStudents;
         const todayTotal = todayPresent + todayAbsent;
         const hasAttendance = todayTotal > 0;
         const presentStudents = document.getElementById('present-students');
@@ -1704,6 +1718,10 @@ async function updateStats(preloadedStats) {
                 absentList.replaceChildren();
             }
         }
+
+        window.dispatchEvent(new CustomEvent('classroom:stats-updated', {
+            detail: normalizedStats
+        }));
     } catch (e) {
         console.error('Stats error', e);
         lastDataHash.stats = null;

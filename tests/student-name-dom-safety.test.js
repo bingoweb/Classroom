@@ -10,6 +10,7 @@ test('Student Name DOM Safety Tests', async (t) => {
     const createSandbox = () => {
         const domElements = {};
         const domContentLoadedHandlers = [];
+        const windowEvents = [];
         const getEl = (id) => {
             if (!domElements[id]) {
                 domElements[id] = { 
@@ -68,6 +69,13 @@ test('Student Name DOM Safety Tests', async (t) => {
             COMPONENTS: { DASHBOARD: 'Dashboard', ADMIN_PANEL: 'AdminPanel' },
             navigator: { userAgent: '' },
             addEventListener: () => {},
+            dispatchEvent: (event) => windowEvents.push(event),
+            CustomEvent: class CustomEvent {
+                constructor(type, init = {}) {
+                    this.type = type;
+                    this.detail = init.detail;
+                }
+            },
             location: { reload: () => {} },
             setInterval: () => {},
             setTimeout: () => {}
@@ -79,7 +87,7 @@ test('Student Name DOM Safety Tests', async (t) => {
             domContentLoadedHandlers.splice(0).forEach(handler => handler());
         };
 
-        return { sandbox, domElements, getEl, fireDomContentLoaded };
+        return { sandbox, domElements, getEl, fireDomContentLoaded, windowEvents };
     };
 
     const maliciousNames = [
@@ -112,7 +120,7 @@ test('Student Name DOM Safety Tests', async (t) => {
         const scriptSource = fs.readFileSync(path.join(__dirname, '../public/js/script.js'), 'utf8');
         const utilsSource = fs.readFileSync(path.join(__dirname, '../public/js/utils.js'), 'utf8');
         
-        const { sandbox, domElements, getEl } = createSandbox();
+        const { sandbox, domElements, getEl, windowEvents } = createSandbox();
         const focusCalls = [];
         sandbox.intervalManager.setTimeout = (callback) => callback();
         sandbox.faceFocusEngine.focusFace = (...args) => focusCalls.push(args);
@@ -175,6 +183,16 @@ test('Student Name DOM Safety Tests', async (t) => {
         assert.strictEqual(getEl('present-students').textContent, 9, 'Today\'s present count is the primary classroom value');
         assert.strictEqual(getEl('total-students').textContent, 10, 'Fixed class capacity remains visible as the secondary value');
         assert.strictEqual(getEl('today-attendance').textContent, '1 ÖĞRENCİ YOK', 'Attendance summary emphasizes the absent count without duplicating the hero value');
+        const statsEvent = windowEvents.find(event => event.type === 'classroom:stats-updated');
+        assert.ok(statsEvent, 'Dashboard publishes normalized stats for independently owned boxes');
+        assert.strictEqual(JSON.stringify(statsEvent.detail), JSON.stringify({
+            total: 10,
+            girls: 5,
+            boys: 5,
+            todayPresent: 9,
+            todayAbsent: 1,
+            absentStudents: [{ id: 5, name: maliciousNames[1] }]
+        }));
         
         assert.ok(!presidentHtml.includes('<script>'), 'No raw script tag in president');
         assert.ok(!presidentHtml.includes('onerror="globalThis.__xss=1"'), 'No raw injected onerror attribute in president');

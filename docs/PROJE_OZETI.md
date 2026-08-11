@@ -1,7 +1,7 @@
 # Classroom — Güncel Proje Özeti
 
-**Güncelleme:** 8 Ağustos 2026  
-**Repo:** `bingoweb/Classroom`  
+**Güncelleme:** 12 Ağustos 2026
+**Repo:** `bingoweb/Classroom`
 **Aktif dal:** `main`
 
 Bu belge Classroom ürününün güncel insan-okur teknik özetidir. Değişen kod ayrıntılarında **Git HEAD kaynak gerçekliktir**.
@@ -39,9 +39,12 @@ Ana kiosk tek 16:9 sahne içinde **8 ana bölge** taşır.
 ### 2.2 Sınıf mevcudu
 
 - toplam öğrenci,
-- kız/erkek dağılımı,
-- yoklama durumu,
-- gelmeyen öğrencilerin avatar/isim görünümü.
+- kız öğrenci sayısı,
+- erkek öğrenci sayısı,
+- üç sahneli soldan sağa akış,
+- cinsiyet sahnelerinde çocuk → etiket → sayı koreografisi.
+
+Günlük yoklama ve gelmeyen öğrenci ayrıntıları artık bu kutuda tekrar edilmez; merkez Class TV yayınında gösterilir. Magic Park kutusu kendi `attendance.css`, `attendance.json`, `attendance.js` ve asset paketine sahiptir.
 
 ### 2.3 Ders akışı
 

@@ -45,6 +45,7 @@
     "test:kiosk-css-analysis": "node --test tests/kiosk-css-analysis.test.js",
     "test:kiosk-titlebar-resize": "node --test tests/kiosk-titlebar-resize.test.js",
     "test:kiosk-theme-system": "node --test tests/kiosk-theme-system.test.js",
+    "test:magic-attendance": "node --test tests/magic-attendance.test.js",
     "test:admin-session-store": "node --test tests/admin-session-store.test.js",
     "test:admin-session-api": "node --test tests/admin-session-api.test.js",
     "test:admin-session-error-redaction": "node --test tests/admin-session-error-redaction.test.js",
@@ -121,6 +122,7 @@
     "gsap": "3.15.0",
     "multer": "2.2.0",
     "sqlite3": "6.0.1",
+    "three": "0.185.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   }
 }
