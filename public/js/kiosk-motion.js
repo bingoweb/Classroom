@@ -16,6 +16,30 @@
         ['96.5%', '91.8%']
     ];
 
+    const MAGIC_SCENE_ROOTS = [
+        '.clock-content-wrapper',
+        '.stats-body',
+        '.countdown-mode',
+        '.before-school-mode',
+        '.goodbye-mode',
+        '.noise-content',
+        '.slideshow-container',
+        '#president-container',
+        '#duty-container',
+        '#stars-container'
+    ];
+
+    function isMagicParkActive() {
+        return Boolean(document.body?.classList?.contains?.('theme-magic-park'));
+    }
+
+    function syncMagicSceneTransforms(gsap) {
+        if (!isMagicParkActive()) return;
+        gsap.set(MAGIC_SCENE_ROOTS, {
+            clearProps: 'transform,translate,rotate,scale'
+        });
+    }
+
     function createAmbientLayer() {
         if (document.querySelector('.park-ambient')) return;
 
@@ -43,13 +67,20 @@
 
         const media = gsap.matchMedia();
         const observers = [];
+        const handleThemeChange = (event) => {
+            if (event?.detail?.themeId === 'magic-park') syncMagicSceneTransforms(gsap);
+        };
+        window.addEventListener('classroom:theme-change', handleThemeChange);
+        syncMagicSceneTransforms(gsap);
 
         media.add({
             fullMotion: '(prefers-reduced-motion: no-preference)',
             reduceMotion: '(prefers-reduced-motion: reduce)'
         }, (context) => {
+            const isMagicPark = isMagicParkActive();
             if (context.conditions.reduceMotion) {
                 gsap.set('.card-titlebar, .park-spark', { clearProps: 'all' });
+                if (isMagicPark) syncMagicSceneTransforms(gsap);
                 return undefined;
             }
 
@@ -58,43 +89,25 @@
                 onComplete: () => {
                     gsap.set('.card-titlebar', {
                         clearProps: 'transform,translate,rotate,scale'
-                    });
-                }
-            });
-            entrance
-                .from('.card-titlebar', {
-                    y: '-1.2vh',
-                    scale: 0.92,
-                    duration: 0.72,
-                    stagger: 0.065
-                })
-                .from([
-                    '.clock-content-wrapper',
-                    '.stats-body',
-                    '.countdown-mode',
-                    '.before-school-mode',
-                    '.goodbye-mode',
-                    '.noise-content',
-                    '.slideshow-container',
-                    '#president-container',
-                    '#duty-container',
-                    '#stars-container'
-                ], {
-                    y: '1.1vh',
-                    scale: 0.985,
-                    duration: 0.68,
-                    stagger: 0.045,
-                    ease: 'power2.out'
-                }, '-=0.42');
-
-            gsap.to('#noise-character-img', {
-                y: '-0.48vh',
-                rotation: 1.2,
-                duration: 2.8,
-                repeat: -1,
-                yoyo: true,
-                ease: 'sine.inOut'
-            });
+                        });
+                    }
+                });
+            if (!isMagicPark) {
+                entrance
+                    .from('.card-titlebar', {
+                        y: '-1.2vh',
+                        scale: 0.92,
+                        duration: 0.72,
+                        stagger: 0.065
+                    })
+                    .from(MAGIC_SCENE_ROOTS, {
+                        y: '1.1vh',
+                        scale: 0.985,
+                        duration: 0.68,
+                        stagger: 0.045,
+                        ease: 'power2.out'
+                    }, '-=0.42');
+            }
 
             gsap.utils.toArray('.park-spark').forEach((spark, index) => {
                 gsap.to(spark, {
@@ -185,6 +198,7 @@
 
         window.addEventListener('pagehide', () => {
             observers.forEach((observer) => observer.disconnect());
+            window.removeEventListener('classroom:theme-change', handleThemeChange);
             media.revert();
         }, { once: true });
     }

@@ -9,8 +9,6 @@ class NoiseMeter {
         this.timeDataArray = null;
         this.isStarting = false;
         this.animationFrameId = null;
-        this.stateImageTimer = null;
-        this.stateImageWarmups = [];
 
         this.noiseScore = 0;
         this.maxScore = 100;
@@ -29,7 +27,6 @@ class NoiseMeter {
         this.currentLevel = null;
         this.elements = {
             card: document.getElementById('noise-meter-card'),
-            image: document.getElementById('noise-character-img'),
             levelMeter: document.getElementById('noise-level-meter'),
             meterBar: document.querySelector('.noise-meter-bar'),
             fill: document.getElementById('noise-meter-fill'),
@@ -52,12 +49,6 @@ class NoiseMeter {
         this.equalizerBinCount = 0;
         this.lastAriaValue = '';
         this.updateLoop = this.updateLoop.bind(this);
-
-        this.images = {
-            low: 'assets/noise-states/quiet.webp',
-            medium: 'assets/noise-states/attention.webp',
-            high: 'assets/noise-states/loud.webp'
-        };
 
         this.init();
     }
@@ -113,6 +104,7 @@ class NoiseMeter {
         }
 
         this.setStatus(icon, title, subtitle, color);
+        this.dispatchNoiseState(this.currentLevel, this.noiseScore, state);
 
         if (this.elements.startBtn) {
             this.elements.startBtn.hidden = !showButton;
@@ -187,28 +179,15 @@ class NoiseMeter {
         setTimeout(() => this.startListening(), 1000);
     }
 
-    warmStateImages() {
-        if (typeof Image !== 'function') return;
-
-        const currentSource = this.elements.image?.getAttribute?.('src') || '';
-        this.stateImageWarmups = Object.values(this.images)
-            .filter(source => source !== currentSource)
-            .map(source => {
-                const image = new Image();
-                image.decoding = 'async';
-                image.src = source;
-                return image;
-            });
-
-        const decodeTasks = this.stateImageWarmups.map(image => (
-            typeof image.decode === 'function'
-                ? image.decode().catch(() => undefined)
-                : Promise.resolve()
-        ));
-
-        Promise.allSettled(decodeTasks).finally(() => {
-            this.stateImageWarmups = [];
-        });
+    dispatchNoiseState(level, score = this.noiseScore, micState = this.elements.card?.dataset?.micState || 'idle') {
+        if (typeof window?.dispatchEvent !== 'function' || typeof CustomEvent !== 'function') return;
+        window.dispatchEvent(new CustomEvent('classroom:noise-state', {
+            detail: {
+                level,
+                score: Number.isFinite(Number(score)) ? Number(score) : 0,
+                micState
+            }
+        }));
     }
 
     updateScaleLayout() {
@@ -381,9 +360,6 @@ class NoiseMeter {
                 color: '#49637a'
             });
 
-            // Decode the remaining visual states only after the microphone is
-            // usable. An unavailable kiosk keeps its initial load lean.
-            this.warmStateImages();
             this.lastUpdateTime = Date.now();
             this.updateLoop();
 
@@ -423,7 +399,7 @@ class NoiseMeter {
 
             const errorState = this.getMicrophoneErrorState(error);
             this.setMicrophoneState('unavailable', {
-                icon: 'assets/ui-icons-3d/quiet.png',
+                icon: 'assets/ui-icons-3d/microphone.png',
                 title: errorState.title,
                 subtitle: errorState.subtitle,
                 showButton: true
@@ -434,12 +410,6 @@ class NoiseMeter {
     stopListening() {
         this.isListening = false;
         this.isStarting = false;
-
-        if (this.stateImageTimer !== null && typeof clearTimeout === 'function') {
-            clearTimeout(this.stateImageTimer);
-            this.stateImageTimer = null;
-        }
-        this.stateImageWarmups = [];
 
         if (this.animationFrameId !== null && typeof cancelAnimationFrame === 'function') {
             cancelAnimationFrame(this.animationFrameId);
@@ -590,21 +560,6 @@ class NoiseMeter {
             this.elements.fill.dataset.level = state;
         }
 
-        if (this.elements.image) {
-            if (this.stateImageTimer !== null && typeof clearTimeout === 'function') {
-                clearTimeout(this.stateImageTimer);
-            }
-            this.elements.image.style.transform = 'translateX(-50%) scale(0.9)';
-            if (this.elements.image.getAttribute?.('src') !== this.images[state]) {
-                this.elements.image.src = this.images[state];
-            }
-            this.stateImageTimer = setTimeout(() => {
-                this.stateImageTimer = null;
-                if (this.currentLevel !== state) return;
-                this.elements.image.style.transform = 'translateX(-50%) scale(1)';
-            }, 200);
-        }
-
         if (this.elements.card) {
             this.elements.card.classList.remove('state-low', 'state-medium', 'state-high');
             this.elements.card.classList.add(`state-${state}`);
@@ -622,13 +577,15 @@ class NoiseMeter {
                     this.setStatus('assets/ui-icons-3d/sparkles.png', 'Harika Gidiyoruz!', 'Sınıfımız süper', '#2ed573');
                     break;
                 case 'medium':
-                    this.setStatus('assets/ui-icons-3d/quiet.png', 'Dikkat! Yükseliyor', 'Biraz sessiz olalım', '#ffa502');
+                    this.setStatus('assets/ui-icons-3d/microphone.png', 'Dikkat! Yükseliyor', 'Biraz sessiz olalım', '#ffa502');
                     break;
                 case 'high':
                     this.setStatus('assets/ui-icons-3d/loudspeaker.png', 'Çok Yüksek!', 'Hadi düşürelim', '#ff4757');
                     break;
             }
         }
+
+        this.dispatchNoiseState(state, this.noiseScore, 'listening');
     }
 }
 

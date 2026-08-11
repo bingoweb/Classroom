@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "magic-park",
+  "name": "Magic Park",
+  "version": "2.2.0",
+  "description": "sontema görselini gerçek alpha foreground olarak kullanan, canlı kart içeriklerini artwork açıklıklarının altında çalıştıran Sihirli Öğrenme Parkı kiosk teması.",
+  "css": "themes/magic-park/theme.css",
+  "themeClass": "theme-magic-park",
+  "backgroundAsset": "assets/sontema.png",
+  "previewAsset": "assets/sontema.png",
+  "accent": "#159ce1",
+  "capabilities": {
+    "layoutGeometry": true,
+    "materialTokens": true,
+    "dynamicContent": true
+  }
+}

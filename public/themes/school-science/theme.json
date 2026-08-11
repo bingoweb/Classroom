@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "school-science",
+  "name": "Bilim Temalı Okul",
+  "version": "1.0.0",
+  "description": "Lacivert-altın çerçeveler, bilim araçları ve Türkiye okul atmosferiyle merak ve keşif teması.",
+  "css": "themes/school-science/theme.css",
+  "themeClass": "theme-school-science",
+  "backgroundAsset": "themes/school-science/assets/background.png",
+  "previewAsset": "themes/school-science/assets/background.png",
+  "accent": "#173a73",
+  "capabilities": {
+    "layoutGeometry": true,
+    "materialTokens": true,
+    "dynamicContent": true
+  }
+}

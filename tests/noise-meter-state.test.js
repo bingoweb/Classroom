@@ -78,7 +78,6 @@ function createElement() {
 
 function createHarness() {
     const card = createElement();
-    const image = createElement();
     const levelMeter = createElement();
     const meterBar = createElement();
     const fill = createElement();
@@ -100,7 +99,6 @@ function createHarness() {
 
     const elementsById = {
         'noise-meter-card': card,
-        'noise-character-img': image,
         'noise-level-meter': levelMeter,
         'noise-meter-fill': fill,
         'noise-status-text': status,
@@ -115,6 +113,14 @@ function createHarness() {
         '.noise-meter-bar': meterBar
     };
     const logs = { info: [], error: [] };
+    const dispatchedEvents = [];
+
+    class TestCustomEvent {
+        constructor(type, options = {}) {
+            this.type = type;
+            this.detail = options.detail;
+        }
+    }
 
     class WorkingAudioContext {
         createAnalyser() {
@@ -169,9 +175,14 @@ function createHarness() {
         setTimeout() {
             return 1;
         },
+        CustomEvent: TestCustomEvent,
         Uint8Array,
         window: {
             addEventListener() {},
+            dispatchEvent(event) {
+                dispatchedEvents.push(event);
+                return true;
+            },
             AudioContext: WorkingAudioContext
         }
     };
@@ -184,9 +195,9 @@ function createHarness() {
         NoiseMeter: sandbox.__NoiseMeter,
         sandbox,
         logs,
+        dispatchedEvents,
         elements: {
             card,
-            image,
             levelMeter,
             meterBar,
             fill,
@@ -240,26 +251,24 @@ test('progress bar activates only the label for the current threshold range', ()
     );
 });
 
-test('rapid threshold changes cancel stale character image transitions', () => {
+test('semantic noise changes are broadcast without owning mascot artwork', () => {
     const harness = createHarness();
     const meter = new harness.NoiseMeter();
-    const pendingTimers = new Map();
-    let nextTimerId = 10;
-
-    harness.sandbox.setTimeout = callback => {
-        const timerId = nextTimerId++;
-        pendingTimers.set(timerId, callback);
-        return timerId;
-    };
-    harness.sandbox.clearTimeout = timerId => pendingTimers.delete(timerId);
 
     meter.changeState('medium');
-    assert.strictEqual(harness.elements.image.src, 'assets/noise-states/attention.webp');
     meter.changeState('high');
-    for (const callback of pendingTimers.values()) callback();
 
-    assert.strictEqual(harness.elements.image.src, 'assets/noise-states/loud.webp');
     assert.strictEqual(meter.currentLevel, 'high');
+    const semanticEvents = harness.dispatchedEvents.slice(-2);
+    assert.deepStrictEqual(
+        semanticEvents.map(event => event.type),
+        ['classroom:noise-state', 'classroom:noise-state']
+    );
+    assert.deepStrictEqual(
+        semanticEvents.map(event => event.detail.level),
+        ['medium', 'high']
+    );
+    assert.ok(semanticEvents.every(event => Number.isFinite(event.detail.score)));
 });
 
 test('equalizer frequency bands are precomputed and reused between animation frames', () => {
@@ -355,8 +364,6 @@ test('missing microphone becomes a calm retryable state without an error log', a
         throw error;
     };
     const meter = new harness.NoiseMeter();
-    let warmupCount = 0;
-    meter.warmStateImages = () => { warmupCount += 1; };
 
     await meter.startListening();
 
@@ -372,7 +379,6 @@ test('missing microphone becomes a calm retryable state without an error log', a
     assert.strictEqual(harness.elements.startButton.disabled, false);
     assert.strictEqual(harness.logs.error.length, 0);
     assert.strictEqual(harness.logs.info.length, 1);
-    assert.strictEqual(warmupCount, 0, 'unused state images stay deferred without a microphone');
 });
 
 test('a pending microphone request cannot be started twice', async () => {
@@ -386,8 +392,6 @@ test('a pending microphone request cannot be started twice', async () => {
         });
     };
     const meter = new harness.NoiseMeter();
-    let warmupCount = 0;
-    meter.warmStateImages = () => { warmupCount += 1; };
 
     const firstRequest = meter.startListening();
     const secondRequest = meter.startListening();
@@ -400,7 +404,6 @@ test('a pending microphone request cannot be started twice', async () => {
     assert.strictEqual(meter.isStarting, false);
     assert.strictEqual(harness.elements.card.dataset.micState, 'listening');
     assert.strictEqual(harness.elements.startButton.hidden, true);
-    assert.strictEqual(warmupCount, 1, 'remaining state images warm exactly once after audio becomes usable');
 });
 
 test('a stream is released when audio setup fails after permission succeeds', async () => {

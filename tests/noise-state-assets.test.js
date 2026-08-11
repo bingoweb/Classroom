@@ -6,6 +6,8 @@ const test = require('node:test');
 const root = path.join(__dirname, '..');
 const kioskHtml = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
 const noiseMeter = fs.readFileSync(path.join(root, 'public/js/noise-meter.js'), 'utf8');
+const classTvPath = path.join(root, 'public/js/class-tv.js');
+const classTv = fs.existsSync(classTvPath) ? fs.readFileSync(classTvPath, 'utf8') : '';
 
 const assets = [
     ['quiet', 'backend/uploads/sessiz.png'],
@@ -42,13 +44,17 @@ test('noise states use pinned full-resolution WebP assets with substantial trans
     assert.ok(optimizedBytes < originalBytes * 0.1, 'combined WebP payload should save at least 90%');
 });
 
-test('kiosk and noise meter reference only the optimized state assets', () => {
-    assert.match(kioskHtml, /assets\/noise-states\/quiet\.webp/);
-    assert.match(kioskHtml, /noise-meter\.js\?v=5/);
+test('Lavunu state assets belong to Class TV instead of the top noise instrument', () => {
+    assert.doesNotMatch(kioskHtml, /id="noise-character-img"/);
+    assert.doesNotMatch(kioskHtml, /<link[^>]+rel="preload"[^>]+noise-states\/quiet\.webp/,
+        'Lavunu should not be eagerly preloaded now that it is only an occasional Class TV guest');
+    assert.match(kioskHtml, /js\/class-tv\.js\?v=1/);
+    assert.match(kioskHtml, /noise-meter\.js\?v=6/);
     assert.doesNotMatch(kioskHtml, /uploads\/sessiz\.png/);
 
     for (const [name] of assets) {
-        assert.match(noiseMeter, new RegExp(`assets/noise-states/${name}\\.webp`));
+        assert.match(classTv, new RegExp(`assets/noise-states/${name}\\.webp`));
     }
+    assert.doesNotMatch(noiseMeter, /assets\/noise-states\//);
     assert.doesNotMatch(noiseMeter, /uploads\/(?:sessiz|uyari|gurultu)\.png/);
 });

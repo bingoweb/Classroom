@@ -1,0 +1,1331 @@
+/* Magic Park 2.2 component refinements. The artwork is the foreground frame;
+ * these surfaces are intentionally calmer because they live behind it. */
+
+body.magic-park-theme.theme-magic-park {
+    --magic-paper: linear-gradient(155deg, rgba(255, 249, 223, 0.79) 0%, rgba(248, 231, 183, 0.73) 54%, rgba(232, 206, 150, 0.76) 100%);
+    --magic-paper-cool: linear-gradient(155deg, rgba(244, 251, 248, 0.78) 0%, rgba(216, 238, 233, 0.72) 58%, rgba(182, 220, 215, 0.76) 100%);
+    --magic-ink: #473929;
+    --magic-muted: #78674f;
+    --magic-blue-surface: linear-gradient(145deg, rgba(234, 248, 251, 0.78) 0%, rgba(202, 234, 240, 0.70) 48%, rgba(157, 206, 218, 0.74) 100%);
+    --magic-blue-ink: #164b5e;
+    --magic-lilac-surface: linear-gradient(145deg, rgba(250, 242, 255, 0.80) 0%, rgba(232, 213, 247, 0.72) 55%, rgba(206, 184, 234, 0.75) 100%);
+    --magic-lilac-ink: #57366f;
+    --magic-berry-surface: radial-gradient(circle at 50% 32%, rgba(61, 52, 86, 0.90) 0%, rgba(39, 41, 66, 0.86) 53%, rgba(27, 35, 51, 0.90) 100%);
+    --magic-gold: #e5b844;
+    --class-tv-purple: #6d35c5;
+    --class-tv-yellow: #ffd84d;
+    --class-tv-cyan: #55ddff;
+}
+
+body.magic-park-theme.theme-magic-park .magic-scene {
+    color: var(--magic-ink);
+    font-family: 'Nunito Classroom', 'Trebuchet MS', sans-serif;
+}
+
+body.magic-park-theme.theme-magic-park .magic-scene *,
+body.magic-park-theme.theme-magic-park .magic-scene *::before,
+body.magic-park-theme.theme-magic-park .magic-scene *::after {
+    box-sizing: border-box;
+}
+
+/* Clock — warm inset dial with one distance-readable hero value. */
+body.magic-park-theme.theme-magic-park .clock-scene {
+    display: grid !important;
+    grid-template-rows: minmax(0, 27fr) minmax(0, 47fr) minmax(0, 26fr);
+    gap: 0;
+    padding: 4.5% 7% 4%;
+    background: var(--magic-paper);
+}
+
+body.magic-park-theme.theme-magic-park .clock-scene .date-section,
+body.magic-park-theme.theme-magic-park .clock-scene .clock-section,
+body.magic-park-theme.theme-magic-park .clock-scene .weekend-section {
+    position: static !important;
+    inset: auto !important;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+body.magic-park-theme.theme-magic-park .clock-scene .date-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8cqh;
+}
+
+body.magic-park-theme.theme-magic-park .day-highlight {
+    color: #2e7590;
+    font: 720 clamp(0.72rem, 7.2cqw, 2.25rem)/1 'Fredoka Classroom', sans-serif;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+}
+
+body.magic-park-theme.theme-magic-park .date-full {
+    color: var(--magic-muted);
+    font: 800 clamp(0.56rem, 4.25cqw, 1.35rem)/1.05 'Nunito Classroom', sans-serif;
+    white-space: nowrap;
+}
+
+body.magic-park-theme.theme-magic-park .clock-scene .clock-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.magic-park-theme.theme-magic-park .digital-clock {
+    margin: 0;
+    padding: 0;
+    color: #5b2e87;
+    background: transparent;
+    font: 690 clamp(2.15rem, 24cqw, 6rem)/0.9 'Fredoka Classroom', sans-serif;
+    letter-spacing: -0.055em;
+    text-shadow: 0 0.08em 0 #fff, 0 0.13em 0.22em rgba(80, 52, 29, 0.12);
+}
+
+body.magic-park-theme.theme-magic-park .clock-scene .weekend-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.magic-park-theme.theme-magic-park .clock-scene .weekend-pill {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 3%;
+    width: 92%;
+    min-height: 0;
+    margin: 0;
+    padding: 2.4% 5%;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 253, 236, 0.78);
+    box-shadow: 0 0.2cqh 0.6cqh rgba(70, 49, 27, 0.12);
+}
+
+body.magic-park-theme.theme-magic-park .clock-scene .weekend-icon {
+    width: 11cqw;
+    height: 11cqw;
+    object-fit: contain;
+}
+
+body.magic-park-theme.theme-magic-park .weekend-text-group {
+    gap: 0.15cqh;
+}
+
+body.magic-park-theme.theme-magic-park .weekend-label,
+body.magic-park-theme.theme-magic-park .weekend-value {
+    color: #8d5d26;
+    font-size: clamp(0.48rem, 3.7cqw, 1.2rem);
+    line-height: 1;
+    white-space: nowrap;
+}
+
+body.magic-park-theme.theme-magic-park .weekend-value {
+    color: #d76a3d;
+    font-weight: 950;
+}
+
+/* Attendance — hero values first, compact gender strip, status/absence below. */
+body.magic-park-theme.theme-magic-park .attendance-scene {
+    position: relative;
+    display: block !important;
+    padding: 3.5% 4.5% 5%;
+    background: var(--magic-paper);
+}
+
+body.magic-park-theme.theme-magic-park .attendance-mini-page {
+    position: absolute;
+    inset: 6% 6% 8%;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    min-height: 0;
+    opacity: 0;
+    pointer-events: none;
+    animation: magic-attendance-channel 15s ease-in-out infinite both;
+    will-change: opacity, transform;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-mini-page--hero {
+    animation-delay: 0s;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-mini-page--gender {
+    animation-delay: 5s;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-mini-page--status {
+    animation-delay: 10s;
+}
+
+@keyframes magic-attendance-channel {
+    0%, 100% {
+        opacity: 0;
+        transform: translate3d(0, 4%, 0) scale(0.985);
+    }
+
+    5%, 28% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    33%, 95% {
+        opacity: 0;
+        transform: translate3d(0, -3%, 0) scale(0.992);
+    }
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .attendance-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.42fr) minmax(0, 0.78fr);
+    gap: 3%;
+    min-height: 0;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .present-students-panel,
+body.magic-park-theme.theme-magic-park .attendance-scene .class-capacity-panel,
+body.magic-park-theme.theme-magic-park .attendance-scene .gender-box,
+body.magic-park-theme.theme-magic-park .attendance-scene .attendance-box,
+body.magic-park-theme.theme-magic-park .attendance-scene .absent-marquee-container {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0.65cqw;
+    background: rgba(255, 253, 236, 0.62);
+    box-shadow: none;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .present-students-panel::before,
+body.magic-park-theme.theme-magic-park .attendance-scene .present-students-panel::after,
+body.magic-park-theme.theme-magic-park .attendance-scene .class-capacity-panel::before,
+body.magic-park-theme.theme-magic-park .attendance-scene .class-capacity-panel::after,
+body.magic-park-theme.theme-magic-park .attendance-scene .gender-box::before,
+body.magic-park-theme.theme-magic-park .attendance-scene .gender-box::after,
+body.magic-park-theme.theme-magic-park .attendance-scene .attendance-box::before,
+body.magic-park-theme.theme-magic-park .attendance-scene .attendance-box::after,
+body.magic-park-theme.theme-magic-park .attendance-scene .absent-marquee-container::before,
+body.magic-park-theme.theme-magic-park .attendance-scene .absent-marquee-container::after {
+    display: none;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .present-students-panel,
+body.magic-park-theme.theme-magic-park .attendance-scene .class-capacity-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3cqh;
+}
+
+body.magic-park-theme.theme-magic-park .present-students-kicker,
+body.magic-park-theme.theme-magic-park .class-capacity-label {
+    color: #76552c;
+    font-size: clamp(0.46rem, 3.1cqw, 1rem);
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+body.magic-park-theme.theme-magic-park .presence-dot {
+    width: 1.8cqw;
+    height: 1.8cqw;
+}
+
+body.magic-park-theme.theme-magic-park .present-students-value-row {
+    gap: 2%;
+}
+
+body.magic-park-theme.theme-magic-park .present-students-value,
+body.magic-park-theme.theme-magic-park .class-capacity-value {
+    color: #8b5522;
+    font: 680 clamp(1.45rem, 15cqw, 4.4rem)/0.9 'Fredoka Classroom', sans-serif;
+}
+
+body.magic-park-theme.theme-magic-park .class-capacity-value {
+    font-size: clamp(1.2rem, 11cqw, 3.2rem);
+}
+
+body.magic-park-theme.theme-magic-park .present-students-unit,
+body.magic-park-theme.theme-magic-park .class-capacity-unit {
+    color: var(--magic-muted);
+    font-size: clamp(0.42rem, 2.7cqw, 0.9rem);
+    font-weight: 800;
+    line-height: 1;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .stat-gender-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3%;
+    min-height: 0;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .gender-box {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 4%;
+    padding: 2% 5%;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .girl-box {
+    background: rgba(255, 217, 232, 0.68);
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .boy-box {
+    background: rgba(203, 238, 239, 0.72);
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .gender-icon {
+    width: 12cqw;
+    height: 12cqw;
+    object-fit: contain;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .gender-info {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 5%;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .gender-count {
+    color: #77495d;
+    font: 680 clamp(0.95rem, 8cqw, 2.3rem)/1 'Fredoka Classroom', sans-serif;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .gender-label {
+    color: #65574c;
+    font-size: clamp(0.48rem, 3.2cqw, 1rem);
+    font-weight: 900;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .attendance-wrapper {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    gap: 3%;
+    min-height: 0;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .attendance-wrapper.has-absent {
+    grid-template-rows: minmax(0, 36fr) minmax(0, 64fr);
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .attendance-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 3%;
+    height: 100%;
+    padding: 0 5%;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-title,
+body.magic-park-theme.theme-magic-park .attendance-status,
+body.magic-park-theme.theme-magic-park .absent-label {
+    color: #715231;
+    font-size: clamp(0.43rem, 2.7cqw, 0.84rem);
+    font-weight: 950;
+    line-height: 1;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-status {
+    text-align: right;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .absent-marquee-container {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 3%;
+    padding: 2% 4%;
+    background: rgba(255, 239, 213, 0.72);
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .marquee-wrapper,
+body.magic-park-theme.theme-magic-park .attendance-scene .marquee-content {
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .marquee-content {
+    display: flex;
+    align-items: center;
+    gap: 3%;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .marquee-item {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 1.5% 3%;
+    border: 0;
+    background: rgba(255, 255, 255, 0.68);
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .marquee-avatar {
+    width: 8cqw;
+    height: 8cqw;
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .marquee-name {
+    font-size: clamp(0.42rem, 2.75cqw, 0.86rem);
+    line-height: 1.05;
+}
+
+/* Lesson flow — full opening, one grammar for all schedule modes. */
+body.magic-park-theme.theme-magic-park .lesson-flow-scene {
+    background: var(--magic-lilac-surface);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .before-school-mode,
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .countdown-mode,
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .goodbye-mode {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 7% 9%;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .before-school-mode:not([style*="display: none"]) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 28%) minmax(0, 72%);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    align-items: center;
+    gap: 2% 4%;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .clock-visual {
+    grid-column: 1;
+    grid-row: 1 / 4;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .clock-icon {
+    width: 85%;
+    height: auto;
+    max-height: 70%;
+    object-fit: contain;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene h3,
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .goodbye-title {
+    margin: 0;
+    color: var(--magic-lilac-ink);
+    font: 650 clamp(0.8rem, 6.5cqw, 2rem)/1.03 'Fredoka Classroom', sans-serif;
+    text-align: center;
+    text-wrap: balance;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .before-school-subtitle,
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .countdown-subtitle,
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .goodbye-subtitle {
+    margin: 0;
+    color: #755f83;
+    font-size: clamp(0.52rem, 3.5cqw, 1rem);
+    font-weight: 850;
+    line-height: 1.08;
+    text-align: center;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .before-school-countdown,
+body.magic-park-theme.theme-magic-park .lesson-flow-scene #countdown {
+    color: #752db2;
+    font: 690 clamp(2rem, 18cqw, 5rem)/0.9 'Fredoka Classroom', sans-serif;
+    letter-spacing: -0.04em;
+    text-align: center;
+    text-shadow: 0 0.06em 0 #fff;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .countdown-mode:not([style*="display: none"]) {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 4%;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .countdown-mode .countdown-text {
+    grid-row: 2;
+    align-self: center;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .period-context {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3%;
+    width: 100%;
+    min-height: 0;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .period-context-chip {
+    min-width: 0;
+    padding: 3% 5%;
+    border: 0;
+    border-radius: 0.55cqw;
+    background: rgba(255, 255, 255, 0.54);
+    box-shadow: none;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .period-context-label {
+    font-size: clamp(0.42rem, 2.65cqw, 0.82rem);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .period-context-value {
+    font-size: clamp(0.5rem, 3.25cqw, 1rem);
+    line-height: 1.05;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .progress-bar-container {
+    width: 100%;
+    height: 3.5cqh;
+    min-height: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(105, 70, 131, 0.16);
+    box-shadow: inset 0 0.2cqh 0.5cqh rgba(77, 49, 97, 0.13);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .progress-bar {
+    border-radius: inherit;
+    background: linear-gradient(90deg, #8c57c5, #c17acb);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .goodbye-mode:not([style*="display: none"]) {
+    display: grid !important;
+    grid-template-rows: minmax(0, 52%) auto auto;
+    align-items: center;
+    justify-items: center;
+    gap: 3%;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene .goodbye-visual {
+    width: 42%;
+    height: 100%;
+}
+
+/* Noise — one wide listening instrument. Lavunu now belongs to Class TV. */
+body.magic-park-theme.theme-magic-park .noise-scene {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    background: var(--magic-blue-surface);
+    color: var(--magic-blue-ink);
+}
+
+body.magic-park-theme.theme-magic-park .noise-scene .noise-info {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-content: center;
+    gap: 5%;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 6% 7% 5%;
+}
+
+body.magic-park-theme.theme-magic-park .noise-scene .noise-status {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 3%;
+    min-height: 0;
+    padding: 2.3% 3%;
+    border: 0;
+    border-radius: 0.75cqw;
+    background: rgba(255, 255, 255, 0.67);
+    box-shadow: 0 0.25cqh 0.7cqh rgba(20, 78, 94, 0.1);
+}
+
+body.magic-park-theme.theme-magic-park .noise-scene .noise-status-icon {
+    width: 4.6cqw;
+    height: 4.6cqw;
+}
+
+body.magic-park-theme.theme-magic-park .noise-scene .noise-status-copy strong {
+    color: #245068;
+    font-size: clamp(0.78rem, 2.45cqw, 1.85rem);
+    line-height: 1;
+}
+
+body.magic-park-theme.theme-magic-park .noise-scene .noise-status-copy small {
+    color: #56737b;
+    font-size: clamp(0.52rem, 1.55cqw, 1.12rem);
+    line-height: 1.05;
+}
+
+body.magic-park-theme.theme-magic-park .noise-scene .noise-meter-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 5%;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+body.magic-park-theme.theme-magic-park .noise-scene .noise-progress {
+    min-width: 0;
+}
+
+body.magic-park-theme.theme-magic-park .noise-scene .noise-meter-bar {
+    height: 5.3cqh;
+    border: 0;
+    background: rgba(24, 85, 101, 0.15);
+}
+
+body.magic-park-theme.theme-magic-park .noise-scene .noise-scale-labels {
+    margin-top: 2.5%;
+    gap: 2%;
+}
+
+body.magic-park-theme.theme-magic-park .noise-scene .noise-scale-label {
+    padding: 2.5% 2%;
+    border: 0;
+    background: rgba(255, 255, 255, 0.58);
+    font-size: clamp(0.46rem, 1.65cqw, 1.08rem);
+    box-shadow: none;
+}
+
+body.magic-park-theme.theme-magic-park .noise-scene .equalizer-container {
+    min-height: 0;
+    padding: 0;
+    height: 100%;
+}
+
+body.magic-park-theme.theme-magic-park .noise-scene .mic-start-btn {
+    min-width: 0;
+    margin: 0 auto;
+    padding: 2.5% 7%;
+    border: 0;
+    background: #168aa1;
+    font-size: clamp(0.58rem, 2cqw, 1.3rem);
+    box-shadow: 0 0.28cqh 0.7cqh rgba(14, 75, 89, 0.18);
+}
+
+/* Slideshow — the photograph/video is the exhibit; the painted curtain is
+ * already the frame, so there is no second border behind it. */
+body.magic-park-theme.theme-magic-park .slideshow-scene {
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #1a2028;
+    box-shadow: none !important;
+}
+
+body.magic-park-theme.theme-magic-park .slideshow-scene .slide {
+    border-radius: 0;
+}
+
+body.magic-park-theme.theme-magic-park .slideshow-scene .slide-text-content {
+    right: 4%;
+    bottom: 5%;
+    left: 4%;
+    padding: 3.2% 4%;
+    border: 0;
+    border-radius: 0.75cqw;
+    background: linear-gradient(100deg, rgba(45, 24, 35, 0.9), rgba(63, 36, 55, 0.88), rgba(32, 43, 56, 0.88));
+    box-shadow: 0 0.35cqh 1cqh rgba(0, 0, 0, 0.34);
+    backdrop-filter: blur(0.28cqw);
+}
+
+body.magic-park-theme.theme-magic-park .slideshow-scene .slide-caption-text {
+    font-size: clamp(0.86rem, 2.75cqw, 2.6rem);
+    line-height: 1.13;
+}
+
+body.magic-park-theme.theme-magic-park .slideshow-scene .slide-caption-text--compact {
+    font-size: clamp(0.78rem, 2.35cqw, 2.2rem);
+}
+
+body.magic-park-theme.theme-magic-park .slideshow-scene .slide-caption-text--long {
+    font-size: clamp(0.7rem, 2cqw, 1.85rem);
+}
+
+body.magic-park-theme.theme-magic-park .slideshow-scene .slide-text-content--story {
+    inset: 8% 7%;
+    padding: 6%;
+}
+
+/* Class TV — the existing slideshow is the base channel; programme cards,
+ * mascot PIP and takeovers are broadcast layers above it. */
+body.magic-park-theme.theme-magic-park .slideshow-card {
+    isolation: isolate;
+}
+
+body.magic-park-theme.theme-magic-park #class-tv-content-plane {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    transform: none;
+    filter: none;
+}
+
+body.magic-park-theme.theme-magic-park #slideshow-container {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 1;
+    width: auto !important;
+    height: auto !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    overflow: hidden;
+    box-shadow: none !important;
+}
+
+body.magic-park-theme.theme-magic-park #class-tv-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: block;
+    overflow: hidden;
+    pointer-events: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    color: #fff;
+    font-family: 'Nunito Classroom', 'Trebuchet MS', sans-serif;
+    transform-origin: 50% 50%;
+}
+
+body.magic-park-theme.theme-magic-park #class-tv-layer::before,
+body.magic-park-theme.theme-magic-park #class-tv-layer::after {
+    display: none;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv__broadcast-bug {
+    position: absolute;
+    top: 3%;
+    left: 3%;
+    z-index: 28;
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 0 0.18em;
+    padding: 1.15% 2.1% 1.35%;
+    border: 0.16cqw solid rgba(255, 255, 255, 0.88);
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(98, 45, 189, 0.94), rgba(66, 35, 151, 0.94));
+    box-shadow: 0 0.28cqh 0.75cqh rgba(15, 10, 45, 0.32), inset 0 0.08cqh 0 rgba(255, 255, 255, 0.38);
+    transform: rotate(-1.2deg);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv__broadcast-bug strong,
+body.magic-park-theme.theme-magic-park .class-tv__broadcast-bug span {
+    font: 760 clamp(0.58rem, 1.45cqw, 1.28rem)/0.9 'Fredoka Classroom', sans-serif;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv__broadcast-bug strong {
+    color: var(--class-tv-yellow);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv__broadcast-bug span {
+    color: #fff;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv__broadcast-bug small {
+    grid-column: 1 / -1;
+    margin-top: 0.18em;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: clamp(0.32rem, 0.62cqw, 0.58rem);
+    font-weight: 950;
+    letter-spacing: 0.16em;
+    line-height: 1;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv__channel-rail {
+    position: absolute;
+    right: 3.2%;
+    bottom: 2.7%;
+    z-index: 28;
+    display: flex;
+    align-items: center;
+    gap: 0.42cqw;
+    padding: 0.55% 1.15%;
+    border-radius: 999px;
+    background: rgba(29, 22, 61, 0.46);
+    box-shadow: inset 0 0 0 0.1cqw rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(0.18cqw);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv__channel-dot {
+    width: clamp(0.32rem, 0.72cqw, 0.64rem);
+    aspect-ratio: 1;
+    border: 0.08cqw solid rgba(255, 255, 255, 0.68);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.34);
+    box-shadow: 0 0 0 transparent;
+    transform: scale(0.78);
+    transition: transform 260ms ease, background 260ms ease, box-shadow 260ms ease;
+}
+
+body.magic-park-theme.theme-magic-park #class-tv-layer[data-programme="ataturk"] .class-tv__channel-dot--ataturk,
+body.magic-park-theme.theme-magic-park #class-tv-layer[data-programme="attendance"] .class-tv__channel-dot--attendance,
+body.magic-park-theme.theme-magic-park #class-tv-layer[data-programme="gender"] .class-tv__channel-dot--gender,
+body.magic-park-theme.theme-magic-park #class-tv-layer[data-programme="absent"] .class-tv__channel-dot--people,
+body.magic-park-theme.theme-magic-park #class-tv-layer[data-programme="vice-presidents"] .class-tv__channel-dot--people,
+body.magic-park-theme.theme-magic-park #class-tv-layer[data-programme="duty"] .class-tv__channel-dot--people,
+body.magic-park-theme.theme-magic-park #class-tv-layer[data-programme="stars"] .class-tv__channel-dot--stars,
+body.magic-park-theme.theme-magic-park #class-tv-layer[data-programme="base-media"] .class-tv__channel-dot--media {
+    background: var(--class-tv-yellow);
+    box-shadow: 0 0 0.65cqw rgba(255, 216, 77, 0.78);
+    transform: scale(1.18);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv__programme,
+body.magic-park-theme.theme-magic-park .class-tv__takeover {
+    position: absolute;
+    inset: 0;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv__programme {
+    z-index: 5;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv__programme[hidden],
+body.magic-park-theme.theme-magic-park .class-tv__mascot-pip[hidden],
+body.magic-park-theme.theme-magic-park .class-tv__takeover[hidden] {
+    display: none !important;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-card {
+    position: relative;
+    display: grid;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 9% 8% 11%;
+    overflow: hidden;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-card::before,
+body.magic-park-theme.theme-magic-park .class-tv-card::after {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-card::before {
+    top: -14%;
+    right: -7%;
+    width: 31%;
+    aspect-ratio: 1;
+    background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.74), rgba(85, 221, 255, 0.34) 26%, rgba(109, 53, 197, 0.08) 64%, transparent 72%);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-card::after {
+    bottom: -22%;
+    left: -8%;
+    width: 38%;
+    aspect-ratio: 1;
+    background: radial-gradient(circle at 55% 45%, rgba(255, 216, 77, 0.44), rgba(255, 113, 164, 0.18) 47%, transparent 70%);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-card--attendance {
+    align-content: center;
+    justify-items: center;
+    gap: 2%;
+    color: #4e2c66;
+    background:
+        radial-gradient(circle at 78% 20%, rgba(255, 226, 109, 0.85), transparent 18%),
+        linear-gradient(135deg, #fff4a9 0%, #ffd5dc 48%, #c9e7ff 100%);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-kicker {
+    font: 900 clamp(0.75rem, 2.35cqw, 2rem)/1 'Fredoka Classroom', sans-serif;
+    letter-spacing: 0.08em;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-hero-number {
+    font: 700 clamp(3rem, 10cqw, 8.5rem)/0.9 'Fredoka Classroom', sans-serif;
+    letter-spacing: -0.055em;
+    text-shadow: 0 0.05em 0 rgba(255, 255, 255, 0.8);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-hero-number span {
+    font-size: 0.43em;
+    letter-spacing: -0.02em;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-message {
+    max-width: 88%;
+    padding: 1.6% 4%;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.7);
+    color: #5d4a58;
+    font-size: clamp(0.72rem, 2cqw, 1.65rem);
+    font-weight: 900;
+    line-height: 1.05;
+    text-align: center;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-card--gender {
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 4%;
+    color: #37445c;
+    background: linear-gradient(135deg, #ffe0ee 0%, #fff7bf 49%, #cbeaff 100%);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-split {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5%;
+    min-height: 0;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-stat {
+    display: grid;
+    grid-template-columns: minmax(0, 37%) minmax(0, 1fr);
+    grid-template-rows: 1fr auto;
+    align-items: center;
+    gap: 2% 5%;
+    min-height: 0;
+    padding: 5%;
+    border-radius: 1.2cqw;
+    background: rgba(255, 255, 255, 0.66);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-stat img {
+    grid-row: 1 / span 2;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-stat strong {
+    align-self: end;
+    font: 700 clamp(2rem, 7cqw, 5.2rem)/0.88 'Fredoka Classroom', sans-serif;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-stat span {
+    align-self: start;
+    font-size: clamp(0.65rem, 1.8cqw, 1.45rem);
+    font-weight: 950;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-card--people {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 3%;
+    color: #3d345c;
+    background: linear-gradient(140deg, #fff2a7, #ffd6ee 42%, #d9e8ff 100%);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-people-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    align-items: stretch;
+    justify-content: center;
+    gap: 3%;
+    min-height: 0;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-person {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: center;
+    justify-items: center;
+    gap: 2%;
+    min-width: 0;
+    min-height: 0;
+    padding: 5%;
+    border-radius: 1cqw;
+    background: rgba(255, 255, 255, 0.67);
+    box-shadow: 0 0.4cqh 0.9cqh rgba(87, 61, 101, 0.14);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-person img {
+    width: min(13cqw, 16cqh);
+    height: min(13cqw, 16cqh);
+    max-width: 100%;
+    max-height: 100%;
+    border: 0.45cqw solid rgba(255, 255, 255, 0.92);
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 0.35cqh 0.8cqh rgba(70, 45, 80, 0.2);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-person strong {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: clamp(0.58rem, 1.75cqw, 1.4rem);
+    line-height: 1.02;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-card--ataturk {
+    grid-template-columns: minmax(0, 49%) minmax(0, 51%);
+    align-items: center;
+    gap: 4%;
+    padding: 5% 7% 6%;
+    background:
+        radial-gradient(circle at 18% 20%, rgba(255, 246, 192, 0.22), transparent 24%),
+        linear-gradient(120deg, #111b27, #28384a 50%, #4a3144 100%);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-ataturk {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    object-fit: contain;
+    filter: drop-shadow(0 0.6cqh 1cqh rgba(0, 0, 0, 0.4));
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-quote {
+    display: grid;
+    align-content: center;
+    gap: 5%;
+    min-width: 0;
+    height: 100%;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-quote > span {
+    color: #ffd968;
+    font-size: clamp(0.62rem, 1.7cqw, 1.45rem);
+    font-weight: 950;
+    letter-spacing: 0.14em;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-quote blockquote {
+    margin: 0;
+    color: #fff8e7;
+    font: 650 clamp(1rem, 2.75cqw, 2.6rem)/1.14 'Fredoka Classroom', sans-serif;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv__mascot-pip {
+    position: absolute;
+    right: 3.5%;
+    bottom: 5%;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: minmax(0, 42%) minmax(0, 1fr);
+    align-items: center;
+    width: 31%;
+    min-height: 24%;
+    padding: 2.5%;
+    border: 0.35cqw solid rgba(255, 255, 255, 0.88);
+    border-radius: 1.2cqw;
+    background: rgba(32, 53, 70, 0.9);
+    box-shadow: 0 0.6cqh 1.8cqh rgba(0, 0, 0, 0.35);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv__mascot-pip.is-medium {
+    background: rgba(126, 69, 36, 0.92);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv__mascot-pip img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv__mascot-pip span {
+    padding-left: 7%;
+    color: #fff;
+    font: 700 clamp(0.55rem, 1.5cqw, 1.2rem)/1.05 'Fredoka Classroom', sans-serif;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv__takeover {
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    padding: 5%;
+    background:
+        radial-gradient(circle at center, rgba(255, 190, 72, 0.35), transparent 44%),
+        linear-gradient(135deg, rgba(113, 15, 37, 0.97), rgba(210, 50, 53, 0.96));
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-takeover__burst {
+    display: grid;
+    grid-template-columns: minmax(0, 43%) minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-items: center;
+    width: 94%;
+    height: 90%;
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-takeover__burst img {
+    grid-row: 1 / span 2;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 0.6cqh 1.2cqh rgba(0, 0, 0, 0.34));
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-takeover__burst strong {
+    align-self: end;
+    font: 750 clamp(1.55rem, 5.3cqw, 4.7rem)/0.92 'Fredoka Classroom', sans-serif;
+    letter-spacing: -0.03em;
+    text-shadow: 0 0.1em 0.24em rgba(0, 0, 0, 0.3);
+}
+
+body.magic-park-theme.theme-magic-park .class-tv-takeover__burst span {
+    align-self: start;
+    padding-top: 3%;
+    font-size: clamp(0.68rem, 1.8cqw, 1.5rem);
+    font-weight: 900;
+}
+
+/* President — one clear hero. Vice-presidents now receive the larger Class TV stage. */
+body.magic-park-theme.theme-magic-park #president-container {
+    display: grid !important;
+    place-items: center;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr);
+    gap: 0;
+    padding: 6% 8% 8%;
+    background: var(--magic-paper);
+}
+
+body.magic-park-theme.theme-magic-park #president-container .president-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: center;
+    justify-items: center;
+    gap: 4%;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 2%;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+body.magic-park-theme.theme-magic-park #president-container .president-main::before,
+body.magic-park-theme.theme-magic-park #president-container .president-main::after {
+    display: none;
+}
+
+body.magic-park-theme.theme-magic-park #president-container .president-avatar-large {
+    width: min(48cqw, 57cqh);
+    height: min(48cqw, 57cqh);
+    border: 0.9cqw solid #e4b94c;
+    box-shadow: 0 0 0 0.55cqw rgba(255, 255, 255, 0.86), 0 0.55cqh 1.2cqh rgba(89, 60, 25, 0.2);
+}
+
+body.magic-park-theme.theme-magic-park #president-container .president-name-large {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    width: 84%;
+    min-height: 0;
+    padding: 4% 6%;
+    color: #744916;
+    border: 0;
+    border-radius: 0.6cqw;
+    background: rgba(255, 252, 226, 0.72);
+    font-size: clamp(0.72rem, 6.3cqw, 1.9rem);
+    line-height: 1.02;
+    box-shadow: none;
+}
+
+/* Duty — all four names stay in the upper 70% because aquarium plants and
+ * the foreground backpack intentionally occupy the lower part of the frame. */
+body.magic-park-theme.theme-magic-park #duty-container {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
+    align-content: start;
+    gap: 4% 3%;
+    padding: 4% 5% 30%;
+    background: var(--magic-blue-surface);
+}
+
+body.magic-park-theme.theme-magic-park #duty-container .duty-item {
+    display: grid;
+    grid-template-columns: minmax(0, 32%) minmax(0, 68%);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    gap: 5%;
+    min-width: 0;
+    min-height: 0;
+    padding: 4%;
+    border: 0;
+    border-radius: 0.55cqw;
+    background: rgba(241, 252, 251, 0.64);
+    box-shadow: none;
+}
+
+body.magic-park-theme.theme-magic-park #duty-container .duty-avatar {
+    width: 13.5cqw;
+    height: 13.5cqw;
+    max-width: 100%;
+    max-height: 100%;
+    border: 0.45cqw solid rgba(31, 132, 156, 0.48);
+    border-radius: 50%;
+    box-shadow: none;
+}
+
+body.magic-park-theme.theme-magic-park #duty-container .duty-name,
+body.magic-park-theme.theme-magic-park #duty-container .duty-name-long {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    color: #15566a;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    font-size: clamp(0.4rem, 3.2cqw, 1rem);
+    font-weight: 900;
+    line-height: 1.03;
+    text-align: left;
+    overflow-wrap: anywhere;
+    box-shadow: none;
+}
+
+body.magic-park-theme.theme-magic-park #duty-container .duty-name-long {
+    font-size: clamp(0.36rem, 2.8cqw, 0.9rem);
+}
+
+/* Stars — featured portrait remains staged above the podium painted in the foreground asset. */
+body.magic-park-theme.theme-magic-park #stars-container {
+    --magic-role-accent: #f1bf42;
+    display: block !important;
+    padding: 0;
+    background: var(--magic-berry-surface);
+}
+
+body.magic-park-theme.theme-magic-park #stars-container .star-slide {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 74fr) minmax(0, 26fr);
+    align-items: center;
+    justify-items: center;
+    gap: 0;
+    width: 100%;
+    height: 100%;
+    padding: 6% 12% 17%;
+}
+
+body.magic-park-theme.theme-magic-park #stars-container .star-slide::before {
+    width: 64%;
+    background: radial-gradient(circle, rgba(255, 223, 103, 0.34) 0 18%, rgba(255, 190, 79, 0.13) 42%, transparent 72%);
+}
+
+body.magic-park-theme.theme-magic-park #stars-container .star-slide::after {
+    width: 66%;
+    border-color: rgba(255, 217, 91, 0.35);
+}
+
+body.magic-park-theme.theme-magic-park #stars-container .star-avatar {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+    width: min(43cqw, 56cqh);
+    height: min(43cqw, 56cqh);
+    border: 0.8cqw solid var(--magic-role-accent);
+    box-shadow: 0 0 0 0.45cqw rgba(255, 255, 255, 0.82), 0 0 1.8cqw rgba(242, 190, 66, 0.34);
+}
+
+body.magic-park-theme.theme-magic-park #stars-container .star-name {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: end;
+    justify-self: center;
+    width: 88%;
+    max-width: 88%;
+    min-height: 0;
+    margin: 0;
+    padding: 4% 6%;
+    color: #6e3158;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 246, 210, 0.92);
+    font-size: clamp(0.65rem, 5.5cqw, 1.7rem);
+    line-height: 1;
+    box-shadow: 0 0.28cqh 0.75cqh rgba(7, 10, 22, 0.3);
+}
+
+body.magic-park-theme.theme-magic-park #stars-container .star-dots {
+    top: 4%;
+    bottom: auto;
+    gap: 2%;
+}
+
+body.magic-park-theme.theme-magic-park #stars-container .star-dot {
+    width: 3cqw;
+    height: 3cqw;
+    background: rgba(255, 244, 190, 0.32);
+}
+
+body.magic-park-theme.theme-magic-park #stars-container .star-dot.active {
+    background: var(--magic-role-accent);
+}
+
+/* Empty/fallback states stay inside the same flat themed surface instead of
+ * becoming another card with its own border. */
+body.magic-park-theme.theme-magic-park .role-empty-state {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 8%;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+body.magic-park-theme.theme-magic-park .role-empty-icon {
+    width: min(28cqw, 34cqh);
+    height: min(28cqw, 34cqh);
+}
+
+body.magic-park-theme.theme-magic-park .role-empty-title {
+    font-size: clamp(0.62rem, 4.5cqw, 1.45rem);
+}
+
+body.magic-park-theme.theme-magic-park .role-empty-message {
+    font-size: clamp(0.46rem, 3.2cqw, 1rem);
+}

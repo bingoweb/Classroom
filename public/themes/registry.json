@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "defaultThemeId": "magic-park",
+  "fallbackThemeId": "magic-park",
+  "themes": [
+    {
+      "id": "magic-park",
+      "manifest": "themes/magic-park/theme.json"
+    },
+    {
+      "id": "school-garden",
+      "manifest": "themes/school-garden/theme.json"
+    },
+    {
+      "id": "school-science",
+      "manifest": "themes/school-science/theme.json"
+    }
+  ]
+}

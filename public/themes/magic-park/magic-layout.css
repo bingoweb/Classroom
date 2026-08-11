@@ -1,0 +1,130 @@
+/* Magic Park — simple layered shell: background, live DOM content, baked alpha foreground. */
+
+body.magic-park-theme.theme-magic-park .bento-grid {
+    position: absolute;
+    isolation: isolate;
+    display: block;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 50% 42%, rgba(255, 250, 222, 0.18), transparent 48%),
+        linear-gradient(180deg, #1b3c35 0%, #132b2b 100%);
+}
+
+/* sontema-foreground.png carries real baked alpha. The eight openings are
+ * empty pixels in the asset itself, so the decorative frame no longer depends
+ * on a runtime SVG/CSS mask pipeline. */
+body.magic-park-theme.theme-magic-park .bento-grid::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: transparent url('../../assets/sontema-foreground.png') center / 100% 100% no-repeat;
+}
+
+body.magic-park-theme.theme-magic-park .main-content-area,
+body.magic-park-theme.theme-magic-park .column {
+    display: contents;
+}
+
+body.magic-park-theme.theme-magic-park .card {
+    position: absolute;
+    z-index: 5;
+    width: auto;
+    height: auto;
+    overflow: hidden;
+    container-type: size;
+}
+
+/* sontema live opening bounds, normalized from the current 3840×2160 source. Each
+ * DOM scene keeps the same small safety bleed behind the baked alpha contour. */
+body.magic-park-theme.theme-magic-park .clock-card {
+    position: absolute;
+    z-index: 5;
+    left: 3.828%;
+    top: 6.574%;
+    width: 18.281%;
+    height: 25.046%;
+}
+
+body.magic-park-theme.theme-magic-park .stats-card {
+    position: absolute;
+    z-index: 5;
+    left: 1.979%;
+    top: 38.472%;
+    width: 24.375%;
+    height: 28.380%;
+}
+
+body.magic-park-theme.theme-magic-park .countdown-card {
+    position: absolute;
+    z-index: 5;
+    left: 4.818%;
+    top: 72.269%;
+    width: 19.010%;
+    height: 21.852%;
+}
+
+body.magic-park-theme.theme-magic-park .noise-meter-card {
+    position: absolute;
+    z-index: 5;
+    left: 33.333%;
+    top: 5.602%;
+    width: 36.979%;
+    height: 29.537%;
+}
+
+body.magic-park-theme.theme-magic-park .slideshow-card {
+    position: absolute;
+    z-index: 5;
+    left: 34.453%;
+    top: 44.398%;
+    width: 33.229%;
+    height: 33.889%;
+}
+
+body.magic-park-theme.theme-magic-park .president-card {
+    position: absolute;
+    z-index: 5;
+    left: 79.740%;
+    top: 4.213%;
+    width: 17.995%;
+    height: 27.917%;
+}
+
+body.magic-park-theme.theme-magic-park .duty-card {
+    position: absolute;
+    z-index: 5;
+    left: 78.698%;
+    top: 43.750%;
+    width: 17.344%;
+    height: 23.750%;
+}
+
+body.magic-park-theme.theme-magic-park .star-card {
+    position: absolute;
+    z-index: 5;
+    left: 78.385%;
+    top: 74.259%;
+    width: 18.906%;
+    height: 23.009%;
+}
+
+body.magic-park-theme.theme-magic-park .magic-scene {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 5;
+    width: auto !important;
+    height: auto !important;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+body.magic-park-theme.theme-magic-park .card-titlebar,
+body.magic-park-theme.theme-magic-park .card-header.card-titlebar {
+    z-index: -1;
+}

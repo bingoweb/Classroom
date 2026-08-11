@@ -19,13 +19,15 @@ test('Student Name DOM Safety Tests', async (t) => {
                     className: '',
                     dataset: {},
                     style: {}, 
-                    classList: { contains: () => false, add: () => {}, remove: () => {} },
+                    classList: { contains: () => false, add: () => {}, remove: () => {}, toggle: () => {} },
                     addEventListener: () => {},
                     getAttribute: function(attr) { return this[attr]; },
                     setAttribute: function(attr, value) { this[attr] = String(value); },
+                    removeAttribute: function(attr) { delete this[attr]; },
                     getContext: () => ({ fillRect: () => {} }),
                     appendChild: () => {},
                     removeChild: () => {},
+                    replaceChildren: function(...nodes) { this.children = nodes; },
                     children: []
                 };
             }
@@ -133,6 +135,13 @@ test('Student Name DOM Safety Tests', async (t) => {
                     { role_type: 'star', id: 4, name: maliciousNames[0] }
                 ];
             }
+            if (url.includes('/stats')) {
+                return {
+                    total: 10, girls: 5, boys: 5,
+                    todayPresent: 9, todayAbsent: 1,
+                    absentStudents: [{ id: 5, name: maliciousNames[1] }]
+                };
+            }
             if (url.includes('/settings')) {
                 return [];
             }
@@ -172,15 +181,13 @@ test('Student Name DOM Safety Tests', async (t) => {
         assert.ok(presidentHtml.includes('&quot;&gt;&lt;img src=x onerror=&quot;globalThis.__xss=1&quot;&gt;'), 'President name is escaped');
         assert.ok(!presidentHtml.includes('Henüz sınıf başkanı belirlenmedi'), 'Assigned president does not show empty state');
 
-        assert.ok(!presidentHtml.includes('<script>globalThis.__xss=1</script>'), 'No raw script tag in VP');
-        assert.ok(presidentHtml.includes('&lt;script&gt;globalThis.__xss=1&lt;/script&gt;'), 'VP name is escaped');
+        assert.ok(!presidentHtml.includes('vice-president'), 'Vice-presidents are no longer rendered in the narrow president panel');
         
         assert.ok(!starsHtml.includes('onerror="globalThis.__xss=1"'), 'No raw injected onerror attribute in star');
         assert.ok(starsHtml.includes('&quot;&gt;&lt;img src=x onerror=&quot;globalThis.__xss=1&quot;&gt;'), 'Star name is escaped');
         assert.ok(starsHtml.includes('id="star-img-4-0"'), 'Star portrait has a stable focus target');
         assert.match(presidentHtml, /president-avatar-large" alt="" aria-hidden="true"/);
         assert.ok(presidentHtml.includes("this.src='girl.png'"), 'female president keeps a gender-appropriate fallback portrait');
-        assert.match(presidentHtml, /vice-president-avatar" alt="" aria-hidden="true"/);
         assert.match(getEl('duty-container').innerHTML, /duty-avatar" alt="" aria-hidden="true"/);
         assert.match(starsHtml, /star-avatar" alt="" aria-hidden="true"/);
         assert.match(absentHtml, /marquee-avatar" alt="" aria-hidden="true"/);
@@ -225,10 +232,52 @@ test('Student Name DOM Safety Tests', async (t) => {
         const presidentHtml = getEl('president-container').innerHTML;
         const dutyHtml = getEl('duty-container').innerHTML;
 
-        assert.ok(presidentHtml.includes('Henüz sınıf başkanı belirlenmedi'));
-        assert.ok(dutyHtml.includes('Bugün için nöbetçi belirlenmedi'));
+        assert.ok(presidentHtml.includes('Başkanımız henüz seçilmedi'));
+        assert.ok(dutyHtml.includes('Bugünün nöbetçileri henüz seçilmedi'));
         assert.ok(!presidentHtml.includes('>---<'));
         assert.ok(!dutyHtml.includes('>---<'));
+    });
+
+    await t.test('Dashboard renders calm role fallbacks on cold-start role failure and preserves existing role content on transient failure', async () => {
+        const scriptSource = fs.readFileSync(path.join(__dirname, '../public/js/script.js'), 'utf8');
+        const utilsSource = fs.readFileSync(path.join(__dirname, '../public/js/utils.js'), 'utf8');
+        const { sandbox, getEl } = createSandbox();
+
+        vm.createContext(sandbox);
+        vm.runInContext(utilsSource, sandbox);
+        sandbox.Utils = sandbox.window.Utils;
+        vm.runInContext(`${scriptSource}\n globalThis.__testApi = { fetchData };`, sandbox);
+
+        sandbox.Utils.fetchWithErrorHandling = async (url) => {
+            if (url.includes('/roles')) return null;
+            if (url.includes('/stats')) {
+                return {
+                    total: 10, girls: 5, boys: 5,
+                    todayPresent: 9, todayAbsent: 1,
+                    absentStudents: []
+                };
+            }
+            return [];
+        };
+
+        await sandbox.globalThis.__testApi.fetchData();
+
+        assert.match(getEl('president-container').innerHTML, /role-empty-state--president/);
+        assert.match(getEl('president-container').innerHTML, /Sınıf ekibimiz birazdan burada/);
+        assert.match(getEl('duty-container').innerHTML, /role-empty-state--duty/);
+        assert.match(getEl('duty-container').innerHTML, /Yardımcı ekibimiz birazdan burada/);
+        assert.match(getEl('stars-container').innerHTML, /role-empty-state--stars/);
+        assert.match(getEl('stars-container').innerHTML, /Yıldız sahnesi birazdan parlayacak/);
+
+        getEl('president-container').innerHTML = '<div class="existing-president">Defne</div>';
+        getEl('duty-container').innerHTML = '<div class="existing-duty">Mert</div>';
+        getEl('stars-container').innerHTML = '<div class="existing-star">Zeynep</div>';
+
+        await sandbox.globalThis.__testApi.fetchData();
+
+        assert.strictEqual(getEl('president-container').innerHTML, '<div class="existing-president">Defne</div>');
+        assert.strictEqual(getEl('duty-container').innerHTML, '<div class="existing-duty">Mert</div>');
+        assert.strictEqual(getEl('stars-container').innerHTML, '<div class="existing-star">Zeynep</div>');
     });
 
     await t.test('Period context renders course names as text-only chips', () => {

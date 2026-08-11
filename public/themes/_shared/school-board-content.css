@@ -1,0 +1,455 @@
+/*
+ * Shared composition primitives for the short/wide boards used by the
+ * school-family themes. Theme artwork/geometry/materials stay package-owned;
+ * this file only adapts dynamic MP2 content to the shared board aspect ratios.
+ */
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .clock-content-wrapper {
+    inset: 22% 5% 8% 5%;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 0.55cqw;
+    row-gap: 0.28cqh;
+    overflow: hidden;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .date-section {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+    min-width: 0;
+    min-height: 0;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .clock-section {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    align-self: stretch;
+    min-width: 0;
+    min-height: 0;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .weekend-section {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: end;
+    min-width: 0;
+    min-height: 0;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .weekend-pill {
+    width: 100%;
+    max-width: 100%;
+    padding-inline: 0.45cqw;
+    gap: 0.28cqw;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .before-school-mode,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .countdown-mode,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .goodbye-mode {
+    inset: 21% 7% 10% 7%;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .before-school-mode::before,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .before-school-mode::after,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .countdown-mode::before,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .countdown-mode::after,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .goodbye-mode::before,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .goodbye-mode::after {
+    display: none;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .before-school-mode:not([style*="display: none"]) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 28%) minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    align-items: center;
+    justify-items: stretch;
+    column-gap: 0.65cqw;
+    row-gap: 0.14cqh;
+    padding: 0.5cqh 0.65cqw;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .before-school-mode .clock-visual {
+    grid-column: 1;
+    grid-row: 1 / 4;
+    align-self: center;
+    justify-self: stretch;
+    width: 100%;
+    height: 78%;
+    max-height: 100%;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .before-school-mode h3 {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+    min-width: 0;
+    margin: 0;
+    text-align: left;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .before-school-mode .before-school-subtitle {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+    min-width: 0;
+    margin: 0;
+    text-align: left;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .before-school-mode .countdown-text {
+    grid-column: 2;
+    grid-row: 3;
+    align-self: start;
+    justify-self: stretch;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    text-align: left;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .countdown-mode:not([style*="display: none"]) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 58%) minmax(0, 42%);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-items: center;
+    justify-items: stretch;
+    column-gap: 0.65cqw;
+    row-gap: 0.16cqh;
+    padding: 0.5cqh 0.65cqw;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .countdown-mode h3 {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: end;
+    min-width: 0;
+    text-align: left;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .countdown-mode .period-context {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: center;
+    min-width: 0;
+    width: 100%;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .countdown-mode .progress-bar-container {
+    grid-column: 1;
+    grid-row: 3;
+    align-self: start;
+    width: 100%;
+    margin: 0;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .countdown-mode .countdown-text {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    align-self: stretch;
+    justify-self: stretch;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    max-height: 100%;
+    margin: 0;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .goodbye-mode:not([style*="display: none"]) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 31%) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: center;
+    justify-items: stretch;
+    column-gap: 0.7cqw;
+    row-gap: 0.18cqh;
+    padding: 0.55cqh 0.7cqw;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .goodbye-visual {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    align-self: center;
+    justify-self: stretch;
+    width: 100%;
+    height: 82%;
+    max-height: 100%;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .goodbye-title {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+    min-width: 0;
+    text-align: left;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .goodbye-subtitle {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: start;
+    min-width: 0;
+    padding-bottom: 0.22cqh;
+    text-align: left;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) #president-container {
+    inset: 18% 7% 8% 7%;
+    grid-template-columns: minmax(0, 45%) minmax(0, 55%);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+    justify-items: stretch;
+    gap: 0.45cqw;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .president-main {
+    grid-column: 1;
+    grid-row: 1;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 0.18cqh;
+    padding: 0.35cqh 0.42cqw;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .president-avatar-large {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+    justify-self: center;
+    width: min(4.4cqw, 7.2cqh);
+    height: min(4.4cqw, 7.2cqh);
+    max-width: 82%;
+    max-height: 100%;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .president-name-large {
+    grid-column: 1;
+    grid-row: 2;
+    width: 94%;
+    min-height: 2.25em;
+    padding: 0.3cqh 0.36cqw;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .vice-presidents-container {
+    grid-column: 2;
+    grid-row: 1;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 0.34cqh;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .vice-president-item {
+    padding: 0.24cqh 0.28cqw;
+    gap: 0.24cqw;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .vice-president-avatar {
+    width: min(2.4cqw, 4.2cqh);
+    height: min(2.4cqw, 4.2cqh);
+    max-height: 82%;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) #president-container > .role-empty-state {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
+    height: 100%;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) #president-container:not(:has(.vice-presidents-container)) .president-main {
+    grid-column: 1 / -1;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) #president-container:not(:has(.vice-presidents-container)) .president-avatar-large {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) #president-container:not(:has(.vice-presidents-container)) .president-name-large {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) #president-container:not(:has(.president-main)) .vice-presidents-container {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .role-empty-state--president,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .role-empty-state--stars {
+    grid-template-columns: minmax(0, 34%) minmax(0, 66%);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    align-content: stretch;
+    align-items: center;
+    justify-items: stretch;
+    column-gap: 0.6cqw;
+    row-gap: 0.08cqh;
+    padding: 0.5cqh 0.62cqw;
+    overflow: hidden;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .role-empty-state--president .role-empty-icon,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .role-empty-state--stars .role-empty-icon {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    align-self: center;
+    justify-self: center;
+    width: auto;
+    height: min(78%, 9cqh);
+    max-width: 88%;
+    max-height: 100%;
+    aspect-ratio: 1;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .role-empty-state--president .role-empty-title,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .role-empty-state--stars .role-empty-title {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+    justify-self: stretch;
+    min-width: 0;
+    padding-inline: 0.12cqw;
+    text-align: left;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .role-empty-state--president .role-empty-message,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .role-empty-state--stars .role-empty-message {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: start;
+    justify-self: stretch;
+    min-width: 0;
+    padding: 0.12cqh 0.12cqw 0;
+    text-align: left;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .noise-content {
+    inset: 18% 5.5% 8% 5.5%;
+    grid-template-columns: minmax(0, 27%) minmax(0, 73%);
+    align-items: stretch;
+    gap: 0.65cqw;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .noise-character-wrapper {
+    align-self: stretch;
+    min-height: 0;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) #noise-character-img {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: auto;
+    object-fit: contain;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .noise-info {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-content: stretch;
+    gap: 0.35cqh;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .noise-status {
+    padding: 0.34cqh 0.52cqw;
+    gap: 0.4cqw;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .noise-meter-container {
+    grid-template-columns: minmax(0, 58%) minmax(0, 42%);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    gap: 0.42cqw;
+    min-height: 0;
+    padding: 0.38cqh 0.5cqw;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .noise-progress {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+    min-height: 0;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .equalizer-container {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: stretch;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 0.12cqh 0;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .equalizer-bars {
+    height: 100%;
+    min-height: 0;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) #noise-meter-card.mic-state-idle .noise-meter-container,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) #noise-meter-card.mic-state-requesting .noise-meter-container,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) #noise-meter-card.mic-state-unavailable .noise-meter-container {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) #noise-meter-card.mic-state-idle .noise-info,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) #noise-meter-card.mic-state-requesting .noise-info,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) #noise-meter-card.mic-state-unavailable .noise-info {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-content: stretch;
+    gap: 0.35cqh;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) #stars-container {
+    inset: 18% 7% 7% 7%;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .star-slide {
+    grid-template-columns: minmax(0, 42%) minmax(0, 58%);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    justify-items: center;
+    overflow: hidden;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .star-avatar {
+    grid-column: 1;
+    grid-row: 1;
+    width: auto;
+    height: min(82%, 6.4cqw);
+    max-width: 88%;
+    max-height: 100%;
+    aspect-ratio: 1;
+    align-self: center;
+    justify-self: center;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .star-name {
+    grid-column: 2;
+    grid-row: 1;
+    width: 92%;
+    max-width: 92%;
+    margin: 0;
+    align-self: center;
+    justify-self: center;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .star-slide::before,
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .star-slide::after {
+    left: 21%;
+    width: 38%;
+}
+
+body.magic-park-theme:is(.theme-school-garden, .theme-school-science) .star-dots {
+    right: 4%;
+    left: 46%;
+    justify-content: center;
+}

@@ -22,6 +22,69 @@ function hasDataChanged(key, newData) {
     return true; // Veri değişmiş
 }
 
+const ROLE_EMPTY_STATES = {
+    president: {
+        icon: 'assets/icons/crown-3d.png',
+        title: 'Liderlik köşesi hazır',
+        message: 'Başkanımız henüz seçilmedi',
+        fallbackTitle: 'Liderlik köşesi dinleniyor',
+        fallbackMessage: 'Sınıf ekibimiz birazdan burada'
+    },
+    duty: {
+        icon: 'assets/icons/clipboard-3d.png',
+        title: 'Yardımcı köşesi hazır',
+        message: 'Bugünün nöbetçileri henüz seçilmedi',
+        fallbackTitle: 'Yardımcı köşesi dinleniyor',
+        fallbackMessage: 'Yardımcı ekibimiz birazdan burada'
+    },
+    stars: {
+        icon: 'assets/icons/star-3d.png',
+        title: 'Yıldız sahnesi hazır',
+        message: 'Bu haftanın yıldızları henüz seçilmedi',
+        fallbackTitle: 'Yıldız sahnesi dinleniyor',
+        fallbackMessage: 'Yıldız sahnesi birazdan parlayacak'
+    }
+};
+
+function renderRoleEmptyState(roleType, { fallback = false } = {}) {
+    const state = ROLE_EMPTY_STATES[roleType];
+    if (!state) return '';
+
+    const title = fallback ? state.fallbackTitle : state.title;
+    const message = fallback ? state.fallbackMessage : state.message;
+    const fallbackClass = fallback ? ' is-fallback' : '';
+
+    return `
+        <div class="role-empty-state role-empty-state--${roleType}${fallbackClass}" role="status">
+            <img class="role-empty-icon" src="${state.icon}" alt="" aria-hidden="true">
+            <strong class="role-empty-title">${title}</strong>
+            <span class="role-empty-message">${message}</span>
+        </div>
+    `;
+}
+
+function hasRoleRenderableContent(container) {
+    if (!container) return false;
+    if (container.children?.length > 0) return true;
+    const meaningfulHtml = String(container.innerHTML || '').replace(/<!--[\s\S]*?-->/g, '').trim();
+    return meaningfulHtml.length > 0;
+}
+
+function renderRoleFallbackState() {
+    const roleContainers = [
+        ['president-container', 'president'],
+        ['duty-container', 'duty'],
+        ['stars-container', 'stars']
+    ];
+
+    roleContainers.forEach(([id, roleType]) => {
+        const container = document.getElementById(id);
+        if (!container || hasRoleRenderableContent(container)) return;
+        if (roleType === 'stars') stopStarSlideshow();
+        container.innerHTML = renderRoleEmptyState(roleType, { fallback: true });
+    });
+}
+
 async function fetchData() {
     try {
         // Independent dashboard resources should not form a request waterfall.
@@ -36,8 +99,11 @@ async function fetchData() {
             if (typeof logger !== 'undefined') {
                 logger.warn(COMPONENTS.DASHBOARD, 'No roles data or invalid format');
             }
+            renderRoleFallbackState();
             return;
         }
+
+        window.ClassTV?.updateRoles(roles);
 
         // AKILLI KONTROL: Roles verisi değişmediyse DOM'u güncelleme
         if (!hasDataChanged('roles', roles)) {
@@ -46,79 +112,38 @@ async function fetchData() {
         }
 
         const president = roles.find(r => r.role_type === 'president');
-        const vicePresidents = roles.filter(r => r.role_type === 'vice_president').slice(0, 2);
         const duties = roles.filter(r => r.role_type === 'duty');
         const stars = roles.filter(r => r.role_type === 'star');
 
         // Roles fetched and processed
 
-        // Render President (1 başkan + 2 yardımcı)
+        // Render President. Vice-presidents are intentionally presented by Class TV.
         const presidentContainer = document.getElementById('president-container');
         if (!presidentContainer) {
             if (typeof logger !== 'undefined') {
                 logger.error(COMPONENTS.DASHBOARD, 'president-container element not found');
             }
         } else {
-            let html = '';
-
-            // Başkan (büyük)
             if (president) {
                 const avatarPath = Utils.getAvatarPath(president);
                 const defaultAvatar = president.gender === 'F' ? CONFIG.DEFAULT_AVATAR_GIRL : CONFIG.DEFAULT_AVATAR_BOY;
                 const imgId = `president-img-${president.id}`;
-                html += `
+                presidentContainer.innerHTML = `
                     <div class="president-main">
                         <img id="${imgId}" src="${avatarPath}" class="president-avatar-large" alt="" aria-hidden="true" onerror="this.onerror=null; this.src='${defaultAvatar}'">
                         <div class="president-name-large">${Utils.escapeHtml(president.name || '---')}</div>
                     </div>
                 `;
-            }
-
-            // Yardımcılar (2 kişi, orta boy)
-            if (vicePresidents.length > 0) {
-                html += '<div class="vice-presidents-container">';
-                vicePresidents.forEach((vp, index) => {
-                    const avatarPath = Utils.getAvatarPath(vp);
-                    const defaultAvatar = vp.gender === 'F' ? CONFIG.DEFAULT_AVATAR_GIRL : CONFIG.DEFAULT_AVATAR_BOY;
-                    const imgId = `vice-president-img-${vp.id}-${index}`;
-                    html += `
-                        <div class="vice-president-item">
-                            <img id="${imgId}" src="${avatarPath}" class="vice-president-avatar" alt="" aria-hidden="true" onerror="this.onerror=null; this.src='${defaultAvatar}'">
-                            <div class="vice-president-name">${Utils.escapeHtml(vp.name || '---')}</div>
-                        </div>
-                    `;
-                });
-                html += '</div>';
-            }
-
-            if (!president && vicePresidents.length === 0) {
-                html = `
-                    <div class="role-empty-state" role="status">
-                        <img class="role-empty-icon" src="assets/icons/crown-3d.png" alt="" aria-hidden="true">
-                        <span>Henüz sınıf başkanı belirlenmedi</span>
-                    </div>
-                `;
-            }
-
-            presidentContainer.innerHTML = html;
-
-            // Yüz odaklama uygula
-            intervalManager.setTimeout(() => {
-                if (president) {
+                intervalManager.setTimeout(() => {
                     const imgId = `president-img-${president.id}`;
                     const img = document.getElementById(imgId);
                     if (img && typeof faceFocusEngine !== 'undefined') {
                         faceFocusEngine.focusFace(img, Utils.getAvatarPath(president), 'large');
                     }
-                }
-                vicePresidents.forEach((vp, index) => {
-                    const imgId = `vice-president-img-${vp.id}-${index}`;
-                    const img = document.getElementById(imgId);
-                    if (img && typeof faceFocusEngine !== 'undefined') {
-                        faceFocusEngine.focusFace(img, Utils.getAvatarPath(vp), 'medium');
-                    }
-                });
-            }, 100);
+                }, 100);
+            } else {
+                presidentContainer.innerHTML = renderRoleEmptyState('president');
+            }
         }
 
         // Render Duty Students (4 kişi, büyük)
@@ -160,12 +185,7 @@ async function fetchData() {
                 });
             }, 100);
         } else {
-            dutyContainer.innerHTML = `
-                <div class="role-empty-state" role="status">
-                    <img class="role-empty-icon" src="assets/icons/clipboard-3d.png" alt="" aria-hidden="true">
-                    <span>Bugün için nöbetçi belirlenmedi</span>
-                </div>
-            `;
+            dutyContainer.innerHTML = renderRoleEmptyState('duty');
         }
 
         // Render Stars - SLIDESHOW SİSTEMİ
@@ -182,7 +202,7 @@ async function fetchData() {
                 const isActive = index === 0 ? 'active' : '';
                 const imgId = `star-img-${s.id}-${index}`;
                 return `
-                <div class="star-slide ${isActive}" data-index="${index}">
+                <div class="star-slide ${isActive}" data-index="${index}" aria-hidden="${index === 0 ? 'false' : 'true'}">
                     <img id="${imgId}" src="${avatarPath}" class="star-avatar" alt="" aria-hidden="true" onerror="this.onerror=null; this.src='${defaultAvatar}'">
                     <div class="star-name">${Utils.escapeHtml(s.name || '---')}</div>
                 </div>
@@ -214,15 +234,12 @@ async function fetchData() {
             initStarSlideshow(stars.length);
         } else {
             // Yıldız yok durumu
-            starsContainer.innerHTML = `
-                <div class="no-stars-message">
-                    <img class="no-stars-icon" src="assets/icons/star-3d.png" alt="" aria-hidden="true">
-                    <div class="no-stars-text">Bu hafta henüz<br>yıldız belirlenmedi</div>
-                </div>
-            `;
+            stopStarSlideshow();
+            starsContainer.innerHTML = renderRoleEmptyState('stars');
         }
 
     } catch (error) {
+        renderRoleFallbackState();
         console.error('Error fetching data:', error);
     }
 }
@@ -237,28 +254,66 @@ let clockInterval = null; // Track clock update interval
 let dataRefreshInterval = null; // Track data refresh interval
 let isTransitioning = false; // Mutex flag to prevent race conditions
 let slideshowGeneration = 0; // Invalidates callbacks from a replaced slide set
+let absentRosterInterval = null;
+const ABSENT_ROSTER_PAGE_SIZE = 2;
+const ABSENT_ROSTER_PAGE_DURATION = 5500;
+
+function clearAbsentRosterInterval() {
+    if (!absentRosterInterval) return;
+    intervalManager.clearInterval(absentRosterInterval);
+    absentRosterInterval = null;
+}
+
+function renderAbsentRosterPage(absentStudents, requestedPage = 0) {
+    const absentContainer = document.getElementById('absent-container');
+    const absentList = document.getElementById('absent-list');
+    if (!absentContainer || !absentList || absentStudents.length === 0) return 0;
+
+    const pageCount = Math.max(1, Math.ceil(absentStudents.length / ABSENT_ROSTER_PAGE_SIZE));
+    const pageIndex = ((requestedPage % pageCount) + pageCount) % pageCount;
+    const pageStart = pageIndex * ABSENT_ROSTER_PAGE_SIZE;
+    const pageStudents = absentStudents.slice(pageStart, pageStart + ABSENT_ROSTER_PAGE_SIZE);
+
+    absentList.innerHTML = pageStudents.map(student => {
+        const avatarPath = Utils.getAvatarPath(student);
+        const defaultAvatar = student.gender === 'F' ? CONFIG.DEFAULT_AVATAR_GIRL : CONFIG.DEFAULT_AVATAR_BOY;
+        return `
+            <span class="marquee-item">
+                <img src="${avatarPath}" class="marquee-avatar" alt="" aria-hidden="true" onerror="this.onerror=null; this.src='${defaultAvatar}'">
+                <span class="marquee-name">${Utils.escapeHtml(student.name)}</span>
+            </span>
+        `;
+    }).join('');
+
+    absentContainer.dataset.pageLabel = pageCount > 1 ? `${pageIndex + 1} / ${pageCount}` : '';
+    absentContainer.setAttribute('aria-label', `Devamsız öğrenciler: ${absentStudents.map(student => student.name).join(', ')}`);
+    return pageIndex;
+}
+
+function startAbsentRoster(absentStudents) {
+    clearAbsentRosterInterval();
+    let currentPage = renderAbsentRosterPage(absentStudents, 0);
+    const pageCount = Math.ceil(absentStudents.length / ABSENT_ROSTER_PAGE_SIZE);
+    if (pageCount <= 1) return;
+
+    absentRosterInterval = intervalManager.setInterval(() => {
+        currentPage = renderAbsentRosterPage(absentStudents, currentPage + 1);
+    }, ABSENT_ROSTER_PAGE_DURATION);
+}
 
 // STAR SLIDESHOW SİSTEMİ
 let starSlideInterval = null;
 let currentStarIndex = 0;
-let lastStarTransition = '';  // Son kullanılan efekti takip et
 const STAR_SLIDE_DURATION = 4000; // 4 saniye her yıldız
-const STAR_TRANSITIONS = [
-    'transition-fade',
-    'transition-slide-right',
-    'transition-slide-left',
-    'transition-scale',
-    'transition-rotate',
-    'transition-flip',
-    'transition-zoom-blur'
-];
+
+function stopStarSlideshow() {
+    if (!starSlideInterval) return;
+    intervalManager.clearInterval(starSlideInterval);
+    starSlideInterval = null;
+}
 
 function initStarSlideshow(totalSlides) {
-    // Önceki interval'i temizle
-    if (starSlideInterval) {
-        clearInterval(starSlideInterval);
-        starSlideInterval = null;
-    }
+    stopStarSlideshow();
 
     // Tek slide varsa geçiş yapma
     if (totalSlides <= 1) {
@@ -266,20 +321,65 @@ function initStarSlideshow(totalSlides) {
     }
 
     currentStarIndex = 0;
-    lastStarTransition = '';
 
     starSlideInterval = intervalManager.setInterval(() => {
         nextStarSlide(totalSlides);
     }, STAR_SLIDE_DURATION);
 }
 
-// Rastgele ama her seferinde FARKLI efekt seç
-function getRandomTransition() {
-    let availableTransitions = STAR_TRANSITIONS.filter(t => t !== lastStarTransition);
-    const randomIndex = Math.floor(Math.random() * availableTransitions.length);
-    const selected = availableTransitions[randomIndex];
-    lastStarTransition = selected;
-    return selected;
+function animateStarSlideTransition(currentSlide, nextSlide) {
+    if (!currentSlide || !nextSlide || currentSlide === nextSlide) return;
+
+    const reducedMotion = typeof window.matchMedia === 'function'
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const gsap = window.gsap;
+
+    currentSlide.classList.add('is-transitioning');
+    nextSlide.classList.add('is-transitioning', 'active');
+    currentSlide.setAttribute('aria-hidden', 'false');
+    nextSlide.setAttribute('aria-hidden', 'false');
+
+    const finish = () => {
+        currentSlide.classList.remove('active', 'is-transitioning');
+        nextSlide.classList.remove('is-transitioning');
+        currentSlide.setAttribute('aria-hidden', 'true');
+        nextSlide.setAttribute('aria-hidden', 'false');
+    };
+
+    if (!gsap || reducedMotion) {
+        finish();
+        return;
+    }
+
+    gsap.killTweensOf([currentSlide, nextSlide]);
+    gsap.set(currentSlide, { autoAlpha: 1, scale: 1, yPercent: 0, rotation: 0 });
+    gsap.set(nextSlide, { autoAlpha: 0, scale: 0.94, yPercent: 6, rotation: 0.8 });
+
+    window.gsap.timeline({
+        defaults: { overwrite: 'auto' },
+        onComplete: () => {
+            finish();
+            gsap.set([currentSlide, nextSlide], {
+                clearProps: 'opacity,visibility,transform'
+            });
+        }
+    })
+        .to(currentSlide, {
+            autoAlpha: 0,
+            scale: 0.975,
+            yPercent: -4,
+            rotation: -0.6,
+            duration: 0.46,
+            ease: 'power2.in'
+        }, 0)
+        .to(nextSlide, {
+            autoAlpha: 1,
+            scale: 1,
+            yPercent: 0,
+            rotation: 0,
+            duration: 0.68,
+            ease: 'back.out(1.25)'
+        }, 0.12);
 }
 
 function nextStarSlide(totalSlides) {
@@ -287,17 +387,7 @@ function nextStarSlide(totalSlides) {
     const dots = document.querySelectorAll('.star-dot');
 
     if (slides.length === 0) return;
-
-    // Her seferinde FARKLI geçiş efekti
-    const randomTransition = getRandomTransition();
-
-    // Mevcut slide'ı gizle
     const currentSlide = slides[currentStarIndex];
-    if (currentSlide) {
-        currentSlide.classList.remove('active');
-        currentSlide.classList.remove(...STAR_TRANSITIONS);
-        currentSlide.classList.add('exit');
-    }
 
     // Dot'u güncelle
     if (dots[currentStarIndex]) {
@@ -309,16 +399,7 @@ function nextStarSlide(totalSlides) {
 
     // Yeni slide'ı göster
     const nextSlide = slides[currentStarIndex];
-    if (nextSlide) {
-        // Önce tüm class'ları temizle
-        nextSlide.classList.remove('exit', ...STAR_TRANSITIONS);
-        // Yeni transition ekle
-        nextSlide.classList.add(randomTransition);
-        // Active yap
-        requestAnimationFrame(() => {
-            nextSlide.classList.add('active');
-        });
-    }
+    animateStarSlideTransition(currentSlide, nextSlide);
 
     // Yeni dot'u aktif yap
     if (dots[currentStarIndex]) {
@@ -431,11 +512,11 @@ function renderSlideshowFallback(container) {
     if (!container) return null;
 
     const fallbackSlide = createSlideElement({
-        id: 'fallback-tribute',
+        id: 'fallback-ataturk',
         title: 'Mustafa Kemal Atatürk',
         content_type: 'quote',
         media_type: 'image',
-        media_path: 'assets/tribute.webp',
+        media_path: 'assets/ataturk-slides/ataturk-1.webp',
         text_content: '“Vatanını en çok seven, görevini en iyi yapandır.”\n— Mustafa Kemal Atatürk'
     }, true);
 
@@ -507,6 +588,42 @@ function createSlideCaptionElement(message) {
 
     caption.appendChild(captionCopy);
     return caption;
+}
+
+function renderSlideMediaFallback(slideElement, { hasNext = false } = {}) {
+    if (!slideElement) return null;
+
+    let fallback = slideElement.querySelector('.slide-media-fallback');
+    if (!fallback) {
+        fallback = document.createElement('div');
+        fallback.className = 'slide-media-fallback';
+        fallback.setAttribute('role', 'status');
+        fallback.setAttribute('aria-live', 'polite');
+
+        const icon = document.createElement('img');
+        icon.className = 'slide-media-fallback-icon';
+        icon.src = 'assets/ui-icons-3d/sparkles.png';
+        icon.alt = '';
+        icon.setAttribute('aria-hidden', 'true');
+
+        const title = document.createElement('strong');
+        title.className = 'slide-media-fallback-title';
+
+        const message = document.createElement('span');
+        message.className = 'slide-media-fallback-message';
+
+        fallback.appendChild(icon);
+        fallback.appendChild(title);
+        fallback.appendChild(message);
+        slideElement.appendChild(fallback);
+    }
+
+    fallback.children[1].textContent = 'Bu anı kısa bir molada';
+    fallback.children[2].textContent = hasNext
+        ? 'Sıradaki kareye geçiyoruz'
+        : 'Sahnemiz birazdan yeniden parlayacak';
+    fallback.style.display = 'grid';
+    return fallback;
 }
 
 function createSlideElement(slide, isActive = false) {
@@ -600,6 +717,25 @@ function createSlideElement(slide, isActive = false) {
             });
             backdrop.style.display = 'none';
             this.style.display = 'none';
+            slideDiv.dataset.mediaFailed = 'true';
+
+            const hasNext = Array.isArray(slidesData) && slidesData.length > 1;
+            renderSlideMediaFallback(slideDiv, { hasNext });
+
+            const isCurrentSlide = slideDiv.classList.contains('active')
+                || String(slideDiv.className || '').split(/\s+/).includes('active');
+            if (isCurrentSlide && hasNext) {
+                if (slideshowInterval) {
+                    intervalManager.clearTimeout(slideshowInterval);
+                    slideshowInterval = null;
+                }
+                const recoveryGeneration = slideshowGeneration;
+                slideshowInterval = intervalManager.setTimeout(() => {
+                    slideshowInterval = null;
+                    if (recoveryGeneration !== slideshowGeneration || isTransitioning) return;
+                    nextSlide();
+                }, 1200);
+            }
         };
         slideDiv.appendChild(backdrop);
         slideDiv.appendChild(img);
@@ -609,7 +745,27 @@ function createSlideElement(slide, isActive = false) {
         }
     }
 
+    const captionText = String(slide.text_content || '').trim();
+    const usesStoryTextLayout = captionText.length > 420;
+    if (usesStoryTextLayout) {
+        slideDiv.classList.add('slide--story-text');
+    }
+
     const caption = createSlideCaptionElement(slide.text_content);
+    if (caption && usesStoryTextLayout) {
+        caption.classList.add('slide-text-content--story');
+        const captionCopy = caption.querySelector('.slide-caption-text');
+        if (captionCopy) {
+            captionCopy.classList.remove('slide-caption-text--compact', 'slide-caption-text--long');
+            captionCopy.classList.add('slide-caption-text--story');
+            const hasDenseStoryToken = captionText
+                .split(/\s+/)
+                .some(token => token.length > 80);
+            if (hasDenseStoryToken) {
+                captionCopy.classList.add('slide-caption-text--story-token-dense');
+            }
+        }
+    }
     if (caption) slideDiv.appendChild(caption);
 
     if (isActive) {
@@ -718,6 +874,14 @@ function startSlideshow() {
 function scheduleNextSlide() {
     if (slidesData.length === 0) return;
 
+    if (slidesData.length === 1) {
+        if (slideshowInterval) {
+            intervalManager.clearTimeout(slideshowInterval);
+            slideshowInterval = null;
+        }
+        return;
+    }
+
     // Don't schedule if already transitioning
     if (isTransitioning) {
         logger.debug(COMPONENTS.SLIDESHOW, 'Skipping schedule: transition in progress', null);
@@ -772,6 +936,32 @@ function nextSlide() {
 
     if (!slidesData || slidesData.length === 0) {
         logger.warn(COMPONENTS.SLIDESHOW, 'Cannot advance: no slides', null);
+        return;
+    }
+
+    if (slidesData.length === 1) {
+        currentSlideIndex = 0;
+        isTransitioning = false;
+        const onlySlide = slidesData[0];
+        if (!onlySlide || !onlySlide.id) {
+            logger.error(COMPONENTS.SLIDESHOW, 'Invalid current slide', null, {
+                currentIndex: currentSlideIndex,
+                slidesDataLength: slidesData.length
+            });
+            scheduleNextSlide();
+            return;
+        }
+        const onlySlideElement = onlySlide?.id
+            ? document.querySelector(`.slide[data-slide-id="${onlySlide.id}"]`)
+            : null;
+        if (onlySlideElement) {
+            onlySlideElement.style.display = 'block';
+            onlySlideElement.classList.add('active');
+        }
+        if (slideshowInterval) {
+            intervalManager.clearTimeout(slideshowInterval);
+            slideshowInterval = null;
+        }
         return;
     }
 
@@ -1299,9 +1489,14 @@ function updateCountdown(now) {
     }
 
     const status = window.ScheduleManager.getScheduleStatus(now);
+    const countdownCard = document.getElementById('countdown-card');
     const countdownMode = document.getElementById('countdown-mode');
     const goodbyeMode = document.getElementById('goodbye-mode');
     const beforeSchoolMode = document.getElementById('before-school-mode');
+
+    if (countdownCard) {
+        countdownCard.dataset.flowState = status.mode;
+    }
 
     const useGoodbyeMode = status.mode === 'weekend' || status.mode === 'after-school';
     const useBeforeSchoolMode = status.mode === 'before-school' && Boolean(beforeSchoolMode);
@@ -1444,6 +1639,8 @@ async function updateStats(preloadedStats) {
             throw new Error('Invalid stats response');
         }
 
+        window.ClassTV?.updateStats(stats);
+
         if (!hasDataChanged('stats', stats)) return;
 
         const totalStudents = Number(stats.total) || 0;
@@ -1487,29 +1684,24 @@ async function updateStats(preloadedStats) {
         const attendanceBox = document.getElementById('attendance-stat');
         if (attendanceBox) attendanceBox.style.display = 'flex';
 
-        // Handle Absent Marquee
+        // Handle the Magic Park absence roster.
         const absentContainer = document.getElementById('absent-container');
         const absentList = document.getElementById('absent-list');
+        const attendanceWrapper = document.querySelector('.attendance-wrapper');
+        if (attendanceWrapper) {
+            attendanceWrapper.classList.toggle('has-absent', absentStudents.length > 0);
+        }
 
         if (absentContainer && absentList) {
             if (absentStudents.length > 0) {
-                absentContainer.style.display = 'flex';
-                // Create marquee items with avatars
-                const marqueeHtml = absentStudents.map(student => {
-                    const avatarPath = Utils.getAvatarPath(student);
-                    const defaultAvatar = student.gender === 'F' ? CONFIG.DEFAULT_AVATAR_GIRL : CONFIG.DEFAULT_AVATAR_BOY;
-                    return `
-                        <span class="marquee-item">
-                            <img src="${avatarPath}" class="marquee-avatar" alt="" aria-hidden="true" onerror="this.onerror=null; this.src='${defaultAvatar}'">
-                            ${Utils.escapeHtml(student.name)}
-                        </span>
-                    `;
-                }).join('');
-
-                // Repeat content to ensure it fills the width for scrolling
-                absentList.innerHTML = marqueeHtml + marqueeHtml + marqueeHtml;
+                absentContainer.style.display = 'grid';
+                startAbsentRoster(absentStudents);
             } else {
+                clearAbsentRosterInterval();
                 absentContainer.style.display = 'none';
+                absentContainer.dataset.pageLabel = '';
+                absentContainer.removeAttribute('aria-label');
+                absentList.replaceChildren();
             }
         }
     } catch (e) {

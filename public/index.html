@@ -7,17 +7,17 @@
     <title>2/D Sihirli Pano</title>
     <link rel="icon" href="assets/favicon.png" type="image/png" sizes="64x64">
     <!-- Pinned local fonts keep the kiosk consistent and fully offline. -->
-    <link rel="preload" href="assets/kiosk-magic-park-shell.webp" as="image" type="image/webp">
-    <link rel="preload" href="assets/noise-states/quiet.webp" as="image" type="image/webp" fetchpriority="high">
+    <link rel="preload" href="assets/sontema-foreground.png" as="image" type="image/png" fetchpriority="high">
     <link rel="preload" href="fonts/fredoka-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="css/style.css?v=8">
     <link rel="stylesheet" href="css/kiosk-mode.css?v=1">
-    <link rel="stylesheet" href="css/kiosk-magic-park.css?v=11">
+    <link id="active-theme-stylesheet" rel="stylesheet" href="themes/magic-park/theme.css">
+    <link rel="stylesheet" href="css/kiosk-theme-system.css?v=1">
     <script src="js/config.js"></script>
     <script src="js/logger.js"></script>
 </head>
 
-<body class="magic-park-theme">
+<body class="magic-park-theme theme-magic-park" data-theme="magic-park" data-theme-class="theme-magic-park">
     <div class="background-overlay"></div>
 
     <div class="bento-grid">
@@ -27,7 +27,7 @@
                 <div class="card-titlebar card-titlebar--sky">
                     <span>Günün Zamanı</span>
                 </div>
-                <div class="clock-content-wrapper">
+                <div class="clock-content-wrapper magic-scene clock-scene">
                     <!-- Date Section (Top) -->
                     <div class="date-section">
                         <div id="day-name" class="day-highlight">Pazartesi</div>
@@ -57,9 +57,9 @@
                     <div class="stats-header-text">Sınıf Mevcudu</div>
                 </div>
 
-                <div class="stats-body">
+                <div class="stats-body magic-scene attendance-scene">
                     <!-- Today's presence and fixed class capacity -->
-                    <div class="attendance-hero" id="attendance-hero">
+                    <div class="attendance-hero attendance-mini-page attendance-mini-page--hero" id="attendance-hero">
                         <div class="present-students-panel">
                             <div class="present-students-kicker">
                                 <span class="presence-dot" aria-hidden="true"></span>
@@ -79,7 +79,7 @@
                     </div>
 
                     <!-- Gender Split -->
-                    <div class="stat-gender-row">
+                    <div class="stat-gender-row attendance-mini-page attendance-mini-page--gender">
                         <div class="gender-box girl-box">
                             <img class="gender-icon" src="assets/ui-icons-3d/student-girl.png" alt="Kız öğrenci">
                             <div class="gender-info">
@@ -97,7 +97,7 @@
                     </div>
 
                     <!-- Attendance -->
-                    <div class="attendance-wrapper">
+                    <div class="attendance-wrapper attendance-mini-page attendance-mini-page--status">
                         <div class="attendance-box" id="attendance-stat">
                             <div class="attendance-header">
                                 <span class="attendance-title">BUGÜNÜN YOKLAMASI</span>
@@ -105,9 +105,9 @@
                             </div>
                         </div>
 
-                        <!-- Absent Students Marquee -->
+                        <!-- Absent Students Storybook Roster -->
                         <div class="absent-marquee-container" id="absent-container" style="display: none;">
-                            <div class="absent-label">GELMEYENLER:</div>
+                            <div class="absent-label">DEVAMSIZLAR</div>
                             <div class="marquee-wrapper">
                                 <div class="marquee-content" id="absent-list"></div>
                             </div>
@@ -120,6 +120,7 @@
                 <div class="card-titlebar card-titlebar--lilac">
                     <span>Ders Akışı</span>
                 </div>
+                <div class="magic-scene lesson-flow-scene">
                 <!-- Before School Starts -->
                 <div class="before-school-mode" id="before-school-mode" style="display: none;">
                     <div class="clock-visual">
@@ -149,6 +150,7 @@
                     <h2 class="goodbye-title" id="goodbye-title">Yarın Görüşürüz!</h2>
                     <p class="goodbye-subtitle" id="goodbye-subtitle">İyi dinlenin</p>
                 </div>
+                </div>
             </div>
         </div>
 
@@ -162,13 +164,7 @@
                     <div class="card-titlebar card-titlebar--aqua">
                         <span>Sınıfın Ses Dengesi</span>
                     </div>
-                    <div class="noise-content">
-                        <div class="noise-character-wrapper">
-                            <img id="noise-character-img" src="assets/noise-states/quiet.webp" alt="Sessiz Karakter"
-                                width="2816" height="1536" decoding="async" fetchpriority="high">
-                            <!-- Ripple Effect for noise -->
-                            <div class="noise-ripple"></div>
-                        </div>
+                    <div class="noise-content magic-scene noise-scene">
                         <div class="noise-info">
                             <div class="noise-status" id="noise-status-text" role="status" aria-live="polite">
                                 <img class="noise-status-icon" src="assets/ui-icons-3d/microphone.png" alt="" aria-hidden="true">
@@ -212,9 +208,27 @@
                     <div class="card-titlebar card-titlebar--coral">
                         <span>Sınıfımızdan</span>
                     </div>
-                    <div id="slideshow-container" class="slideshow-container"
-                        style="position: relative; width: 100%; height: 100%; overflow: hidden;">
-                        <!-- Slides injected by JS -->
+                    <div id="class-tv-content-plane" class="class-tv-content-plane">
+                        <div id="slideshow-container" class="slideshow-container magic-scene slideshow-scene"
+                            style="position: relative; width: 100%; height: 100%; overflow: hidden;">
+                            <!-- Slides injected by JS -->
+                        </div>
+                        <div id="class-tv-layer" class="class-tv" aria-live="polite" aria-atomic="true">
+                            <div class="class-tv__broadcast-bug" aria-hidden="true">
+                                <strong>2/D</strong><span>TV</span><small>SINIF YAYINI</small>
+                            </div>
+                            <div class="class-tv__programme" id="class-tv-programme"></div>
+                            <div class="class-tv__mascot-pip" id="class-tv-mascot-pip" hidden></div>
+                            <div class="class-tv__takeover" id="class-tv-takeover" role="status" hidden></div>
+                            <div class="class-tv__channel-rail" aria-hidden="true">
+                                <span class="class-tv__channel-dot class-tv__channel-dot--ataturk"></span>
+                                <span class="class-tv__channel-dot class-tv__channel-dot--attendance"></span>
+                                <span class="class-tv__channel-dot class-tv__channel-dot--gender"></span>
+                                <span class="class-tv__channel-dot class-tv__channel-dot--people"></span>
+                                <span class="class-tv__channel-dot class-tv__channel-dot--stars"></span>
+                                <span class="class-tv__channel-dot class-tv__channel-dot--media"></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -225,7 +239,7 @@
                     <div class="card-header card-titlebar card-titlebar--sunny">
                         <span>Sınıf Başkanı</span>
                     </div>
-                    <div id="president-container" class="student-display-large">
+                    <div id="president-container" class="student-display-large magic-scene president-scene">
                         <!-- President injected by JS -->
                     </div>
                 </div>
@@ -233,7 +247,7 @@
                     <div class="card-header card-titlebar card-titlebar--aqua">
                         <span>Nöbetçiler</span>
                     </div>
-                    <div id="duty-container" class="duty-grid">
+                    <div id="duty-container" class="duty-grid magic-scene duty-scene">
                         <!-- Duty students injected by JS -->
                     </div>
                 </div>
@@ -241,7 +255,7 @@
                     <div class="card-header card-titlebar card-titlebar--berry">
                         <span>Haftanın Yıldızları</span>
                     </div>
-                    <div id="stars-container" class="stars-grid">
+                    <div id="stars-container" class="stars-grid magic-scene stars-scene">
                         <!-- Stars injected by JS -->
                     </div>
                 </div>
@@ -250,13 +264,25 @@
         </div>
     </div>
 
+    <div id="theme-switcher" aria-label="Kiosk tema seçimi">
+        <div id="theme-switcher-panel" class="theme-switcher__panel" hidden>
+            <p class="theme-switcher__title">Görünüm Teması</p>
+            <div id="theme-switcher-choices" role="group" aria-label="Kullanılabilir temalar"></div>
+        </div>
+        <button id="theme-switcher-toggle" class="theme-switcher__toggle" type="button"
+            aria-label="Tema seçimini aç" aria-expanded="false" aria-controls="theme-switcher-panel">
+            <span class="theme-switcher__icon" aria-hidden="true">◈</span>
+        </button>
+    </div>
+
     <!-- Scripts -->
+    <script src="js/kiosk-theme.js?v=1"></script>
     <script src="vendor/gsap/gsap-3.15.0.min.js"></script>
     <script src="vendor/canvas-confetti/canvas-confetti-1.9.4.js"></script>
     <script src="js/time-provider.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/confetti.js"></script>
-    <script src="js/kiosk-motion.js?v=4"></script>
+    <script src="js/kiosk-motion.js?v=5"></script>
     <script src="js/api-service.js"></script>
     <script src="js/schedule-normalizer.js"></script>
     <script src="js/schedule-manager.js"></script>
@@ -265,8 +291,9 @@
     <script src="js/media-analyzer.js?v=3"></script>
     <script src="js/transitions.js?v=6"></script>
     <script src="js/interval-manager.js?v=2"></script>
-    <script src="js/noise-meter.js?v=5"></script>
-    <script src="js/script.js?v=9"></script>
+    <script src="js/class-tv.js?v=1"></script>
+    <script src="js/noise-meter.js?v=6"></script>
+    <script src="js/script.js?v=13"></script>
     <script src="js/dev-time-simulator.js"></script>
 </body>
 

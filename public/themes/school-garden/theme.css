@@ -1,0 +1,116 @@
+/* Renkli Okul Bahçesi — package-owned artwork, geometry and materials. */
+@import url('../../css/kiosk-magic-park.css');
+@import url('../_shared/school-board-content.css');
+
+body.magic-park-theme.theme-school-garden {
+    /* Artwork registration, measured from the 1672×941 source. */
+    --theme-stage-left-margin: 4.05%;
+    --theme-left-col: 23.35%;
+    --theme-gap-left-center: 1.85%;
+    --theme-center-col: 42.95%;
+    --theme-gap-center-right: 2.95%;
+    --theme-right-col: 21.8%;
+    --theme-stage-right-margin: 3.05%;
+    --theme-left-rows: 9.8% 17% 1.4% 45.3% 2% 18.3% 6.2%;
+    --theme-center-rows: 17.5% 19.2% 2.8% 54.1% 6.4%;
+    --theme-right-rows: 9.8% 17% 1.4% 45.3% 2% 18.3% 6.2%;
+    --theme-card-fill: rgba(255, 249, 223, 0.08);
+    --theme-card-border: 1px solid rgba(116, 69, 22, 0.16);
+    --theme-card-shadow: 0 0.35cqh 1.15cqw rgba(70, 42, 17, 0.08);
+    --theme-title-color: #704017;
+    --theme-title-shadow: 0 0.05em 0 #fff5cf, 0 0.12em 0.2em rgba(255, 255, 255, 0.55);
+}
+
+body.magic-park-theme.theme-school-garden {
+    background-color: #76bd51;
+}
+
+body.magic-park-theme.theme-school-garden .bento-grid {
+    display: grid;
+    grid-template-columns:
+        var(--theme-stage-left-margin)
+        var(--theme-left-col)
+        var(--theme-gap-left-center)
+        var(--theme-center-col)
+        var(--theme-gap-center-right)
+        var(--theme-right-col)
+        var(--theme-stage-right-margin);
+    grid-template-rows: 100%;
+    width: min(100vw, 177.7777778vh);
+    height: min(100vh, 56.25vw);
+    padding: 0;
+    background: #78bd55 url('./assets/background.png') center / 100% 100% no-repeat;
+}
+
+body.magic-park-theme.theme-school-garden .main-content-area {
+    display: contents;
+}
+
+body.magic-park-theme.theme-school-garden .col-left,
+body.magic-park-theme.theme-school-garden .col-center,
+body.magic-park-theme.theme-school-garden .col-right {
+    height: 100%;
+    min-height: 0;
+    align-self: stretch;
+    padding: 0;
+    row-gap: 0;
+}
+
+body.magic-park-theme.theme-school-garden .col-left {
+    grid-column: 2;
+    grid-row: 1;
+    grid-template-rows: var(--theme-left-rows);
+}
+
+body.magic-park-theme.theme-school-garden .col-center {
+    grid-column: 4;
+    grid-row: 1;
+    grid-template-rows: var(--theme-center-rows);
+}
+
+body.magic-park-theme.theme-school-garden .col-right {
+    grid-column: 6;
+    grid-row: 1;
+    grid-template-rows: var(--theme-right-rows);
+}
+
+body.magic-park-theme.theme-school-garden .col-left > .clock-card,
+body.magic-park-theme.theme-school-garden .col-center > .noise-meter-card,
+body.magic-park-theme.theme-school-garden .col-right > .president-card {
+    grid-row: 2;
+}
+
+body.magic-park-theme.theme-school-garden .col-left > .stats-card,
+body.magic-park-theme.theme-school-garden .col-center > .slideshow-card,
+body.magic-park-theme.theme-school-garden .col-right > .duty-card {
+    grid-row: 4;
+}
+
+body.magic-park-theme.theme-school-garden .col-left > .countdown-card,
+body.magic-park-theme.theme-school-garden .col-right > .star-card {
+    grid-row: 6;
+}
+
+body.magic-park-theme.theme-school-garden .card {
+    overflow: hidden;
+    border: var(--theme-card-border);
+    border-radius: 1.15cqw;
+    background: var(--theme-card-fill);
+    box-shadow: var(--theme-card-shadow);
+}
+
+body.magic-park-theme.theme-school-garden .card-titlebar,
+body.magic-park-theme.theme-school-garden .card-header.card-titlebar {
+    top: 4.5%;
+    color: var(--theme-title-color);
+    text-shadow: var(--theme-title-shadow);
+}
+
+body.magic-park-theme.theme-school-garden .slideshow-card > .card-titlebar {
+    top: 2.7%;
+    color: #7b4318;
+}
+
+body.magic-park-theme.theme-school-garden .park-ambient {
+    display: none;
+}

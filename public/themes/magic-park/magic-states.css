@@ -1,0 +1,35 @@
+/* Magic Park 2.2 runtime-state overrides live here. */
+
+body.magic-park-theme.theme-magic-park #countdown-card[hidden],
+body.magic-park-theme.theme-magic-park #noise-meter-card[hidden] {
+    display: none;
+}
+
+body.magic-park-theme.theme-magic-park #countdown-card[data-flow-state="in-class"] .lesson-flow-scene {
+    background: linear-gradient(145deg, #f7f0ff 0%, #e6d3f4 55%, #cbb4e5 100%);
+}
+
+body.magic-park-theme.theme-magic-park #countdown-card[data-flow-state="in-break"] .lesson-flow-scene {
+    background: linear-gradient(145deg, #effaf2 0%, #d3edda 56%, #add9c2 100%);
+}
+
+body.magic-park-theme.theme-magic-park #countdown-card[data-flow-state="after-school"] .lesson-flow-scene,
+body.magic-park-theme.theme-magic-park #countdown-card[data-flow-state="weekend"] .lesson-flow-scene {
+    background: linear-gradient(145deg, #fff5df 0%, #f1dfbf 58%, #d7c49f 100%);
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card.state-low .noise-scene {
+    background: linear-gradient(145deg, #eefbf8, #ccece5 55%, #a6d8cc);
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card.state-medium .noise-scene {
+    background: linear-gradient(145deg, #fff9e9, #f5e6bd 55%, #dfcb9b);
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card.state-high .noise-scene {
+    background: linear-gradient(145deg, #fff0ed, #f2ccc8 55%, #dca6a6);
+}
+
+body.magic-park-theme.theme-magic-park .attendance-scene .attendance-hero.is-pending {
+    opacity: 0.72;
+}

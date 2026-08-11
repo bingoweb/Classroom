@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "school-garden",
+  "name": "Renkli Okul Bahçesi",
+  "version": "1.0.0",
+  "description": "Türkiye ilkokul bahçesi, sıcak parşömen panolar ve neşeli okul araçlarıyla canlı okul teması.",
+  "css": "themes/school-garden/theme.css",
+  "themeClass": "theme-school-garden",
+  "backgroundAsset": "themes/school-garden/assets/background.png",
+  "previewAsset": "themes/school-garden/assets/background.png",
+  "accent": "#d78324",
+  "capabilities": {
+    "layoutGeometry": true,
+    "materialTokens": true,
+    "dynamicContent": true
+  }
+}

@@ -43,15 +43,16 @@ Yeni çalışma düzeni:
 - Hata düzeltmesi gerekiyorsa ana refactor commit'inden ayrı **bugfix product/test commit'i** tercih edilecek; exact-SHA Node 22 + Node 24 CI yeşil olmadan ana dalgaya geri dönülmeyecektir.
 - Bu kural bundan sonraki bütün Classroom geliştirme oturumlarında **bağlayıcı ve kalıcıdır**.
 
-### 0.3 Gerekli yerel araç/program eksikse kurulabilir olanı kurma kuralı
+### 0.3 Gerekli yerel araç/program/kütüphane eksikse kurulabilir olanı kurma kuralı
 
-- Geliştirme, test, analiz, browser doğrulama veya bakım sırasında macOS üzerinde gerekli bir uygulama/CLI/program eksik olduğu fark edilirse yalnızca “kurulu değil”, “yok” veya “bu araç mevcut değil” denilerek geçilmeyecektir.
+- Geliştirme, test, analiz, browser doğrulama veya bakım sırasında macOS üzerinde gerekli bir uygulama/CLI/program/kütüphane eksik olduğu fark edilirse yalnızca “kurulu değil”, “yok” veya “bu araç mevcut değil” denilerek geçilmeyecektir.
 - Araç güvenli, makul ve mevcut sistem yetkileriyle kurulabiliyorsa doğrudan kurulacaktır.
 - Homebrew ile kurulabilen CLI/formüller için Homebrew tercih edilebilir; mevcut proje ve sistem kurallarıyla çelişen global değişiklik yapılmayacaktır.
 - Kurulum sonrası sürüm/çalışabilirlik doğrulanacak ve ana iş kaldığı yerden devam edecektir.
 - Kurulum gerçekten mümkün değilse veya kullanıcı etkileşimi, ayrı lisans ya da ek yetki gerekiyorsa ancak o zaman açık blocker olarak raporlanacaktır.
 - Bu kural DevSpace zorunluluğunu kaldırmaz; yerel geliştirme/komut yürütme yine DevSpace source-of-truth üzerinden yapılacaktır.
 - 9 Ağustos 2026 P3-5D0 hazırlığında eksik `rg`/ripgrep bu kurala göre Homebrew üzerinden kurulmuş ve `ripgrep 15.2.0` olarak doğrulanmıştır.
+- 11 Ağustos 2026 Magic Park foreground hata incelemesinde eksik Python Pillow kütüphanesi aynı kurala göre Homebrew üzerinden `pillow 12.3.0` olarak kurulmuştur; eksik yerel yardımcı bağımlılıklar nedeniyle tanı/inceleme adımı atlanmayacaktır.
 
 ---
 
@@ -5597,6 +5598,14 @@ Durum simgeleri:
 - 🟨 Çalışılıyor
 - 🟩 Tamamlandı ve doğrulandı
 - 🟥 Bloke / yeniden karar gerekli
+
+## 31.1 Magic Park `sontema` foreground görsel bakım checkpoint'i — 11 Ağustos 2026
+
+Magic Park foreground alpha-mask bakım turunda iki kök neden kapatıldı: global opening-growth'un kromatik artwork'e tünellemesi ve lokal koyu/negative-space cleanup'ların gerçek artwork edge'lerini background sanması. Builder'a global chromatic growth guard, Noise lokal cleanup guard ve Class TV dark-warm edge repair eklendi.
+
+Başlangıç foreground'una göre finalde **31.244 alpha pikseli** değişti, **RGB değişimi 0**; sekiz opening geometrisi değişmedi. Attendance/Class TV/Noise için daha önce doğrulanmış lokal düzeltmeler korunuyor. Ayrıntılı RED→GREEN ölçümleri ve final SHA yaşayan 4K görsel envanteri ile `docs/GRAPHICS_ASSET_TOOLCHAIN.md` içindedir.
+
+Durum: 🟩 **Kod/görsel bakım ve fresh doğrulama tamamlandı.** Hedef testler `30/30`, kiosk paketi `33/33`, tema sistemi `20/20`; builder SHA deterministik; PNG/diff kontrolleri temiz; Playwright üç çözünürlük ve Chrome DevTools 4K kabulü hatasız. Commit/push kapanışı bu checkpoint'in hemen ardından yürütülüyor.
 
 ---
 

@@ -7,6 +7,7 @@ const vm = require('node:vm');
 const scriptPath = path.join(__dirname, '../public/js/script.js');
 const scriptSource = fs.readFileSync(scriptPath, 'utf8');
 const styleSource = fs.readFileSync(path.join(__dirname, '../public/css/style.css'), 'utf8');
+const magicStyleSource = fs.readFileSync(path.join(__dirname, '../public/css/kiosk-magic-park.css'), 'utf8');
 const mediaAnalyzer = require('../public/js/media-analyzer.js');
 const transitionEngine = require('../public/js/transitions.js');
 
@@ -197,6 +198,7 @@ globalThis.__slideshowTestApi = {
     createSlideElement,
     hydrateSlideMedia,
     renderSlideshowFallback,
+    renderSlideMediaFallback: typeof renderSlideMediaFallback === 'function' ? renderSlideMediaFallback : null,
     getSlidesSnapshot,
     refreshSlideshow,
 
@@ -271,14 +273,14 @@ test('Slideshow Transition Lock', async (t) => {
         assert.strictEqual(typeof harness.api.refreshSlideshow, 'function', 'slide refresh function is explicitly exposed as a function');
     });
 
-    await t.test('Emergency tribute fallback uses the same modern media-caption component', () => {
+    await t.test('No-slides fallback uses curated high-resolution theatre artwork', () => {
         const harness = createVmHarness();
         const fallback = harness.api.renderSlideshowFallback(harness.slideshowContainer);
 
         assert.strictEqual(harness.slideshowContainer.children.length, 1);
         assert.strictEqual(fallback.className, 'slide active');
         assert.strictEqual(fallback.dataset.mediaHydrated, 'true');
-        assert.strictEqual(fallback.children[1].src, 'assets/tribute.webp');
+        assert.strictEqual(fallback.children[1].src, 'assets/ataturk-slides/ataturk-1.webp');
         assert.strictEqual(
             fallback.children[2].children[0].textContent,
             '“Vatanını en çok seven, görevini en iyi yapandır.”\n— Mustafa Kemal Atatürk'
@@ -538,6 +540,118 @@ test('Slideshow Transition Lock', async (t) => {
         assert.strictEqual(api.getSlideMediaLayoutMode(1200, 1200, 2025, 1350), 'contain', 'square images keep their full composition');
         assert.strictEqual(api.getSlideMediaLayoutMode(1080, 1920, 2025, 1350), 'contain', 'portrait images keep their full composition');
         assert.strictEqual(api.getSlideMediaLayoutMode(0, 0, 2025, 1350), 'contain', 'invalid dimensions use the lossless fallback');
+
+        assert.match(
+            magicStyleSource,
+            /\.slideshow-container \.slide \.slide-media\.slide-media--contain\s*\{[^}]*object-fit:\s*contain/s,
+            'Magic Park owns contain with enough specificity to beat the generic slide image rule'
+        );
+        assert.match(
+            magicStyleSource,
+            /\.slideshow-container \.slide \.slide-media\.slide-media--cover\s*\{[^}]*object-fit:\s*cover/s,
+            'Magic Park owns cover explicitly as the paired media layout mode'
+        );
+    });
+
+    await t.test('Exactly one slide stays active and never schedules a self-transition', () => {
+        const harness = createVmHarness();
+        const { api, scheduledTimeouts, appliedTransitions } = harness;
+        const onlyElement = harness.createMockElement(1, ['slide', 'active']);
+
+        api.setSlidesData([{ id: 1, display_duration: 1200, transition_duration: 800 }]);
+        api.setCurrentSlideIndex(0);
+        api.setIsTransitioning(false);
+        harness.setMockElements({ 1: onlyElement });
+
+        api.scheduleNextSlide();
+        assert.strictEqual(scheduledTimeouts.length, 0, 'one-slide galleries do not schedule rotation');
+
+        api.nextSlide();
+        const state = api.getState();
+        assert.strictEqual(state.currentSlideIndex, 0);
+        assert.strictEqual(state.isTransitioning, false);
+        assert.strictEqual(onlyElement.classList.contains('active'), true, 'the only slide remains active');
+        assert.strictEqual(appliedTransitions.length, 0, 'the only slide never transitions against itself');
+        assert.strictEqual(scheduledTimeouts.length, 0, 'manual next is also a stable no-op');
+    });
+
+    await t.test('Broken active image renders a storybook recovery surface and advances when another slide exists', () => {
+        const harness = createVmHarness();
+        const { api, scheduledTimeouts } = harness;
+        assert.strictEqual(typeof api.renderSlideMediaFallback, 'function');
+
+        const brokenSlide = {
+            id: 1,
+            title: 'Broken',
+            media_type: 'image',
+            media_path: '/missing.webp',
+            content_type: 'photo',
+            display_duration: 12000
+        };
+        const healthySlide = {
+            id: 2,
+            title: 'Healthy',
+            media_type: 'image',
+            media_path: '/healthy.webp',
+            content_type: 'photo',
+            display_duration: 12000
+        };
+        const element = api.createSlideElement(brokenSlide, true);
+        element.classList.add('active');
+        api.setSlidesData([brokenSlide, healthySlide]);
+        api.setCurrentSlideIndex(0);
+
+        const image = element.querySelector('.slide-media');
+        image.onerror();
+
+        const fallback = element.querySelector('.slide-media-fallback');
+        assert.strictEqual(element.dataset.mediaFailed, 'true');
+        assert.ok(fallback, 'a designed media fallback is rendered');
+        assert.strictEqual(fallback.style.display, 'grid');
+        assert.match(fallback.children[1].textContent, /kısa bir molada/i);
+        assert.match(fallback.children[2].textContent, /Sıradaki kareye geçiyoruz/i);
+        assert.ok(
+            scheduledTimeouts.some(timeout => timeout.delay === 1200),
+            'active failure gets a short recovery timer instead of the full slide duration'
+        );
+    });
+
+    await t.test('Very long caption becomes a bounded story-text theatre scene instead of an unbounded bottom overlay', () => {
+        const { api } = createVmHarness();
+        const longText = 'a'.repeat(1200);
+        const slide = api.createSlideElement({
+            id: 7,
+            title: 'Story',
+            media_type: 'image',
+            media_path: '/story.webp',
+            content_type: 'photo',
+            text_content: longText
+        }, true);
+
+        assert.ok(slide.classList.contains('slide--story-text'));
+        const caption = slide.querySelector('.slide-text-content');
+        assert.ok(caption.classList.contains('slide-text-content--story'));
+        assert.ok(caption.children[0].classList.contains('slide-caption-text--story'));
+        assert.ok(
+            caption.children[0].classList.contains('slide-caption-text--story-token-dense'),
+            'a 1200-character unbroken token receives the dedicated dense story profile'
+        );
+        assert.strictEqual(caption.children[0].textContent.length, 1200, 'story mode preserves the full message');
+        assert.match(
+            magicStyleSource,
+            /\.slide--story-text \.slide-text-content--story\s*\{[^}]*inset:\s*8% 7%[^}]*max-height:\s*84%[^}]*padding:\s*3cqh 3\.1cqw[^}]*overflow:\s*hidden/s,
+            'story panel is bounded inside the theatre frame'
+        );
+        assert.match(
+            magicStyleSource,
+            /\.slide-caption-text--story\s*\{[^}]*overflow-wrap:\s*anywhere[^}]*word-break:\s*break-word/s,
+            'story copy safely wraps long unbroken words and URLs instead of hiding horizontal overflow'
+        );
+        assert.match(
+            magicStyleSource,
+            /\.slide-caption-text--story-token-dense\s*\{[^}]*font-size:\s*clamp\(0\.64rem,\s*0\.56cqw,\s*1\.35rem\)[^}]*line-height:\s*1\.1/s,
+            'dense-token profile spends typography budget only on pathological unbroken story tokens'
+        );
     });
 
     await t.test('A. Initial concurrent-transition guard remains locked', () => {

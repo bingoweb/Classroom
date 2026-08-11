@@ -1,0 +1,27 @@
+/* Magic Park package entrypoint. Keep the validated MP2 implementation intact. */
+@import url('../../css/kiosk-magic-park.css');
+@import url('./magic-layout.css');
+@import url('./magic-components.css');
+@import url('./magic-states.css');
+
+body.magic-park-theme.theme-magic-park {
+    --theme-left-col: 27%;
+    --theme-center-col: 47.5%;
+    --theme-right-col: 25.5%;
+    --theme-left-rows: 36.4% 31.1% 32.5%;
+    --theme-center-rows: 39.1% 60.9%;
+    --theme-right-rows: 39.1% 31.2% 29.7%;
+    --theme-card-fill: transparent;
+    --theme-card-border: 0;
+    --theme-card-shadow: none;
+    --theme-title-color: #fffdf2;
+}
+
+/* sontema.png already carries the eight visible card headings. Keep the DOM
+ * title text for semantics/shared-theme compatibility, but do not paint a
+ * duplicate title layer over the artwork in the Magic Park package. */
+body.magic-park-theme.theme-magic-park .card-titlebar {
+    opacity: 0;
+    pointer-events: none;
+    user-select: none;
+}

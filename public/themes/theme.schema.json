@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://classroom.local/themes/theme.schema.json",
+  "title": "Classroom Kiosk Theme Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "version",
+    "description",
+    "css",
+    "themeClass",
+    "capabilities"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "css": {
+      "type": "string",
+      "pattern": "^themes/.+/theme\\.css$"
+    },
+    "themeClass": {
+      "type": "string",
+      "pattern": "^theme-[a-z0-9-]+$"
+    },
+    "backgroundAsset": {
+      "type": ["string", "null"]
+    },
+    "previewAsset": {
+      "type": ["string", "null"]
+    },
+    "accent": {
+      "type": "string"
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "layoutGeometry",
+        "materialTokens",
+        "dynamicContent"
+      ],
+      "properties": {
+        "layoutGeometry": { "type": "boolean" },
+        "materialTokens": { "type": "boolean" },
+        "dynamicContent": { "type": "boolean" }
+      }
+    }
+  }
+}

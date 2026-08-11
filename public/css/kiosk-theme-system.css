@@ -1,0 +1,113 @@
+/* Theme-system chrome only. Theme artwork/material/layout belongs in public/themes/<id>/theme.css. */
+
+/* Class TV is an optional shared DOM mount owned only by Magic Park. */
+body:not(.theme-magic-park) #class-tv-layer {
+    display: none;
+}
+
+#theme-switcher {
+    position: fixed;
+    right: clamp(0.55rem, 0.65vw, 1.7rem);
+    bottom: clamp(0.55rem, 0.8vh, 1.55rem);
+    z-index: 20000;
+    display: grid;
+    justify-items: end;
+    gap: clamp(0.35rem, 0.45vh, 0.75rem);
+    font-family: 'Nunito Classroom', 'Trebuchet MS', sans-serif;
+}
+
+.theme-switcher__toggle {
+    display: grid;
+    place-items: center;
+    width: clamp(2.15rem, 2.25vw, 4.6rem);
+    aspect-ratio: 1;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 50%;
+    color: #183458;
+    background: rgba(255, 250, 230, 0.78);
+    box-shadow: 0 0.2rem 0.7rem rgba(22, 45, 73, 0.18);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    opacity: 0.48;
+    transition: opacity 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.theme-switcher__toggle:hover,
+.theme-switcher__toggle:focus-visible,
+.theme-switcher__toggle[aria-expanded="true"] {
+    opacity: 1;
+    transform: translateY(-1px);
+    box-shadow: 0 0.28rem 0.9rem rgba(22, 45, 73, 0.24);
+}
+
+.theme-switcher__toggle:focus-visible,
+.theme-switcher__choice:focus-visible {
+    outline: 3px solid rgba(39, 119, 210, 0.82);
+    outline-offset: 3px;
+}
+
+.theme-switcher__icon {
+    font-size: clamp(1rem, 1.15vw, 2.35rem);
+    line-height: 1;
+}
+
+.theme-switcher__panel {
+    min-width: clamp(12rem, 14vw, 24rem);
+    padding: clamp(0.5rem, 0.7vw, 1.1rem);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: clamp(0.75rem, 0.85vw, 1.55rem);
+    background: rgba(255, 252, 239, 0.94);
+    box-shadow: 0 0.5rem 1.6rem rgba(22, 45, 73, 0.22);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+}
+
+.theme-switcher__panel[hidden] {
+    display: none;
+}
+
+.theme-switcher__title {
+    margin: 0 0 0.45rem;
+    color: #263b59;
+    font-family: 'Fredoka Classroom', 'Trebuchet MS', sans-serif;
+    font-size: clamp(0.78rem, 0.72vw, 1.45rem);
+    font-weight: 650;
+    text-align: center;
+}
+
+#theme-switcher-choices {
+    display: grid;
+    gap: clamp(0.28rem, 0.36vw, 0.62rem);
+}
+
+.theme-switcher__choice {
+    width: 100%;
+    padding: clamp(0.52rem, 0.52vw, 0.95rem) clamp(0.7rem, 0.75vw, 1.25rem);
+    border: 1px solid rgba(64, 82, 111, 0.17);
+    border-radius: clamp(0.55rem, 0.55vw, 1rem);
+    color: #253a58;
+    background: rgba(255, 255, 255, 0.74);
+    font: inherit;
+    font-size: clamp(0.72rem, 0.64vw, 1.25rem);
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.theme-switcher__choice:hover {
+    background: #fff;
+}
+
+.theme-switcher__choice[aria-pressed="true"] {
+    border-color: rgba(44, 107, 176, 0.44);
+    background: linear-gradient(135deg, rgba(223, 241, 255, 0.96), rgba(255, 247, 213, 0.96));
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.74);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .theme-switcher__toggle {
+        transition: none;
+    }
+}

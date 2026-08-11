@@ -1,6 +1,6 @@
 # Classroom — Güncel AI Proje Bağlamı
 
-**Son bağlam yenilemesi:** 8 Ağustos 2026  
+**Son bağlam yenilemesi:** 11 Ağustos 2026
 **Repo:** `/Users/bingoweb/Projeler/Classroom-ilk-surum`  
 **GitHub:** `bingoweb/Classroom`  
 **Aktif dal:** `main`
@@ -190,6 +190,49 @@ Gerçek Chromium ile doğrulandı:
 - Fullscreen API enter/exit,
 - titlebar overflow 0.
 
+### Grafik/asset geliştirme ana kuralı
+
+Magic Park ve diğer görsel asset çalışmalarında yalnız CSS/Node ile sınırlı kalınmaz. Transparanlık, maske çıkarımı, halo/fringe temizliği, anti-aliasing, renk kontaminasyonu, connected-components, morphology, edge analizi veya raster optimizasyonu gerekiyorsa Mac üzerinde uygun yerel grafik araçları kullanılmalıdır.
+
+Gerekli bir uygulama, CLI, Python paketi veya görüntü işleme kütüphanesi eksikse “kurulu değil” deyip geçme. Mümkünse Homebrew / Python package tooling / uygun güvenli yöntemle kur, sürüm veya import seviyesinde doğrula ve geliştirmeye devam et. Geliştirme aracı olan paketleri gereksiz yere Classroom runtime dependency'si haline getirme.
+
+11 Ağustos 2026 tarihinde doğrulanan yerel grafik araç seti:
+
+- ImageMagick 7.1.2-29
+- libvips 8.18.5
+- OpenCV 5.0.0
+- G'MIC 4.0.3
+- pngquant 3.0.3
+- oxipng 10.2.0
+- pngcheck 4.0.1
+- NumPy 2.5.2
+- Pillow 12.3.0
+
+Araçların amaçları, yeniden kurulum komutları ve kullanım sınırları:
+
+`docs/GRAPHICS_ASSET_TOOLCHAIN.md`
+
+Kullanıcı bir mevcut proje görselindeki hata, transparanlık veya maske problemi için crop/referans görsel gönderirse bunu yeni grafik üretme isteği sayma. Gerçek düzeltme source-of-truth asset, foreground/mask üretim zinciri ve testlerde yapılır; referans crop yalnız teşhis içindir.
+
+### Magic Park foreground alpha-mask bakım checkpoint'i — 11 Ağustos 2026
+
+Aktif source-of-truth zinciri `public/assets/sontema.png` → `scripts/build-sontema-foreground.js` → `public/assets/sontema-foreground.png` olarak korunur. `sontema.png` doğal boyutu **3840×2160**'dır.
+
+Son genel foreground bakımında iki gerçek kök neden ayrıştırıldı:
+
+1. Global opening-growth algoritması ilk growth halkası ve sonraki yaklaşık 2–4 px bandında güçlü kromatik artwork piksellerini geçiş yolu sayabildiği için dekor/anti-alias kenarlarını yanlışlıkla transparanlaştırabiliyordu.
+2. Bazı lokal background/negative-space cleanup heuristikleri koyu fakat gerçek artwork piksellerini background sanabiliyordu. Bunun iki kanıtı Noise sağındaki 10 kahverengi/kırmızı artwork pikseli ve Class TV üst negatif-boşluk bölgesindeki yüzlerce koyu sıcak artwork edge pikseliydi.
+
+Builder artık global **chromatic growth guard** uygular; opening growth güçlü kromatik artwork üzerinden ilerlemez. Noise lokal black-island cleanup'ı doğrulanmış dekor piksellerini korur. Class TV üst negatif-boşluk düzeltmesi koyu sıcak/kromatik anti-alias edge coverage'ını korur.
+
+Başlangıç foreground'u geçici yeniden üretilip finalle karşılaştırıldığında değişiklik yalnız alpha kanalındadır: **31.244 alpha pikseli değişti, RGB değişimi 0**. Dağılım `alpha 0→255 = 15.479`, `0→partial = 2.676`, `partial→255 = 13.089`. Final foreground SHA-256: `61fa4e4dd366bdbce9a3994186e6be130de085df12318fc3d557c90383100f41`.
+
+Regression RED kanıtında 4 px chromatic growth-band değerleri `clock=214`, `attendance=608`, `lesson-flow=322`, `noise=135`, `class-tv=43`, `president=334`, `duty=62`, `stars=800` olarak görüldü. Global guard sonrası yedi panel temizlendi; Noise'ta kalan 10 piksel lokal cleanup'a kadar izlenip giderildi. Class TV lokal negatif-boşluk regression'ında yalnız sol bölgede **494** koyu sıcak artwork kenar pikselinin silindiği ayrıca kanıtlandı ve lokal repair sonrası GREEN oldu.
+
+Önceki Attendance beyaz-halo/kalem-kitap-bardak/fener temizliği, Class TV perde/fold/lamba-negatif-boşluk düzeltmeleri ve Noise sağ dekor koruması regresyon sözleşmesinin parçası olarak korunmalıdır. Sekiz opening geometrisi değiştirilmemiştir.
+
+Bu checkpoint'in fresh kapanışında `node --test tests/kiosk-magic-park.test.js` **30/30 PASS**, `npm run test:kiosk-magic-park` **33/33 PASS**, `npm run test:kiosk-theme-system` **20/20 PASS** verdi. Builder yeniden üretimde aynı SHA-256'yı verdi; iki PNG `pngcheck` OK ve `git diff --check` temiz kaldı. Playwright `3840×2160 / 2560×1440 / 1920×1080` kabulünde viewport=document=stage, overflow `0`, console error/warn `0`, failed request `0`, HTTP `>=400` `0`; Chrome DevTools 4K kabulünde foreground HTTP `200`, doğal boyut `3840×2160`, `z-index:20`, `pointer-events:none`, `opacity:1`, console error/warn/issue `0` olarak doğrulandı. Ayrıntılı kanıt yaşayan 4K görsel envanteri ve `docs/GRAPHICS_ASSET_TOOLCHAIN.md` içindedir.
+
 ## 9. Fiziksel 4K kalite kapısı
 
 Browser/otomatik ön-kabul başarılıdır fakat **gerçek 55" 4K TV fiziksel kabulü hâlâ açık**.
@@ -271,6 +314,10 @@ npm run verify:code
 ```
 
 Bu son komut artık yaşayan `test:core` kapısına delegasyon yapar.
+
+Grafik/asset geliştirme araçları ve doğrulama komutları:
+
+`docs/GRAPHICS_ASSET_TOOLCHAIN.md`
 
 ## 12. Önemli veri bütünlüğü sözleşmeleri
 
