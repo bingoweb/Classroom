@@ -1,0 +1,449 @@
+@font-face {
+    font-family: 'Baloo Clock';
+    src: url('/fonts/baloo2-600.woff2') format('woff2');
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Baloo Clock';
+    src: url('/fonts/baloo2-800.woff2') format('woff2');
+    font-style: normal;
+    font-weight: 800;
+    font-display: swap;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board {
+    --clock-shell-blue: #0d97dd;
+    --clock-shell-blue-mid: #0278cd;
+    --clock-shell-blue-deep: #055ba4;
+    --clock-shell-navy: #18488a;
+    --clock-shell-sky: #56bae2;
+    --clock-shell-yellow: #fcd920;
+    --clock-shell-gold: #f7a006;
+    --clock-shell-orange: #c44818;
+    --clock-shell-white: #f6fafc;
+    --clock-shell-mist: #d4e6ef;
+    --clock-grad-a: var(--clock-shell-sky);
+    --clock-grad-b: var(--clock-shell-blue);
+    --clock-grad-c: var(--clock-shell-yellow);
+    --clock-optical-shift: 6.5%;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    isolation: isolate;
+    color: var(--clock-shell-navy);
+    background: linear-gradient(145deg, var(--clock-grad-a) 0%, var(--clock-grad-b) 52%, var(--clock-grad-c) 100%);
+    font-family: 'Baloo Clock', sans-serif;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board[data-day-phase='morning'] {
+    --clock-grad-a: var(--clock-shell-mist);
+    --clock-grad-b: var(--clock-shell-sky);
+    --clock-grad-c: var(--clock-shell-gold);
+}
+
+body.magic-park-theme.theme-magic-park .clock-board[data-day-phase='day'] {
+    --clock-grad-a: var(--clock-shell-sky);
+    --clock-grad-b: var(--clock-shell-blue);
+    --clock-grad-c: var(--clock-shell-yellow);
+}
+
+body.magic-park-theme.theme-magic-park .clock-board[data-day-phase='evening'] {
+    --clock-grad-a: var(--clock-shell-blue);
+    --clock-grad-b: var(--clock-shell-sky);
+    --clock-grad-c: var(--clock-shell-gold);
+}
+
+body.magic-park-theme.theme-magic-park .clock-board[data-day-phase='night'] {
+    --clock-grad-a: var(--clock-shell-blue-deep);
+    --clock-grad-b: var(--clock-shell-blue);
+    --clock-grad-c: var(--clock-shell-sky);
+}
+
+body.magic-park-theme.theme-magic-park .clock-board::before,
+body.magic-park-theme.theme-magic-park .clock-board::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board::before {
+    left: -8%;
+    right: -8%;
+    bottom: -20%;
+    height: 34%;
+    border-radius: 50% 50% 0 0;
+    background: linear-gradient(90deg,
+        rgba(252, 217, 32, 0.42),
+        rgba(246, 250, 252, 0.16),
+        rgba(247, 160, 6, 0.36));
+}
+
+body.magic-park-theme.theme-magic-park .clock-board::after {
+    inset: 1.8%;
+    border: 0.10cqw solid rgba(246, 250, 252, 0.38);
+    border-radius: 2.2cqw;
+    box-shadow: inset 0 0 1.4cqw rgba(24, 72, 138, 0.10);
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__content {
+    position: relative;
+    z-index: 1;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-rows: 26% minmax(0, 1fr);
+    gap: 1.6%;
+    padding: 3.6% 2.6% 2.8%;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__date-group {
+    align-self: stretch;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 0.45cqh;
+    min-width: 0;
+    text-align: center;
+    transform: translateX(var(--clock-optical-shift));
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__date,
+body.magic-park-theme.theme-magic-park .clock-board__day,
+body.magic-park-theme.theme-magic-park .clock-board__time,
+body.magic-park-theme.theme-magic-park .clock-board__weather-temperature,
+body.magic-park-theme.theme-magic-park .clock-board__weekend-label,
+body.magic-park-theme.theme-magic-park .clock-board__weekend-value {
+    text-rendering: geometricPrecision;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__date {
+    display: block;
+    max-width: 88%;
+    padding: 0.6% 5.5% 0.75%;
+    border: 0.15cqw solid rgba(246, 250, 252, 0.92);
+    border-radius: 999px;
+    color: var(--clock-shell-navy);
+    background: linear-gradient(135deg, var(--clock-shell-yellow) 0%, var(--clock-shell-gold) 100%);
+    box-shadow:
+        inset 0 0 0 0.10cqw rgba(255, 255, 255, 0.28),
+        0 0.38cqh 0.9cqh rgba(24, 72, 138, 0.18);
+    font-size: clamp(1rem, 6.25cqw, 1.9rem);
+    font-weight: 800;
+    line-height: 1.04;
+    -webkit-text-stroke: 0.010em rgba(5, 91, 164, 0.30);
+    text-shadow:
+        0 -0.018em 0 rgba(246, 250, 252, 0.72),
+        0 0.035em 0 rgba(13, 151, 221, 0.34),
+        0 0.085em 0.10em rgba(24, 72, 138, 0.18);
+    white-space: nowrap;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__day {
+    display: inline-grid;
+    place-items: center;
+    min-width: 31%;
+    padding: 0.45% 5% 0.6%;
+    border: 0.12cqw solid rgba(246, 250, 252, 0.76);
+    border-radius: 999px;
+    color: var(--clock-shell-white);
+    background: linear-gradient(135deg, var(--clock-shell-orange), var(--clock-shell-gold));
+    box-shadow: 0 0.3cqh 0.7cqh rgba(196, 72, 24, 0.18);
+    font-size: clamp(0.78rem, 4.55cqw, 1.38rem);
+    font-weight: 800;
+    line-height: 1;
+    -webkit-text-stroke: 0.012em rgba(24, 72, 138, 0.30);
+    text-shadow:
+        0 -0.018em 0 rgba(255, 236, 186, 0.72),
+        0 0.04em 0 rgba(196, 72, 24, 0.50),
+        0 0.10em 0.12em rgba(24, 72, 138, 0.22);
+    white-space: nowrap;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__clock-face {
+    position: relative;
+    align-self: stretch;
+    justify-self: center;
+    width: 95%;
+    min-width: 0;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) 35%;
+    gap: 3%;
+    place-items: center;
+    box-sizing: border-box;
+    padding: 4.5% 5.5% 7%;
+    overflow: hidden;
+    border: 0.24cqw solid var(--clock-shell-yellow);
+    border-radius: 4.4cqw 3.2cqw 4.5cqw 3.3cqw / 2.5cqw 3.9cqw 2.6cqw 4cqw;
+    background: linear-gradient(150deg,
+        var(--clock-shell-sky) 0%,
+        var(--clock-shell-blue) 42%,
+        var(--clock-shell-blue-mid) 72%,
+        var(--clock-shell-blue-deep) 100%);
+    box-shadow:
+        inset 0 0 0 0.12cqw rgba(246, 250, 252, 0.30),
+        inset 0 -1.2cqh 2.1cqh rgba(24, 72, 138, 0.18),
+        0 0.6cqh 1.35cqh rgba(24, 72, 138, 0.22);
+    transform: translateX(var(--clock-optical-shift));
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__clock-face::before,
+body.magic-park-theme.theme-magic-park .clock-board__clock-face::after {
+    content: '';
+    position: absolute;
+    width: 5.2cqw;
+    height: 5.2cqw;
+    border-radius: 50%;
+    opacity: 0.28;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__clock-face::before {
+    left: 3%;
+    top: 12%;
+    background: var(--clock-shell-yellow);
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__clock-face::after {
+    right: 3%;
+    bottom: 12%;
+    background: var(--clock-shell-gold);
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__time {
+    position: relative;
+    z-index: 1;
+    max-width: 100%;
+    align-self: center;
+    color: var(--clock-shell-white);
+    font-family: 'Baloo Clock', sans-serif;
+    font-size: clamp(3.35rem, 23.4cqw, 8rem);
+    font-weight: 800;
+    line-height: 0.76;
+    letter-spacing: -0.055em;
+    font-variant-numeric: tabular-nums;
+    -webkit-text-stroke: 0.014em rgba(246, 250, 252, 0.72);
+    text-shadow:
+        0 -0.022em 0 rgba(255, 255, 255, 0.88),
+        0 0.028em 0 rgba(212, 230, 239, 0.98),
+        0 0.058em 0 rgba(13, 151, 221, 0.98),
+        0 0.086em 0 rgba(5, 91, 164, 0.96),
+        0 0.115em 0.045em rgba(24, 72, 138, 0.46),
+        0 0.18em 0.22em rgba(24, 72, 138, 0.24);
+    white-space: nowrap;
+}
+
+@keyframes magic-clock-colon-blink {
+    0%,
+    44% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    50%,
+    94% {
+        opacity: 0.34;
+        transform: translateY(0.012em) scale(0.96);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__time .blink {
+    display: inline-block;
+    margin: 0 0.028em;
+    position: relative;
+    top: 0;
+    animation: magic-clock-colon-blink 1s steps(1, end) infinite !important;
+    opacity: 1;
+    color: var(--clock-shell-orange) !important;
+    -webkit-text-fill-color: var(--clock-shell-orange) !important;
+    -webkit-text-stroke: 0.012em rgba(252, 217, 32, 0.5);
+    text-shadow:
+        0 -0.018em 0 rgba(255, 220, 118, 0.72),
+        0 0.04em 0 rgba(247, 160, 6, 0.96),
+        0 0.075em 0 rgba(196, 72, 24, 0.92),
+        0 0.11em 0.12em rgba(24, 72, 138, 0.3) !important;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__helpers {
+    align-self: stretch;
+    justify-self: center;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3.2%;
+    width: 112%;
+    height: 100%;
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__helper {
+    min-width: 0;
+    min-height: 0;
+    align-self: stretch;
+    box-sizing: border-box;
+    position: relative;
+    isolation: isolate;
+    border-radius: 1.65cqw;
+    box-shadow:
+        inset 0 0 0 0.08cqw rgba(255, 255, 255, 0.24),
+        0 0.25cqh 0.62cqh rgba(24, 72, 138, 0.16);
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__helper > * {
+    position: relative;
+    z-index: 1;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__helper--weather {
+    display: grid;
+    grid-template-columns: 44% 56%;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    justify-items: center;
+    justify-self: start;
+    width: 94%;
+    padding: 3% 9% 3% 7%;
+    border: 0.14cqw solid rgba(246, 250, 252, 0.76);
+    border-radius: 999px 1.1cqw 1.1cqw 999px;
+    background: linear-gradient(135deg, var(--clock-shell-yellow), var(--clock-shell-gold));
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__helper--weather::after {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    top: 50%;
+    right: -0.92cqh;
+    width: 2.45cqh;
+    height: 2.45cqh;
+    border-top: 0.10cqw solid rgba(246, 250, 252, 0.64);
+    border-right: 0.10cqw solid rgba(246, 250, 252, 0.64);
+    border-radius: 0.38cqw;
+    background: var(--clock-shell-gold);
+    box-shadow: 0.18cqh 0.18cqh 0.42cqh rgba(24, 72, 138, 0.16);
+    transform: translateY(-50%) rotate(45deg);
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__helper--weather[hidden] {
+    display: none !important;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__helper--weather[hidden] + .clock-board__helper--weekend {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: 52%;
+    border-radius: 999px;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__helper--weather[hidden] + .clock-board__helper--weekend::before {
+    display: none;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__weather-icon {
+    align-self: center;
+    justify-self: center;
+    width: auto;
+    height: 100%;
+    aspect-ratio: 1;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: center;
+    filter:
+        drop-shadow(0 0.10em 0.07em rgba(5, 91, 164, 0.46))
+        drop-shadow(0 0.30em 0.22em rgba(24, 72, 138, 0.34));
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__weather-temperature {
+    align-self: center;
+    justify-self: center;
+    color: var(--clock-shell-navy);
+    font-size: clamp(1.05rem, 6.4cqw, 1.85rem);
+    font-weight: 800;
+    line-height: 1;
+    text-rendering: geometricPrecision;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-text-stroke: 0.014em rgba(5, 91, 164, 0.34);
+    text-shadow:
+        0 -0.018em 0 rgba(246, 250, 252, 0.76),
+        0 0.032em 0 rgba(13, 151, 221, 0.42),
+        0 0.07em 0 rgba(5, 91, 164, 0.32),
+        0 0.14em 0.16em rgba(24, 72, 138, 0.22);
+    white-space: nowrap;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__helper--weekend {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    justify-self: end;
+    width: 94%;
+    gap: 0.18cqh;
+    padding: 3% 7%;
+    border: 0.14cqw solid rgba(246, 250, 252, 0.78);
+    border-radius: 1.1cqw 999px 999px 1.1cqw;
+    background: linear-gradient(225deg,
+        var(--clock-shell-sky) 0%,
+        var(--clock-shell-blue) 48%,
+        var(--clock-shell-blue-deep) 100%);
+    box-shadow:
+        inset 0 0 0 0.08cqw rgba(255, 255, 255, 0.34),
+        inset -0.16cqw 0 0 rgba(246, 250, 252, 0.16),
+        0 0.25cqh 0.62cqh rgba(24, 72, 138, 0.20);
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__helper--weekend::before {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    top: 50%;
+    left: -0.92cqh;
+    width: 2.45cqh;
+    height: 2.45cqh;
+    border-bottom: 0.10cqw solid rgba(246, 250, 252, 0.62);
+    border-left: 0.10cqw solid rgba(246, 250, 252, 0.62);
+    border-radius: 0.38cqw;
+    background: var(--clock-shell-sky);
+    box-shadow: -0.18cqh 0.18cqh 0.42cqh rgba(24, 72, 138, 0.16);
+    transform: translateY(-50%) rotate(45deg);
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__weekend-label {
+    color: var(--clock-shell-white);
+    font-size: clamp(0.68rem, 3.5cqw, 1rem);
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    -webkit-text-stroke: 0.010em rgba(5, 91, 164, 0.42);
+    text-shadow:
+        0 -0.018em 0 rgba(246, 250, 252, 0.62),
+        0 0.04em 0 rgba(5, 91, 164, 0.72),
+        0 0.09em 0.10em rgba(24, 72, 138, 0.30);
+    white-space: nowrap;
+}
+
+body.magic-park-theme.theme-magic-park .clock-board__weekend-value {
+    color: var(--clock-shell-yellow) !important;
+    font-size: clamp(0.82rem, 4.8cqw, 1.35rem);
+    font-weight: 800;
+    line-height: 1;
+    -webkit-text-stroke: 0.012em rgba(196, 72, 24, 0.36);
+    text-shadow:
+        0 -0.018em 0 rgba(255, 245, 186, 0.76),
+        0 0.04em 0 rgba(247, 160, 6, 0.74),
+        0 0.10em 0.12em rgba(24, 72, 138, 0.30);
+    white-space: nowrap;
+}

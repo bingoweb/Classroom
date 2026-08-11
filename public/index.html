@@ -27,29 +27,32 @@
                 <div class="card-titlebar card-titlebar--sky">
                     <span>Günün Zamanı</span>
                 </div>
-                <div class="clock-content-wrapper magic-scene clock-scene">
-                    <!-- Date Section (Top) -->
-                    <div class="date-section">
-                        <div id="day-name" class="day-highlight">Pazartesi</div>
-                        <div id="date" class="date-full">1 Ocak 2024</div>
-                    </div>
+                <section id="clock-board" class="clock-board magic-scene"
+                    aria-label="Günün tarihi, saati ve Gölbaşı hava durumu">
+                    <div class="clock-board__content">
+                        <header class="clock-board__date-group">
+                            <span id="date" class="clock-board__date">1 Ocak 2024</span>
+                            <strong id="day-name" class="clock-board__day">Pazartesi</strong>
+                        </header>
 
-                    <!-- Clock Section (Middle) -->
-                    <div class="clock-section">
-                        <div id="clock" class="digital-clock">00:00</div>
-                    </div>
+                        <section class="clock-board__clock-face" aria-label="Şu anki saat">
+                            <div id="clock" class="clock-board__time">00:00</div>
+                            <div class="clock-board__helpers">
+                                <div id="clock-weather" class="clock-board__helper clock-board__helper--weather"
+                                    role="status" aria-live="polite" hidden>
+                                    <img id="clock-weather-icon" class="clock-board__weather-icon"
+                                        src="assets/ui-icons-3d/weather-sun.png" alt="" aria-hidden="true">
+                                    <span id="clock-weather-temperature" class="clock-board__weather-temperature">--°</span>
+                                </div>
 
-                    <!-- Weekend Countdown Section (Bottom) -->
-                    <div class="weekend-section" id="weekend-widget">
-                        <div class="weekend-pill">
-                            <img class="weekend-icon" src="assets/ui-icons-3d/calendar-weekend.png" alt="" aria-hidden="true">
-                            <div class="weekend-text-group">
-                                <span class="weekend-label">HAFTA SONUNA</span>
-                                <span class="weekend-value" id="weekend-counter">-- GÜN</span>
+                                <div id="weekend-widget" class="clock-board__helper clock-board__helper--weekend">
+                                    <span class="clock-board__weekend-label">HAFTA SONU</span>
+                                    <strong id="weekend-counter" class="clock-board__weekend-value">-- GÜN</strong>
+                                </div>
                             </div>
-                        </div>
+                        </section>
                     </div>
-                </div>
+                </section>
             </div>
 
             <div class="card stats-card">
@@ -280,6 +283,7 @@
     <script src="vendor/gsap/gsap-3.15.0.min.js"></script>
     <script src="vendor/canvas-confetti/canvas-confetti-1.9.4.js"></script>
     <script src="js/time-provider.js"></script>
+    <script src="themes/magic-park/boxes/clock/clock.js?v=2"></script>
     <script src="js/utils.js"></script>
     <script src="js/confetti.js"></script>
     <script src="js/kiosk-motion.js?v=5"></script>

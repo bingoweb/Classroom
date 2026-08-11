@@ -726,8 +726,12 @@ test('lesson-flow scene stays inside its artwork-anchored countdown card', () =>
 });
 
 test('Magic Park 2.2 component layer is composed for the eight transparent artwork openings', () => {
+    const themePath = path.join(root, 'public/themes/magic-park/theme.css');
+    const clockPath = path.join(root, 'public/themes/magic-park/boxes/clock/clock.css');
     const componentsPath = path.join(root, 'public/themes/magic-park/magic-components.css');
     const statesPath = path.join(root, 'public/themes/magic-park/magic-states.css');
+    const theme = fs.readFileSync(themePath, 'utf8');
+    const clock = fs.readFileSync(clockPath, 'utf8');
     const components = fs.readFileSync(componentsPath, 'utf8');
     const states = fs.readFileSync(statesPath, 'utf8');
 
@@ -740,8 +744,12 @@ test('Magic Park 2.2 component layer is composed for the eight transparent artwo
         assert.match(components, new RegExp(token), `Magic Park component palette must own ${token}`);
     }
 
-    assert.match(components, /\.clock-scene\s*\{[^}]*grid-template-rows:/s,
-        'clock opening must use a dedicated three-zone composition');
+    assert.match(theme, /@import url\('\.\/boxes\/clock\/clock\.css'\);/,
+        'clock opening must load its dedicated box package instead of sharing the generic component file');
+    assert.match(clock, /\.clock-board\s*\{[^}]*position:\s*absolute\s*!important[^}]*inset:\s*0\s*!important/s,
+        'clock box package must own one full-opening child-friendly composition');
+    assert.doesNotMatch(components, /\.clock-scene|\.digital-clock|\.weekend-pill|\.clock-weather/,
+        'generic Magic Park component CSS must not reintroduce the retired Clock visual system');
     assert.match(components, /\.attendance-scene\s*\{[^}]*position:\s*relative[^}]*display:\s*block\s*!important/s,
         'attendance opening must act as the viewport for its rotating mini-channel pages');
     assert.match(components, /\.attendance-hero\s*\{[^}]*grid-template-columns:/s,
@@ -769,7 +777,7 @@ test('Magic Park 2.2 exposes eight semantic scene roots without replacing dynami
     const html = read('public/index.html');
 
     for (const sceneClass of [
-        'clock-scene',
+        'clock-board',
         'attendance-scene',
         'lesson-flow-scene',
         'noise-scene',
@@ -780,7 +788,7 @@ test('Magic Park 2.2 exposes eight semantic scene roots without replacing dynami
     ]) {
         assert.match(
             html,
-            new RegExp(`class="[^"]*\\bmagic-scene\\b[^"]*\\b${sceneClass}\\b[^"]*"`),
+            new RegExp(`class="(?=[^"]*\\bmagic-scene\\b)(?=[^"]*\\b${sceneClass}\\b)[^"]*"`),
             `${sceneClass} must expose a Magic Park 2.2 scene root`
         );
     }
