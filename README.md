@@ -6,6 +6,7 @@ Bu README kurulum, çalıştırma ve günlük kullanım içindir. Değişen tekn
 
 - `CLASSROOM_PROJE_TOMOGRAFISI_2026-08-08.md`
 - `Classroom Projesi/01 - Güncel Belgeler/Classroom Projesi — Önceliklendirilmiş Düzeltme Planı — 2026-08-08.md`
+- `docs/DERS_AKISI_GELISTIRME_RAPORU_2026-08-12.md` — Ders Akışı saniyelik zaman, LiquidFun/Three.js gazoz-kavanoz sistemi ve görsel kabul kaydı.
 
 ## Güncel ürün yüzeyleri
 
@@ -14,15 +15,15 @@ Bu README kurulum, çalıştırma ve günlük kullanım içindir. Değişen tekn
 Ana ekran tek bir 16:9 Magic Park sahnesi içinde sekiz bilgi bölgesi sunar:
 
 1. Günün zamanı — gün, tarih, dijital saat ve hafta sonu/tatil bağlamı.
-2. Sınıf mevcudu — toplam, kız/erkek dağılımı, yoklama durumu ve gelmeyen öğrenciler.
-3. Ders akışı — ders/teneffüs durumu, countdown ve sıradaki dönem bağlamı.
+2. Sınıf mevcudu — yalnız toplam, kız ve erkek öğrenci sayısının üç sahneli akışı; yoklama ayrıntıları merkez Class TV'dedir.
+3. Ders akışı — saniyelik ders/teneffüs durumu, sıra numarası, portakallı gazoz dolumu ve mevcut/sıradaki dönem bağlamı.
 4. Sınıfın ses dengesi — mikrofon, otomatik kalibrasyon, Sessiz/Dikkat/Gürültü durumları.
 5. Sınıfımızdan — görsel/GIF/video slayt alanı.
 6. Sınıf başkanı — başkan ve yardımcılar.
 7. Nöbetçiler — günlük görevli öğrenciler.
 8. Haftanın yıldızları — yıldız öğrenciler için mini slideshow.
 
-Kiosk görsel sistemi `public/css/kiosk-magic-park.css` ve `public/js/kiosk-motion.js` üzerinde kuruludur. Fredoka/Nunito fontları, GSAP ve canvas-confetti çalışma zamanında yerel dosyalardan servis edilir.
+Kiosk görsel sistemi ortak `public/css/kiosk-magic-park.css`, `public/js/kiosk-motion.js` ve kutuya özel `public/themes/magic-park/boxes/` paketlerinden oluşur. Sınıf mevcudu ve Ders Akışı kendi CSS/JSON/JavaScript sahipliğine sahiptir. Fredoka/Nunito fontları, GSAP, Three.js, LiquidFun ve canvas-confetti çalışma zamanında yerel dosyalardan servis edilir.
 
 ### Yönetim paneli
 

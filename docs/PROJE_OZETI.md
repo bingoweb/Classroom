@@ -6,6 +6,10 @@
 
 Bu belge Classroom ürününün güncel insan-okur teknik özetidir. Değişen kod ayrıntılarında **Git HEAD kaynak gerçekliktir**.
 
+Ders Akışı kutusunun hata kök nedenleri, fizik/optik mimarisi, dosya sahipliği, iterasyonları ve gerçek boyutlu kabul kanıtları:
+
+`docs/DERS_AKISI_GELISTIRME_RAPORU_2026-08-12.md`
+
 Açık işler, tamamlanan düzeltmeler ve güncel test/CI kanıtları:
 
 `Classroom Projesi/01 - Güncel Belgeler/Classroom Projesi — Önceliklendirilmiş Düzeltme Planı — 2026-08-08.md`
@@ -49,10 +53,18 @@ Günlük yoklama ve gelmeyen öğrenci ayrıntıları artık bu kutuda tekrar ed
 ### 2.3 Ders akışı
 
 - okul öncesi durum,
-- ders/teneffüs countdown,
-- ilerleme göstergesi,
+- gerçek saniyelik ders/teneffüs geri sayımı,
+- uzaktan okunabilen `kaçıncı ders / kaçıncı teneffüs` başlığı,
+- aşağıdan yukarıya dolan özel GLSL portakallı gazoz yüzeyi,
+- 72 büyük ve 168 mikro gazoz kabarcığı; 12 dip çekirdeklenme zinciri ve 36 cama tutunan kabarcık,
+- dolum seviyesine duyarlı yazı kontrastı,
+- su yüksekliğinin kendisini kullanan hassas zaman göstergesi,
 - şimdi/sıradaki ders bağlamı,
 - okul sonrası ve hafta sonu durumları.
+
+Magic Park Ders Akışı görünümü kendi `lesson-flow.css`, `lesson-flow.json`, `lesson-flow.js`, `liquid-physics.js` ve `assets/glass-jar-interior-v1.webp` paketine sahiptir. LiquidFun parçacık çözümü basınç, viskozite, yüzey gerilimi, yerçekimi, tank çarpışması ve kabarcık akıntısını; 128 örnekli sönümlü sığ-su çözücüsü ile sürekli kapiler basınç alanı ise sık, ilerleyen ve yansıyan serbest yüzey dalgasını hesaplar. Görünür sıvı `lesson-flow.json` tarafından tanımlanan berrak, posasız portakallı gazozdur. Three.js gerçek kavanoz arka plakasını sıvı içinden kırar; derinliğe bağlı üstel RGB geçirgenliği, turuncu hacim saçılımı, hareketli caustic, Fresnel yansıması, cam kenarında yükselen menisküs ve kavisli taban merceğini tek malzemede birleştirir. 72 büyük fiziksel kabarcığın yanında 12 düzensiz dip noktasından doğan 168 mikro kabarcık vardır; 36'sı cam duvarında bekleyip sonra akışa katılır. Özel arka plaka ve saydam CSS cam kenarı sıvıyı gerçek bir kavanoz hacmine oturtur. JSON sahipli `glass.interiorMask`, sıvı ile kabarcıkları cam yan duvarlarının, yuvarlak omuzların ve iki yana yükselen oval tabanın içinde keser; düşük dolum düz bir çizgiden değil taban çanağının merkezinden başlar. Ortalama sıvı yüksekliği zaman ilerlemesine aynı karede kilitlidir ve yeni parçacıklar yüzey altında doğar. Bilgi alanları sıvıyı kapatmayan optik camdır; boş mevcut/sıradaki bağlamı DOM'dan gizlenir. Ayrı bir ilerleme çubuğu yoktur. WebGL kullanılamazsa DOM metinleri ile aynı yüzdeyi kullanan turuncu CSS dolumu bilgi kaybı olmadan devam eder.
+
+Başlık, kalan süre açıklaması ve sayaç 12 Ağustos 2026'da kutuya özel **Büyülü Cam Amblem** sistemiyle yenilendi. Kesimli saydam amblem, küçük ölçekte de görünen çift ışık rayı ve dört katmanlı emaye sayaç; yükselen sıvıya göre yüz/kenar renklerini tersleyerek okunurluğu korur. Palet ve hareket değerleri `lesson-flow.json > typography` alanından gelir; CSS ve JSON sahipliği başka kutularla paylaşılmaz. Bu revizyonda sıvı, gazoz fiziği, kabarcıklar, kavanoz maskesi ve dolum senkronu değiştirilmedi.
 
 ### 2.4 Sınıfın ses dengesi
 
@@ -300,6 +312,8 @@ Program iki kaynaklıdır:
 Transport hatası ile semantik invalid response birbirinden ayrılır. Geçersiz/eksik program kiosk'u tamamen bozmak yerine fallback'e düşürür.
 
 Admin ana menüsünde program editor bulunmaz.
+
+`ScheduleManager` gün içi konumu saniye cinsinden hesaplar. Ders öncesi, ders ve teneffüs sayaçları `MM:SS`; bir saati aşan süreler `H:MM:SS` biçimindedir. Ders/teneffüs ilerleme yüzdesi de saniye hassasiyetindedir ve kesin sınır anında bir sonraki duruma geçer. Durum nesnesi ayrıca mevcut tür içindeki sıra numarasını (`currentPeriodNumber`) taşır.
 
 ## 10. Ses ölçer
 

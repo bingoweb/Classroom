@@ -1,0 +1,211 @@
+{
+  "schemaVersion": 1,
+  "id": "magic-park-lesson-flow",
+  "version": "1.1.0",
+  "theme": "magic-park",
+  "css": "lesson-flow.css",
+  "script": "lesson-flow.js",
+  "modes": {
+    "before-school": {
+      "title": "DERS BAŞLIYOR",
+      "showCountdown": true
+    },
+    "in-class": {
+      "title": "TENEFFÜSE KALAN",
+      "showCountdown": true
+    },
+    "in-break": {
+      "title": "DERSE KALAN",
+      "showCountdown": true
+    },
+    "after-school": {
+      "title": "YARIN GÖRÜŞÜRÜZ",
+      "showCountdown": false
+    },
+    "weekend": {
+      "title": "İYİ HAFTA SONLARI!",
+      "showCountdown": false
+    },
+    "error": {
+      "title": "PROGRAM BEKLENİYOR",
+      "showCountdown": false
+    }
+  },
+  "palette": {
+    "before-school": {
+      "surfaceA": "#EAF9FF",
+      "surfaceB": "#D8D2FF",
+      "ink": "#4B3476",
+      "accent": "#F7BD45",
+      "water": "#F28A18"
+    },
+    "in-class": {
+      "surfaceA": "#FFF8E7",
+      "surfaceB": "#DFC9F6",
+      "ink": "#523473",
+      "accent": "#9A5AD0",
+      "water": "#F28A18"
+    },
+    "in-break": {
+      "surfaceA": "#F4FFE8",
+      "surfaceB": "#BDEAD6",
+      "ink": "#315C57",
+      "accent": "#46B8C2",
+      "water": "#F28A18"
+    },
+    "after-school": {
+      "surfaceA": "#FFF6D7",
+      "surfaceB": "#F8CDB5",
+      "ink": "#6B4168",
+      "accent": "#ED9A64",
+      "water": "#F28A18"
+    },
+    "weekend": {
+      "surfaceA": "#FFF4D1",
+      "surfaceB": "#D7CEFA",
+      "ink": "#54427D",
+      "accent": "#F0B84B",
+      "water": "#F28A18"
+    },
+    "error": {
+      "surfaceA": "#FFF8E7",
+      "surfaceB": "#E8DDF0",
+      "ink": "#665875",
+      "accent": "#A58CB5",
+      "water": "#F28A18"
+    }
+  },
+  "timingMs": {
+    "transition": 850,
+    "title": 430,
+    "primary": 560,
+    "context": 420,
+    "numberSettle": 520,
+    "surfaceFill": 1000
+  },
+  "motion": {
+    "direction": "left-to-right",
+    "revealOrder": [
+      "title",
+      "kicker",
+      "primary",
+      "context"
+    ]
+  },
+  "typography": {
+    "concept": "enchanted-glass-crest",
+    "palette": {
+      "dryFace": "#245D5B",
+      "dryEdge": "#FFF8E6",
+      "wetFace": "#FFF8E6",
+      "wetEdge": "#245D5B",
+      "depth": "#5D3C78",
+      "glass": "#8FE8E1",
+      "warmGlint": "#FFB12D"
+    },
+    "motionMs": {
+      "titleSettle": 520,
+      "kickerReveal": 380,
+      "separatorPulse": 1000,
+      "sheenCycle": 9000
+    },
+    "depthLayers": 4
+  },
+  "water": {
+    "engine": "liquidfun-shallow-water-hybrid",
+    "renderer": "refracted-backdrop-volume",
+    "fillDirection": "bottom-to-top",
+    "surface": "traveling-height-field",
+    "liquidKind": "orange-soda",
+    "liquidPalette": {
+      "shallow": "#FFC44A",
+      "deep": "#E85D08",
+      "foam": "#FFF3C4",
+      "gas": "#FFF9E6",
+      "scatter": "#FF9828"
+    },
+    "optics": {
+      "absorption": [
+        0.18,
+        0.72,
+        1.55
+      ],
+      "density": 1.18,
+      "refractionStrength": 0.018,
+      "fresnel": 0.36,
+      "meniscusRise": 0.018
+    },
+    "carbonation": {
+      "risingBubbles": 72,
+      "microBubbles": 168,
+      "nucleationSites": 12,
+      "wallBubbles": 36,
+      "growth": 0.32,
+      "minimumRiseSpeed": 0.055,
+      "maximumRiseSpeed": 0.14
+    },
+    "glass": {
+      "backgroundAsset": "assets/glass-jar-interior-v1.webp",
+      "material": "clear-molded-glass",
+      "centerClearance": 72,
+      "liquidDepth": 0.72,
+      "interiorMask": {
+        "sideInset": 0.075,
+        "centerFloor": 0.072,
+        "edgeFloor": 0.18,
+        "bottomCurve": 2,
+        "ceiling": 0.955,
+        "shoulderDepth": 0.055,
+        "feather": 0.012
+      }
+    },
+    "surfaceWave": {
+      "samples": 128,
+      "propagation": 0.225,
+      "velocityRetention": 0.996,
+      "displacementRetention": 0.99965,
+      "reflection": 0.82,
+      "maximumAmplitude": 0.086,
+      "impulseRadius": 7,
+      "impulseGain": 0.0135,
+      "capillaryAmplitude": 0.012,
+      "capillaryFrequency": 28
+    },
+    "bubbles": 72,
+    "physics": {
+      "engine": "liquidfun-particles",
+      "maxParticles": 640,
+      "fixedStepHz": 60,
+      "surfaceWaveSolver": "damped-shallow-water",
+      "gravity": true,
+      "pressure": true,
+      "viscosity": true,
+      "surfaceTension": true,
+      "collisionTank": true
+    },
+    "contrastThresholds": {
+      "context": 24,
+      "primary": 50,
+      "kicker": 74,
+      "title": 90
+    }
+  },
+  "layout": {
+    "safeInset": "7% 8% 8%",
+    "rows": [
+      20,
+      11,
+      43,
+      26
+    ]
+  },
+  "capabilities": {
+    "three": true,
+    "customShader": true,
+    "instancedBubbles": true,
+    "particlePhysics": true,
+    "gsap": true,
+    "cssFallback": true,
+    "reducedMotion": true
+  }
+}

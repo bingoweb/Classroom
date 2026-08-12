@@ -1,0 +1,582 @@
+/* Magic Park Ders Akışı — Sihirli Su Saati.
+ * All lesson-flow presentation is owned by this box-local stylesheet. */
+
+body.magic-park-theme.theme-magic-park .lesson-flow-legacy {
+    display: none !important;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene[hidden] {
+    display: none !important;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene {
+    --lesson-flow-surface-a: #eaf9ff;
+    --lesson-flow-surface-b: #d8d2ff;
+    --lesson-flow-ink: #4b3476;
+    --lesson-flow-accent: #f7bd45;
+    --lesson-flow-water: #f28a18;
+    --lesson-flow-glass-edge: rgba(236, 255, 255, 0.82);
+    --lesson-flow-type-dry-face: #245d5b;
+    --lesson-flow-type-dry-edge: #fff8e6;
+    --lesson-flow-type-wet-face: #fff8e6;
+    --lesson-flow-type-wet-edge: #245d5b;
+    --lesson-flow-type-depth: #5d3c78;
+    --lesson-flow-type-glass: #8fe8e1;
+    --lesson-flow-type-warm-glint: #ffb12d;
+    --lesson-flow-title-settle: 520ms;
+    --lesson-flow-kicker-reveal: 380ms;
+    --lesson-flow-separator-pulse: 1000ms;
+    --lesson-flow-crest-sheen: 9000ms;
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    color: var(--lesson-flow-ink);
+    background-color: #def4f1;
+    background-image:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(225, 250, 247, 0.04)),
+        url("./assets/glass-jar-interior-v1.webp");
+    background-position: center, center;
+    background-size: 100% 100%, cover;
+    isolation: isolate;
+    container-name: lesson-flow-box;
+    container-type: size;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene::before,
+body.magic-park-theme.theme-magic-park .lesson-flow-scene::after {
+    position: absolute;
+    z-index: 0;
+    content: '';
+    pointer-events: none;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene::before {
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 46% 28%, rgba(255, 255, 255, 0.22), transparent 48%),
+        linear-gradient(90deg, rgba(76, 186, 183, 0.08), transparent 19% 80%, rgba(255, 231, 164, 0.1));
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene::after {
+    right: 5%;
+    bottom: 1.6%;
+    left: 5%;
+    height: 8%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(42, 110, 116, 0.2), transparent 70%);
+    filter: blur(0.42cqw);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene[data-mode="in-class"] {
+    --lesson-flow-surface-a: #fff8e7;
+    --lesson-flow-surface-b: #dfc9f6;
+    --lesson-flow-ink: #523473;
+    --lesson-flow-accent: #9a5ad0;
+    --lesson-flow-water: #f28a18;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene[data-mode="in-break"] {
+    --lesson-flow-surface-a: #f4ffe8;
+    --lesson-flow-surface-b: #bdead6;
+    --lesson-flow-ink: #315c57;
+    --lesson-flow-accent: #46b8c2;
+    --lesson-flow-water: #f28a18;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene[data-mode="after-school"] {
+    --lesson-flow-surface-a: #fff6d7;
+    --lesson-flow-surface-b: #f8cdb5;
+    --lesson-flow-ink: #6b4168;
+    --lesson-flow-accent: #ed9a64;
+    --lesson-flow-water: #f28a18;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene[data-mode="weekend"] {
+    --lesson-flow-surface-a: #fff4d1;
+    --lesson-flow-surface-b: #d7cefa;
+    --lesson-flow-ink: #54427d;
+    --lesson-flow-accent: #f0b84b;
+    --lesson-flow-water: #f28a18;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene[data-mode="error"] {
+    --lesson-flow-surface-a: #fff8e7;
+    --lesson-flow-surface-b: #e8ddf0;
+    --lesson-flow-ink: #665875;
+    --lesson-flow-accent: #a58cb5;
+    --lesson-flow-water: #f28a18;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__depth,
+body.magic-park-theme.theme-magic-park .lesson-flow__glow,
+body.magic-park-theme.theme-magic-park .lesson-flow__progress-wash {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__progress-wash {
+    top: auto;
+    z-index: 1;
+    height: var(--lesson-flow-progress, 0%);
+    opacity: 0.34;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.62), transparent 10%),
+        linear-gradient(0deg, var(--lesson-flow-water), color-mix(in srgb, var(--lesson-flow-water) 58%, white));
+    box-shadow: 0 -0.55cqh 1.4cqh color-mix(in srgb, var(--lesson-flow-accent) 33%, transparent);
+    transition: height 1s linear, background 0.72s ease;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__depth canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    opacity: 1;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene[data-depth="liquidfun"] .lesson-flow__progress-wash {
+    opacity: 0;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__glow {
+    z-index: 3;
+    background:
+        linear-gradient(112deg, transparent 18%, rgba(255, 255, 255, 0.26) 42%, transparent 59%) -130% 0 / 48% 100% no-repeat,
+        radial-gradient(ellipse at 50% 54%, rgba(255, 255, 255, 0.08), transparent 68%);
+    animation: lesson-flow-sheen 8s ease-in-out infinite;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__glow::before,
+body.magic-park-theme.theme-magic-park .lesson-flow__glow::after {
+    position: absolute;
+    content: '';
+    pointer-events: none;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__glow::before {
+    inset: 3.2% 4.4% 4.8%;
+    border: 0.16cqw solid var(--lesson-flow-glass-edge);
+    border-radius: 10.5cqw 10.5cqw 7.2cqw 7.2cqw;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.2), transparent 8% 91%, rgba(255, 255, 255, 0.24)),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.13), transparent 15% 82%, rgba(206, 247, 247, 0.1));
+    box-shadow:
+        inset 0.48cqw 0 0.72cqw rgba(255, 255, 255, 0.24),
+        inset -0.48cqw 0 0.72cqw rgba(65, 165, 167, 0.1),
+        inset 0 -0.82cqh 1.2cqh rgba(75, 149, 151, 0.12),
+        inset 0 0.26cqh 0.5cqh rgba(255, 255, 255, 0.42);
+    backdrop-filter: blur(0.16cqw) saturate(1.12);
+    -webkit-backdrop-filter: blur(0.16cqw) saturate(1.12);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__glow::after {
+    top: 8%;
+    bottom: 15%;
+    left: 8.2%;
+    width: 5.2%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.52) 42%, rgba(255, 255, 255, 0.12) 68%, transparent);
+    filter: blur(0.11cqw);
+    opacity: 0.72;
+    transform: rotate(1.4deg);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__content {
+    position: absolute;
+    inset: 5.5% 8% 7.5%;
+    z-index: 4;
+    display: grid;
+    grid-template-rows: minmax(0, 20fr) minmax(0, 11fr) minmax(0, 42fr) minmax(0, 27fr);
+    align-items: center;
+    justify-items: center;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    min-height: 0;
+    gap: 0;
+    padding: 0;
+    perspective: 24cqw;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__title {
+    position: relative;
+    z-index: 1;
+    isolation: isolate;
+    align-self: end;
+    min-width: 54%;
+    max-width: 84%;
+    margin: 0;
+    padding: 1.55% 9% 1.35%;
+    border: 0;
+    color: var(--lesson-flow-type-dry-face);
+    background: none;
+    font: 900 clamp(0.88rem, 7.35cqw, 2.3rem)/0.96 'Fredoka Classroom', sans-serif;
+    letter-spacing: 0.018em;
+    text-align: center;
+    text-shadow:
+        0 0.025em 0 var(--lesson-flow-type-dry-edge),
+        0 0.058em 0 var(--lesson-flow-type-depth),
+        0 0.1em 0.09em rgba(47, 40, 76, 0.22);
+    text-wrap: balance;
+    transform-style: preserve-3d;
+    transition: color var(--lesson-flow-title-settle) ease, text-shadow var(--lesson-flow-title-settle) ease;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__title::before,
+body.magic-park-theme.theme-magic-park .lesson-flow__title::after {
+    position: absolute;
+    content: '';
+    pointer-events: none;
+    clip-path: polygon(7% 4%, 93% 4%, 97% 19%, 100% 50%, 97% 81%, 93% 96%, 7% 96%, 3% 81%, 0 50%, 3% 19%);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__title::before {
+    z-index: -2;
+    inset: -11% -6%;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 38%, color-mix(in srgb, var(--lesson-flow-type-glass) 12%, transparent)),
+        linear-gradient(112deg, color-mix(in srgb, var(--lesson-flow-type-glass) 28%, transparent), rgba(255, 255, 255, 0.018) 48%, color-mix(in srgb, var(--lesson-flow-type-depth) 14%, transparent));
+    filter:
+        drop-shadow(0 -0.055cqh 0 rgba(255, 255, 255, 0.96))
+        drop-shadow(0 0.13cqh 0 color-mix(in srgb, var(--lesson-flow-type-glass) 88%, var(--lesson-flow-type-depth)))
+        drop-shadow(0 0.21cqh 0 color-mix(in srgb, var(--lesson-flow-type-depth) 74%, transparent))
+        drop-shadow(0 0.35cqh 0.46cqh rgba(38, 52, 76, 0.16));
+    backdrop-filter: blur(0.18cqw) saturate(1.16) brightness(1.04);
+    -webkit-backdrop-filter: blur(0.18cqw) saturate(1.16) brightness(1.04);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__title::after {
+    z-index: -1;
+    inset: -3% -2%;
+    background:
+        linear-gradient(107deg, transparent 34%, rgba(255, 255, 255, 0.56) 47%, rgba(255, 255, 255, 0.12) 53%, transparent 65%) -135% 0 / 42% 100% no-repeat,
+        radial-gradient(circle at 7% 50%, color-mix(in srgb, var(--lesson-flow-type-glass) 36%, transparent), transparent 17%),
+        radial-gradient(circle at 93% 50%, color-mix(in srgb, var(--lesson-flow-type-warm-glint) 18%, transparent), transparent 18%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 34% 72%, color-mix(in srgb, var(--lesson-flow-type-warm-glint) 8%, transparent));
+    box-shadow:
+        inset 0 0.1cqh 0 rgba(255, 255, 255, 0.78),
+        inset 0 -0.1cqh 0 color-mix(in srgb, var(--lesson-flow-type-glass) 44%, transparent);
+    animation: lesson-flow-crest-sheen var(--lesson-flow-crest-sheen) ease-in-out infinite;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__kicker {
+    align-self: start;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 88%;
+    max-width: 92%;
+    gap: 2.6%;
+    margin: 0;
+    padding-top: 1.1%;
+    color: var(--lesson-flow-type-dry-face);
+    font: 950 clamp(0.58rem, 4.15cqw, 1.28rem)/1 'Nunito Classroom', sans-serif;
+    letter-spacing: 0.045em;
+    text-align: center;
+    text-shadow:
+        0 0.05em 0 rgba(255, 255, 255, 0.96),
+        0 0.105em 0.1em rgba(52, 59, 79, 0.15);
+    text-wrap: balance;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__kicker::before,
+body.magic-park-theme.theme-magic-park .lesson-flow__kicker::after {
+    flex: 1 1 12%;
+    min-width: 1.65rem;
+    height: max(1px, 0.36cqh);
+    content: '';
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent, var(--lesson-flow-type-glass) 38%, rgba(255, 255, 255, 0.96) 74%, var(--lesson-flow-type-warm-glint));
+    box-shadow:
+        0 0 0.22cqh color-mix(in srgb, var(--lesson-flow-type-glass) 68%, transparent),
+        0 0.1cqh 0 color-mix(in srgb, var(--lesson-flow-type-depth) 42%, transparent);
+    transform-origin: right center;
+    animation: lesson-flow-kicker-ray var(--lesson-flow-kicker-reveal) ease-out both;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__kicker::after {
+    background: linear-gradient(90deg, var(--lesson-flow-type-warm-glint), rgba(255, 255, 255, 0.96) 26%, var(--lesson-flow-type-glass) 62%, transparent);
+    transform-origin: left center;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__primary {
+    align-self: center;
+    display: -webkit-box;
+    max-width: 100%;
+    margin: 0;
+    overflow: hidden;
+    color: var(--lesson-flow-ink);
+    font: 780 clamp(1.08rem, 8cqw, 2.5rem)/1.02 'Fredoka Classroom', sans-serif;
+    letter-spacing: -0.018em;
+    text-align: center;
+    text-shadow: 0 0.055em 0 rgba(255, 255, 255, 0.95), 0 0.15em 0.25em rgba(77, 44, 106, 0.14);
+    text-wrap: balance;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__primary.is-countdown {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: center;
+    overflow: visible;
+    color: var(--lesson-flow-type-dry-face);
+    background: linear-gradient(
+        180deg,
+        #fffef8 0%,
+        var(--lesson-flow-type-dry-edge) 28%,
+        var(--lesson-flow-type-dry-face) 63%,
+        color-mix(in srgb, var(--lesson-flow-type-warm-glint) 42%, var(--lesson-flow-type-dry-face)) 100%
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    font-size: clamp(2.3rem, 18.2cqw, 5.5rem);
+    font-variant-numeric: tabular-nums;
+    font-weight: 760;
+    line-height: 0.88;
+    letter-spacing: -0.052em;
+    filter: none;
+    text-shadow:
+        0 0.018em 0 var(--lesson-flow-type-dry-edge),
+        0 0.045em 0 color-mix(in srgb, var(--lesson-flow-type-dry-face) 82%, black),
+        0 0.075em 0 var(--lesson-flow-type-depth),
+        0 0.105em 0.045em rgba(38, 34, 64, 0.34);
+    -webkit-text-fill-color: transparent;
+    -webkit-text-stroke: 0.016em var(--lesson-flow-type-dry-edge);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__primary.is-countdown::before {
+    content: none;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__digits,
+body.magic-park-theme.theme-magic-park .lesson-flow__separator {
+    display: inline-block;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__separator {
+    min-width: 0.28em;
+    margin-inline: -0.045em 0.005em;
+    transform-origin: center 58%;
+    animation: lesson-flow-separator-breathe var(--lesson-flow-separator-pulse) ease-in-out infinite;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__context {
+    align-self: center;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    justify-items: center;
+    width: 88%;
+    min-width: 0;
+    min-height: 0;
+    gap: 3%;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__context[hidden],
+body.magic-park-theme.theme-magic-park .lesson-flow__current[hidden],
+body.magic-park-theme.theme-magic-park .lesson-flow__next-group[hidden] {
+    display: none !important;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene.has-next .lesson-flow__context {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__current,
+body.magic-park-theme.theme-magic-park .lesson-flow__next-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 2.5% 9%;
+    overflow: hidden;
+    border: 0.08cqw solid rgba(255, 255, 255, 0.56);
+    border-radius: 999px;
+    color: var(--lesson-flow-ink);
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow:
+        inset 0 0.12cqh 0 rgba(255, 255, 255, 0.58),
+        inset 0 -0.18cqh 0.32cqh rgba(255, 255, 255, 0.07),
+        0 0.18cqh 0.42cqh rgba(34, 40, 68, 0.07);
+    backdrop-filter: blur(0.32cqw) saturate(1.42) brightness(1.07);
+    -webkit-backdrop-filter: blur(0.32cqw) saturate(1.42) brightness(1.07);
+    font: 850 clamp(0.64rem, 4.9cqw, 1.48rem)/1.02 'Fredoka Classroom', sans-serif;
+    text-align: center;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene.has-next .lesson-flow__current,
+body.magic-park-theme.theme-magic-park .lesson-flow-scene.has-next .lesson-flow__next-group {
+    width: 100%;
+    padding-inline: 5%;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__current {
+    flex-direction: column;
+    gap: 0.08cqh;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__current::before {
+    content: 'ŞİMDİ';
+    font: 900 clamp(0.38rem, 2.35cqw, 0.68rem)/1 'Nunito Classroom', sans-serif;
+    letter-spacing: 0.05em;
+    opacity: 0.84;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene[data-mode="before-school"] .lesson-flow__current::before {
+    content: 'BAŞLANGIÇ';
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__next-group {
+    flex-direction: column;
+    gap: 0.08cqh;
+    color: var(--lesson-flow-ink);
+    background: rgba(255, 255, 255, 0.07);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__next-group small {
+    font: 900 clamp(0.38rem, 2.35cqw, 0.68rem)/1 'Nunito Classroom', sans-serif;
+    letter-spacing: 0.05em;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__next-group strong {
+    max-width: 100%;
+    font: 850 clamp(0.5rem, 3.1cqw, 0.94rem)/1 'Fredoka Classroom', sans-serif;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__water-meter {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Adaptive contrast follows the bottom-up time fill through each reading zone. */
+body.magic-park-theme.theme-magic-park .lesson-flow__title.is-on-fill {
+    color: var(--lesson-flow-type-wet-face);
+    background: none;
+    text-shadow:
+        0 0.025em 0 var(--lesson-flow-type-wet-edge),
+        0 0.058em 0 var(--lesson-flow-type-depth),
+        0 0.1em 0.09em rgba(35, 27, 54, 0.4);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__kicker.is-on-fill {
+    color: var(--lesson-flow-type-wet-face);
+    text-shadow: 0 0.065em 0 var(--lesson-flow-type-wet-edge), 0 0.14em 0.18em rgba(35, 27, 54, 0.42);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__primary.is-on-fill {
+    color: #fffdf5;
+    text-shadow: 0 0.07em 0 var(--lesson-flow-ink), 0 0.18em 0.24em rgba(35, 27, 54, 0.42);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__primary.is-countdown.is-on-fill {
+    color: var(--lesson-flow-type-wet-face);
+    background: linear-gradient(
+        180deg,
+        #ffffff 0%,
+        var(--lesson-flow-type-wet-face) 47%,
+        color-mix(in srgb, var(--lesson-flow-type-warm-glint) 22%, var(--lesson-flow-type-wet-face)) 100%
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    filter: none;
+    text-shadow:
+        0 0.018em 0 rgba(255, 255, 255, 0.88),
+        0 0.045em 0 var(--lesson-flow-type-wet-edge),
+        0 0.075em 0 var(--lesson-flow-type-depth),
+        0 0.105em 0.05em rgba(28, 30, 48, 0.38);
+    -webkit-text-fill-color: transparent;
+    -webkit-text-stroke: 0.016em var(--lesson-flow-type-wet-edge);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow__context.is-on-fill .lesson-flow__current,
+body.magic-park-theme.theme-magic-park .lesson-flow__context.is-on-fill .lesson-flow__next-group {
+    color: #fffdf5;
+    background: rgba(255, 255, 255, 0.06);
+    text-shadow: 0 0.055em rgba(32, 25, 48, 0.84), 0 0.12em 0.16em rgba(32, 25, 48, 0.4);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene.is-message-mode .lesson-flow__content {
+    grid-template-rows: minmax(0, 18fr) minmax(0, 28fr) minmax(0, 44fr) minmax(0, 10fr);
+    padding: 4% 2% 3%;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene.is-message-mode .lesson-flow__title {
+    align-self: center;
+    grid-row: 2;
+    max-width: 100%;
+    font-size: clamp(0.72rem, 5.9cqw, 1.85rem);
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene.is-message-mode .lesson-flow__kicker {
+    grid-row: 1;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene.is-message-mode .lesson-flow__primary {
+    align-self: center;
+    grid-row: 3;
+    max-width: 92%;
+    font-size: clamp(1.12rem, 8.2cqw, 2.45rem);
+    line-height: 1.04;
+}
+
+body.magic-park-theme.theme-magic-park .lesson-flow-scene.is-message-mode .lesson-flow__context {
+    grid-row: 4;
+}
+
+@keyframes lesson-flow-sheen {
+    0%, 58% { background-position: -130% 0, center; }
+    82%, 100% { background-position: 270% 0, center; }
+}
+
+@keyframes lesson-flow-crest-sheen {
+    0%, 62% { background-position: -135% 0, center; }
+    82%, 100% { background-position: 285% 0, center; }
+}
+
+@keyframes lesson-flow-kicker-ray {
+    from { opacity: 0; transform: scaleX(0.08); }
+    to { opacity: 0.9; transform: scaleX(1); }
+}
+
+@keyframes lesson-flow-separator-breathe {
+    0%, 100% { opacity: 0.72; transform: scale(0.97); }
+    48% { opacity: 1; transform: scale(1.02); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.magic-park-theme.theme-magic-park .lesson-flow__glow,
+    body.magic-park-theme.theme-magic-park .lesson-flow__progress-wash,
+    body.magic-park-theme.theme-magic-park .lesson-flow__title::after,
+    body.magic-park-theme.theme-magic-park .lesson-flow__kicker::before,
+    body.magic-park-theme.theme-magic-park .lesson-flow__kicker::after,
+    body.magic-park-theme.theme-magic-park .lesson-flow__separator {
+        animation: none;
+    }
+
+    body.magic-park-theme.theme-magic-park .lesson-flow__progress-wash {
+        transition: none;
+    }
+}

@@ -5,6 +5,7 @@
 @import url('./magic-states.css');
 @import url('./boxes/clock/clock.css');
 @import url('./boxes/attendance/attendance.css');
+@import url('./boxes/lesson-flow/lesson-flow.css');
 
 body.magic-park-theme.theme-magic-park {
     --theme-left-col: 27%;

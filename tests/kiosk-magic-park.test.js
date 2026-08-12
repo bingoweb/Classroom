@@ -186,48 +186,42 @@ test('magic park kiosk is fully local and loaded in dependency order', () => {
     }
 });
 
-test('MP2-A attendance garden uses storybook materials and a readable non-ticker absence roster', () => {
-    const css = read('public/css/kiosk-magic-park.css');
+test('MP2-A attendance garden is owned by its bright three-scene package', () => {
+    const css = read('public/themes/magic-park/boxes/attendance/attendance.css');
     const script = read('public/js/script.js');
     const html = read('public/index.html');
 
-    assert.match(css, /--mp2-paper-cream:/);
-    assert.match(css, /--mp2-wood-ink:/);
-    assert.match(css, /\.present-students-panel::before/);
-    assert.match(css, /\.class-capacity-panel::before/);
-    assert.match(css, /\.gender-box::before/);
-    assert.match(css, /\.attendance-box::before/);
-    assert.match(css, /\.absent-marquee-container::before/);
-    assert.match(css, /body\.magic-park-theme \.marquee-content\s*\{[^}]*flex-wrap:\s*nowrap[^}]*animation:\s*none/s);
-    assert.match(css, /body\.magic-park-theme \.marquee-item\s*\{[^}]*border-radius:[^}]*background:/s);
+    assert.match(css, /\.magic-attendance\s*\{[^}]*linear-gradient/s);
+    assert.match(css, /\.magic-attendance__scene--total/);
+    assert.match(css, /\.magic-attendance__scene--girls/);
+    assert.match(css, /\.magic-attendance__scene--boys/);
+    assert.match(css, /\.attendance-legacy-details\s*\{[^}]*display:\s*none/s);
     assert.doesNotMatch(script, /marqueeHtml \+ marqueeHtml \+ marqueeHtml/);
     assert.match(script, /startAbsentRoster\(absentStudents\);/);
     assert.match(html, /js\/script\.js\?v=13/);
 });
 
-test('MP2-A long absence state is paged instead of shrinking or clipping every student at once', () => {
-    const css = read('public/css/kiosk-magic-park.css');
+test('MP2-A package excludes absence data while the legacy Class TV feed keeps its paging hook', () => {
+    const manifest = JSON.parse(read('public/themes/magic-park/boxes/attendance/attendance.json'));
     const script = read('public/js/script.js');
     const html = read('public/index.html');
 
+    assert.deepEqual(manifest.visibleFields, ['total', 'girls', 'boys']);
     assert.match(script, /ABSENT_ROSTER_PAGE_SIZE\s*=\s*2/);
     assert.match(script, /ABSENT_ROSTER_PAGE_DURATION\s*=\s*5500/);
     assert.match(script, /function renderAbsentRosterPage\(/);
     assert.match(script, /dataset\.pageLabel/);
     assert.match(script, /attendanceWrapper\.classList\.toggle\('has-absent'/);
     assert.match(script, /absentRosterInterval\s*=\s*intervalManager\.setInterval/);
-    assert.match(css, /\.attendance-wrapper\.has-absent\s*\{[^}]*grid-template-rows:\s*minmax\(0, 36fr\) minmax\(0, 64fr\)/s);
-    assert.match(css, /body\.magic-park-theme \.marquee-content\s*\{[^}]*flex-direction:\s*row[^}]*flex-wrap:\s*nowrap/s);
-    assert.match(css, /content:\s*attr\(data-page-label\)/);
     assert.match(html, /<div class="absent-label">DEVAMSIZLAR<\/div>/);
 });
 
-test('MP2-A attendance strip decorative hardware uses browser-valid lengths and clean script markup', () => {
-    const css = read('public/css/kiosk-magic-park.css');
+test('MP2-A attendance package avoids duplicate decorative hardware and keeps clean script markup', () => {
+    const css = read('public/themes/magic-park/boxes/attendance/attendance.css');
     const html = read('public/index.html');
 
-    assert.doesNotMatch(css, /box-shadow:\s*calc\(100%\s*\+\s*19\.1cqw\)/);
-    assert.match(css, /box-shadow:\s*19\.1cqw\s+0\s+0\s+#d2a15d/);
+    assert.doesNotMatch(css, /abacus|blocks|toy|boncuk/i);
+    assert.match(css, /\.magic-attendance__number\s*\{[^}]*background-clip:\s*text/s);
     assert.match(html, /^    <script src="js\/script\.js\?v=13"><\/script>$/m);
 });
 
@@ -296,19 +290,23 @@ test('MP2-C role scenes use storybook role materials, designed fallback states, 
 
 test('MP2-D clock and lesson flow use owned typography, enamel time badges, and unclipped state-aware scenes', () => {
     const css = read('public/css/kiosk-magic-park.css');
+    const lessonFlowCss = read('public/themes/magic-park/boxes/lesson-flow/lesson-flow.css');
+    const lessonFlowRuntime = read('public/themes/magic-park/boxes/lesson-flow/lesson-flow.js');
     const script = read('public/js/script.js');
     const html = read('public/index.html');
 
     assert.match(css, /--mp2-time-paper:/);
     assert.match(css, /body\.magic-park-theme \.date-full\s*\{[^}]*font-family:\s*'Nunito Classroom'/s);
     assert.match(css, /body\.magic-park-theme \.weekend-pill\s*\{[^}]*border-radius:\s*0\.8cqw 1\.05cqw 0\.82cqw 1\.08cqw[^}]*background:\s*linear-gradient/s);
-    assert.match(css, /body\.magic-park-theme \.before-school-mode,[\s\S]*?background:\s*linear-gradient/s);
-    assert.match(css, /body\.magic-park-theme #countdown-card\[data-flow-state="in-class"\] \.countdown-mode/);
-    assert.match(css, /body\.magic-park-theme #countdown-card\[data-flow-state="in-break"\] \.countdown-mode/);
-    assert.match(css, /body\.magic-park-theme \.countdown-mode\s*\{[^}]*padding:\s*0\.6cqh 0\.8cqw[^}]*gap:\s*0\.25cqh/s);
-    assert.match(css, /body\.magic-park-theme \.period-context\.is-single \.period-context-chip\.is-only\s*\{[^}]*width:\s*100%/s);
-    assert.match(css, /body\.magic-park-theme \.period-context-value\s*\{[^}]*overflow:\s*visible[^}]*text-overflow:\s*clip[^}]*white-space:\s*normal/s);
-    assert.match(css, /body\.magic-park-theme \.goodbye-visual\s*\{[^}]*width:\s*34%[^}]*height:\s*42%/s);
+    assert.match(lessonFlowCss, /\.lesson-flow__primary\.is-countdown\s*\{[^}]*font-variant-numeric:\s*tabular-nums/s);
+    assert.match(lessonFlowCss, /\.lesson-flow-scene\[data-mode="in-class"\]/);
+    assert.match(lessonFlowCss, /\.lesson-flow-scene\[data-mode="in-break"\]/);
+    assert.doesNotMatch(lessonFlowCss, /\.lesson-flow__route-fill/);
+    assert.match(lessonFlowCss, /\.lesson-flow__content\s*\{[^}]*grid-template-rows:/s);
+    assert.match(lessonFlowRuntime, /classroom:schedule-status-updated/);
+    assert.match(lessonFlowRuntime, /createThreeFlowLayer/);
+    assert.match(lessonFlowRuntime, /physics\.getSurfaceProfile/);
+    assert.match(lessonFlowRuntime, /uSurfaceProfile/);
 
     assert.match(script, /countdownCard\.dataset\.flowState\s*=\s*status\.mode/);
     assert.match(html, /id="active-theme-stylesheet"[^>]*themes\/magic-park\/theme\.css/);
@@ -721,17 +719,21 @@ test('lesson-flow scene stays inside its artwork-anchored countdown card', () =>
     const html = read('public/index.html');
     assert.doesNotMatch(html, /class="card countdown-card magic-scene lesson-flow-scene"/,
         'countdown card must not also be the full-size generic scene surface');
-    assert.match(html, /<div class="card countdown-card" id="countdown-card">[\s\S]*?<div class="magic-scene lesson-flow-scene">/,
+    assert.match(html, /<div class="card countdown-card" id="countdown-card">[\s\S]*?<div class="magic-scene lesson-flow-scene"[^>]*>/,
         'lesson flow must own a nested scene surface inside the positioned countdown card');
 });
 
 test('Magic Park 2.2 component layer is composed for the eight transparent artwork openings', () => {
     const themePath = path.join(root, 'public/themes/magic-park/theme.css');
     const clockPath = path.join(root, 'public/themes/magic-park/boxes/clock/clock.css');
+    const attendancePath = path.join(root, 'public/themes/magic-park/boxes/attendance/attendance.css');
+    const lessonFlowPath = path.join(root, 'public/themes/magic-park/boxes/lesson-flow/lesson-flow.css');
     const componentsPath = path.join(root, 'public/themes/magic-park/magic-components.css');
     const statesPath = path.join(root, 'public/themes/magic-park/magic-states.css');
     const theme = fs.readFileSync(themePath, 'utf8');
     const clock = fs.readFileSync(clockPath, 'utf8');
+    const attendance = fs.readFileSync(attendancePath, 'utf8');
+    const lessonFlow = fs.readFileSync(lessonFlowPath, 'utf8');
     const components = fs.readFileSync(componentsPath, 'utf8');
     const states = fs.readFileSync(statesPath, 'utf8');
 
@@ -750,10 +752,10 @@ test('Magic Park 2.2 component layer is composed for the eight transparent artwo
         'clock box package must own one full-opening child-friendly composition');
     assert.doesNotMatch(components, /\.clock-scene|\.digital-clock|\.weekend-pill|\.clock-weather/,
         'generic Magic Park component CSS must not reintroduce the retired Clock visual system');
-    assert.match(components, /\.attendance-scene\s*\{[^}]*position:\s*relative[^}]*display:\s*block\s*!important/s,
-        'attendance opening must act as the viewport for its rotating mini-channel pages');
-    assert.match(components, /\.attendance-hero\s*\{[^}]*grid-template-columns:/s,
-        'attendance hero must prioritize present/total values horizontally');
+    assert.match(attendance, /\.magic-attendance\s*\{[^}]*position:\s*absolute[^}]*overflow:\s*hidden/s,
+        'attendance opening must act as the viewport for its owned rotating scenes');
+    assert.match(attendance, /\.magic-attendance__scene--total \.magic-attendance__copy/,
+        'attendance package must own the total-student hero');
     assert.match(components, /\.noise-scene\s*\{[^}]*grid-template-rows:/s,
         'wide noise opening must devote its complete surface to the listening instrument');
     assert.match(components, /\.slideshow-scene\s*\{[^}]*border:\s*0\s*!important/s,
@@ -767,8 +769,8 @@ test('Magic Park 2.2 component layer is composed for the eight transparent artwo
     assert.match(components, /\.star-name\s*\{[^}]*align-self:\s*end/s,
         'featured student name must remain visibly staged above the foreground podium');
 
-    assert.match(states, /#countdown-card\[data-flow-state="in-class"\]/,
-        'lesson-flow appearance must remain driven by the existing runtime state hook');
+    assert.match(lessonFlow, /\.lesson-flow-scene\[data-mode="in-class"\]/,
+        'lesson-flow appearance must be driven by its box-local runtime state hook');
     assert.match(states, /#noise-meter-card\.state-high/,
         'noise high state must retain a designed artwork-scoped state');
 });
@@ -857,6 +859,8 @@ test('Class TV is Magic-Park-only and the narrow attendance panel behaves as a m
     const html = read('public/index.html');
     const themeSystemCss = read('public/css/kiosk-theme-system.css');
     const components = read('public/themes/magic-park/magic-components.css');
+    const attendanceCss = read('public/themes/magic-park/boxes/attendance/attendance.css');
+    const attendanceRuntime = read('public/themes/magic-park/boxes/attendance/attendance.js');
 
     assert.match(themeSystemCss, /body:not\(\.theme-magic-park\)\s+#class-tv-layer\s*\{[^}]*display:\s*none/s,
         'shared theme chrome must hide Class TV only outside its owning theme');
@@ -870,10 +874,10 @@ test('Class TV is Magic-Park-only and the narrow attendance panel behaves as a m
     ]) {
         assert.match(html, new RegExp(`\\b${pageClass}\\b`), `${pageClass} must exist`);
     }
-    assert.match(components, /@keyframes\s+magic-attendance-channel/,
-        'the narrow attendance panel must rotate its compact views');
-    assert.match(components, /\.attendance-mini-page--gender\s*\{[^}]*animation-delay:/s);
-    assert.match(components, /\.attendance-mini-page--status\s*\{[^}]*animation-delay:/s);
+    assert.match(attendanceCss, /\.magic-attendance__scene\s*\{[^}]*opacity:\s*0/s,
+        'the narrow attendance panel must stage one owned scene at a time');
+    assert.match(attendanceRuntime, /scheduleNextScene/);
+    assert.match(attendanceRuntime, /SCENE_DURATION_MS\s*=\s*6000/);
 });
 
 test('emergency tribute portrait uses a correctly typed optimized WebP asset', () => {
@@ -954,12 +958,14 @@ test('detail-polish rules prevent narrow meters, clipped slides, and off-centre 
 test('live kiosk panels reserve gaps without clipping and share the centre title width', () => {
     const html = read('public/index.html');
     const css = read('public/css/kiosk-magic-park.css');
+    const attendanceCss = read('public/themes/magic-park/boxes/attendance/attendance.css');
+    const lessonFlowCss = read('public/themes/magic-park/boxes/lesson-flow/lesson-flow.css');
 
-    assert.match(css, /\.stats-body\s*\{[^}]*grid-template-rows:\s*minmax\(0, 40fr\) minmax\(0, 34fr\) minmax\(0, 26fr\)/s);
+    assert.match(attendanceCss, /\.magic-attendance__stage\s*\{[^}]*z-index:\s*2[^}]*perspective:/s);
     assert.match(css, /\.card-titlebar,[\s\S]*?width:\s*100%/s);
     assert.doesNotMatch(html, /class="[^"]*(?:card-titlebar-icon|stats-header-icon)/);
     assert.match(css, /\.noise-content\s*\{[^}]*inset:\s*18% 7\.5% 12\.5% 7\.5%[^}]*border:\s*0[^}]*box-shadow:\s*none/s);
-    assert.match(css, /\.before-school-mode,[\s\S]*?inset:\s*24% 16% 18% 16%/s);
+    assert.match(lessonFlowCss, /\.lesson-flow__content\s*\{[^}]*inset:\s*5\.5% 8% 7\.5%/s);
     assert.match(css, /\.vice-president-name\s*\{[^}]*overflow-wrap:\s*anywhere/s);
 });
 

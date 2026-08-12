@@ -1498,6 +1498,13 @@ function updateCountdown(now) {
         countdownCard.dataset.flowState = status.mode;
     }
 
+    const scheduleSource = typeof window.ScheduleManager.getScheduleSource === 'function'
+        ? window.ScheduleManager.getScheduleSource()
+        : 'fallback';
+    window.dispatchEvent(new CustomEvent('classroom:schedule-status-updated', {
+        detail: { status, scheduleSource, now }
+    }));
+
     const useGoodbyeMode = status.mode === 'weekend' || status.mode === 'after-school';
     const useBeforeSchoolMode = status.mode === 'before-school' && Boolean(beforeSchoolMode);
     const useCountdownMode = !useGoodbyeMode && !useBeforeSchoolMode;
@@ -1580,9 +1587,6 @@ function updateCountdown(now) {
             setDisplayIfChanged(countdownMode, 'flex');
             const titleEl = countdownMode.querySelector('h3');
             setTextIfChanged(titleEl, status.message);
-            const scheduleSource = typeof window.ScheduleManager.getScheduleSource === 'function'
-                ? window.ScheduleManager.getScheduleSource()
-                : 'fallback';
             const periodContextOptions = { showNext: scheduleSource === 'external' };
 
             const subtitleEl = countdownMode.querySelector('.countdown-subtitle');

@@ -159,6 +159,21 @@ function minutesToTime(minutes) {
     return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 }
 
+function timeToSeconds(timeString) {
+    return timeToMinutes(timeString) * 60;
+}
+
+function formatDuration(totalSeconds) {
+    const bounded = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+    const hours = Math.floor(bounded / 3600);
+    const minutes = Math.floor((bounded % 3600) / 60);
+    const seconds = bounded % 60;
+    if (hours > 0) {
+        return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
 /**
  * Hafta içi mi kontrolü (Pazartesi=1, Cuma=5)
  */
@@ -196,12 +211,13 @@ function getScheduleStatus(now) {
     const dayIndex = now.getDay(); // 0=Pazar, 1=Pazartesi, ..., 6=Cumartesi
     const currentHour = now.getHours();
     const currentMin = now.getMinutes();
-    const currentTime = currentHour * 60 + currentMin;
+    const currentSecond = now.getSeconds();
+    const currentTime = (currentHour * 3600) + (currentMin * 60) + currentSecond;
 
     const activeSchedule = getInternalActiveSchedule();
 
-    const schoolStartMinutes = timeToMinutes(activeSchedule.schoolStart);
-    const schoolEndMinutes = timeToMinutes(activeSchedule.schoolEnd);
+    const schoolStartSeconds = timeToSeconds(activeSchedule.schoolStart);
+    const schoolEndSeconds = timeToSeconds(activeSchedule.schoolEnd);
 
     // Hafta sonu kontrolü
     if (isWeekend(dayIndex)) {
@@ -231,26 +247,27 @@ function getScheduleStatus(now) {
     }
 
     // Ders başlamadan önce (09:00'dan önce)
-    if (currentTime < schoolStartMinutes) {
-        const minutesUntilStart = schoolStartMinutes - currentTime;
-        const hours = Math.floor(minutesUntilStart / 60);
-        const mins = minutesUntilStart % 60;
+    if (currentTime < schoolStartSeconds) {
+        const secondsUntilStart = schoolStartSeconds - currentTime;
+        const hours = Math.floor(secondsUntilStart / 3600);
+        const mins = Math.floor((secondsUntilStart % 3600) / 60);
 
         return {
             mode: 'before-school',
             message: 'Ders Başlamasına Kalan Süre',
             subtitle: `${activeSchedule.schoolStart} - Ders Başlıyor`,
-            countdown: `${hours}:${String(mins).padStart(2, '0')}`,
+            countdown: formatDuration(secondsUntilStart),
             progress: 0,
             visual: 'clock',
             hoursUntilStart: hours,
             minutesUntilStart: mins,
+            secondsUntilStart: secondsUntilStart % 60,
             image: 'assets/ui-icons-3d/school-clock.png'
         };
     }
 
     // Okul bittikten sonra (14:30'dan sonra)
-    if (currentTime >= schoolEndMinutes) {
+    if (currentTime >= schoolEndSeconds) {
         const dayNames = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
         const dayThemes = {
             1: { image: 'assets/ui-icons-3d/schedule-sunrise.png', subtitle: 'Harika bir hafta geçirdin!' },
@@ -277,6 +294,7 @@ function getScheduleStatus(now) {
     let currentPeriod = null;
     let nextBreak = null;
     let periodProgress = 0;
+    let currentPeriodNumber = null;
 
     let nextEventNameStr = null;
     let nextLessonNameStr = null;
@@ -285,12 +303,16 @@ function getScheduleStatus(now) {
         const period = activeSchedule.periods[i];
         if (!period || !period.type || !period.name) continue;
 
-        const periodStart = timeToMinutes(period.start);
-        const periodEnd = timeToMinutes(period.end);
+        const periodStart = timeToSeconds(period.start);
+        const periodEnd = timeToSeconds(period.end);
 
         // Şu anki dönem içindeyiz
         if (currentTime >= periodStart && currentTime < periodEnd) {
             currentPeriod = period;
+            currentPeriodNumber = activeSchedule.periods
+                .slice(0, i + 1)
+                .filter(candidate => candidate && candidate.type === period.type)
+                .length;
 
             const nextPeriod = findNextPeriod(activeSchedule.periods, i);
             const nextClassPeriod = findNextPeriodByType(activeSchedule.periods, i, 'class');
@@ -306,10 +328,6 @@ function getScheduleStatus(now) {
                     duration: nextPeriod && nextPeriod.duration ? nextPeriod.duration : 0
                 };
 
-                // Progress hesapla
-                const periodDuration = periodEnd - periodStart;
-                const elapsed = currentTime - periodStart;
-                periodProgress = Math.min(100, Math.max(0, (elapsed / periodDuration) * 100));
             } else {
                 // Teneffüsteyiz
                 if (nextPeriod) {
@@ -319,8 +337,13 @@ function getScheduleStatus(now) {
                         duration: 0
                     };
                 }
-                periodProgress = 0;
             }
+
+            const periodDuration = periodEnd - periodStart;
+            const elapsed = currentTime - periodStart;
+            periodProgress = periodDuration > 0
+                ? Math.min(100, Math.max(0, (elapsed / periodDuration) * 100))
+                : 0;
             break;
         }
     }
@@ -340,13 +363,11 @@ function getScheduleStatus(now) {
     // Countdown hesapla
     let countdownText = '--:--';
     if (nextBreak) {
-        const minutesUntilBreak = nextBreak.time - currentTime;
-        if (minutesUntilBreak > 0) {
-            const hours = Math.floor(minutesUntilBreak / 60);
-            const mins = minutesUntilBreak % 60;
-            countdownText = hours > 0 ? `${hours}:${String(mins).padStart(2, '0')}` : `${mins}:00`;
+        const secondsUntilBreak = nextBreak.time - currentTime;
+        if (secondsUntilBreak > 0) {
+            countdownText = formatDuration(secondsUntilBreak);
         } else {
-            countdownText = '0:00';
+            countdownText = '00:00';
         }
     }
 
@@ -361,6 +382,7 @@ function getScheduleStatus(now) {
         nextEvent: nextBreak ? nextBreak.name : 'Okul Sonu',
         currentPeriodName: currentPeriod.name,
         currentPeriodType: currentPeriod.type,
+        currentPeriodNumber,
         nextEventName: nextEventNameStr,
         nextLessonName: nextLessonNameStr
     };
@@ -376,7 +398,8 @@ if (typeof window !== 'undefined') {
         setExternalSchedule,
         clearExternalSchedule,
         getActiveSchedule,
-        getScheduleSource
+        getScheduleSource,
+        formatDuration
     };
 }
 
@@ -390,10 +413,8 @@ if (typeof module !== 'undefined' && module.exports) {
         setExternalSchedule,
         clearExternalSchedule,
         getActiveSchedule,
-        getScheduleSource
+        getScheduleSource,
+        formatDuration
     };
 }
-
-
-
 

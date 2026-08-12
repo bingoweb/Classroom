@@ -157,36 +157,57 @@
                 <div class="card-titlebar card-titlebar--lilac">
                     <span>Ders Akışı</span>
                 </div>
-                <div class="magic-scene lesson-flow-scene">
-                <!-- Before School Starts -->
-                <div class="before-school-mode" id="before-school-mode" style="display: none;">
-                    <div class="clock-visual">
-                        <img class="clock-icon" src="assets/ui-icons-3d/school-clock.png" alt="Ders başlangıç saati">
+                <div class="magic-scene lesson-flow-scene" id="magic-lesson-flow" hidden
+                    aria-live="polite" aria-atomic="true">
+                    <div class="lesson-flow__progress-wash" aria-hidden="true"></div>
+                    <div class="lesson-flow__depth" data-lesson-flow-webgl aria-hidden="true"></div>
+                    <div class="lesson-flow__glow" aria-hidden="true"></div>
+                    <span class="lesson-flow__water-meter" role="progressbar" aria-label="Geçen süre"
+                        aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
+                    <div class="lesson-flow__content">
+                        <p class="lesson-flow__title" id="lesson-flow-title">DERS BAŞLIYOR</p>
+                        <p class="lesson-flow__kicker" id="lesson-flow-kicker">BAŞLAMASINA KALAN</p>
+                        <strong class="lesson-flow__primary is-countdown" id="lesson-flow-primary">--:--</strong>
+                        <div class="lesson-flow__context">
+                            <strong class="lesson-flow__current" id="lesson-flow-current">09:00’DA</strong>
+                            <span class="lesson-flow__next-group">
+                                <small id="lesson-flow-next-label" hidden></small>
+                                <strong id="lesson-flow-next" hidden></strong>
+                            </span>
+                        </div>
                     </div>
-                    <h3 id="before-school-title">Ders Başlamasına Kalan Süre</h3>
-                    <p class="before-school-subtitle" id="before-school-subtitle">09:00 - Ders Başlıyor</p>
-                    <div class="countdown-text" id="before-school-countdown">--:--</div>
                 </div>
 
-                <!-- During School Hours -->
-                <div class="countdown-mode" id="countdown-mode">
-                    <h3>Teneffüse Kalan Zaman</h3>
-                    <div class="countdown-subtitle"></div>
-                    <div class="progress-bar-container" role="progressbar" aria-label="Ders süresi ilerlemesi"
-                        aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                        <div class="progress-bar" id="countdown-bar"></div>
+                <div class="lesson-flow-legacy">
+                    <!-- Before School Starts -->
+                    <div class="before-school-mode" id="before-school-mode" style="display: none;">
+                        <div class="clock-visual">
+                            <img class="clock-icon" src="assets/ui-icons-3d/school-clock.png" alt="Ders başlangıç saati">
+                        </div>
+                        <h3 id="before-school-title">Ders Başlamasına Kalan Süre</h3>
+                        <p class="before-school-subtitle" id="before-school-subtitle">09:00 - Ders Başlıyor</p>
+                        <div class="countdown-text" id="before-school-countdown">--:--</div>
                     </div>
-                    <div class="countdown-text" id="countdown">--:--</div>
-                </div>
 
-                <!-- After School Hours -->
-                <div class="goodbye-mode" id="goodbye-mode" style="display: none;">
-                    <div class="goodbye-visual" id="goodbye-visual">
-                        <!-- Dynamic daily theme icons will be inserted here -->
+                    <!-- During School Hours -->
+                    <div class="countdown-mode" id="countdown-mode">
+                        <h3>Teneffüse Kalan Zaman</h3>
+                        <div class="countdown-subtitle"></div>
+                        <div class="progress-bar-container" role="progressbar" aria-label="Ders süresi ilerlemesi"
+                            aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                            <div class="progress-bar" id="countdown-bar"></div>
+                        </div>
+                        <div class="countdown-text" id="countdown">--:--</div>
                     </div>
-                    <h2 class="goodbye-title" id="goodbye-title">Yarın Görüşürüz!</h2>
-                    <p class="goodbye-subtitle" id="goodbye-subtitle">İyi dinlenin</p>
-                </div>
+
+                    <!-- After School Hours -->
+                    <div class="goodbye-mode" id="goodbye-mode" style="display: none;">
+                        <div class="goodbye-visual" id="goodbye-visual">
+                            <!-- Dynamic daily theme icons will be inserted here -->
+                        </div>
+                        <h2 class="goodbye-title" id="goodbye-title">Yarın Görüşürüz!</h2>
+                        <p class="goodbye-subtitle" id="goodbye-subtitle">İyi dinlenin</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -319,6 +340,8 @@
     <script src="js/time-provider.js"></script>
     <script src="themes/magic-park/boxes/clock/clock.js?v=2"></script>
     <script src="themes/magic-park/boxes/attendance/attendance.js?v=1"></script>
+    <script src="themes/magic-park/boxes/lesson-flow/liquid-physics.js?v=5"></script>
+    <script src="themes/magic-park/boxes/lesson-flow/lesson-flow.js?v=18"></script>
     <script src="js/utils.js"></script>
     <script src="js/confetti.js"></script>
     <script src="js/kiosk-motion.js?v=5"></script>

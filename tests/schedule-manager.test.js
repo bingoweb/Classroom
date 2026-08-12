@@ -335,6 +335,54 @@ test('28. Existing weekend status still works', () => {
     assert.strictEqual(status.mode, 'weekend');
 });
 
+test('28a. In-class countdown ticks with wall-clock seconds', () => {
+    const { manager } = loadIsolatedManager();
+
+    assert.strictEqual(manager.getScheduleStatus(new Date('2024-01-01T09:10:00')).countdown, '30:00');
+    assert.strictEqual(manager.getScheduleStatus(new Date('2024-01-01T09:10:01')).countdown, '29:59');
+    assert.strictEqual(manager.getScheduleStatus(new Date('2024-01-01T09:10:59')).countdown, '29:01');
+});
+
+test('28b. Before-school countdown includes seconds and supports durations above one hour', () => {
+    const { manager } = loadIsolatedManager();
+
+    assert.strictEqual(manager.getScheduleStatus(new Date('2024-01-01T08:59:30')).countdown, '00:30');
+    assert.strictEqual(manager.getScheduleStatus(new Date('2024-01-01T07:59:59')).countdown, '1:00:01');
+});
+
+test('28c. Lesson and break progress advance continuously instead of resetting to whole minutes', () => {
+    const { manager } = loadIsolatedManager();
+
+    const lesson = manager.getScheduleStatus(new Date('2024-01-01T09:10:30'));
+    assert.strictEqual(lesson.progress, 26.25);
+
+    const schoolBreak = manager.getScheduleStatus(new Date('2024-01-01T09:47:30'));
+    assert.strictEqual(schoolBreak.mode, 'in-break');
+    assert.strictEqual(schoolBreak.countdown, '07:30');
+    assert.strictEqual(schoolBreak.progress, 50);
+});
+
+test('28d. Exact period boundaries switch state without a stale zero countdown', () => {
+    const { manager } = loadIsolatedManager();
+
+    const beforeBoundary = manager.getScheduleStatus(new Date('2024-01-01T09:39:59'));
+    const atBoundary = manager.getScheduleStatus(new Date('2024-01-01T09:40:00'));
+    assert.strictEqual(beforeBoundary.mode, 'in-class');
+    assert.strictEqual(beforeBoundary.countdown, '00:01');
+    assert.strictEqual(atBoundary.mode, 'in-break');
+    assert.strictEqual(atBoundary.countdown, '15:00');
+});
+
+test('28e. Every lesson and break exposes its human-readable ordinal', () => {
+    const { manager } = loadIsolatedManager();
+
+    assert.strictEqual(manager.getScheduleStatus(new Date('2024-01-01T09:10:00')).currentPeriodNumber, 1);
+    assert.strictEqual(manager.getScheduleStatus(new Date('2024-01-01T09:45:00')).currentPeriodNumber, 1);
+    assert.strictEqual(manager.getScheduleStatus(new Date('2024-01-01T10:00:00')).currentPeriodNumber, 2);
+    assert.strictEqual(manager.getScheduleStatus(new Date('2024-01-01T12:30:00')).currentPeriodNumber, 4);
+    assert.strictEqual(manager.getScheduleStatus(new Date('2024-01-01T13:55:00')).currentPeriodNumber, 6);
+});
+
 test('29. Browser-style export works', () => {
     const normalizerCode = fs.readFileSync(path.join(__dirname, '../public/js/schedule-normalizer.js'), 'utf8');
     const managerCode = fs.readFileSync(path.join(__dirname, '../public/js/schedule-manager.js'), 'utf8');
