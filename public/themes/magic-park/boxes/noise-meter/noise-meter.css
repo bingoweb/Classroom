@@ -1,0 +1,594 @@
+/*
+ * Magic Park — Sınıfın Ses Dengesi / Profesyonel Mini Ses Konsolu
+ *
+ * Geometry source of truth:
+ *   3840×2160 kiosk opening => 1420×638
+ *   1920×1080 kiosk opening => 710×319
+ *   supplied panel crop     => 1721×800
+ *   rendered panel width    => 100.55% of the opening (tiny edge overscan, no stretch)
+ *   rendered panel height   => ~104.03% of the opening (aspect-preserving cover)
+ *
+ * Presentation only. public/js/noise-meter.js remains the sole owner of
+ * getUserMedia, AudioContext, calibration, smoothing, hysteresis, auto-reconnect,
+ * ARIA meter values, analyser data and classroom:noise-state.
+ */
+
+body.magic-park-theme.theme-magic-park #noise-meter-card {
+    --noise-screen: #04192f;
+    --noise-screen-2: #07324f;
+    --noise-cyan: #58e4e6;
+    --noise-mint: #63e3a0;
+    --noise-lime: #a8e154;
+    --noise-yellow: #ffd857;
+    --noise-orange: #ff9a43;
+    --noise-coral: #ff7470;
+    --noise-pink: #ef67aa;
+    --noise-violet: #8c72e7;
+    --noise-text: #f8ffff;
+    --noise-muted: #b8dce9;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: geometricPrecision;
+    animation: none;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card[hidden] {
+    display: none;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-scene {
+    position: absolute;
+    inset: 0 !important;
+    isolation: isolate;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    width: auto;
+    height: auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background:
+        radial-gradient(circle at 50% 44%, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0) 44%),
+        linear-gradient(165deg, #dff8df 0%, #bdf3e2 38%, #8ce4dc 72%, #64ced2 100%);
+}
+
+/*
+ * The visible chassis is the user-supplied panel, processed through GIMP only
+ * to clear its connected white canvas and crop it to the real device bounds.
+ * CSS only places live text/analyser data into its physical openings.
+ */
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-scene::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: url('./assets/noise-console-panel.webp') center / 100.55% auto no-repeat;
+    transform: scaleY(1.018);
+    transform-origin: center;
+    filter: drop-shadow(0 0.42cqh 0.34cqh rgba(27, 67, 96, 0.18));
+    transition: filter 180ms ease;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-scene::after {
+    content: none;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-info {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    overflow: visible;
+}
+
+/* panel screen: x=266..1452, y=129..490 in the 1721×800 cropped faceplate. */
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-status {
+    position: absolute;
+    top: 18.3%;
+    left: 17.7%;
+    z-index: 5;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1.25%;
+    width: 64.6%;
+    height: 8.8%;
+    min-width: 0;
+    min-height: 0;
+    padding: 0 1.0%;
+    overflow: hidden;
+    border: 0;
+    border-bottom: 0.075cqh solid rgba(101, 224, 232, 0.22);
+    color: var(--noise-text) !important;
+    background: transparent;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-status::after {
+    content: '';
+    display: block;
+    width: 0.64cqw;
+    height: 0.64cqw;
+    border-radius: 50%;
+    background: var(--noise-cyan);
+    box-shadow:
+        -0.98cqw 0 0 var(--noise-violet),
+        -1.96cqw 0 0 var(--noise-pink),
+        0 0 0.34cqw rgba(88, 228, 230, 0.52);
+    opacity: 0.92;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-status-icon {
+    width: 2.72cqw;
+    height: 2.72cqw;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    object-fit: contain;
+    filter:
+        drop-shadow(0 0.12cqh 0.08cqh rgba(0, 8, 26, 0.78))
+        drop-shadow(0 0 0.26cqw rgba(88, 228, 230, 0.24));
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-status-copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.12cqh;
+    min-width: 0;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-status-copy strong {
+    overflow: hidden;
+    color: var(--noise-text);
+    font-family: 'Fredoka Classroom', sans-serif;
+    font-size: clamp(0.94rem, 1.5cqw, 1.64rem);
+    font-weight: 790;
+    line-height: 1.08;
+    letter-spacing: 0.008em;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: geometricPrecision;
+    -webkit-text-stroke: 0.014em rgba(5, 32, 55, 0.38);
+    text-shadow:
+        0 0.07cqh 0 rgba(0, 5, 20, 0.96),
+        0 0.13cqh 0 rgba(0, 10, 28, 0.78),
+        0 0 0.28cqw rgba(95, 225, 232, 0.32);
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-status-copy small {
+    overflow: hidden;
+    color: var(--noise-muted);
+    font-family: 'Nunito Classroom', sans-serif;
+    font-size: clamp(0.62rem, 0.79cqw, 0.9rem);
+    font-weight: 860;
+    line-height: 1.08;
+    letter-spacing: 0.012em;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: geometricPrecision;
+    -webkit-text-stroke: 0.01em rgba(2, 24, 43, 0.36);
+    text-shadow:
+        0 0.055cqh 0 rgba(0, 6, 19, 0.96),
+        0 0.11cqh 0 rgba(0, 10, 28, 0.72),
+        0 0 0.18cqw rgba(88, 228, 230, 0.20);
+}
+
+/* The container spans the whole face so its children can occupy LCD + key shelf. */
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-meter-container {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: block !important;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+/* Faint LCD grid lives strictly inside the real screen glass. */
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-meter-container::before {
+    content: '';
+    position: absolute;
+    top: 16.5%;
+    left: 16.27%;
+    z-index: 0;
+    width: 67.58%;
+    height: 44.23%;
+    pointer-events: none;
+    border-radius: 0.5cqw;
+    background:
+        linear-gradient(rgba(88, 228, 230, 0.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(88, 228, 230, 0.035) 1px, transparent 1px);
+    background-size: 100% 25%, 6.25% 100%;
+    box-shadow: inset 0 0 0 0.05cqw rgba(95, 226, 232, 0.10);
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-meter-container::after {
+    content: '';
+    position: absolute;
+    top: 58.2%;
+    left: 17.7%;
+    z-index: 1;
+    width: 64.6%;
+    height: 0.12cqh;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent, rgba(88, 228, 230, 0.66) 15% 42%, rgba(255, 216, 87, 0.60) 54% 69%, rgba(239, 103, 170, 0.66) 82%, transparent);
+    box-shadow: 0 0 0.28cqw rgba(88, 228, 230, 0.24);
+    pointer-events: none;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .equalizer-container {
+    position: absolute;
+    top: 28.4%;
+    left: 17.45%;
+    z-index: 3;
+    display: block !important;
+    width: 65.1%;
+    height: 21.6%;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0.7% 0.5% 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0.35cqw;
+    background: linear-gradient(180deg, rgba(4, 25, 47, 0.16), rgba(2, 16, 34, 0.42));
+    box-shadow: inset 0 0 0 0.04cqw rgba(103, 229, 234, 0.08);
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .equalizer-container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        repeating-linear-gradient(180deg, transparent 0 23%, rgba(109, 229, 232, 0.075) 23.5% 24%, transparent 24.5% 25%),
+        linear-gradient(104deg, transparent 0 20%, rgba(130, 242, 243, 0.07) 29%, transparent 39% 100%);
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .equalizer-bars {
+    position: relative;
+    z-index: 2;
+    display: grid !important;
+    grid-template-columns: repeat(128, minmax(0, 1fr));
+    align-items: end;
+    gap: 0.026cqw;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .eq-column,
+body.magic-park-theme.theme-magic-park #noise-meter-card .eq-column:nth-child(even) {
+    position: relative;
+    display: flex !important;
+    flex-direction: column-reverse;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .eq-bar {
+    width: 100%;
+    min-height: 0.16cqh;
+    border-radius: 999px 999px 0.03cqw 0.03cqw;
+    background: linear-gradient(180deg, #a985f6 0%, #ef72b5 18%, #ffd85c 40%, #91e66a 63%, #58e4e6 82%, #64bdf4 100%);
+    box-shadow: 0 0 0.14cqw rgba(88, 228, 230, 0.44) !important;
+    filter: saturate(1.12) brightness(1.08);
+    mask-image: none;
+    -webkit-mask-image: none;
+    animation: none !important;
+    transition: height 42ms linear, filter 160ms ease, background 180ms ease;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .eq-peak {
+    width: 100%;
+    height: 0.13cqh;
+    min-height: 1px;
+    border-radius: 999px;
+    background: #fff3a6;
+    box-shadow: 0 0 0.16cqw rgba(255, 225, 100, 0.72);
+    transition: bottom 90ms linear, opacity 150ms ease;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .eq-label {
+    display: none;
+}
+
+/* role=meter remains on .noise-progress; its visual children are independently placed. */
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-progress {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-meter-bar {
+    --warning-threshold: 70%;
+    --danger-threshold: 85%;
+    position: absolute;
+    top: 53.0%;
+    left: 17.55%;
+    width: 64.9%;
+    height: 4.5%;
+    min-height: 0.72rem;
+    overflow: hidden;
+    border: 0.075cqw solid rgba(176, 242, 242, 0.72);
+    border-radius: 999px;
+    background:
+        linear-gradient(90deg,
+            rgba(88, 226, 163, 0.18) 0 70%,
+            rgba(255, 216, 87, 0.22) 70% 85%,
+            rgba(239, 103, 170, 0.24) 85% 100%),
+        #0a2945;
+    box-shadow:
+        inset 0 0.18cqh 0.34cqh rgba(0, 4, 18, 0.48),
+        0 0 0.18cqw rgba(77, 218, 223, 0.12);
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-meter-bar::before,
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-meter-bar::after {
+    content: '';
+    position: absolute;
+    top: -24%;
+    z-index: 4;
+    width: 0.095cqw;
+    height: 148%;
+    border-radius: 999px;
+    background: #fff5b0;
+    box-shadow: 0 0 0.19cqw rgba(255, 232, 125, 0.68);
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-meter-bar::before {
+    left: var(--warning-threshold);
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-meter-bar::after {
+    left: var(--danger-threshold);
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-meter-fill {
+    position: relative;
+    height: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #58e3a4 0%, #94e14f 38%, #ffd857 69%, #ff9d43 84%, #ef67aa 100%) !important;
+    box-shadow:
+        inset 0 0.10cqh 0 rgba(255, 255, 255, 0.72),
+        0 0 0.36cqw rgba(92, 227, 169, 0.48);
+    transition: width 120ms linear, background 190ms ease, box-shadow 190ms ease;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-meter-fill[data-demo="true"] {
+    background: linear-gradient(90deg, #64bdf4 0%, #58e4e6 26%, #73ddb0 49%, #ffd85c 72%, #ef72b5 100%) !important;
+    box-shadow:
+        inset 0 0.10cqh 0 rgba(255, 255, 255, 0.76),
+        0 0 0.34cqw rgba(88, 228, 230, 0.44);
+    transition: width 90ms linear, background 180ms ease, box-shadow 180ms ease;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-meter-fill::after {
+    content: '';
+    position: absolute;
+    inset: 13% 1.5% auto;
+    height: 25%;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.55);
+}
+
+/*
+ * The supplied panel already contains the lower hardware/control rail. These
+ * semantic labels sit on that hardware without drawing a second button skin.
+ */
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-scale-labels {
+    position: absolute;
+    top: 74.0%;
+    left: 20.9%;
+    z-index: 7;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.95cqw;
+    width: 58.2%;
+    height: 10.4%;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-scale-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.34cqw;
+    min-width: 0;
+    min-height: 0;
+    padding: 0 0.45cqw;
+    overflow: hidden;
+    border: 0;
+    border-radius: 999px;
+    color: #eaffff;
+    background: rgba(4, 29, 47, 0.34);
+    font-family: 'Fredoka Classroom', sans-serif;
+    font-size: clamp(0.68rem, 0.94cqw, 1rem);
+    font-weight: 790;
+    line-height: 1;
+    letter-spacing: 0.005em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: geometricPrecision;
+    -webkit-text-stroke: 0.014em rgba(0, 14, 30, 0.48);
+    text-shadow:
+        0 0.055cqh 0 rgba(0, 7, 20, 0.98),
+        0 0.12cqh 0 rgba(0, 14, 33, 0.82),
+        0 0 0.20cqw rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 0 0 0.055cqw rgba(219, 252, 255, 0.16);
+    opacity: 0.94;
+    transform: translateY(0);
+    filter: saturate(0.96);
+    transition: transform 160ms ease, filter 160ms ease, opacity 160ms ease;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-scale-label--quiet {
+    color: #caffdf;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-scale-label--warning {
+    color: #fff0a8;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-scale-label--danger {
+    color: #ffc4dd;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-legend-light {
+    display: block;
+    width: 0.62cqw;
+    height: 0.62cqw;
+    min-width: 0.42rem;
+    min-height: 0.42rem;
+    flex: 0 0 auto;
+    border: 0.06cqw solid rgba(255, 255, 255, 0.88);
+    background: currentColor;
+    box-shadow: 0 0 0.2cqw currentColor;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-legend-light.quiet {
+    border-radius: 50%;
+    color: #268f5e;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-legend-light.warning {
+    border-radius: 0.1cqw;
+    color: #d98b2a;
+    transform: rotate(45deg) scale(0.82);
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-legend-light.danger {
+    border-radius: 0.16cqw;
+    color: #bd3e79;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card .noise-scale-label.is-active {
+    opacity: 1;
+    filter: saturate(1.30) brightness(1.08) drop-shadow(0 0.24cqh 0.26cqh rgba(255, 255, 255, 0.20));
+    transform: translateY(-0.36cqh) scale(1.018);
+}
+
+/* The device remains one piece; semantic state changes only its illuminated parts. */
+body.magic-park-theme.theme-magic-park #noise-meter-card.state-low .noise-status-copy strong {
+    color: #caffcb;
+    text-shadow: 0 0.08cqh 0 rgba(0, 5, 20, 0.92), 0 0 0.30cqw rgba(99, 227, 160, 0.44);
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card.state-medium .noise-status-copy strong {
+    color: #fff2a3;
+    text-shadow: 0 0.08cqh 0 rgba(0, 5, 20, 0.92), 0 0 0.30cqw rgba(255, 216, 87, 0.46);
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card.state-high .noise-status-copy strong {
+    color: #ffc0dc;
+    text-shadow: 0 0.08cqh 0 rgba(0, 5, 20, 0.92), 0 0 0.34cqw rgba(239, 103, 170, 0.52);
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card.state-high .eq-bar {
+    background: linear-gradient(180deg, #ff72b7 0%, #ffd857 28%, #ff9d43 57%, #ff6f73 100%);
+    box-shadow: 0 0 0.15cqw rgba(255, 103, 126, 0.48) !important;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card.state-high .eq-peak {
+    background: #ffe9a2;
+    box-shadow: 0 0 0.18cqw rgba(255, 132, 155, 0.82);
+}
+
+/*
+ * The console never visually sleeps. Microphone states remain semantic/runtime
+ * hooks, while JS supplies a lightweight ambient waveform until real analyser
+ * data takes ownership of the 128 bands.
+ */
+body.magic-park-theme.theme-magic-park #noise-meter-card.mic-state-idle .equalizer-container,
+body.magic-park-theme.theme-magic-park #noise-meter-card.mic-state-requesting .equalizer-container,
+body.magic-park-theme.theme-magic-park #noise-meter-card.mic-state-unavailable .equalizer-container {
+    display: block !important;
+    opacity: 1;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card.mic-state-idle .eq-bar,
+body.magic-park-theme.theme-magic-park #noise-meter-card.mic-state-requesting .eq-bar,
+body.magic-park-theme.theme-magic-park #noise-meter-card.mic-state-unavailable .eq-bar {
+    min-height: 0.18cqh;
+    opacity: 0.9;
+    background: linear-gradient(180deg, #a985f6 0%, #ef72b5 28%, #ffd85c 50%, #73ddb0 72%, #58dce4 100%);
+    box-shadow: 0 0 0.11cqw rgba(88, 220, 228, 0.30) !important;
+    animation: none !important;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card.mic-state-idle .eq-peak,
+body.magic-park-theme.theme-magic-park #noise-meter-card.mic-state-requesting .eq-peak,
+body.magic-park-theme.theme-magic-park #noise-meter-card.mic-state-unavailable .eq-peak {
+    opacity: 0 !important;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card.mic-state-requesting .equalizer-container {
+    animation: magicNoiseScreenListen 1.2s ease-in-out infinite;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card.mic-state-requesting .noise-status-icon {
+    animation: magicNoiseMicListen 1.05s ease-in-out infinite;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card.mic-state-unavailable .noise-status-copy strong {
+    color: #e2d5ff;
+}
+
+body.magic-park-theme.theme-magic-park #noise-meter-card.mic-state-unavailable .noise-scale-labels {
+    visibility: visible;
+    opacity: 1;
+    filter: none;
+}
+
+@keyframes magicNoiseScreenListen {
+    0%, 100% { filter: brightness(0.96); }
+    50% { filter: brightness(1.12); }
+}
+
+@keyframes magicNoiseMicListen {
+    0%, 100% { transform: scale(0.98); }
+    50% { transform: scale(1.055); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.magic-park-theme.theme-magic-park #noise-meter-card *,
+    body.magic-park-theme.theme-magic-park #noise-meter-card *::before,
+    body.magic-park-theme.theme-magic-park #noise-meter-card *::after {
+        animation: none !important;
+        transition-duration: 0.001ms !important;
+    }
+}

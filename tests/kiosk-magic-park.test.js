@@ -728,12 +728,14 @@ test('Magic Park 2.2 component layer is composed for the eight transparent artwo
     const clockPath = path.join(root, 'public/themes/magic-park/boxes/clock/clock.css');
     const attendancePath = path.join(root, 'public/themes/magic-park/boxes/attendance/attendance.css');
     const lessonFlowPath = path.join(root, 'public/themes/magic-park/boxes/lesson-flow/lesson-flow.css');
+    const noiseMeterPath = path.join(root, 'public/themes/magic-park/boxes/noise-meter/noise-meter.css');
     const componentsPath = path.join(root, 'public/themes/magic-park/magic-components.css');
     const statesPath = path.join(root, 'public/themes/magic-park/magic-states.css');
     const theme = fs.readFileSync(themePath, 'utf8');
     const clock = fs.readFileSync(clockPath, 'utf8');
     const attendance = fs.readFileSync(attendancePath, 'utf8');
     const lessonFlow = fs.readFileSync(lessonFlowPath, 'utf8');
+    const noiseMeter = fs.readFileSync(noiseMeterPath, 'utf8');
     const components = fs.readFileSync(componentsPath, 'utf8');
     const states = fs.readFileSync(statesPath, 'utf8');
 
@@ -756,8 +758,56 @@ test('Magic Park 2.2 component layer is composed for the eight transparent artwo
         'attendance opening must act as the viewport for its owned rotating scenes');
     assert.match(attendance, /\.magic-attendance__scene--total \.magic-attendance__copy/,
         'attendance package must own the total-student hero');
-    assert.match(components, /\.noise-scene\s*\{[^}]*grid-template-rows:/s,
-        'wide noise opening must devote its complete surface to the listening instrument');
+    assert.match(theme, /@import url\('\.\/boxes\/noise-meter\/noise-meter\.css'\);/,
+        'noise opening must load its dedicated box package instead of sharing generic Magic Park component CSS');
+    assert.match(noiseMeter, /\.noise-scene\s*\{[^}]*grid-template-rows:/s,
+        'noise package must devote its complete surface to one listening instrument');
+    assert.match(noiseMeter, /\.equalizer-bars\s*\{[^}]*grid-template-columns:\s*repeat\(128,/s,
+        'noise package must present all 128 real equalizer bands');
+    assert.match(noiseMeter, /#noise-meter-card \.eq-bar\s*\{[^}]*animation:\s*none\s*!important/s,
+        'real analyser data must own equalizer motion without the legacy decorative pulse');
+    assert.match(noiseMeter, /noise-console-panel\.webp/,
+        'child-friendly technical console must use the user-supplied panel faceplate processed for kiosk use');
+    assert.doesNotMatch(noiseMeter, /url\(['"]?\.\/assets\/noise-console-gimp\.webp['"]?\)/,
+        'the previous generated GIMP faceplate must not render behind the user-supplied panel');
+    assert.match(noiseMeter, /--noise-screen:\s*#0[0-9a-f]{5}/i,
+        'noise package must define a dark electronics-style LCD colour');
+    assert.match(noiseMeter, /panel screen: x=266\.\.1452, y=129\.\.490/i,
+        'the live analyser geometry must be locked to the detected display opening in the supplied panel');
+    assert.match(noiseMeter, /noise-scale-label--quiet[\s\S]*noise-scale-label--warning[\s\S]*noise-scale-label--danger/s,
+        'the three semantic ranges must remain visible as child-friendly physical controls');
+    assert.match(noiseMeter, /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)\s*!important/,
+        'physical preset controls must be equal size instead of inheriting threshold proportions');
+    assert.doesNotMatch(noiseMeter, /mic-state-unavailable\s+\.noise-scale-labels\s*\{[^}]*visibility:\s*hidden/s,
+        'the three physical controls must stay visible even when microphone input is unavailable');
+    assert.doesNotMatch(noiseMeter, /mic-state-(?:idle|requesting|unavailable)\s+\.eq-bar\s*\{[^}]*height:\s*[^;}]+!important/s,
+        'microphone fallback states must not freeze all equalizer bands to a CSS sleep pattern');
+    const noiseHardwarePath = path.join(root, 'public/themes/magic-park/boxes/noise-meter/assets/noise-console-panel.webp');
+    assert.equal(fs.existsSync(noiseHardwarePath), true,
+        'noise package must ship the cropped user-supplied professional faceplate');
+    assert.match(noiseMeter, /url\(['"]?\.\/assets\/noise-console-panel\.webp['"]?\)/,
+        'noise package must use the supplied panel faceplate instead of CSS-only hardware');
+    assert.match(noiseMeter, /background:\s*url\(['"]?\.\/assets\/noise-console-panel\.webp['"]?\)\s+center\s*\/\s*100\.55%\s+auto\s+no-repeat/,
+        'supplied panel must slightly overscan the noise opening width without aspect-ratio distortion');
+    assert.match(noiseMeter, /\.noise-scene::before\s*\{[^}]*transform:\s*scaleY\(1\.018\)/s,
+        'the supplied panel must use the requested slightly stronger vertical expansion while retaining its 100.55% width fit');
+    assert.match(noiseMeter, /\.noise-scale-labels\s*\{[^}]*top:\s*74\.0%[^}]*left:\s*20\.9%[^}]*width:\s*58\.2%[^}]*height:\s*10\.4%/s,
+        'the three semantic controls must fill the lower physical control shelf precisely');
+    assert.doesNotMatch(noiseMeter, /\.mic-start-btn/,
+        'the retired retry overlay must not remain in the Magic Park noise package');
+    assert.match(noiseMeter, /#noise-meter-card\s*\{[^}]*-webkit-font-smoothing:\s*antialiased[^}]*text-rendering:\s*geometricPrecision/s,
+        'noise console typography must use high-clarity font rendering');
+    assert.match(noiseMeter, /\.noise-scale-label\s*\{[^}]*-webkit-text-stroke:[^}]*text-shadow:\s*[^;]+,[^;]+/s,
+        'the three lower controls must use a subtle stroke plus layered text shadow for readability');
+    const noiseManifest = read('public/themes/magic-park/boxes/noise-meter/noise-meter.json');
+    assert.match(noiseManifest, /"source":\s*"public\/assets\/panel\.png"/,
+        'noise package must record panel.png as the active user-supplied faceplate source');
+    assert.doesNotMatch(noiseMeter, /\.noise-info::before\s*\{[^}]*radial-gradient|\.noise-info::after\s*\{[^}]*radial-gradient/s,
+        'the final hardware controls must not be painted as CSS-only radial-gradient knobs');
+    assert.doesNotMatch(components, /\.noise-scene|\.noise-status|\.noise-meter-|\.noise-scale-|\.equalizer-|\.eq-bar|\.eq-peak|\.mic-start-btn/,
+        'generic Magic Park component CSS must not own box-local noise presentation');
+    assert.doesNotMatch(states, /#noise-meter-card|\.state-(?:low|medium|high)\s+\.noise-scene/,
+        'generic Magic Park state CSS must not own box-local noise visual states');
     assert.match(components, /\.slideshow-scene\s*\{[^}]*border:\s*0\s*!important/s,
         'theatre media must sit directly behind the foreground curtains without a duplicate frame');
     assert.match(components, /#president-container\s*\{[^}]*place-items:\s*center/s,
@@ -771,8 +821,8 @@ test('Magic Park 2.2 component layer is composed for the eight transparent artwo
 
     assert.match(lessonFlow, /\.lesson-flow-scene\[data-mode="in-class"\]/,
         'lesson-flow appearance must be driven by its box-local runtime state hook');
-    assert.match(states, /#noise-meter-card\.state-high/,
-        'noise high state must retain a designed artwork-scoped state');
+    assert.match(noiseMeter, /#noise-meter-card\.state-high/,
+        'noise high state must retain a designed artwork-scoped state inside its box package');
 });
 
 test('Magic Park 2.2 exposes eight semantic scene roots without replacing dynamic kiosk hooks', () => {
@@ -820,7 +870,6 @@ test('Magic Park 2.2 exposes eight semantic scene roots without replacing dynami
         'noise-level-meter',
         'noise-meter-fill',
         'equalizer-container',
-        'mic-start-btn',
         'slideshow-container',
         'class-tv-layer',
         'class-tv-programme',
@@ -846,10 +895,18 @@ test('Class TV owns Lavunu while the top noise panel remains a dedicated instrum
         'Lavunu must no longer live in the top listening panel');
     assert.match(noisePanel, /id="noise-level-meter"/);
     assert.match(noisePanel, /id="equalizer-container"/);
+    assert.doesNotMatch(noisePanel, /id="mic-start-btn"|Tekrar Dene/,
+        'noise panel must not render a manual retry layer');
     assert.match(html, /id="class-tv-layer"/);
     assert.match(html, /js\/class-tv\.js\?v=1/);
     assert.match(noiseSource, /classroom:noise-state/,
         'noise sensing must publish semantic state to the broadcast layer');
+    assert.match(noiseSource, /startAmbientEqualizer\(\)/,
+        'noise meter must provide a lightweight animated fallback while analyser data is unavailable');
+    assert.match(noiseSource, /stopAmbientEqualizer\(\)/,
+        'real analyser ownership must be able to stop the fallback equalizer immediately');
+    assert.match(noiseSource, /addEventListener\(['"]devicechange['"]/,
+        'noise sensing must automatically retry when the browser reports a microphone device change');
     assert.match(classTvSource, /assets\/noise-states\/quiet\.webp/);
     assert.match(classTvSource, /assets\/noise-states\/attention\.webp/);
     assert.match(classTvSource, /assets\/noise-states\/loud\.webp/);

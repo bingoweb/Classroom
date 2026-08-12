@@ -85,7 +85,6 @@ function createHarness() {
     const statusIcon = createElement();
     const statusTitle = createElement();
     const statusSubtitle = createElement();
-    const startButton = createElement();
     const equalizerWrapper = createElement();
     const equalizerContainer = createElement();
     const scaleLabels = ['low', 'medium', 'high'].map(level => {
@@ -102,7 +101,6 @@ function createHarness() {
         'noise-level-meter': levelMeter,
         'noise-meter-fill': fill,
         'noise-status-text': status,
-        'mic-start-btn': startButton,
         'equalizer-container': equalizerContainer
     };
     const selectorElements = {
@@ -145,6 +143,11 @@ function createHarness() {
         }
     }
 
+    let animationFrameCallback = null;
+    let animationFrameRequests = 0;
+    let cancelledAnimationFrames = 0;
+    let reducedMotion = false;
+    const mediaDeviceListeners = new Map();
     const sandbox = {
         console: {
             log() {},
@@ -165,12 +168,24 @@ function createHarness() {
         },
         navigator: {
             mediaDevices: {
+                addEventListener(type, listener) {
+                    if (!mediaDeviceListeners.has(type)) mediaDeviceListeners.set(type, []);
+                    mediaDeviceListeners.get(type).push(listener);
+                },
                 getUserMedia: async () => ({
                     getTracks: () => [{ stop() {} }]
                 })
             }
         },
-        requestAnimationFrame() {},
+        requestAnimationFrame(callback) {
+            animationFrameRequests += 1;
+            animationFrameCallback = callback;
+            return animationFrameRequests;
+        },
+        cancelAnimationFrame() {
+            cancelledAnimationFrames += 1;
+            animationFrameCallback = null;
+        },
         clearTimeout() {},
         setTimeout() {
             return 1;
@@ -179,6 +194,9 @@ function createHarness() {
         Uint8Array,
         window: {
             addEventListener() {},
+            matchMedia() {
+                return { matches: reducedMotion };
+            },
             dispatchEvent(event) {
                 dispatchedEvents.push(event);
                 return true;
@@ -196,6 +214,27 @@ function createHarness() {
         sandbox,
         logs,
         dispatchedEvents,
+        setReducedMotion(value) {
+            reducedMotion = Boolean(value);
+        },
+        async dispatchMediaDeviceChange() {
+            const listeners = mediaDeviceListeners.get('devicechange') || [];
+            await Promise.all(listeners.map(listener => listener()));
+        },
+        get mediaDeviceChangeListenerCount() {
+            return (mediaDeviceListeners.get('devicechange') || []).length;
+        },
+        runAnimationFrame(timestamp = 0) {
+            const callback = animationFrameCallback;
+            animationFrameCallback = null;
+            if (callback) callback(timestamp);
+        },
+        get animationFrameRequests() {
+            return animationFrameRequests;
+        },
+        get cancelledAnimationFrames() {
+            return cancelledAnimationFrames;
+        },
         elements: {
             card,
             levelMeter,
@@ -206,7 +245,6 @@ function createHarness() {
             statusIcon,
             statusTitle,
             statusSubtitle,
-            startButton,
             equalizerWrapper
         }
     };
@@ -219,12 +257,74 @@ test('noise meter starts in a neutral, non-interactive preparation state', () =>
     assert.strictEqual(harness.elements.card.dataset.micState, 'idle');
     assert.ok(harness.elements.card.classList.contains('mic-state-idle'));
     assert.strictEqual(harness.elements.statusTitle.textContent, 'Ses Ölçer Hazırlanıyor');
-    assert.strictEqual(harness.elements.startButton.hidden, true);
     assert.strictEqual(harness.elements.equalizerWrapper.children.length, 128);
     assert.strictEqual(harness.elements.equalizerWrapper.appendCalls, 1);
     assert.strictEqual(meter.isStarting, false);
     assert.strictEqual(meter.currentLevel, null);
     assert.ok(harness.elements.scaleLabels.every(label => !label.classList.contains('is-active')));
+});
+
+test('ambient equalizer keeps the panel alive while real analyser data is unavailable', () => {
+    const harness = createHarness();
+    const meter = new harness.NoiseMeter();
+
+    assert.strictEqual(meter.ambientEqualizerActive, true);
+    meter.renderAmbientEqualizerFrame(1200);
+
+    const heights = harness.elements.equalizerWrapper.children.map(column =>
+        Number.parseFloat(column.children[1].style.height)
+    );
+    assert.strictEqual(heights.length, 128);
+    assert.ok(heights.every(height => Number.isFinite(height) && height >= 4 && height <= 72));
+    assert.ok(
+        heights.slice(1).every((height, index) => Math.abs(height - heights[index]) <= 24),
+        'komşu demo bantları kaotik sıçramamalı'
+    );
+});
+
+test('ambient demo also animates the progress fill without publishing fake meter values', () => {
+    const harness = createHarness();
+    const meter = new harness.NoiseMeter();
+
+    meter.renderAmbientEqualizerFrame(1200);
+    const firstWidth = Number.parseFloat(harness.elements.fill.style.width);
+    meter.renderAmbientEqualizerFrame(2600);
+    const secondWidth = Number.parseFloat(harness.elements.fill.style.width);
+
+    assert.ok(firstWidth >= 12 && firstWidth <= 58);
+    assert.ok(secondWidth >= 12 && secondWidth <= 58);
+    assert.notStrictEqual(secondWidth, firstWidth, 'demo progress should move naturally instead of staying frozen');
+    assert.strictEqual(harness.elements.fill.dataset.demo, 'true');
+    assert.strictEqual(harness.elements.levelMeter.attributes['aria-valuenow'], '0');
+    assert.strictEqual(meter.currentLevel, null);
+});
+
+test('ambient equalizer stops as soon as the real microphone analyser becomes active', async () => {
+    const harness = createHarness();
+    const meter = new harness.NoiseMeter();
+
+    assert.strictEqual(meter.ambientEqualizerActive, true);
+    await meter.startListening();
+
+    assert.strictEqual(meter.isListening, true);
+    assert.strictEqual(meter.ambientEqualizerActive, false);
+    assert.notStrictEqual(harness.elements.fill.dataset.demo, 'true');
+    assert.ok(harness.cancelledAnimationFrames >= 1);
+});
+
+test('prefers-reduced-motion uses a calm static equalizer instead of scheduling demo motion', () => {
+    const harness = createHarness();
+    harness.setReducedMotion(true);
+    const meter = new harness.NoiseMeter();
+
+    meter.stopAmbientEqualizer();
+    meter.startAmbientEqualizer();
+
+    assert.strictEqual(meter.ambientEqualizerActive, false);
+    const heights = harness.elements.equalizerWrapper.children.map(column =>
+        Number.parseFloat(column.children[1].style.height)
+    );
+    assert.ok(heights.some(height => height > 4));
 });
 
 test('progress bar activates only the label for the current threshold range', () => {
@@ -288,6 +388,23 @@ test('equalizer frequency bands are precomputed and reused between animation fra
 
     meter.configureEqualizerBands(1024);
     assert.notStrictEqual(meter.equalizerBands, firstBands);
+});
+
+test('equalizer responds to quiet analyser energy without 5-percent stepping and smooths frame changes', () => {
+    const harness = createHarness();
+    const meter = new harness.NoiseMeter();
+
+    meter.dataArray = new Uint8Array(512).fill(4);
+    meter.updateEqualizerBars();
+
+    const firstHeight = Number.parseFloat(harness.elements.equalizerWrapper.children[0].children[1].style.height);
+    assert.ok(firstHeight > 0 && firstHeight < 5, 'quiet energy should remain visible below the old 5% quantization step');
+
+    meter.dataArray.fill(180);
+    meter.updateEqualizerBars();
+    const secondHeight = Number.parseFloat(harness.elements.equalizerWrapper.children[0].children[1].style.height);
+    assert.ok(secondHeight > firstHeight, 'louder analyser energy should raise the bar');
+    assert.ok(secondHeight < 90, 'the display should ease toward a loud target instead of jumping in one frame');
 });
 
 test('automatic thresholds align the progress markers and label ranges', () => {
@@ -356,12 +473,16 @@ test('sustained loudness raises the score smoothly without frame-time jumps', ()
     assert.ok(meter.noiseScore > 80, 'uzun sekme duraklaması tek karede skoru sıfırlamamalı');
 });
 
-test('missing microphone becomes a calm retryable state without an error log', async () => {
+test('missing microphone stays in demo mode and reconnects automatically on devicechange', async () => {
     const harness = createHarness();
+    let microphoneAvailable = false;
     harness.sandbox.navigator.mediaDevices.getUserMedia = async () => {
-        const error = new Error('No microphone');
-        error.name = 'NotFoundError';
-        throw error;
+        if (!microphoneAvailable) {
+            const error = new Error('No microphone');
+            error.name = 'NotFoundError';
+            throw error;
+        }
+        return { getTracks: () => [{ stop() {} }] };
     };
     const meter = new harness.NoiseMeter();
 
@@ -372,13 +493,19 @@ test('missing microphone becomes a calm retryable state without an error log', a
     assert.strictEqual(harness.elements.statusTitle.textContent, 'Ses Ölçer Dinlenmede');
     assert.strictEqual(
         harness.elements.statusSubtitle.textContent,
-        'Mikrofon bağlanınca yeniden deneyin'
+        'Mikrofon bağlanınca otomatik başlayacak'
     );
-    assert.strictEqual(harness.elements.startButton.hidden, false);
-    assert.strictEqual(harness.elements.startButton.textContent, 'Tekrar Dene');
-    assert.strictEqual(harness.elements.startButton.disabled, false);
+    assert.strictEqual(harness.mediaDeviceChangeListenerCount, 1);
+    assert.strictEqual(meter.ambientEqualizerActive, true);
     assert.strictEqual(harness.logs.error.length, 0);
     assert.strictEqual(harness.logs.info.length, 1);
+
+    microphoneAvailable = true;
+    await harness.dispatchMediaDeviceChange();
+
+    assert.strictEqual(meter.isListening, true);
+    assert.strictEqual(harness.elements.card.dataset.micState, 'listening');
+    assert.strictEqual(meter.ambientEqualizerActive, false);
 });
 
 test('a pending microphone request cannot be started twice', async () => {
@@ -403,7 +530,6 @@ test('a pending microphone request cannot be started twice', async () => {
     assert.strictEqual(meter.isListening, true);
     assert.strictEqual(meter.isStarting, false);
     assert.strictEqual(harness.elements.card.dataset.micState, 'listening');
-    assert.strictEqual(harness.elements.startButton.hidden, true);
 });
 
 test('a stream is released when audio setup fails after permission succeeds', async () => {

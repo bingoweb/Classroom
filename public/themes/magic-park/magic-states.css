@@ -1,18 +1,5 @@
 /* Magic Park 2.2 runtime-state overrides live here. */
 
-body.magic-park-theme.theme-magic-park #countdown-card[hidden],
-body.magic-park-theme.theme-magic-park #noise-meter-card[hidden] {
+body.magic-park-theme.theme-magic-park #countdown-card[hidden] {
     display: none;
-}
-
-body.magic-park-theme.theme-magic-park #noise-meter-card.state-low .noise-scene {
-    background: linear-gradient(145deg, #eefbf8, #ccece5 55%, #a6d8cc);
-}
-
-body.magic-park-theme.theme-magic-park #noise-meter-card.state-medium .noise-scene {
-    background: linear-gradient(145deg, #fff9e9, #f5e6bd 55%, #dfcb9b);
-}
-
-body.magic-park-theme.theme-magic-park #noise-meter-card.state-high .noise-scene {
-    background: linear-gradient(145deg, #fff0ed, #f2ccc8 55%, #dca6a6);
 }

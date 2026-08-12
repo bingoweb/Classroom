@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "id": "magic-park-noise-meter",
+  "version": "2.1.0",
+  "theme": "magic-park",
+  "css": "noise-meter.css",
+  "script": null,
+  "runtimeOwner": "public/js/noise-meter.js",
+  "eventContract": "classroom:noise-state",
+  "meterRole": "meter",
+  "equalizerBands": 128,
+  "levels": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "microphoneStates": [
+    "idle",
+    "requesting",
+    "listening",
+    "unavailable"
+  ],
+  "palette": {
+    "shellBlue": "#225D88",
+    "deepPetrol": "#07364E",
+    "glassCyan": "#66D7E6",
+    "quietMint": "#62E6A8",
+    "attentionGold": "#FFD45B",
+    "highCoral": "#FF6D72",
+    "inkLight": "#F7FEFF",
+    "mutedLight": "#BCE5EA"
+  },
+  "visualLanguage": {
+    "name": "Sihirli Ses Konsolu",
+    "composition": "child-friendly-car-stereo-console",
+    "mascot": false,
+    "persistentDecorations": false,
+    "stateEncoding": [
+      "color",
+      "light",
+      "shape",
+      "motion",
+      "text"
+    ],
+    "hardware": "User-supplied child-friendly panel, background-cleared and tightly cropped with GIMP 3.2.4"
+  },
+  "ownership": {
+    "audioPipeline": false,
+    "audioContext": false,
+    "microphoneLifecycle": false,
+    "timers": false,
+    "animationFrameLoop": false,
+    "webgl": false,
+    "presentationOnly": true
+  },
+  "capabilities": {
+    "cssFallback": true,
+    "reducedMotion": true,
+    "offline": true
+  },
+  "geometry": {
+    "kiosk4k": {
+      "width": 1420,
+      "height": 638
+    },
+    "kiosk1080p": {
+      "width": 710,
+      "height": 319
+    },
+    "hardwareRender": {
+      "width": 1721,
+      "height": 800,
+      "fit": "width-preserving-cover",
+      "kioskWidthPct": 100.55,
+      "baseKioskHeightPct": 104.03,
+      "verticalScaleY": 1.018
+    },
+    "statusRegion": {
+      "leftPct": 17.7,
+      "topPct": 18.3,
+      "widthPct": 64.6,
+      "heightPct": 8.8
+    },
+    "screenHole": {
+      "leftPct": 15.4561,
+      "topPct": 14.9526,
+      "widthPct": 68.9715,
+      "heightPct": 46.8161
+    },
+    "presetRail": {
+      "leftPct": 20.9,
+      "topPct": 74.0,
+      "widthPct": 58.2,
+      "heightPct": 10.4
+    },
+    "leftKnob": {
+      "centerXPct": 9.9942,
+      "centerYPct": 41.0765
+    },
+    "rightKnob": {
+      "centerXPct": 90.4126,
+      "centerYPct": 39.7832
+    }
+  },
+  "assets": {
+    "faceplate": "assets/noise-console-panel.webp",
+    "source": "public/assets/panel.png",
+    "processor": "scripts/process-magic-noise-panel-gimp.sh"
+  }
+}

@@ -9,6 +9,18 @@ class NoiseMeter {
         this.timeDataArray = null;
         this.isStarting = false;
         this.animationFrameId = null;
+        this.ambientAnimationFrameId = null;
+        this.ambientRestartTimerId = null;
+        this.ambientEqualizerActive = false;
+        this.ambientLastFrameTime = -Infinity;
+        this.ambientBurstStartedAt = 0;
+        this.ambientBurstDuration = 0;
+        this.ambientFrameInterval = 100;
+        this.ambientPhase = Math.random() * Math.PI * 2;
+        this.ambientMeterLevel = 0;
+        this.ambientBandLevels = new Array(128).fill(0);
+        this.ambientShapeProfile = this.createAmbientShapeProfile();
+        this.ambientNextShapeRefresh = 0;
 
         this.noiseScore = 0;
         this.maxScore = 100;
@@ -34,7 +46,6 @@ class NoiseMeter {
             statusIcon: document.querySelector('#noise-status-text .noise-status-icon'),
             statusTitle: document.querySelector('#noise-status-text .noise-status-copy strong'),
             statusSubtitle: document.querySelector('#noise-status-text .noise-status-copy small'),
-            startBtn: document.getElementById('mic-start-btn'),
             eqWrapper: document.querySelector('.equalizer-bars'),
             scaleLabels: Array.from(document.querySelectorAll('.noise-scale-label')),
             eqBars: [],
@@ -43,12 +54,15 @@ class NoiseMeter {
 
         this.peakLevels = new Array(128).fill(0);
         this.peakHoldCounters = new Array(128).fill(0);
+        this.visualBarLevels = new Array(128).fill(0);
         this.displayedBarLevels = new Array(128).fill(-1);
         this.displayedPeakLevels = new Array(128).fill(-1);
         this.equalizerBands = [];
         this.equalizerBinCount = 0;
         this.lastAriaValue = '';
         this.updateLoop = this.updateLoop.bind(this);
+        this.ambientLoop = this.ambientLoop.bind(this);
+        this.handleDeviceChange = this.handleDeviceChange.bind(this);
 
         this.init();
     }
@@ -72,9 +86,7 @@ class NoiseMeter {
         icon = 'assets/ui-icons-3d/microphone.png',
         title,
         subtitle,
-        color = '#49637a',
-        buttonText = 'Tekrar Dene',
-        showButton = false
+        color = '#49637a'
     }) {
         if (this.elements.card) {
             this.elements.card.classList.remove(
@@ -105,12 +117,6 @@ class NoiseMeter {
 
         this.setStatus(icon, title, subtitle, color);
         this.dispatchNoiseState(this.currentLevel, this.noiseScore, state);
-
-        if (this.elements.startBtn) {
-            this.elements.startBtn.hidden = !showButton;
-            this.elements.startBtn.disabled = state === 'requesting';
-            this.elements.startBtn.textContent = buttonText;
-        }
     }
 
     getMicrophoneErrorState(error) {
@@ -119,7 +125,7 @@ class NoiseMeter {
         if (['NotFoundError', 'DevicesNotFoundError'].includes(errorName)) {
             return {
                 title: 'Ses Ölçer Dinlenmede',
-                subtitle: 'Mikrofon bağlanınca yeniden deneyin'
+                subtitle: 'Mikrofon bağlanınca otomatik başlayacak'
             };
         }
 
@@ -143,6 +149,154 @@ class NoiseMeter {
         };
     }
 
+    prefersReducedMotion() {
+        return Boolean(window?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+    }
+
+    createAmbientShapeProfile() {
+        const anchorCount = 12;
+        const anchors = Array.from({ length: anchorCount }, () => 0.18 + (Math.random() * 0.82));
+        return Array.from({ length: 128 }, (_, index) => {
+            const position = (index / 127) * (anchorCount - 1);
+            const start = Math.floor(position);
+            const end = Math.min(anchorCount - 1, start + 1);
+            const mix = position - start;
+            return anchors[start] + ((anchors[end] - anchors[start]) * mix);
+        });
+    }
+
+    renderAmbientStaticEqualizer() {
+        if (!this.elements.eqBars?.length) return;
+
+        for (let i = 0; i < 128; i++) {
+            const normalized = i / 127;
+            const height = this.clamp(
+                10 + (7 * Math.sin((normalized * Math.PI * 2.4) + 0.4)) +
+                (4 * Math.sin((normalized * Math.PI * 6.2) + 1.1)),
+                4,
+                24
+            );
+            this.ambientBandLevels[i] = height;
+            if (this.elements.eqBars[i]) this.elements.eqBars[i].style.height = `${height.toFixed(2)}%`;
+            if (this.elements.eqPeaks[i]) this.elements.eqPeaks[i].style.opacity = 0;
+        }
+
+        this.ambientMeterLevel = 28;
+        if (this.elements.fill) {
+            this.elements.fill.style.width = '28%';
+            this.elements.fill.dataset.demo = 'true';
+        }
+    }
+
+    renderAmbientEqualizerFrame(timestamp = Date.now()) {
+        if (!this.elements.eqBars?.length) return;
+
+        if (timestamp >= this.ambientNextShapeRefresh) {
+            this.ambientShapeProfile = this.createAmbientShapeProfile();
+            this.ambientNextShapeRefresh = timestamp + 2200 + (Math.random() * 2600);
+            this.ambientPhase += (Math.random() - 0.5) * 0.9;
+        }
+
+        const time = timestamp * 0.001;
+        for (let i = 0; i < 128; i++) {
+            const normalized = i / 127;
+            const broadWave = Math.sin((normalized * Math.PI * 3.1) + (time * 1.35) + this.ambientPhase);
+            const fineWave = Math.sin((normalized * Math.PI * 8.4) - (time * 0.82) + (this.ambientPhase * 0.4));
+            const profile = (this.ambientShapeProfile[i] - 0.5) * 18;
+            const target = this.clamp(25 + (broadWave * 15) + (fineWave * 7) + profile, 4, 72);
+            const current = this.ambientBandLevels[i] || target;
+            const next = current + ((target - current) * 0.32);
+            this.ambientBandLevels[i] = next;
+
+            const bar = this.elements.eqBars[i];
+            const peak = this.elements.eqPeaks[i];
+            if (bar) bar.style.height = `${next.toFixed(2)}%`;
+            if (peak) peak.style.opacity = 0;
+        }
+
+        if (this.elements.fill) {
+            const meterTarget = this.clamp(
+                32 +
+                (Math.sin((time * 0.86) + this.ambientPhase) * 13) +
+                (Math.sin((time * 0.31) + (this.ambientPhase * 0.55)) * 6),
+                12,
+                58
+            );
+            const meterCurrent = this.ambientMeterLevel || meterTarget;
+            const meterNext = meterCurrent + ((meterTarget - meterCurrent) * 0.28);
+            this.ambientMeterLevel = meterNext;
+            this.elements.fill.style.width = `${meterNext.toFixed(2)}%`;
+            this.elements.fill.dataset.demo = 'true';
+        }
+    }
+
+    ambientLoop(timestamp) {
+        this.ambientAnimationFrameId = null;
+        if (!this.ambientEqualizerActive || this.isListening || this.analyser) return;
+
+        if (!this.ambientBurstStartedAt) this.ambientBurstStartedAt = timestamp;
+        if ((timestamp - this.ambientBurstStartedAt) >= this.ambientBurstDuration) {
+            this.ambientEqualizerActive = false;
+            this.ambientBurstStartedAt = 0;
+            const pause = 1800 + (Math.random() * 4200);
+            this.ambientRestartTimerId = setTimeout(() => {
+                this.ambientRestartTimerId = null;
+                if (!this.isListening && !this.analyser) this.startAmbientEqualizer();
+            }, pause);
+            return;
+        }
+
+        if ((timestamp - this.ambientLastFrameTime) >= this.ambientFrameInterval) {
+            this.renderAmbientEqualizerFrame(timestamp);
+            this.ambientLastFrameTime = timestamp;
+        }
+
+        this.ambientAnimationFrameId = requestAnimationFrame(this.ambientLoop);
+    }
+
+    startAmbientEqualizer() {
+        if (this.isListening || this.analyser || !this.elements.eqBars?.length) return;
+
+        if (this.prefersReducedMotion()) {
+            this.ambientEqualizerActive = false;
+            this.renderAmbientStaticEqualizer();
+            return;
+        }
+
+        if (this.ambientEqualizerActive) return;
+        if (this.ambientRestartTimerId !== null) {
+            clearTimeout(this.ambientRestartTimerId);
+            this.ambientRestartTimerId = null;
+        }
+
+        this.ambientEqualizerActive = true;
+        this.ambientBurstStartedAt = 0;
+        this.ambientBurstDuration = 2200 + (Math.random() * 2200);
+        this.ambientLastFrameTime = -Infinity;
+        this.renderAmbientEqualizerFrame(Date.now());
+        this.ambientAnimationFrameId = requestAnimationFrame(this.ambientLoop);
+    }
+
+    stopAmbientEqualizer() {
+        this.ambientEqualizerActive = false;
+        this.ambientBurstStartedAt = 0;
+        this.ambientMeterLevel = 0;
+
+        if (this.elements.fill) {
+            delete this.elements.fill.dataset.demo;
+            this.elements.fill.style.width = '0%';
+        }
+
+        if (this.ambientAnimationFrameId !== null && typeof cancelAnimationFrame === 'function') {
+            cancelAnimationFrame(this.ambientAnimationFrameId);
+            this.ambientAnimationFrameId = null;
+        }
+        if (this.ambientRestartTimerId !== null) {
+            clearTimeout(this.ambientRestartTimerId);
+            this.ambientRestartTimerId = null;
+        }
+    }
+
     init() {
         if (this.elements.eqWrapper) {
             this.elements.eqWrapper.innerHTML = '';
@@ -164,19 +318,24 @@ class NoiseMeter {
             this.elements.eqWrapper.appendChild(equalizerFragment);
         }
 
-        if (this.elements.startBtn) {
-            this.elements.startBtn.addEventListener('click', () => this.startListening());
-        }
-
         this.updateScaleLayout();
         window.addEventListener('pagehide', () => this.stopListening(), { once: true });
+        if (navigator.mediaDevices?.addEventListener) {
+            navigator.mediaDevices.addEventListener('devicechange', this.handleDeviceChange);
+        }
 
         this.setMicrophoneState('idle', {
             title: 'Ses Ölçer Hazırlanıyor',
             subtitle: 'Mikrofon bağlantısı kontrol ediliyor'
         });
 
+        this.startAmbientEqualizer();
         setTimeout(() => this.startListening(), 1000);
+    }
+
+    async handleDeviceChange() {
+        if (this.isListening || this.isStarting) return;
+        await this.startListening();
     }
 
     dispatchNoiseState(level, score = this.noiseScore, micState = this.elements.card?.dataset?.micState || 'idle') {
@@ -311,8 +470,7 @@ class NoiseMeter {
         this.isStarting = true;
         this.setMicrophoneState('requesting', {
             title: 'Mikrofon Bağlanıyor',
-            subtitle: 'Ses dengesi hazırlanıyor',
-            buttonText: 'Bağlanıyor…'
+            subtitle: 'Ses dengesi hazırlanıyor'
         });
 
         let pendingStream = null;
@@ -337,7 +495,7 @@ class NoiseMeter {
             this.microphone = this.audioContext.createMediaStreamSource(pendingStream);
 
             this.analyser.fftSize = 1024;
-            this.analyser.smoothingTimeConstant = 0.7;
+            this.analyser.smoothingTimeConstant = 0.68;
             this.microphone.connect(this.analyser);
 
             const bufferLength = this.analyser.frequencyBinCount;
@@ -352,6 +510,7 @@ class NoiseMeter {
             pendingStream = null;
             this.isListening = true;
             this.isStarting = false;
+            this.stopAmbientEqualizer();
             if (this.elements.card) this.elements.card.classList.add('active');
 
             this.setMicrophoneState('listening', {
@@ -401,15 +560,16 @@ class NoiseMeter {
             this.setMicrophoneState('unavailable', {
                 icon: 'assets/ui-icons-3d/microphone.png',
                 title: errorState.title,
-                subtitle: errorState.subtitle,
-                showButton: true
+                subtitle: errorState.subtitle
             });
+            this.startAmbientEqualizer();
         }
     }
 
     stopListening() {
         this.isListening = false;
         this.isStarting = false;
+        this.stopAmbientEqualizer();
 
         if (this.animationFrameId !== null && typeof cancelAnimationFrame === 'function') {
             cancelAnimationFrame(this.animationFrameId);
@@ -466,7 +626,6 @@ class NoiseMeter {
 
         const totalBars = 128;
         const totalBins = this.dataArray.length;
-        const step = 5;
         this.configureEqualizerBands(totalBins);
 
         for (let i = 0; i < totalBars; i++) {
@@ -482,35 +641,39 @@ class NoiseMeter {
             if (count === 0 && startBin < totalBins) { sum = this.dataArray[startBin]; count = 1; }
 
             let avg = count > 0 ? sum / count : 0;
-            if (avg < 5) avg = 0;
+            if (avg < 1) avg = 0;
 
-            let percent = (avg / 255) * 100 * amplification;
-            percent = Math.min(100, Math.max(0, percent));
+            const normalizedEnergy = avg > 0 ? avg / 255 : 0;
+            let targetPercent = Math.pow(normalizedEnergy, 0.82) * 100 * amplification;
+            targetPercent = Math.min(100, Math.max(0, targetPercent));
 
-            let quantizedPercent = Math.floor(percent / step) * step;
-            if (quantizedPercent < step && avg > 0) quantizedPercent = step;
-            if (avg === 0) quantizedPercent = 0;
+            const previousPercent = this.visualBarLevels[i] || 0;
+            const response = targetPercent > previousPercent ? 0.52 : 0.24;
+            let displayPercent = previousPercent + ((targetPercent - previousPercent) * response);
+            if (targetPercent === 0 && displayPercent < 0.22) displayPercent = 0;
+            this.visualBarLevels[i] = displayPercent;
 
             // Peak Hold
-            if (this.peakLevels[i] < quantizedPercent) {
-                this.peakLevels[i] = quantizedPercent;
-                this.peakHoldCounters[i] = 30;
+            if (this.peakLevels[i] < displayPercent) {
+                this.peakLevels[i] = displayPercent;
+                this.peakHoldCounters[i] = 18;
             } else {
                 if (this.peakHoldCounters[i] > 0) this.peakHoldCounters[i]--;
-                else this.peakLevels[i] -= 0.25;
+                else this.peakLevels[i] -= 0.55;
             }
-            if (this.peakLevels[i] < quantizedPercent) this.peakLevels[i] = quantizedPercent;
+            if (this.peakLevels[i] < displayPercent) this.peakLevels[i] = displayPercent;
+            if (this.peakLevels[i] < 0) this.peakLevels[i] = 0;
 
-            if (this.displayedBarLevels[i] !== quantizedPercent) {
-                bar.style.height = `${quantizedPercent}%`;
-                this.displayedBarLevels[i] = quantizedPercent;
+            if (Math.abs(this.displayedBarLevels[i] - displayPercent) >= 0.05) {
+                bar.style.height = `${displayPercent.toFixed(2)}%`;
+                this.displayedBarLevels[i] = displayPercent;
             }
 
             if (peak) {
-                let displayPeak = Math.floor(this.peakLevels[i] / step) * step;
-                if (this.displayedPeakLevels[i] !== displayPeak) {
+                const displayPeak = this.peakLevels[i];
+                if (Math.abs(this.displayedPeakLevels[i] - displayPeak) >= 0.05) {
                     if (displayPeak > 0) {
-                        peak.style.bottom = `${displayPeak}%`;
+                        peak.style.bottom = `${displayPeak.toFixed(2)}%`;
                         peak.style.opacity = 0.9;
                     } else {
                         peak.style.opacity = 0;

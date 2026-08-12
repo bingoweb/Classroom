@@ -71,11 +71,14 @@ Başlık, kalan süre açıklaması ve sayaç 12 Ağustos 2026'da kutuya özel *
 - Web Audio mikrofon pipeline'ı,
 - otomatik kalibrasyon,
 - Sessiz / Dikkat / Gürültü durumları,
-- görsel durum karakterleri,
-- equalizer,
+- gerçek analyser verisini kullanan 128 bant equalizer,
 - retry ve izin/hata mesajları.
 
-Ses sistemi tek güncel görsel dil ve otomatik eşik yaklaşımı kullanır.
+Magic Park görünümü 12 Ağustos 2026'da bağımsız `public/themes/magic-park/boxes/noise-meter/` paketine taşındı. Son tasarım **Sihirli Ses Konsolu** yaklaşımıdır: kutu çocuk dostu bir elektronik cihaz / mini oto teyibi ön yüzü gibi görünür. Aktif faceplate kullanıcı kaynaklı `public/assets/panel.png` dosyasından GIMP 3.2 ile dış beyaz canvas temizlenip gerçek cihaz sınırına kırpılarak `assets/noise-console-panel.webp` üretilir. Runtime geometri sözleşmesi 4K açıklıkta `1420×638`, 1080p'de `710×319`; faceplate yatay fit değeri kesin `100.55% auto`, dikey ölçek `scaleY(1.018)` ve alt üç kontrol grubu `top: 74.0%` değerindedir. `panel2.png` runtime'da kullanılmaz.
+
+Alt fiziksel kontrol bölgesinde yalnız `Sessiz / Dikkat / Gürültü` görünür; eski manuel `Tekrar Dene` katmanı tamamen kaldırılmıştır. Mikrofon yokken 128 bantlı doğal demo equalizer ile alt seviye çubuğu birlikte hareket eder; bu demo ARIA meter değerini veya gerçek ses durumunu taklit etmez. Tarayıcı `devicechange` ile yeni mikrofon bildirdiğinde `public/js/noise-meter.js` otomatik yeniden bağlanır ve gerçek analyser hem equalizer'ı hem ilerleme çubuğunu anında devralır. Gerçek analyser tarafında eski 5% quantization kaldırıldı; düşük enerjili bantlar da görünür kalır ve attack/release yumuşatması ile daha hassas, akışkan tepki verir. Equalizer ve demo çubuğu Magic Park'ın mavi/cyan, mint, sarı, pembe ve mor paletine bağlanmıştır.
+
+Gerçek işlevin tek sahibi `public/js/noise-meter.js` olarak korunur: `getUserMedia`, `AudioContext`, kalibrasyon, RMS loudness, skor yumuşatma, eşik/histerezis, 128 bant verisi, otomatik mikrofon yeniden bağlanması, ARIA meter ve `classroom:noise-state` burada kalır. Durum metinleri ve üç kontrol etiketi yüksek-keskinlik font smoothing, kontrollü `-webkit-text-stroke` ve çok katmanlı gölge ile 4K/1080p okunabilirliğe göre güçlendirilmiştir. Lavunu/gürültü karakterleri yalnız Class TV'de kalır.
 
 ### 2.5 Sınıfımızdan slideshow
 
@@ -326,7 +329,9 @@ Admin ana menüsünde program editor bulunmaz.
 - hysteresis,
 - üç durumlu görsel state,
 - accessible meter değerleri,
-- retry davranışı
+- 128 bantlı hassas/akışkan analyser equalizer,
+- mikrofon yokken demo equalizer + demo seviye çubuğu,
+- `devicechange` tabanlı otomatik mikrofon yeniden bağlanması
 
 kullanır.
 

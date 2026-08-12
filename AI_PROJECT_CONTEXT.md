@@ -1,6 +1,6 @@
 # Classroom — Güncel AI Proje Bağlamı
 
-**Son bağlam yenilemesi:** 11 Ağustos 2026
+**Son bağlam yenilemesi:** 12 Ağustos 2026
 **Repo:** `/Users/bingoweb/Projeler/Classroom-ilk-surum`  
 **GitHub:** `bingoweb/Classroom`  
 **Aktif dal:** `main`
@@ -263,6 +263,16 @@ Kod analizi/refactor/security/profiling araçlarının kullanım sözleşmesi:
 `docs/DEVELOPMENT_TOOLCHAIN.md`
 
 Kullanıcı bir mevcut proje görselindeki hata, transparanlık veya maske problemi için crop/referans görsel gönderirse bunu yeni grafik üretme isteği sayma. Gerçek düzeltme source-of-truth asset, foreground/mask üretim zinciri ve testlerde yapılır; referans crop yalnız teşhis içindir.
+
+### Magic Park Noise Meter checkpoint'i — 12 Ağustos 2026
+
+`Sınıfın Ses Dengesi` artık bağımsız `public/themes/magic-park/boxes/noise-meter/` paketidir. Aktif runtime faceplate `public/assets/panel.png` kaynağından `scripts/process-magic-noise-panel-gimp.sh` / `.py` ile üretilen `public/themes/magic-park/boxes/noise-meter/assets/noise-console-panel.webp` dosyasıdır. `panel2.png` kullanılmaz. Panelin yatay yerleşim sözleşmesi **`100.55% auto`**, dikey ölçek **`scaleY(1.018)`**, alt üç kontrol grubu **`top: 74.0%`** olarak korunmalıdır.
+
+Manuel `mic-start-btn / Tekrar Dene` katmanı tamamen kaldırıldı. Mikrofon yokken 128 bantlı demo equalizer ve alt demo seviye çubuğu çalışır; demo yalnız görseldir ve ARIA meter değerini `0` üzerinde sahte bir ölçüme dönüştürmez. `navigator.mediaDevices.devicechange` yeni mikrofonu bildirdiğinde ölçüm otomatik yeniden başlar; gerçek analyser devreye girince demo RAF/timer akışı durur ve gerçek equalizer + seviye çubuğu devralır.
+
+Gerçek analyser equalizer'ında 5% quantization kaldırıldı. Düşük enerjili bantlar artık görünür; attack/release smoothing ile daha hassas ve akışkan hareket eder. Palette Magic Park cyan/mavi + mint + sarı + pembe + mor kullanılır. Durum metinleri ve `Sessiz / Dikkat / Gürültü` etiketleri antialiasing, geometricPrecision, kontrollü text-stroke ve çok katmanlı text-shadow ile okunaklılaştırıldı.
+
+Fresh kabul kanıtı: Noise runtime hedef testleri **17/17**, Magic Park kiosk testleri **33/33**, `npm run test:core` **1552/1552** PASS. Chrome DevTools 1920×1080 ve 3840×2160 ölçümünde panel `100.55%` + `scaleY(1.018)`, kontrol grubu yaklaşık `%74`, retry DOM'u yok, demo seviye çubuğu hareketli ve ARIA `0`; console error/warn **0**. Gerçek fiziksel sınıf mikrofonu kabulü hâlâ donanım kalite kapısında yapılmalıdır.
 
 ### Magic Park foreground alpha-mask bakım checkpoint'i — 11 Ağustos 2026
 
