@@ -83,3 +83,40 @@ Başkana özel selector veya görsel kural `magic-components.css` ya da generic 
 - Başkan yardımcılarını bu kutuya taşımak.
 - Yeni bir genel rol sistemi tasarlamak.
 - Diğer Magic Park kutularının görsel tasarımını değiştirmek.
+
+## 13 Ağustos 2026 — Uygulama ve Kabul Sonucu
+
+Onaylanan sade/açık tasarım uygulandı ve Başkan kutusu `public/themes/magic-park/boxes/president/` altında bağımsız paket olarak tamamlandı.
+
+### Gerçekleşen tasarım
+
+- Canlı alanda yalnız başkan fotoğrafı ve adı render edilir.
+- İkinci başlık, taç, slogan, durum mesajı ve Başkan yardımcısı markup'ı yoktur.
+- Koyu lacivert/mor madalyon tasarımı tamamen kaldırıldı; iç yüzey açık krem, şeftali ve çok hafif pembe/mint/sarı vurgu ailesine geçirildi.
+- `assets/president-stage.webp` GIMP MCP ile açık Magic Park malzeme diline yeniden boyandı.
+- Fotoğraf çerçevesi dairesel madalyon yerine organik squircle formuna, isim ise açık krem-şeftali oyuncak/plastik plakaya dönüştürüldü.
+
+### Optik hizalama bulgusu
+
+Canlı kabul sırasında Başkan kartının CSS bounding-box merkezi ile baked foreground içindeki gerçek transparan açıklığın merkezi aynı olmadığı ölçüldü. 4K kaynak maskesinde Başkan açıklığının alfa ağırlık merkezi yaklaşık `x=3367–3370`, eski kart merkez referansı ise yaklaşık `x=3407` idi. Bu fark 1080p'de gözle görünür sağa kayma üretiyordu.
+
+Bu nedenle `president.css` içeriği:
+
+- yatayda gerçek açıklığa doğru sola optik offset uygular,
+- dikeyde fotoğraf+isim grubunu aşağı alarak üst/alt nefes payını dengeler,
+- runtime'ın `.president-main` üzerine yazdığı transition `transform` değerinin bu hizalamayı ezmesini `transform: ... !important` ile önler.
+
+Son canlı doğrulamada fotoğraf ve isim aynı optik eksende kalmış, başlığa yaslanma ve sağa kaçma giderilmiştir.
+
+### Öğrenci fotoğrafı / fallback bulgusu
+
+Proje kökü ve import artefaktları tarandığında mevcut 30 gerçek öğrenciye ait yüklenmiş bireysel fotoğraf bulunmadı. `backend/uploads/` altındaki sekiz JPG'nin hashleri eski `dev-fixtures` test öğrencileriyle birebir eşleşmektedir; bu görseller gerçek öğrencilere yanlış atanmadı.
+
+Mevcut gerçek öğrenci importu fotoğraf alanlarını `assets/default_boy.png` / `assets/default_girl.png` ile dolduruyor. Bu eski default assetlerde dama deseni görselin içine gömülü olduğundan Başkan renderı yalnız bu default yollar için temiz Magic Park 3D kız/erkek avatarına geçer. Gerçek `/uploads/...` fotoğraf yolu geldiğinde gerçek fotoğraf kullanılmaya devam eder.
+
+### Doğrulama
+
+- Başkan/Magic Park + DOM safety hedef paketi: `38/38 PASS`.
+- `npm run test:core`: `1552/1552 PASS`.
+- Browser kabulü: 1920×1080 ve 4K görünümde gerçek veritabanı Başkan rolüyle kontrol edildi.
+- `git diff --check`: temiz.

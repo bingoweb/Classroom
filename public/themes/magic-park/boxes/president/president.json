@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "magic-park-president",
+  "version": "2.0.0",
+  "theme": "magic-park",
+  "css": "president.css",
+  "script": null,
+  "runtimeOwner": "public/js/script.js",
+  "roleType": "president",
+  "maxVisibleStudents": 1,
+  "visualLanguage": {
+    "name": "Aydınlık Başkan Çerçevesi",
+    "composition": "single-student-bright-simplified-stage",
+    "material": ["soft-cream-panel", "playful-organic-frame", "light-name-plaque"]
+  },
+  "palette": {
+    "cream": "#FFF9EF",
+    "peach": "#FFDCC8",
+    "pink": "#F3A7C5",
+    "mint": "#9EDFD2",
+    "sun": "#FFD66B",
+    "warmBrown": "#8F5D4F"
+  },
+  "assets": {
+    "stage": "assets/president-stage.webp",
+    "stageSource": "GIMP MCP repaint aligned to the existing Magic Park president-box artwork"
+  },
+  "capabilities": {
+    "portraitFallback": true,
+    "faceFocus": true,
+    "longNameWrapping": true,
+    "designedEmptyState": false,
+    "reducedMotion": true,
+    "offline": true
+  }
+}

@@ -1048,8 +1048,7 @@ body.magic-park-theme .slide-caption-text--story-token-dense {
     letter-spacing: 0;
 }
 
-/* Treehouse leadership, turquoise duty lodge and celestial stars portal. */
-body.magic-park-theme #president-container,
+/* Shared role-stage foundations. President presentation lives in its box package. */
 body.magic-park-theme #duty-container,
 body.magic-park-theme #stars-container {
     position: absolute;
@@ -1065,75 +1064,6 @@ body.magic-park-theme #stars-container {
     background: transparent;
 }
 
-body.magic-park-theme #president-container {
-    inset: 21% 13.5% 14% 13.5%;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 54fr) minmax(0, 40fr);
-    align-items: center;
-    justify-items: center;
-    gap: 0.55cqh;
-}
-
-body.magic-park-theme .president-main {
-    position: relative;
-    isolation: isolate;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr);
-    align-items: center;
-    justify-items: center;
-    justify-content: center;
-    gap: 0.7cqw;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    padding: 0.52cqh 0.62cqw;
-    overflow: hidden;
-    border: 0.09cqw solid rgba(117, 77, 35, 0.3);
-    border-radius: 1.08cqw 0.86cqw 1.06cqw 0.9cqw;
-    background: linear-gradient(145deg, rgba(255, 249, 224, 0.98), rgba(255, 229, 159, 0.96) 58%, rgba(234, 183, 92, 0.93));
-    box-shadow: inset 0 0.1cqh 0 rgba(255, 255, 255, 0.92), inset 0 -0.2cqh 0 rgba(132, 83, 34, 0.1), 0 0.3cqh 0.72cqh rgba(102, 66, 26, 0.18);
-}
-
-body.magic-park-theme .president-main::before,
-body.magic-park-theme .president-main::after {
-    content: '';
-    position: absolute;
-    top: 0.42cqh;
-    z-index: -1;
-    width: 0.48cqw;
-    height: 0.48cqw;
-    border-radius: 50%;
-    background: radial-gradient(circle at 34% 28%, #fff3ad 0 18%, #f0bd4b 22% 58%, #ad6f2e 62% 100%);
-    box-shadow: 0 0.1cqh 0.18cqh rgba(104, 67, 28, 0.28);
-}
-
-body.magic-park-theme .president-main::before {
-    left: 0.46cqw;
-}
-
-body.magic-park-theme .president-main::after {
-    right: 0.46cqw;
-}
-
-body.magic-park-theme .president-avatar-large {
-    grid-row: 1;
-    grid-column: 1;
-    align-self: center;
-    width: clamp(4.9rem, 5.9cqw, 14.2rem);
-    height: clamp(4.9rem, 5.9cqw, 14.2rem);
-    flex: 0 0 auto;
-    object-fit: cover;
-    object-position: center 35%;
-    border: 0.18cqw solid #f3c54f;
-    border-radius: 50%;
-    background: #fff9e8;
-    box-shadow: 0 0 0 0.11cqw rgba(255, 255, 255, 0.96), 0 0 0 0.26cqw rgba(174, 111, 38, 0.22), 0 0.55cqh 1.05cqh rgba(105, 63, 20, 0.3);
-}
-
-body.magic-park-theme .president-name-large,
-body.magic-park-theme .vice-president-name,
 body.magic-park-theme .duty-name,
 body.magic-park-theme .star-name {
     overflow: hidden;
@@ -1150,88 +1080,6 @@ body.magic-park-theme .star-name {
     text-align: center;
     text-overflow: ellipsis;
     text-shadow: none;
-}
-
-body.magic-park-theme .president-name-large {
-    grid-row: 1;
-    grid-column: 2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-height: 2.7em;
-    justify-self: center;
-    margin: 0;
-    padding: 0.52cqh 0.7cqw;
-    color: #744416;
-    font-size: clamp(0.82rem, 0.94cqw, 2.25rem);
-    white-space: normal;
-    overflow-wrap: anywhere;
-    border: 0.07cqw solid rgba(131, 83, 33, 0.22);
-    border-radius: 0.72cqw 0.9cqw 0.7cqw 0.92cqw;
-    background: linear-gradient(180deg, rgba(255, 255, 244, 0.94), rgba(255, 238, 188, 0.92));
-    box-shadow: 0 0.24cqh 0.6cqh rgba(116, 72, 18, 0.15), inset 0 0.08cqh 0 rgba(255, 255, 255, 0.94), inset 0 -0.12cqh 0 rgba(160, 100, 39, 0.08);
-}
-
-body.magic-park-theme .vice-presidents-container {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: stretch;
-    justify-content: stretch;
-    gap: 0.5cqw;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    padding: 0;
-    border: 0;
-}
-
-body.magic-park-theme .vice-president-item {
-    position: relative;
-    isolation: isolate;
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: center;
-    gap: 0.25cqw;
-    width: 100%;
-    height: 100%;
-    min-width: 0;
-    min-height: 0;
-    padding: 0.32cqh 0.3cqw;
-    overflow: hidden;
-    border: 0.07cqw solid rgba(59, 139, 128, 0.28);
-    border-radius: 0.78cqw 0.64cqw 0.8cqw 0.66cqw;
-    background: linear-gradient(145deg, rgba(241, 255, 239, 0.94), rgba(186, 235, 211, 0.9) 54%, rgba(116, 206, 194, 0.86));
-    box-shadow: inset 0 0.08cqh 0 rgba(255, 255, 255, 0.92), 0 0.22cqh 0.5cqh rgba(54, 104, 79, 0.14);
-}
-
-body.magic-park-theme .vice-president-avatar {
-    width: clamp(2.35rem, 2.4cqw, 5.8rem);
-    height: clamp(2.35rem, 2.4cqw, 5.8rem);
-    object-fit: cover;
-    object-position: center 35%;
-    border: 0.1cqw solid #43bca7;
-    border-radius: 0.72cqw 0.82cqw 0.7cqw 0.84cqw;
-    background: #fafff6;
-    box-shadow: 0 0 0 0.07cqw rgba(255, 255, 255, 0.92), 0 0.28cqh 0.68cqh rgba(39, 95, 74, 0.18);
-}
-
-body.magic-park-theme .vice-president-name {
-    width: 100%;
-    max-width: none;
-    min-height: 2.35em;
-    padding: 0.32cqh 0.34cqw;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #24644e;
-    font-size: clamp(0.64rem, 0.7cqw, 1.68rem);
-    line-height: 1.02;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    border: 0.05cqw solid rgba(59, 122, 91, 0.14);
-    border-radius: 0.58cqw;
-    background: linear-gradient(180deg, rgba(255, 255, 244, 0.86), rgba(232, 249, 224, 0.78));
 }
 
 body.magic-park-theme #duty-container {
@@ -1477,15 +1325,9 @@ body.magic-park-theme .role-empty-message {
     text-wrap: balance;
 }
 
-body.magic-park-theme #president-container > .role-empty-state,
 body.magic-park-theme #duty-container > .role-empty-state {
     grid-row: 1 / -1;
     grid-column: 1 / -1;
-}
-
-body.magic-park-theme .role-empty-state--president {
-    border-color: rgba(180, 126, 54, 0.32);
-    background: linear-gradient(145deg, rgba(255, 248, 211, 0.94), rgba(248, 218, 144, 0.86));
 }
 
 body.magic-park-theme .role-empty-state--duty {

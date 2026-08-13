@@ -7,6 +7,7 @@
 @import url('./boxes/attendance/attendance.css');
 @import url('./boxes/lesson-flow/lesson-flow.css');
 @import url('./boxes/noise-meter/noise-meter.css');
+@import url('./boxes/president/president.css');
 
 body.magic-park-theme.theme-magic-park {
     --theme-left-col: 27%;

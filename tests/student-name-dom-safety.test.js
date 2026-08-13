@@ -205,7 +205,7 @@ test('Student Name DOM Safety Tests', async (t) => {
         assert.ok(starsHtml.includes('&quot;&gt;&lt;img src=x onerror=&quot;globalThis.__xss=1&quot;&gt;'), 'Star name is escaped');
         assert.ok(starsHtml.includes('id="star-img-4-0"'), 'Star portrait has a stable focus target');
         assert.match(presidentHtml, /president-avatar-large" alt="" aria-hidden="true"/);
-        assert.ok(presidentHtml.includes("this.src='girl.png'"), 'female president keeps a gender-appropriate fallback portrait');
+        assert.ok(presidentHtml.includes("this.src='assets/ui-icons-3d/student-girl.png'"), 'female president falls back to the clean Magic Park 3D student portrait');
         assert.match(getEl('duty-container').innerHTML, /duty-avatar" alt="" aria-hidden="true"/);
         assert.match(starsHtml, /star-avatar" alt="" aria-hidden="true"/);
         assert.match(absentHtml, /marquee-avatar" alt="" aria-hidden="true"/);
@@ -230,7 +230,7 @@ test('Student Name DOM Safety Tests', async (t) => {
         assert.strictEqual(getEl('today-attendance').textContent, 'YOKLAMA BEKLENİYOR', 'Pending attendance has an explicit state');
     });
 
-    await t.test('Dashboard renders explanatory empty states for unassigned roles', async () => {
+    await t.test('Dashboard keeps the unassigned president box visually empty while other roles retain explanatory states', async () => {
         const scriptSource = fs.readFileSync(path.join(__dirname, '../public/js/script.js'), 'utf8');
         const utilsSource = fs.readFileSync(path.join(__dirname, '../public/js/utils.js'), 'utf8');
         const { sandbox, getEl } = createSandbox();
@@ -250,7 +250,7 @@ test('Student Name DOM Safety Tests', async (t) => {
         const presidentHtml = getEl('president-container').innerHTML;
         const dutyHtml = getEl('duty-container').innerHTML;
 
-        assert.ok(presidentHtml.includes('Başkanımız henüz seçilmedi'));
+        assert.strictEqual(presidentHtml.trim(), '', 'Unassigned president box must not add a second title, icon, status, or placeholder');
         assert.ok(dutyHtml.includes('Bugünün nöbetçileri henüz seçilmedi'));
         assert.ok(!presidentHtml.includes('>---<'));
         assert.ok(!dutyHtml.includes('>---<'));
@@ -280,8 +280,7 @@ test('Student Name DOM Safety Tests', async (t) => {
 
         await sandbox.globalThis.__testApi.fetchData();
 
-        assert.match(getEl('president-container').innerHTML, /role-empty-state--president/);
-        assert.match(getEl('president-container').innerHTML, /Sınıf ekibimiz birazdan burada/);
+        assert.strictEqual(getEl('president-container').innerHTML.trim(), '', 'Cold-start role failure keeps the president interior empty');
         assert.match(getEl('duty-container').innerHTML, /role-empty-state--duty/);
         assert.match(getEl('duty-container').innerHTML, /Yardımcı ekibimiz birazdan burada/);
         assert.match(getEl('stars-container').innerHTML, /role-empty-state--stars/);

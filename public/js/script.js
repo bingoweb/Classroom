@@ -23,13 +23,6 @@ function hasDataChanged(key, newData) {
 }
 
 const ROLE_EMPTY_STATES = {
-    president: {
-        icon: 'assets/icons/crown-3d.png',
-        title: 'Liderlik köşesi hazır',
-        message: 'Başkanımız henüz seçilmedi',
-        fallbackTitle: 'Liderlik köşesi dinleniyor',
-        fallbackMessage: 'Sınıf ekibimiz birazdan burada'
-    },
     duty: {
         icon: 'assets/icons/clipboard-3d.png',
         title: 'Yardımcı köşesi hazır',
@@ -127,17 +120,22 @@ async function fetchData() {
             if (president) {
                 const avatarPath = Utils.getAvatarPath(president);
                 const defaultAvatar = president.gender === 'F' ? CONFIG.DEFAULT_AVATAR_GIRL : CONFIG.DEFAULT_AVATAR_BOY;
+                const presidentFallbackAvatar = president.gender === 'F'
+                    ? 'assets/ui-icons-3d/student-girl.png'
+                    : 'assets/ui-icons-3d/student-boy.png';
+                const usesDefaultAvatar = !president.photo || avatarPath === defaultAvatar || president.photo === defaultAvatar;
+                const presidentAvatarPath = usesDefaultAvatar ? presidentFallbackAvatar : avatarPath;
                 const imgId = `president-img-${president.id}`;
                 presidentContainer.innerHTML = `
                     <div class="president-main">
-                        <img id="${imgId}" src="${avatarPath}" class="president-avatar-large" alt="" aria-hidden="true" onerror="this.onerror=null; this.src='${defaultAvatar}'">
+                        <img id="${imgId}" src="${presidentAvatarPath}" class="president-avatar-large" alt="" aria-hidden="true" onerror="this.onerror=null; this.src='${presidentFallbackAvatar}'">
                         <div class="president-name-large">${Utils.escapeHtml(president.name || '---')}</div>
                     </div>
                 `;
                 intervalManager.setTimeout(() => {
                     const imgId = `president-img-${president.id}`;
                     const img = document.getElementById(imgId);
-                    if (img && typeof faceFocusEngine !== 'undefined') {
+                    if (img && !usesDefaultAvatar && typeof faceFocusEngine !== 'undefined') {
                         faceFocusEngine.focusFace(img, Utils.getAvatarPath(president), 'large');
                     }
                 }, 100);

@@ -262,13 +262,15 @@ test('Magic Park clears legacy scene-root transforms while preserving alternate-
 
 test('MP2-C role scenes use storybook role materials, designed fallback states, and GSAP star crossfades', () => {
     const css = read('public/css/kiosk-magic-park.css');
+    const presidentCss = read('public/themes/magic-park/boxes/president/president.css');
     const script = read('public/js/script.js');
     const html = read('public/index.html');
 
     assert.match(css, /--mp2-role-paper:/);
-    assert.match(css, /body\.magic-park-theme \.president-main\s*\{[^}]*background:\s*linear-gradient/s);
-    assert.match(css, /body\.magic-park-theme #president-container\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
-    assert.match(css, /body\.magic-park-theme \.vice-president-item\s*\{[^}]*background:\s*linear-gradient/s);
+    assert.match(presidentCss, /#president-container\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
+    assert.match(presidentCss, /\.president-main\s*\{[^}]*background:\s*transparent/s);
+    assert.doesNotMatch(css, /#president-container|\.president-main|\.president-avatar-large|\.president-name-large|\.vice-president-item|\.vice-president-avatar|\.vice-president-name/,
+        'Magic Park shared CSS must not own president-box presentation');
     assert.match(css, /body\.magic-park-theme \.duty-item\s*\{[^}]*background:\s*linear-gradient/s);
     assert.match(css, /body\.magic-park-theme \.role-empty-state\s*\{[^}]*grid-template-rows:\s*auto auto auto/s);
     assert.match(css, /body\.magic-park-theme \.role-empty-icon\s*\{[^}]*width:\s*clamp\(4\.5rem, 5\.8cqw, 14rem\)/s);
@@ -729,6 +731,8 @@ test('Magic Park 2.2 component layer is composed for the eight transparent artwo
     const attendancePath = path.join(root, 'public/themes/magic-park/boxes/attendance/attendance.css');
     const lessonFlowPath = path.join(root, 'public/themes/magic-park/boxes/lesson-flow/lesson-flow.css');
     const noiseMeterPath = path.join(root, 'public/themes/magic-park/boxes/noise-meter/noise-meter.css');
+    const presidentPath = path.join(root, 'public/themes/magic-park/boxes/president/president.css');
+    const presidentManifestPath = path.join(root, 'public/themes/magic-park/boxes/president/president.json');
     const componentsPath = path.join(root, 'public/themes/magic-park/magic-components.css');
     const statesPath = path.join(root, 'public/themes/magic-park/magic-states.css');
     const theme = fs.readFileSync(themePath, 'utf8');
@@ -736,6 +740,20 @@ test('Magic Park 2.2 component layer is composed for the eight transparent artwo
     const attendance = fs.readFileSync(attendancePath, 'utf8');
     const lessonFlow = fs.readFileSync(lessonFlowPath, 'utf8');
     const noiseMeter = fs.readFileSync(noiseMeterPath, 'utf8');
+    assert.equal(fs.existsSync(presidentPath), true,
+        'president opening must ship a dedicated box-local stylesheet');
+    assert.equal(fs.existsSync(presidentManifestPath), true,
+        'president opening must ship a dedicated box-local JSON manifest');
+    const presidentManifest = JSON.parse(fs.readFileSync(presidentManifestPath, 'utf8'));
+    assert.equal(presidentManifest.css, 'president.css',
+        'president manifest must declare its own stylesheet');
+    assert.equal(presidentManifest.roleType, 'president',
+        'president manifest must own only the president role contract');
+    assert.equal(presidentManifest.maxVisibleStudents, 1,
+        'president manifest must preserve the single-president hero composition');
+    assert.equal(presidentManifest.assets?.stage, 'assets/president-stage.webp',
+        'president manifest must declare its own stage artwork');
+    const president = fs.readFileSync(presidentPath, 'utf8');
     const components = fs.readFileSync(componentsPath, 'utf8');
     const states = fs.readFileSync(statesPath, 'utf8');
 
@@ -810,8 +828,36 @@ test('Magic Park 2.2 component layer is composed for the eight transparent artwo
         'generic Magic Park state CSS must not own box-local noise visual states');
     assert.match(components, /\.slideshow-scene\s*\{[^}]*border:\s*0\s*!important/s,
         'theatre media must sit directly behind the foreground curtains without a duplicate frame');
-    assert.match(components, /#president-container\s*\{[^}]*place-items:\s*center/s,
-        'president opening must be a single-president hero stage');
+    assert.match(theme, /@import url\('\.\/boxes\/president\/president\.css'\);/,
+        'president opening must load its dedicated box package instead of sharing generic Magic Park component CSS');
+    assert.equal(presidentManifest.visualLanguage?.composition, 'single-student-bright-simplified-stage',
+        'president manifest must describe the approved bright simplified single-student composition');
+    assert.deepEqual(presidentManifest.visualLanguage?.material, ['soft-cream-panel', 'playful-organic-frame', 'light-name-plaque'],
+        'president manifest must keep the interior in the same light playful material family as the outer box');
+    assert.match(president, /#president-container\s*\{[^}]*place-items:\s*center/s,
+        'president opening must remain a single-president hero stage');
+    assert.match(president, /#president-container\s*\{[^}]*background:[^}]*url\(['"]?\.\/assets\/president-stage\.webp['"]?\)/s,
+        'president package must own a box-local light stage aligned behind the artwork opening');
+    assert.doesNotMatch(president, /#14234c|#51366f|navy-velvet|plum|rgba\(24,\s*34,\s*76/i,
+        'president interior must not reintroduce the rejected dark navy/plum presentation');
+    assert.match(president, /\.president-main\s*\{[^}]*--president-optical-shift-x:\s*-5\.4cqw[^}]*--president-optical-shift-y:\s*10%[^}]*transform:\s*translate\(var\(--president-optical-shift-x\),\s*var\(--president-optical-shift-y\)\)\s*!important/s,
+        'president content group must align to the measured artwork opening and override runtime transition transforms');
+    assert.match(president, /\.president-avatar-large\s*\{[^}]*width:\s*62%[^}]*aspect-ratio:\s*1\s*\/\s*1/s,
+        'president portrait must keep more breathing room inside the irregular wood/pink opening');
+    assert.match(president, /\.president-name-large\s*\{[^}]*width:\s*90%/s,
+        'president name plaque must stay inside the same optical axis without crowding the artwork edges');
+    assert.match(president, /\.president-avatar-large\s*\{[^}]*border-radius:\s*(?!50%)[^;]+;[^}]*box-shadow:\s*[^;]+,[^;]+/s,
+        'president portrait frame must be a playful organic squircle rather than the rejected circular medallion');
+    assert.match(president, /\.president-name-large\s*\{[^}]*background:\s*linear-gradient\([^}]*#fff/i,
+        'president name must sit on a light plaque instead of a dark badge');
+    assert.match(president, /\.president-name-large\s*\{[^}]*-webkit-text-fill-color:\s*currentColor/s,
+        'president name plaque must cancel legacy transparent text fill from shared kiosk styles');
+    assert.match(president, /\.president-name-large\s*\{[^}]*grid-column:\s*1[^}]*grid-row:\s*2/s,
+        'president package must keep the name plaque below the portrait');
+    assert.doesNotMatch(president, /role-empty-state--president|role-empty-icon|Liderlik|Başkanımız henüz/,
+        'president package must not render a second heading, icon, status, or explanatory empty-state content');
+    assert.doesNotMatch(components, /#president-container|\.president-main|\.president-avatar-large|\.president-name-large/,
+        'generic Magic Park component CSS must not own box-local president presentation');
     assert.match(components, /#duty-container\s*\{[^}]*padding:[^}]*30%/s,
         'duty content must reserve the decorated aquarium floor instead of hiding names behind plants');
     assert.match(components, /#stars-container\s*\{[^}]*--magic-role-accent:/s,
@@ -1023,15 +1069,16 @@ test('live kiosk panels reserve gaps without clipping and share the centre title
     assert.doesNotMatch(html, /class="[^"]*(?:card-titlebar-icon|stats-header-icon)/);
     assert.match(css, /\.noise-content\s*\{[^}]*inset:\s*18% 7\.5% 12\.5% 7\.5%[^}]*border:\s*0[^}]*box-shadow:\s*none/s);
     assert.match(lessonFlowCss, /\.lesson-flow__content\s*\{[^}]*inset:\s*5\.5% 8% 7\.5%/s);
-    assert.match(css, /\.vice-president-name\s*\{[^}]*overflow-wrap:\s*anywhere/s);
 });
 
 test('featured student panels use a clear portrait hierarchy and compact noise layout', () => {
     const css = read('public/css/kiosk-magic-park.css');
+    const presidentCss = read('public/themes/magic-park/boxes/president/president.css');
 
-    assert.match(css, /#president-container\s*\{[^}]*grid-template-rows:\s*minmax\(0, 54fr\) minmax\(0, 40fr\)/s);
-    assert.match(css, /\.president-main\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\)[^}]*grid-template-rows:\s*minmax\(0, 1fr\)/s);
-    assert.match(css, /\.vice-presidents-container\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)[^}]*height:\s*100%/s);
+    assert.match(presidentCss, /#president-container\s*\{[^}]*grid-template-rows:\s*minmax\(0, 1fr\)/s);
+    assert.match(presidentCss, /\.president-main\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)[^}]*grid-template-rows:\s*minmax\(0, 1fr\) auto/s);
+    assert.doesNotMatch(presidentCss, /vice-president/,
+        'the narrow president package must remain a single-president hero and never reintroduce vice presidents');
     assert.match(css, /\.mic-state-unavailable \.noise-info\s*\{[^}]*grid-template-rows:\s*auto auto auto[^}]*align-content:\s*center/s);
     assert.match(css, /#stars-container\s*\{[^}]*inset:\s*18% 9% 7% 9%/s);
     assert.match(css, /\.star-avatar\s*\{[^}]*width:\s*clamp\(7rem, 9\.4cqw, 22\.5rem\)/s);

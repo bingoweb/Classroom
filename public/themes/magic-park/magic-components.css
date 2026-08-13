@@ -502,63 +502,6 @@ body.magic-park-theme.theme-magic-park .class-tv-takeover__burst span {
     font-weight: 900;
 }
 
-/* President — one clear hero. Vice-presidents now receive the larger Class TV stage. */
-body.magic-park-theme.theme-magic-park #president-container {
-    display: grid !important;
-    place-items: center;
-    grid-template-columns: minmax(0, 1fr) !important;
-    grid-template-rows: minmax(0, 1fr);
-    gap: 0;
-    padding: 6% 8% 8%;
-    background: var(--magic-paper);
-}
-
-body.magic-park-theme.theme-magic-park #president-container .president-main {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
-    align-items: center;
-    justify-items: center;
-    gap: 4%;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    padding: 2%;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-}
-
-body.magic-park-theme.theme-magic-park #president-container .president-main::before,
-body.magic-park-theme.theme-magic-park #president-container .president-main::after {
-    display: none;
-}
-
-body.magic-park-theme.theme-magic-park #president-container .president-avatar-large {
-    width: min(48cqw, 57cqh);
-    height: min(48cqw, 57cqh);
-    border: 0.9cqw solid #e4b94c;
-    box-shadow: 0 0 0 0.55cqw rgba(255, 255, 255, 0.86), 0 0.55cqh 1.2cqh rgba(89, 60, 25, 0.2);
-}
-
-body.magic-park-theme.theme-magic-park #president-container .president-name-large {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 0;
-    width: 84%;
-    min-height: 0;
-    padding: 4% 6%;
-    color: #744916;
-    border: 0;
-    border-radius: 0.6cqw;
-    background: rgba(255, 252, 226, 0.72);
-    font-size: clamp(0.72rem, 6.3cqw, 1.9rem);
-    line-height: 1.02;
-    box-shadow: none;
-}
-
 /* Duty — all four names stay in the upper 70% because aquarium plants and
  * the foreground backpack intentionally occupy the lower part of the frame. */
 body.magic-park-theme.theme-magic-park #duty-container {

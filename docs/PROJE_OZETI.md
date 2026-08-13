@@ -134,6 +134,23 @@ hedeflerinde stage/kart/titlebar overflow görülmemiştir.
 
 Gerçek 55" fiziksel 4K TV kabulü ayrı donanım kalite kapısı olarak hâlâ açıktır.
 
+### Magic Park — Sınıf Başkanı kutusu
+
+Başkan kutusu artık kendi `public/themes/magic-park/boxes/president/` paketine sahiptir:
+
+- `president.css` — kutuya özel sunum ve optik geometri,
+- `president.json` — box manifesti / görsel dil,
+- `assets/president-stage.webp` — açık, sıcak iç yüzey asseti,
+- `README.md` — kutu sahipliği ve kabul kuralları.
+
+Canlı içerik yalnız **başkan fotoğrafı + başkan adı**dır. Dış artwork zaten `Sınıf Başkanı` başlığını taşıdığı için ikinci başlık, taç, slogan veya açıklama render edilmez. Başkan yardımcıları Class TV sahipliğinde kalır.
+
+İç tasarım koyu madalyon görünümünden çıkarılmış; açık krem/şeftali zemin, organik fotoğraf çerçevesi ve açık isim plakası kullanılmıştır. Başkan kutusuna özel selectorlar ortak `magic-components.css` / generic kiosk CSS'e geri taşınmaz.
+
+Foreground artwork'ün transparan açıklığı geometrik olarak kart bounding-box'ıyla simetrik değildir. Bu yüzden Başkan fotoğrafı ve isim plakası kaba kart merkezine değil gerçek açıklığın ölçülmüş optik merkezine hizalanır; runtime transition transformunun bu merkezi bozması box-local CSS tarafından nötralize edilir. 1920×1080 ve 4K kabulünde fotoğraf ve isim aynı eksende, üst/alt boşlukları dengeli doğrulanmıştır.
+
+Mevcut 30 gerçek öğrenci importunda yüklenmiş bireysel fotoğraf yoktur. Eski `default_boy.png` / `default_girl.png` dosyalarında dama deseni gömülü olduğundan yalnız bu default yollar Başkan kutusunda temiz Magic Park 3D cinsiyet fallback'ine çevrilir; gerçek `/uploads/...` öğrenci fotoğrafı geldiğinde gerçek fotoğraf korunur.
+
 ## 4. Admin paneli
 
 Admin ana navigasyonunda dört günlük iş vardır:
