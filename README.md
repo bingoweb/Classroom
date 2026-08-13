@@ -1,8 +1,8 @@
 # Classroom — 2/D Sihirli Pano
 
 <p align="center">
-  <strong>İlkokul sınıfı için 4K öğrenci kiosku + güvenli öğretmen yönetim paneli</strong><br>
-  Magic Park görsel sistemi, gerçek zamanlı sınıf araçları ve yerel-first çalışma modeli.
+  <strong>Gerçek sınıf için tasarlanmış 4K Magic Park kiosku ve güvenli öğretmen yönetim sistemi.</strong><br>
+  Canlı ders akışı · ses dengesi · sınıf rolleri · medya yayını · yerel-first çalışma modeli
 </p>
 
 <p align="center">
@@ -14,167 +14,155 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/magic-park-overview.webp" alt="Classroom Magic Park kiosk genel görünümü" width="100%">
+  <img src="docs/images/github-showcase-hero.webp" alt="Classroom Magic Park ürün vitrini: tam kiosk, ses konsolu ve sınıf başkanı detayları" width="100%">
 </p>
 
-Classroom, sınıftaki büyük ekranda sürekli çalışan **2/D Sihirli Pano / Sihirli Öğrenme Parkı (Magic Park)** ile öğretmenin günlük işlemlerini yönettiği **Admin Paneli**ni aynı uygulamada birleştirir.
+Classroom, sınıftaki büyük ekranda sürekli çalışan **2/D Sihirli Pano / Sihirli Öğrenme Parkı (Magic Park)** ile öğretmenin günlük işlemlerini yönettiği **Admin Paneli**ni tek uygulamada birleştirir. Kiosk; saat, ders akışı, sınıf mevcudu, ses seviyesi, medya yayını ve sınıf rollerini çocukların uzaktan rahat okuyabileceği canlı bir 16:9 sahneye dönüştürür.
 
-Projenin odağı yalnızca bilgi göstermek değil; saati, ders akışını, sınıf mevcudunu, ses seviyesini ve sınıf içi rolleri çocukların uzaktan rahat okuyabileceği, canlı ve eğlenceli bir sınıf yüzeyine dönüştürmektir. Ana kiosk gerçek **16:9** sahne olarak tasarlanır ve 4K ekran kullanımını hedefler.
+> **Sınıfta kullanılmak üzere geliştiriliyor.** Magic Park browser içinde çalışan sıradan bir dashboard değil; 4K büyük ekran, uzaktan okunabilirlik, fiziksel mikrofon, gerçek ders zamanı ve öğretmen iş akışı birlikte düşünülerek tasarlanıyor.
 
-> Ekran görüntülerindeki öğrenci adı gizlilik nedeniyle örnek veriyle anonimleştirilmiştir. Repo içindeki gerçek öğrenci verisi ekran görüntülerine taşınmaz.
+> Public ekran görüntülerindeki öğrenci adı gizlilik nedeniyle **ÖRNEK ÖĞRENCİ** olarak anonimleştirilmiştir. Screenshot hazırlığı gerçek öğrenci verisini değiştirmez.
 
-## Ekran görüntüleri
+## Neden Classroom?
 
 <table>
   <tr>
-    <td width="68%">
-      <img src="docs/images/magic-park-top-panels.webp" alt="Magic Park günün zamanı ve ses dengesi panelleri">
-    </td>
-    <td width="32%">
-      <img src="docs/images/magic-park-president.webp" alt="Magic Park sınıf başkanı kutusu">
-    </td>
+    <td width="50%"><strong>🖥️ Gerçek 4K sınıf kiosku</strong><br>Magic Park sabit 16:9 sahne, büyük TV okunabilirliği ve 1080p/4K browser kabulü gözetilerek geliştiriliyor.</td>
+    <td width="50%"><strong>🎡 Paketlenmiş Magic Park kutuları</strong><br>Yenilenen her kutu kendi görsel sözleşmesini, CSS/JSON sahipliğini ve gerektiğinde JS/assetlerini taşıyor.</td>
   </tr>
   <tr>
-    <td><strong>Üst kontrol alanı</strong><br>Günün zamanı, hava durumu ve çocuk dostu Sihirli Ses Konsolu.</td>
-    <td><strong>Sınıf Başkanı</strong><br>Yalnız fotoğraf + isim; dış artwork ile optik olarak hizalanmış box-local tasarım.</td>
+    <td><strong>⏱️ Gerçek zamanlı Ders Akışı</strong><br>Ders ve teneffüs zamanı saniyelik ilerliyor; fizik tabanlı gazoz kavanozu aynı zaman kaynağıyla doluyor.</td>
+    <td><strong>🎚️ Otomatik Ses Dengesi</strong><br>Mikrofon bağlandığında Web Audio ölçümü otomatik devralıyor; mikrofon yokken yalnız görsel demo çalışıyor.</td>
+  </tr>
+  <tr>
+    <td><strong>🧑‍🏫 Sınıf rolleri ve yayın</strong><br>Başkan, yardımcılar, nöbetçiler, yıldızlar, yoklama ve öğretmen slaytları tek sınıf verisi üzerinde birleşiyor.</td>
+    <td><strong>🔐 Güvenli local-first yönetim</strong><br>Admin session, CSRF, rate limit, managed upload ve SQLite transaction katmanlarıyla korunuyor.</td>
   </tr>
 </table>
 
-## Magic Park neler gösteriyor?
+## Magic Park spotlight
 
-Ana kiosk tek 16:9 sahnede sekiz canlı bölge kullanır:
+### Günün Zamanı + Sihirli Ses Konsolu
 
-| Bölge | Güncel davranış |
+<p align="center">
+  <img src="docs/images/github-showcase-top-controls.webp" alt="Magic Park Günün Zamanı ve Sınıfın Ses Dengesi üst kontrol alanı" width="100%">
+</p>
+
+- Büyük dijital saat, tarih ve Gölbaşı hava durumu uzaktan okunacak ölçekte sunulur.
+- Noise Meter 128 bantlı equalizer ve alt seviye göstergesini tek elektronik konsol dili içinde birleştirir.
+- Mikrofon `devicechange` ile geldiğinde gerçek analyser verisi demo animasyonunu otomatik devralır.
+
+### Sınıf Başkanı + Class TV
+
+<table>
+  <tr>
+    <td width="34%" valign="top">
+      <img src="docs/images/github-showcase-president.webp" alt="Magic Park Sınıf Başkanı kutusu">
+    </td>
+    <td width="66%" valign="top">
+      <img src="docs/images/github-showcase-class-tv.webp" alt="Magic Park merkez Class TV ve Ders Akışı sahnesi">
+    </td>
+  </tr>
+  <tr>
+    <td valign="top"><strong>Sınıf Başkanı</strong><br>Canlı içerik yalnız fotoğraf + isimdir. Dış artwork başlığı zaten taşıdığı için ikinci başlık veya slogan üretilmez.</td>
+    <td valign="top"><strong>Class TV + Ders Akışı</strong><br>Merkez yayın alanı öğretmen medyasını ve sistem fallback içeriğini taşırken Ders Akışı gerçek sınıf zamanını takip eder.</td>
+  </tr>
+</table>
+
+Başkan fotoğrafı ve isim plakası kaba kart merkezine değil foreground artwork'ün ölçülmüş **gerçek optik açıklığına** hizalanır. Ders Akışı ise Three.js + LiquidFun tabanlı portakallı gazoz hacmi, fiziksel kabarcıklar ve CSS fallback ile aynı ilerleme yüzdesini paylaşır.
+
+## Canlı sınıf araçları
+
+| Alan | Öğrencinin gördüğü davranış |
 | --- | --- |
-| **Günün Zamanı** | Gün, tarih, büyük dijital saat, Gölbaşı hava durumu ve hafta sonu bağlamı |
-| **Sınıf Mevcudu** | Toplam / kız / erkek öğrenci sayısının üç sahneli çocuk animasyonu |
-| **Ders Akışı** | Saniyelik ders-teneffüs sayacı, mevcut/sıradaki dönem ve fizik tabanlı gazoz kavanozu |
-| **Sınıfın Ses Dengesi** | Web Audio mikrofon pipeline'ı, 128 bant equalizer, otomatik mikrofon bağlantısı ve demo modu |
-| **Sınıfımızdan** | Görsel, GIF ve video slaytları; öğretmen içeriği yoksa Atatürk fallback yayını |
-| **Sınıf Başkanı** | Yalnız başkan fotoğrafı ve adı; yardımcılar Class TV içeriğinde kalır |
-| **Nöbetçiler** | Günlük görevli öğrenciler |
+| **Günün Zamanı** | Gün, tarih, büyük saat, Gölbaşı sıcaklığı ve hafta sonu bağlamı |
+| **Sınıf Mevcudu** | Toplam / kız / erkek öğrenci sayısının sahneli çocuk animasyonu |
+| **Ders Akışı** | Saniyelik ders-teneffüs sayacı ve fizik tabanlı gazoz kavanozu |
+| **Sınıfın Ses Dengesi** | Mikrofon ölçümü, 128 bant equalizer ve Sessiz / Dikkat / Gürültü durumları |
+| **Sınıfımızdan** | Görsel, GIF ve video yayını; içerik yoksa system-owned Atatürk fallback seti |
+| **Sınıf Başkanı** | Yalnız başkan fotoğrafı + adı; yardımcılar Class TV içeriğinde kalır |
+| **Nöbetçiler** | Günün görevli öğrencileri |
 | **Haftanın Yıldızları** | Yıldız öğrenciler için mini slideshow |
 
-### Ders Akışı
+## Magic Park kutu mimarisi
 
-Ders Akışı basit bir progress bar değildir. Kutunun içinde **Three.js + LiquidFun** tabanlı portakallı gazoz kavanozu bulunur. Sıvı yüksekliği gerçek ders/teneffüs ilerlemesine bağlıdır; fiziksel kabarcıklar, mikro kabarcıklar, cam kenarı davranışı, menisküs, kırılma ve fallback CSS dolumu aynı zaman kaynağıyla senkronize edilir.
+<p align="center">
+  <img src="docs/images/github-showcase-architecture.webp" alt="Magic Park box package mimarisi: theme, shared foundation ve bağımsız kutu paketleri" width="100%">
+</p>
 
-Paket sahipliği:
+Magic Park'ta kutuya özel sunumun generic tema CSS'ine yayılmaması temel mimari kuraldır:
 
-```text
-public/themes/magic-park/boxes/lesson-flow/
-├── lesson-flow.css
-├── lesson-flow.json
-├── lesson-flow.js
-├── liquid-physics.js
-└── assets/
-```
-
-### Sınıfın Ses Dengesi
-
-Noise Meter gerçek mikrofon bulunduğunda otomatik devralır; mikrofon yokken equalizer ve alt seviye çubuğu yalnız görsel demo olarak çalışır. Manuel "Tekrar Dene" katmanı yoktur. `devicechange` üzerinden yeni mikrofon algılandığında ölçüm yeniden bağlanır.
-
-Aktif Magic Park paketi:
+- geliştirilen kutu kendi **CSS + JSON** sahipliğini taşır,
+- gerektiğinde JS, fizik kodu ve görsel assetler aynı pakette yaşar,
+- `magic-layout.css` / `magic-components.css` ortak foundation sağlar; box-specific presentation taşımaz,
+- foreground artwork'ün alpha açıklığı ile canlı DOM ayrı katmanlardır.
 
 ```text
-public/themes/magic-park/boxes/noise-meter/
-├── noise-meter.css
-├── noise-meter.json
-└── assets/noise-console-panel.webp
+public/themes/magic-park/boxes/
+├── attendance/
+├── clock/
+├── lesson-flow/
+├── noise-meter/
+└── president/
 ```
 
-### Sınıf Başkanı
+### Öne çıkan paketler
 
-Başkan kutusu dış çerçevedeki mevcut `Sınıf Başkanı` başlığını tekrar etmez. Canlı içeriğin tamamı **fotoğraf + isim** ile sınırlıdır. Koyu kart/taç/slogan yaklaşımı kaldırılmış; açık krem-şeftali iç yüzey, organik fotoğraf çerçevesi ve açık isim plakası kullanılmıştır.
-
-Kutunun görsel sahipliği ortak CSS'e değil kendi paketine aittir:
-
-```text
-public/themes/magic-park/boxes/president/
-├── president.css
-├── president.json
-├── README.md
-└── assets/president-stage.webp
-```
-
-Fotoğraf ve isim, kartın kaba bounding-box merkezine değil foreground artwork'ün ölçülmüş **gerçek optik açıklığına** hizalanır. Bu sayede 1080p ve 4K'da sağa/yukarı kayma oluşturan generic transformlar Başkan kutusunun geometrisini bozamaz.
-
-## Kutu paket mimarisi
-
-Magic Park geliştirmesinde kutuya özel sunumun generic tema CSS'ine yayılmaması temel prensiptir. Yenilenen kutular `public/themes/magic-park/boxes/<kutu>/` altında kendi stil/manifest/asset sahipliğini taşır.
-
-```text
-public/themes/magic-park/
-├── theme.css
-├── magic-layout.css
-├── magic-components.css
-└── boxes/
-    ├── attendance/
-    ├── clock/
-    ├── lesson-flow/
-    ├── noise-meter/
-    └── president/
-```
-
-Ana Magic Park foreground artwork'ü gerçek alpha açıklıkları kullanır. Canlı DOM içeriği bu açıklıkların arkasında çalışır; dekoratif çerçeve ise üst katmanda kalır. Böylece CSS ile ikinci kez sahte çerçeve çizmek yerine görsel ve canlı içerik tek kompozisyon gibi davranır.
+| Paket | Sahip olduğu özel sistem |
+| --- | --- |
+| `lesson-flow/` | CSS + JSON + JS + LiquidFun/Three.js fizik/optik katmanı + assetler |
+| `noise-meter/` | CSS + JSON + elektronik konsol asseti; gerçek audio runtime `public/js/noise-meter.js` |
+| `president/` | CSS + JSON + açık iç yüzey asseti; fotoğraf ve isim için optik geometri |
+| `attendance/` | CSS + JSON + JS + sınıf mevcudu sahne akışı |
 
 ## Öğretmen Admin Paneli
 
-Admin ana navigasyonu günlük sınıf işlerine odaklanır:
+<table>
+  <tr>
+    <td width="50%"><strong>👧 Öğrenciler</strong><br>Ekleme/silme, fotoğraf güncelleme, arama, filtreleme ve Excel import.</td>
+    <td width="50%"><strong>🏅 Görevler</strong><br>Başkan, en fazla iki yardımcı, nöbetçiler ve yıldız öğrenciler.</td>
+  </tr>
+  <tr>
+    <td><strong>✅ Yoklama</strong><br>Tarih bazlı present / absent kaydı ve toplu replacement transaction.</td>
+    <td><strong>🎞️ Slaytlar</strong><br>Image/GIF/video, caption, süre, transition, aktif/pasif ve sıralama yönetimi.</td>
+  </tr>
+</table>
 
-- **Öğrenciler:** öğrenci ekleme/silme, fotoğraf güncelleme, arama/filtreleme, Excel import.
-- **Görevler:** başkan, en fazla iki yardımcı, nöbetçiler ve yıldız öğrenciler.
-- **Yoklama:** tarih bazlı `present / absent` yönetimi ve toplu kayıt.
-- **Slaytlar:** image/GIF/video yükleme, caption, süre, transition, aktif/pasif ve sıralama.
+Öğretmen içeriği bulunmadığında kiosk boş kalmaz. Yedi canonical Atatürk slaytı **system-owned fallback** olarak startup sırasında idempotent biçimde reconcile edilir; admin listesinden değiştirilemez veya silinemez.
 
-Öğretmen slaytı bulunmadığında kiosk boş kalmaz. Yedi canonical Atatürk slaytı **system-owned fallback** olarak startup sırasında idempotent biçimde reconcile edilir; admin listesinden değiştirilemez veya silinemez.
-
-## Teknoloji
+## Teknik omurga
 
 | Katman | Teknoloji |
 | --- | --- |
 | Frontend | HTML, CSS, Vanilla JavaScript |
-| Backend | Node.js + Express 4.22.2 |
-| Veritabanı | SQLite / sqlite3 6.0.1 |
-| Upload | Multer 2.2.0 |
-| Excel | SheetJS 0.20.3, yerel runtime |
-| Motion | GSAP 3.15.0, canvas-confetti 1.9.4 |
-| 3D / fizik | Three.js 0.185.1, LiquidFun vendor runtime |
+| Backend | Node.js + Express **4.22.2** |
+| Veritabanı | SQLite / sqlite3 **6.0.1** |
+| Upload | Multer **2.2.0** |
+| Excel | SheetJS **0.20.3**, yerel runtime |
+| Motion | GSAP **3.15.0**, canvas-confetti **1.9.4** |
+| 3D / fizik | Three.js **0.185.1**, LiquidFun vendor runtime |
+| Ses | Web Audio API + analyser pipeline |
 | Fontlar | Yerel Fredoka + Nunito Sans |
 
 Frontend framework kullanılmaz. Kiosk, admin, statik dosyalar ve `/api/*` endpointleri tek Express uygulaması tarafından servis edilir.
 
 Admin Excel çalışma zamanı SheetJS paketinden yerel olarak servis edilir; **dış CDN'e bağımlı değildir**.
 
-## Hızlı kurulum
+## 3 adımda çalıştır
 
-Gereksinim:
-
-```text
-Node.js >=22 <25
-npm
-```
-
-Bağımlılıkları lockfile üzerinden kurun:
+**Gereksinim:** `Node.js >=22 <25` ve npm.
 
 ```bash
 npm ci
-```
-
-Admin parolasını environment üzerinden verip uygulamayı başlatın:
-
-```bash
 export CLASSROOM_ADMIN_PASSWORD='guclu-bir-parola'
 npm start
 ```
 
-İsteğe bağlı kullanıcı adı:
+Opsiyonel admin kullanıcı adı:
 
 ```bash
 export CLASSROOM_ADMIN_USERNAME='admin'
 ```
-
-Uygulama açıldığında:
 
 | Yüzey | Adres |
 | --- | --- |
@@ -182,7 +170,7 @@ Uygulama açıldığında:
 | Admin login | `http://localhost:3000/admin-login.html` |
 | Admin panel | `http://localhost:3000/admin/` |
 
-`CLASSROOM_ADMIN_PASSWORD` ayarlı değilse public kiosk çalışmaya devam eder fakat admin login **fail-closed** olarak 503 döner. Repo içinde fallback parola veya commit edilmiş parola digest'i bulunmaz.
+`CLASSROOM_ADMIN_PASSWORD` tanımlı değilse public kiosk çalışmaya devam eder; admin login ise **fail-closed** davranarak 503 döner. Repo içinde fallback parola veya commit edilmiş parola digest'i yoktur.
 
 ### Linux kiosk başlatma
 
@@ -190,9 +178,25 @@ Uygulama açıldığında:
 ./start.sh
 ```
 
-Script backend'i başlatır ve uygun tarayıcı bulunduğunda Chromium / Chrome / Firefox kiosk modunu açar.
+`start.sh` backend'i açar ve uygun tarayıcı bulunduğunda Chromium / Chrome / Firefox kiosk modunu kullanır.
 
-## Veritabanı
+## Güvenlik ve local-first çalışma modeli
+
+Admin mutasyonlarında şu katmanlar birlikte çalışır:
+
+- server-side in-memory session + HttpOnly cookie,
+- `SameSite=Strict`,
+- session'a bağlı CSRF token,
+- login ve admin write rate limit,
+- same-origin browser politikası,
+- managed upload path kontrolü,
+- hata response redaction,
+- kritik SQLite işlemlerinde transaction / rollback.
+
+Secret değerleri Git'e yazılmamalıdır. `.env`, `.env.local` ve `.env.production` çalışma dosyaları repository dışında tutulur. Backend ve admin tarih anahtarları **Europe/Istanbul** takvim gününü kullanır.
+
+<details>
+<summary><strong>Veritabanı ve ana tablolar</strong></summary>
 
 Varsayılan SQLite dosyası:
 
@@ -213,25 +217,19 @@ slide_settings
 error_logs
 ```
 
-Backend ve admin tarih anahtarları **Europe/Istanbul** takvim gününe göre üretilir. Test/bakım araçları gerçek sınıf veritabanı yerine mümkün olduğunda `CLASSROOM_DB_PATH` ile izole temp DB kullanır.
+Test ve bakım araçları mümkün olduğunda gerçek sınıf DB'si yerine `CLASSROOM_DB_PATH` ile izole temp DB kullanır.
 
-## Güvenlik yaklaşımı
-
-Admin mutasyonlarında server-side session, HttpOnly cookie, `SameSite=Strict`, session'a bağlı CSRF token, login/write rate limit, same-origin politika, managed upload path kontrolü, hata redaction ve kritik SQLite işlemlerinde transaction/rollback kullanılır.
-
-Secret değerleri Git'e yazılmamalıdır. `.env`, `.env.local` ve `.env.production` çalışma dosyaları repository dışında tutulur.
+</details>
 
 ## Test ve kalite kapıları
 
-Ana test paketi:
+Ana kalite kapısı:
 
 ```bash
 npm run test:core
 ```
 
-Bu suite schedule, admin auth/session/CSRF/rate limit, öğrenci ve fotoğraf işlemleri, roller, yoklama, slayt cache/transaction davranışları, error redaction, Magic Park, native SQLite, Multer multipart runtime ve bakım smoke testlerini kapsar.
-
-Diğer önemli kontroller:
+Bu suite; schedule, auth/session/CSRF/rate-limit, öğrenci/fotoğraf/import, roller, yoklama, slayt transaction/cache, error redaction, Magic Park, native SQLite, Multer multipart runtime ve bakım smoke davranışlarını kapsar.
 
 ```bash
 npm run test:kiosk-magic-park
@@ -242,7 +240,7 @@ npm run test:multer-runtime-smoke
 npm run verify:code
 ```
 
-GitHub Actions aynı `test:core` kapısını **Node 22 ve Node 24** üzerinde çalıştırır.
+GitHub Actions aynı `test:core` kalite kapısını **Node 22 ve Node 24** üzerinde çalıştırır.
 
 ## Proje yapısı
 
@@ -253,7 +251,7 @@ public/admin/                 öğretmen yönetim paneli
 public/js/                    kiosk runtime modülleri
 public/css/                   ortak kiosk stil katmanları
 public/themes/magic-park/     aktif Magic Park tema paketi
-docs/images/                  README için anonimleştirilmiş ekran görüntüleri
+docs/images/                  anonimleştirilmiş GitHub showcase görselleri
 scripts/                      seed, bakım ve smoke araçları
 tests/                        Node test suite
 docs/                         teknik raporlar ve tasarım kayıtları
@@ -263,8 +261,6 @@ Classroom Projesi/            yaşayan geliştirme / devir belgeleri
 ## Güncel teknik belgeler
 
 Değişen teknik ayrıntılarda **Git HEAD kaynak gerçeklik / source of truth** kabul edilir. Yaşayan açık işler ve tamamlanan bakım kanıtları için `Classroom Projesi/01 - Güncel Belgeler/Classroom Projesi — Önceliklendirilmiş Düzeltme Planı — 2026-08-08.md` kullanılır; tarihsel belgeler mevcut HEAD davranışını override etmez.
-
-Daha derin bilgi için:
 
 - [`docs/PROJE_OZETI.md`](docs/PROJE_OZETI.md) — güncel insan-okur mimari özeti.
 - [`AI_PROJECT_CONTEXT.md`](AI_PROJECT_CONTEXT.md) — geliştirme oturumları için kısa devir bağlamı.
