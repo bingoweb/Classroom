@@ -8,6 +8,9 @@ class NoiseMeter {
         this.dataArray = null;
         this.timeDataArray = null;
         this.isStarting = false;
+        this.isDestroyed = false;
+        this.startAttemptId = 0;
+        this.startupTimerId = null;
         this.animationFrameId = null;
         this.ambientAnimationFrameId = null;
         this.ambientRestartTimerId = null;
@@ -59,10 +62,14 @@ class NoiseMeter {
         this.displayedPeakLevels = new Array(128).fill(-1);
         this.equalizerBands = [];
         this.equalizerBinCount = 0;
+        this.trackEndedListeners = new Map();
         this.lastAriaValue = '';
         this.updateLoop = this.updateLoop.bind(this);
         this.ambientLoop = this.ambientLoop.bind(this);
         this.handleDeviceChange = this.handleDeviceChange.bind(this);
+        this.handleTrackEnded = this.handleTrackEnded.bind(this);
+        this.handlePageHide = this.handlePageHide.bind(this);
+        this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
 
         this.init();
     }
@@ -112,7 +119,10 @@ class NoiseMeter {
             if (this.elements.levelMeter) {
                 this.elements.levelMeter.setAttribute('aria-valuenow', '0');
                 this.elements.levelMeter.setAttribute('aria-valuetext', title);
+                this.elements.levelMeter.setAttribute('aria-hidden', 'true');
             }
+        } else if (this.elements.levelMeter) {
+            this.elements.levelMeter.removeAttribute('aria-hidden');
         }
 
         this.setStatus(icon, title, subtitle, color);
@@ -153,6 +163,13 @@ class NoiseMeter {
         return Boolean(window?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
     }
 
+    getAnimationTimestamp() {
+        if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+            return performance.now();
+        }
+        return Date.now();
+    }
+
     createAmbientShapeProfile() {
         const anchorCount = 12;
         const anchors = Array.from({ length: anchorCount }, () => 0.18 + (Math.random() * 0.82));
@@ -188,7 +205,7 @@ class NoiseMeter {
         }
     }
 
-    renderAmbientEqualizerFrame(timestamp = Date.now()) {
+    renderAmbientEqualizerFrame(timestamp = this.getAnimationTimestamp()) {
         if (!this.elements.eqBars?.length) return;
 
         if (timestamp >= this.ambientNextShapeRefresh) {
@@ -255,9 +272,9 @@ class NoiseMeter {
     }
 
     startAmbientEqualizer() {
-        if (this.isListening || this.analyser || !this.elements.eqBars?.length) return;
+        if (this.isDestroyed || this.isListening || this.analyser || !this.elements.eqBars?.length) return;
 
-        if (this.prefersReducedMotion()) {
+        if (document.hidden || this.prefersReducedMotion()) {
             this.ambientEqualizerActive = false;
             this.renderAmbientStaticEqualizer();
             return;
@@ -273,8 +290,24 @@ class NoiseMeter {
         this.ambientBurstStartedAt = 0;
         this.ambientBurstDuration = 2200 + (Math.random() * 2200);
         this.ambientLastFrameTime = -Infinity;
-        this.renderAmbientEqualizerFrame(Date.now());
+        this.renderAmbientEqualizerFrame(this.getAnimationTimestamp());
         this.ambientAnimationFrameId = requestAnimationFrame(this.ambientLoop);
+    }
+
+    pauseAmbientEqualizer() {
+        this.ambientEqualizerActive = false;
+        this.ambientBurstStartedAt = 0;
+
+        if (this.ambientAnimationFrameId !== null && typeof cancelAnimationFrame === 'function') {
+            cancelAnimationFrame(this.ambientAnimationFrameId);
+            this.ambientAnimationFrameId = null;
+        }
+        if (this.ambientRestartTimerId !== null) {
+            clearTimeout(this.ambientRestartTimerId);
+            this.ambientRestartTimerId = null;
+        }
+
+        this.renderAmbientStaticEqualizer();
     }
 
     stopAmbientEqualizer() {
@@ -298,6 +331,8 @@ class NoiseMeter {
     }
 
     init() {
+        if (!this.elements.card) return;
+
         if (this.elements.eqWrapper) {
             this.elements.eqWrapper.innerHTML = '';
             const equalizerFragment = document.createDocumentFragment();
@@ -319,7 +354,8 @@ class NoiseMeter {
         }
 
         this.updateScaleLayout();
-        window.addEventListener('pagehide', () => this.stopListening(), { once: true });
+        window.addEventListener('pagehide', this.handlePageHide, { once: true });
+        document.addEventListener('visibilitychange', this.handleVisibilityChange);
         if (navigator.mediaDevices?.addEventListener) {
             navigator.mediaDevices.addEventListener('devicechange', this.handleDeviceChange);
         }
@@ -330,12 +366,84 @@ class NoiseMeter {
         });
 
         this.startAmbientEqualizer();
-        setTimeout(() => this.startListening(), 1000);
+        this.startupTimerId = setTimeout(() => {
+            this.startupTimerId = null;
+            this.startListening();
+        }, 1000);
     }
 
     async handleDeviceChange() {
-        if (this.isListening || this.isStarting) return;
+        if (this.isDestroyed || this.isListening || this.isStarting) return;
         await this.startListening();
+    }
+
+    handlePageHide() {
+        this.destroy();
+    }
+
+    handleVisibilityChange() {
+        if (this.isDestroyed) return;
+
+        if (document.hidden) {
+            if (this.isListening) {
+                if (this.animationFrameId !== null && typeof cancelAnimationFrame === 'function') {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+                if (this.audioContext && this.audioContext.state !== 'closed' && typeof this.audioContext.suspend === 'function') {
+                    const suspendPromise = this.audioContext.suspend();
+                    if (suspendPromise && typeof suspendPromise.catch === 'function') {
+                        suspendPromise.catch(() => {});
+                    }
+                }
+            } else {
+                this.pauseAmbientEqualizer();
+            }
+            return;
+        }
+
+        if (this.isListening && this.analyser) {
+            if (this.audioContext && this.audioContext.state !== 'closed' && typeof this.audioContext.resume === 'function') {
+                const resumePromise = this.audioContext.resume();
+                if (resumePromise && typeof resumePromise.catch === 'function') {
+                    resumePromise.catch(() => {});
+                }
+            }
+            this.lastUpdateTime = Date.now();
+            if (this.animationFrameId === null) this.updateLoop();
+            return;
+        }
+
+        this.startAmbientEqualizer();
+    }
+
+    attachTrackEndedListeners(stream) {
+        this.detachTrackEndedListeners();
+        const tracks = stream?.getAudioTracks?.() || stream?.getTracks?.() || [];
+        tracks.forEach(track => {
+            if (typeof track?.addEventListener !== 'function') return;
+            track.addEventListener('ended', this.handleTrackEnded);
+            this.trackEndedListeners.set(track, this.handleTrackEnded);
+        });
+    }
+
+    detachTrackEndedListeners() {
+        this.trackEndedListeners.forEach((listener, track) => {
+            if (typeof track?.removeEventListener === 'function') {
+                track.removeEventListener('ended', listener);
+            }
+        });
+        this.trackEndedListeners.clear();
+    }
+
+    handleTrackEnded() {
+        if (!this.isListening) return;
+        this.stopListening();
+        this.setMicrophoneState('unavailable', {
+            title: 'Ses Ölçer Dinlenmede',
+            subtitle: 'Mikrofon bağlanınca otomatik başlayacak'
+        });
+        this.startAmbientEqualizer();
     }
 
     dispatchNoiseState(level, score = this.noiseScore, micState = this.elements.card?.dataset?.micState || 'idle') {
@@ -465,9 +573,10 @@ class NoiseMeter {
     }
 
     async startListening() {
-        if (this.isListening || this.isStarting) return;
+        if (this.isDestroyed || this.isListening || this.isStarting) return;
 
         this.isStarting = true;
+        const startAttemptId = ++this.startAttemptId;
         this.setMicrophoneState('requesting', {
             title: 'Mikrofon Bağlanıyor',
             subtitle: 'Ses dengesi hazırlanıyor'
@@ -490,6 +599,13 @@ class NoiseMeter {
                 },
                 video: false
             });
+
+            if (!this.isStarting || startAttemptId !== this.startAttemptId) {
+                pendingStream.getTracks().forEach(track => track.stop());
+                pendingStream = null;
+                return;
+            }
+
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.analyser = this.audioContext.createAnalyser();
             this.microphone = this.audioContext.createMediaStreamSource(pendingStream);
@@ -508,6 +624,7 @@ class NoiseMeter {
 
             this.stream = pendingStream;
             pendingStream = null;
+            this.attachTrackEndedListeners(this.stream);
             this.isListening = true;
             this.isStarting = false;
             this.stopAmbientEqualizer();
@@ -520,7 +637,8 @@ class NoiseMeter {
             });
 
             this.lastUpdateTime = Date.now();
-            this.updateLoop();
+            if (document.hidden) this.handleVisibilityChange();
+            else this.updateLoop();
 
         } catch (error) {
             this.isStarting = false;
@@ -539,6 +657,8 @@ class NoiseMeter {
             this.microphone = null;
             this.dataArray = null;
             this.timeDataArray = null;
+
+            if (this.isDestroyed || startAttemptId !== this.startAttemptId) return;
 
             const expectedErrors = new Set([
                 'NotAllowedError',
@@ -567,6 +687,7 @@ class NoiseMeter {
     }
 
     stopListening() {
+        this.startAttemptId += 1;
         this.isListening = false;
         this.isStarting = false;
         this.stopAmbientEqualizer();
@@ -576,6 +697,7 @@ class NoiseMeter {
             this.animationFrameId = null;
         }
 
+        this.detachTrackEndedListeners();
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop());
             this.stream = null;
@@ -601,9 +723,25 @@ class NoiseMeter {
         this.timeDataArray = null;
     }
 
+    destroy() {
+        if (this.isDestroyed) return;
+        this.isDestroyed = true;
+
+        if (this.startupTimerId !== null) {
+            clearTimeout(this.startupTimerId);
+            this.startupTimerId = null;
+        }
+        if (navigator.mediaDevices?.removeEventListener) {
+            navigator.mediaDevices.removeEventListener('devicechange', this.handleDeviceChange);
+        }
+        window.removeEventListener?.('pagehide', this.handlePageHide);
+        document.removeEventListener?.('visibilitychange', this.handleVisibilityChange);
+        this.stopListening();
+    }
+
     updateLoop() {
         this.animationFrameId = null;
-        if (!this.isListening || !this.analyser || !this.dataArray || !this.timeDataArray) return;
+        if (document.hidden || !this.isListening || !this.analyser || !this.dataArray || !this.timeDataArray) return;
         this.animationFrameId = requestAnimationFrame(this.updateLoop);
 
         this.analyser.getByteFrequencyData(this.dataArray);

@@ -67,6 +67,9 @@ function createElement() {
             if (name === 'src') return this.src;
             return attributes[name] ?? null;
         },
+        removeAttribute(name) {
+            delete attributes[name];
+        },
         set innerHTML(value) {
             children.length = 0;
         },
@@ -76,7 +79,7 @@ function createElement() {
     };
 }
 
-function createHarness() {
+function createHarness(options = {}) {
     const card = createElement();
     const levelMeter = createElement();
     const meterBar = createElement();
@@ -97,7 +100,7 @@ function createHarness() {
     equalizerContainer.className = 'equalizer-container';
 
     const elementsById = {
-        'noise-meter-card': card,
+        'noise-meter-card': options.withoutCard ? null : card,
         'noise-level-meter': levelMeter,
         'noise-meter-fill': fill,
         'noise-status-text': status,
@@ -121,6 +124,12 @@ function createHarness() {
     }
 
     class WorkingAudioContext {
+        constructor() {
+            this.state = 'running';
+            this.suspendCalls = 0;
+            this.resumeCalls = 0;
+        }
+
         createAnalyser() {
             return {
                 fftSize: 1024,
@@ -139,6 +148,19 @@ function createHarness() {
         }
 
         close() {
+            this.state = 'closed';
+            return Promise.resolve();
+        }
+
+        suspend() {
+            this.suspendCalls += 1;
+            this.state = 'suspended';
+            return Promise.resolve();
+        }
+
+        resume() {
+            this.resumeCalls += 1;
+            this.state = 'running';
             return Promise.resolve();
         }
     }
@@ -148,6 +170,12 @@ function createHarness() {
     let cancelledAnimationFrames = 0;
     let reducedMotion = false;
     const mediaDeviceListeners = new Map();
+    const documentListeners = new Map();
+    const windowListeners = new Map();
+    const timeoutCallbacks = new Map();
+    let nextTimeoutId = 1;
+    let documentHidden = false;
+    let performanceNow = 500;
     const sandbox = {
         console: {
             log() {},
@@ -155,7 +183,17 @@ function createHarness() {
             error: (...args) => logs.error.push(args)
         },
         document: {
-            addEventListener() {},
+            get hidden() {
+                return documentHidden;
+            },
+            addEventListener(type, listener) {
+                if (!documentListeners.has(type)) documentListeners.set(type, []);
+                documentListeners.get(type).push(listener);
+            },
+            removeEventListener(type, listener) {
+                const listeners = documentListeners.get(type) || [];
+                documentListeners.set(type, listeners.filter(candidate => candidate !== listener));
+            },
             createDocumentFragment() {
                 const fragment = createElement();
                 fragment.isFragment = true;
@@ -172,6 +210,10 @@ function createHarness() {
                     if (!mediaDeviceListeners.has(type)) mediaDeviceListeners.set(type, []);
                     mediaDeviceListeners.get(type).push(listener);
                 },
+                removeEventListener(type, listener) {
+                    const listeners = mediaDeviceListeners.get(type) || [];
+                    mediaDeviceListeners.set(type, listeners.filter(candidate => candidate !== listener));
+                },
                 getUserMedia: async () => ({
                     getTracks: () => [{ stop() {} }]
                 })
@@ -186,14 +228,28 @@ function createHarness() {
             cancelledAnimationFrames += 1;
             animationFrameCallback = null;
         },
-        clearTimeout() {},
-        setTimeout() {
-            return 1;
+        clearTimeout(id) {
+            timeoutCallbacks.delete(id);
+        },
+        setTimeout(callback) {
+            const id = nextTimeoutId++;
+            timeoutCallbacks.set(id, callback);
+            return id;
+        },
+        performance: {
+            now: () => performanceNow
         },
         CustomEvent: TestCustomEvent,
         Uint8Array,
         window: {
-            addEventListener() {},
+            addEventListener(type, listener) {
+                if (!windowListeners.has(type)) windowListeners.set(type, []);
+                windowListeners.get(type).push(listener);
+            },
+            removeEventListener(type, listener) {
+                const listeners = windowListeners.get(type) || [];
+                windowListeners.set(type, listeners.filter(candidate => candidate !== listener));
+            },
             matchMedia() {
                 return { matches: reducedMotion };
             },
@@ -221,8 +277,27 @@ function createHarness() {
             const listeners = mediaDeviceListeners.get('devicechange') || [];
             await Promise.all(listeners.map(listener => listener()));
         },
+        dispatchDocumentEvent(type) {
+            const listeners = documentListeners.get(type) || [];
+            listeners.forEach(listener => listener());
+        },
+        setDocumentHidden(value) {
+            documentHidden = Boolean(value);
+        },
+        setPerformanceNow(value) {
+            performanceNow = Number(value);
+        },
         get mediaDeviceChangeListenerCount() {
             return (mediaDeviceListeners.get('devicechange') || []).length;
+        },
+        get visibilityChangeListenerCount() {
+            return (documentListeners.get('visibilitychange') || []).length;
+        },
+        get pageHideListenerCount() {
+            return (windowListeners.get('pagehide') || []).length;
+        },
+        get pendingTimeoutCount() {
+            return timeoutCallbacks.size;
         },
         runAnimationFrame(timestamp = 0) {
             const callback = animationFrameCallback;
@@ -282,6 +357,18 @@ test('ambient equalizer keeps the panel alive while real analyser data is unavai
     );
 });
 
+test('ambient animation uses the same monotonic clock as requestAnimationFrame', () => {
+    const harness = createHarness();
+    harness.setPerformanceNow(500);
+    const meter = new harness.NoiseMeter();
+
+    assert.ok(meter.ambientNextShapeRefresh > 500);
+    assert.ok(
+        meter.ambientNextShapeRefresh < 5500,
+        'shape refresh deadline must stay on the RAF/performance timeline instead of epoch milliseconds'
+    );
+});
+
 test('ambient demo also animates the progress fill without publishing fake meter values', () => {
     const harness = createHarness();
     const meter = new harness.NoiseMeter();
@@ -296,6 +383,7 @@ test('ambient demo also animates the progress fill without publishing fake meter
     assert.notStrictEqual(secondWidth, firstWidth, 'demo progress should move naturally instead of staying frozen');
     assert.strictEqual(harness.elements.fill.dataset.demo, 'true');
     assert.strictEqual(harness.elements.levelMeter.attributes['aria-valuenow'], '0');
+    assert.strictEqual(harness.elements.levelMeter.attributes['aria-hidden'], 'true');
     assert.strictEqual(meter.currentLevel, null);
 });
 
@@ -309,6 +397,7 @@ test('ambient equalizer stops as soon as the real microphone analyser becomes ac
     assert.strictEqual(meter.isListening, true);
     assert.strictEqual(meter.ambientEqualizerActive, false);
     assert.notStrictEqual(harness.elements.fill.dataset.demo, 'true');
+    assert.strictEqual(harness.elements.levelMeter.attributes['aria-hidden'], undefined);
     assert.ok(harness.cancelledAnimationFrames >= 1);
 });
 
@@ -552,4 +641,172 @@ test('a stream is released when audio setup fails after permission succeeds', as
     assert.strictEqual(meter.isStarting, false);
     assert.strictEqual(harness.elements.card.dataset.micState, 'unavailable');
     assert.strictEqual(harness.logs.error.length, 1);
+});
+
+test('an externally ended microphone track releases the analyser and returns to demo mode', async () => {
+    const harness = createHarness();
+    const listeners = new Map();
+    const track = {
+        readyState: 'live',
+        addEventListener(type, listener) {
+            listeners.set(type, listener);
+        },
+        removeEventListener(type, listener) {
+            if (listeners.get(type) === listener) listeners.delete(type);
+        },
+        stop() {
+            this.readyState = 'ended';
+        }
+    };
+    harness.sandbox.navigator.mediaDevices.getUserMedia = async () => ({
+        getTracks: () => [track],
+        getAudioTracks: () => [track]
+    });
+    const meter = new harness.NoiseMeter();
+
+    await meter.startListening();
+    assert.strictEqual(meter.isListening, true);
+    assert.strictEqual(typeof listeners.get('ended'), 'function');
+
+    track.readyState = 'ended';
+    listeners.get('ended')();
+
+    assert.strictEqual(meter.isListening, false);
+    assert.strictEqual(meter.analyser, null);
+    assert.strictEqual(meter.stream, null);
+    assert.strictEqual(meter.ambientEqualizerActive, true);
+    assert.strictEqual(harness.elements.card.dataset.micState, 'unavailable');
+    assert.strictEqual(harness.elements.statusTitle.textContent, 'Ses Ölçer Dinlenmede');
+});
+
+test('a microphone request that resolves after stopListening cannot reactivate the meter', async () => {
+    const harness = createHarness();
+    let resolveStream;
+    let stopped = false;
+    harness.sandbox.navigator.mediaDevices.getUserMedia = () => new Promise(resolve => {
+        resolveStream = resolve;
+    });
+    const meter = new harness.NoiseMeter();
+
+    const pendingStart = meter.startListening();
+    meter.stopListening();
+    resolveStream({
+        getTracks: () => [{ stop: () => { stopped = true; } }]
+    });
+    await pendingStart;
+
+    assert.strictEqual(stopped, true, 'stale permission results must release their track immediately');
+    assert.strictEqual(meter.isListening, false);
+    assert.strictEqual(meter.isStarting, false);
+    assert.strictEqual(meter.stream, null);
+    assert.strictEqual(meter.analyser, null);
+});
+
+test('a microphone request that rejects after destroy cannot revive demo or unavailable state', async () => {
+    const harness = createHarness();
+    let rejectStream;
+    harness.sandbox.navigator.mediaDevices.getUserMedia = () => new Promise((resolve, reject) => {
+        rejectStream = reject;
+    });
+    const meter = new harness.NoiseMeter();
+
+    const pendingStart = meter.startListening();
+    meter.destroy();
+    const error = new Error('Permission request ended with the page');
+    error.name = 'AbortError';
+    rejectStream(error);
+    await pendingStart;
+
+    assert.strictEqual(meter.isDestroyed, true);
+    assert.strictEqual(meter.isListening, false);
+    assert.strictEqual(meter.ambientEqualizerActive, false);
+    assert.strictEqual(meter.ambientAnimationFrameId, null);
+    assert.strictEqual(harness.logs.info.length, 0);
+    assert.strictEqual(harness.logs.error.length, 0);
+});
+
+test('missing noise meter DOM does not install microphone listeners, timers, or equalizer work', () => {
+    const harness = createHarness({ withoutCard: true });
+    const meter = new harness.NoiseMeter();
+
+    assert.strictEqual(meter.elements.card, null);
+    assert.strictEqual(meter.elements.eqBars.length, 0);
+    assert.strictEqual(meter.ambientEqualizerActive, false);
+    assert.strictEqual(harness.mediaDeviceChangeListenerCount, 0);
+    assert.strictEqual(harness.visibilityChangeListenerCount, 0);
+    assert.strictEqual(harness.pageHideListenerCount, 0);
+    assert.strictEqual(harness.pendingTimeoutCount, 0);
+});
+
+test('destroy releases active audio and removes global lifecycle listeners and startup timers', async () => {
+    const harness = createHarness();
+    let trackStopped = false;
+    harness.sandbox.navigator.mediaDevices.getUserMedia = async () => ({
+        getTracks: () => [{ stop: () => { trackStopped = true; } }]
+    });
+    const meter = new harness.NoiseMeter();
+
+    await meter.startListening();
+    const audioContext = meter.audioContext;
+    assert.strictEqual(harness.mediaDeviceChangeListenerCount, 1);
+    assert.strictEqual(harness.pageHideListenerCount, 1);
+    assert.ok(harness.pendingTimeoutCount >= 1);
+    assert.strictEqual(typeof meter.destroy, 'function');
+
+    meter.destroy();
+
+    assert.strictEqual(trackStopped, true);
+    assert.strictEqual(audioContext.state, 'closed');
+    assert.strictEqual(meter.isListening, false);
+    assert.strictEqual(meter.stream, null);
+    assert.strictEqual(meter.analyser, null);
+    assert.strictEqual(harness.mediaDeviceChangeListenerCount, 0);
+    assert.strictEqual(harness.pageHideListenerCount, 0);
+    assert.strictEqual(harness.pendingTimeoutCount, 0);
+});
+
+test('background visibility suspends live analysis and resumes one visual loop when visible again', async () => {
+    const harness = createHarness();
+    const meter = new harness.NoiseMeter();
+
+    await meter.startListening();
+    const audioContext = meter.audioContext;
+    assert.strictEqual(harness.visibilityChangeListenerCount, 1);
+    assert.notStrictEqual(meter.animationFrameId, null);
+
+    harness.setDocumentHidden(true);
+    harness.dispatchDocumentEvent('visibilitychange');
+    await Promise.resolve();
+
+    assert.strictEqual(audioContext.suspendCalls, 1);
+    assert.strictEqual(meter.animationFrameId, null);
+
+    harness.setDocumentHidden(false);
+    harness.dispatchDocumentEvent('visibilitychange');
+    await Promise.resolve();
+
+    assert.strictEqual(audioContext.resumeCalls, 1);
+    assert.notStrictEqual(meter.animationFrameId, null);
+
+    meter.destroy();
+    assert.strictEqual(harness.visibilityChangeListenerCount, 0);
+});
+
+test('background demo becomes static instead of leaving RAF or restart timers running', () => {
+    const harness = createHarness();
+    const meter = new harness.NoiseMeter();
+
+    assert.strictEqual(meter.ambientEqualizerActive, true);
+    harness.setDocumentHidden(true);
+    harness.dispatchDocumentEvent('visibilitychange');
+
+    assert.strictEqual(meter.ambientEqualizerActive, false);
+    assert.strictEqual(meter.ambientAnimationFrameId, null);
+    assert.strictEqual(meter.ambientRestartTimerId, null);
+    assert.strictEqual(harness.elements.fill.dataset.demo, 'true');
+    assert.strictEqual(harness.elements.fill.style.width, '28%');
+
+    harness.setDocumentHidden(false);
+    harness.dispatchDocumentEvent('visibilitychange');
+    assert.strictEqual(meter.ambientEqualizerActive, true);
 });

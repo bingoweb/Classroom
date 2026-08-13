@@ -58,3 +58,10 @@ test('Lavunu state assets belong to Class TV instead of the top noise instrument
     assert.doesNotMatch(noiseMeter, /assets\/noise-states\//);
     assert.doesNotMatch(noiseMeter, /uploads\/(?:sessiz|uyari|gurultu)\.png/);
 });
+
+test('noise meter does not expose a fake numeric meter before live audio is available', () => {
+    assert.match(
+        kioskHtml,
+        /id="noise-level-meter"[^>]*role="meter"[^>]*aria-valuenow="0"[^>]*aria-valuetext="Ses ölçer hazırlanıyor"[^>]*aria-hidden="true"/s
+    );
+});
