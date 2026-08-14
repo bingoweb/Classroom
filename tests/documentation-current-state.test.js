@@ -84,13 +84,15 @@ test('documentation source-of-truth contract', async (t) => {
     });
 
     await t.test('GitHub showcase images remain local even though Markdown documentation moved', () => {
-        for (const imagePath of [
-            'docs/images/github-showcase-hero.webp',
-            'docs/images/github-showcase-top-controls.webp',
-            'docs/images/github-showcase-president.webp',
-            'docs/images/github-showcase-class-tv.webp'
-        ]) {
+        const imagePaths = [...readme.matchAll(/(?:src|href)=["'](docs\/images\/[^"']+)["']/g)]
+            .map(match => match[1]);
+
+        assert.ok(imagePaths.length >= 5, 'README must keep the full visual GitHub showcase set');
+        assert.equal(new Set(imagePaths).size, imagePaths.length, 'README showcase image references must be unique');
+
+        for (const imagePath of imagePaths) {
             assert.equal(fs.existsSync(path.join(root, imagePath)), true, `${imagePath} must remain available to README`);
+            assert.ok(fs.statSync(path.join(root, imagePath)).size > 0, `${imagePath} must not be empty`);
         }
     });
 });
