@@ -254,24 +254,14 @@ public/themes/magic-park/     aktif Magic Park tema paketi
 docs/images/                  anonimleştirilmiş GitHub showcase görselleri
 scripts/                      seed, bakım ve smoke araçları
 tests/                        Node test suite
-docs/                         teknik raporlar ve tasarım kayıtları
-Classroom Projesi/            yaşayan geliştirme / devir belgeleri
 ```
 
-## Güncel teknik belgeler
+## Dokümantasyon
 
-Değişen teknik ayrıntılarda **Git HEAD kaynak gerçeklik / source of truth** kabul edilir. Yaşayan açık işler ve tamamlanan bakım kanıtları için `Classroom Projesi/01 - Güncel Belgeler/Classroom Projesi — Önceliklendirilmiş Düzeltme Planı — 2026-08-08.md` kullanılır; tarihsel belgeler mevcut HEAD davranışını override etmez.
-
-- [`docs/PROJE_OZETI.md`](docs/PROJE_OZETI.md) — güncel insan-okur mimari özeti.
-- [`AI_PROJECT_CONTEXT.md`](AI_PROJECT_CONTEXT.md) — geliştirme oturumları için kısa devir bağlamı.
-- [`CLASSROOM_PROJE_TOMOGRAFISI_2026-08-08.md`](CLASSROOM_PROJE_TOMOGRAFISI_2026-08-08.md) — kapsamlı repo/mimari taraması.
-- [`docs/DERS_AKISI_GELISTIRME_RAPORU_2026-08-12.md`](docs/DERS_AKISI_GELISTIRME_RAPORU_2026-08-12.md) — Ders Akışı fizik ve görsel sistem raporu.
-- [`docs/BASKAN_KUTUSU_GELISTIRME_RAPORU_2026-08-13.md`](docs/BASKAN_KUTUSU_GELISTIRME_RAPORU_2026-08-13.md) — Başkan kutusu tasarım, optik hizalama ve kabul kaydı.
-- [`docs/DEVELOPMENT_TOOLCHAIN.md`](docs/DEVELOPMENT_TOOLCHAIN.md) — geliştirme araç zinciri.
-- [`docs/GRAPHICS_ASSET_TOOLCHAIN.md`](docs/GRAPHICS_ASSET_TOOLCHAIN.md) — grafik/asset üretim ve doğrulama süreci.
+Operasyonel Classroom dokümantasyonunun kanonik kaynağı artık **Obsidian `Classroom/` bilgi alanıdır**. Teknik kararlar, yaşayan planlar, tasarım spesifikasyonları, geliştirme raporları, devir/checkpoint kayıtları ve bileşen belgeleri Obsidian MCP üzerinden yönetilir. Bu `README.md` GitHub vitrini olarak repoda tutulur; proje gerçekliğinde **kod/runtime için Git HEAD**, dokümantasyon için **Obsidian** esas alınır.
 
 ## Geliştirme ilkesi
 
 Bir değişiklik tamamlanmış sayılmadan önce hedef sorun yeniden üretilir veya regression testiyle kilitlenir; ilgili testler, komşu regresyonlar ve mümkün olduğunda `npm run test:core` çalıştırılır. Görsel değişiklikler gerçek browser kabulüyle 1080p/4K ölçekte doğrulanır.
 
-Bu repository aktif olarak sınıfta kullanılmak üzere geliştirilen yaşayan bir projedir; eski belgelerdeki tarihsel prototipler mevcut `main` dalının davranışını override etmez.
+Bu repository aktif olarak sınıfta kullanılmak üzere geliştirilen yaşayan bir projedir; Obsidian'daki tarihsel kayıtlar mevcut `main` dalının runtime davranışını override etmez.

@@ -8,34 +8,8 @@ const path = require('node:path');
 const root = path.join(__dirname, '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
-function findFileByNormalizedBasename(startDirectory, targetBasename) {
-    const normalizedTarget = targetBasename.normalize('NFC');
-    const entries = fs.readdirSync(startDirectory, { withFileTypes: true });
-
-    for (const entry of entries) {
-        const entryPath = path.join(startDirectory, entry.name);
-        if (entry.isFile() && entry.name.normalize('NFC') === normalizedTarget) {
-            return entryPath;
-        }
-        if (entry.isDirectory()) {
-            const nested = findFileByNormalizedBasename(entryPath, targetBasename);
-            if (nested) return nested;
-        }
-    }
-
-    return null;
-}
-
 const readme = read('README.md');
-const aiContext = read('AI_PROJECT_CONTEXT.md');
-const projectSummary = read('docs/PROJE_OZETI.md');
 const packageJson = JSON.parse(read('package.json'));
-
-const livingPlanName = 'Classroom Projesi — Önceliklendirilmiş Düzeltme Planı — 2026-08-08.md';
-const tomographyName = 'CLASSROOM_PROJE_TOMOGRAFISI_2026-08-08.md';
-const livingPlanPath = findFileByNormalizedBasename(path.join(root, 'Classroom Projesi'), livingPlanName);
-assert.ok(livingPlanPath, `Unable to locate ${livingPlanName}`);
-const livingPlan = fs.readFileSync(livingPlanPath, 'utf8');
 
 function markdownVersionPattern(name, version) {
     const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -46,31 +20,31 @@ function markdownVersionPattern(name, version) {
 function assertNoLegacyActiveClaims(text, label) {
     assert.doesNotMatch(text, /daily_word/i, `${label} must not present removed daily_word as current`);
     assert.doesNotMatch(text, /OpenMeteo|open-meteo/i, `${label} must not present removed weather integration as current`);
-    assert.doesNotMatch(text, /10\s+(?:farklı\s+)?(?:equalizer|ekolayzer)|equalizer.{0,30}tema/i, `${label} must not present removed equalizer theme UI as current`);
+    assert.doesNotMatch(text, /10\s+(?:farklı\s+)?(?:equalizer|ekolayzer)|equalizer.{0,30}tema/i,
+        `${label} must not present removed equalizer theme UI as current`);
     assert.doesNotMatch(text, /schedule-diagnostics\.js|schedule-draft-editor\.js|schedule-review-panel\.js|settings-handler\.js/i,
         `${label} must not present removed admin prototype files as current`);
     assert.doesNotMatch(text, /gemini-service|gemini-client|nano-banana|generate-ai/i,
         `${label} must not resurrect removed AI experiments`);
 }
 
-test('current documentation source-of-truth contract', async (t) => {
-    await t.test('living-plan discovery is independent of Unicode normalization in parent folder names', () => {
-        const tempRoot = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'classroom-doc-path-'));
-        try {
-            const decomposedDirectory = path.join(tempRoot, 'Gu\u0308ncel Belgeler');
-            fs.mkdirSync(decomposedDirectory, { recursive: true });
-            const fixtureName = 'Önceliklendirilmiş Plan.md';
-            fs.writeFileSync(path.join(decomposedDirectory, fixtureName), 'ok');
-
-            const found = findFileByNormalizedBasename(tempRoot, fixtureName.normalize('NFC'));
-            assert.ok(found);
-            assert.equal(fs.readFileSync(found, 'utf8'), 'ok');
-        } finally {
-            fs.rmSync(tempRoot, { recursive: true, force: true });
+function collectProjectMarkdown(directory, relative = '') {
+    const found = [];
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        if (entry.name === '.git' || entry.name === 'node_modules') continue;
+        const absolute = path.join(directory, entry.name);
+        const nextRelative = path.join(relative, entry.name);
+        if (entry.isDirectory()) {
+            found.push(...collectProjectMarkdown(absolute, nextRelative));
+        } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
+            found.push(nextRelative.split(path.sep).join('/'));
         }
-    });
+    }
+    return found.sort();
+}
 
-    await t.test('README describes the current runtime, product surfaces, and local dependency model', () => {
+test('documentation source-of-truth contract', async (t) => {
+    await t.test('README remains the public GitHub surface and describes the current runtime', () => {
         assert.equal(packageJson.engines.node, '>=22 <25');
         assert.match(readme, /Node(?:\.js)?\s+22[^\n]*24|Node(?:\.js)?\s+22\s*\/\s*24/i);
         assert.match(readme, /2\/D Sihirli Pano|Sihirli Öğrenme Parkı|Magic Park/i);
@@ -84,67 +58,39 @@ test('current documentation source-of-truth contract', async (t) => {
         assert.match(readme, markdownVersionPattern('Multer', '2.2.0'));
         assert.match(readme, markdownVersionPattern('SheetJS', '0.20.3'));
         assert.doesNotMatch(readme, /cdn\.sheetjs\.com|cdnjs|unpkg\.com/i);
-        assert.match(readme, new RegExp(tomographyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-        assert.match(readme, /Önceliklendirilmiş Düzeltme Planı/);
         assertNoLegacyActiveClaims(readme, 'README');
     });
 
-    await t.test('AI context is a current handoff instead of an old branch/task diary', () => {
-        assert.match(aiContext, /branch[^\n]*main|dal[^\n]*main/i);
-        assert.match(aiContext, /Git HEAD|HEAD.*source of truth|HEAD.*gerçek/i);
-        assert.match(aiContext, /Classroom Projesi\/01 - Güncel Belgeler/);
-        assert.match(aiContext, /Önceliklendirilmiş Düzeltme Planı/);
-        assert.match(aiContext, new RegExp(tomographyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-        assert.match(aiContext, /system-owned|sistem[- ]owned|sistem sahipli/i);
-        assert.match(aiContext, /audit[^\n]*0|0 vulnerability/i);
-        assert.match(aiContext, /fiziksel[^\n]*55["″]/i);
-        assert.doesNotMatch(aiContext, /ilk-surum-gelistirme/i);
-        assert.doesNotMatch(aiContext, /Save Button|save button/i);
-        assertNoLegacyActiveClaims(aiContext, 'AI_PROJECT_CONTEXT');
+    await t.test('README declares the split source-of-truth model', () => {
+        assert.match(readme, /Obsidian\s+`Classroom\/`/i);
+        assert.match(readme, /kanonik/i);
+        assert.match(readme, /Git HEAD/i);
+        assert.match(readme, /kod\/runtime|kod.*runtime/i);
+        assert.match(readme, /dokümantasyon.*Obsidian|Obsidian.*dokümantasyon/i);
+        assert.match(readme, /GitHub vitrini/i);
     });
 
-    await t.test('project summary reflects current kiosk, admin, security, and data architecture', () => {
-        assert.match(projectSummary, /2\/D Sihirli Pano|Sihirli Öğrenme Parkı|Magic Park/i);
-        assert.match(projectSummary, /sekiz|8\s+(?:ana\s+)?(?:bölge|kart)/i);
-        assert.match(projectSummary, /Öğrenciler/);
-        assert.match(projectSummary, /Görevler/);
-        assert.match(projectSummary, /Yoklama/);
-        assert.match(projectSummary, /Slaytlar/);
-        assert.match(projectSummary, /CSRF/i);
-        assert.match(projectSummary, /SameSite=Strict/i);
-        assert.match(projectSummary, /Europe\/Istanbul/i);
-        assert.match(projectSummary, /system-owned|sistem[- ]owned|sistem sahipli/i);
-        assert.match(projectSummary, markdownVersionPattern('sqlite3', '6.0.1'));
-        assert.match(projectSummary, markdownVersionPattern('Multer', '2.2.0'));
-        assert.match(projectSummary, markdownVersionPattern('SheetJS', '0.20.3'));
-        assert.match(projectSummary, /Önceliklendirilmiş Düzeltme Planı/);
-        assert.match(projectSummary, new RegExp(tomographyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-        assertNoLegacyActiveClaims(projectSummary, 'PROJE_OZETI');
-    });
-
-    await t.test('all three documents define a non-conflicting source-of-truth chain', () => {
-        for (const [name, text] of [
-            ['README', readme],
-            ['AI_PROJECT_CONTEXT', aiContext],
-            ['PROJE_OZETI', projectSummary]
+    await t.test('operational Markdown is no longer duplicated in the repository', () => {
+        assert.deepEqual(collectProjectMarkdown(root), ['README.md']);
+        for (const legacyPath of [
+            'AI_PROJECT_CONTEXT.md',
+            'CLASSROOM_PROJE_TOMOGRAFISI_2026-08-08.md',
+            'docs/PROJE_OZETI.md',
+            'docs/DEVELOPMENT_TOOLCHAIN.md',
+            'docs/GRAPHICS_ASSET_TOOLCHAIN.md'
         ]) {
-            assert.match(text, /source of truth|kaynak.*gerçek|teknik gerçek/i, `${name} must explain its authority boundary`);
-            assert.match(text, /Git HEAD|HEAD/i, `${name} must defer changing code facts to Git HEAD`);
-            assert.match(text, /Önceliklendirilmiş Düzeltme Planı/, `${name} must point to the living work queue`);
+            assert.equal(fs.existsSync(path.join(root, legacyPath)), false, `${legacyPath} must live in Obsidian, not the repo`);
         }
     });
 
-    await t.test('living priority table reflects already completed P3-1 and P3-2 milestones', () => {
-        assert.match(livingPlan, /# 4\. FAZ 0[^\n]*Değişiklikten önce tabanı sabitle[\s\S]{0,220}\*\*Durum:\*\* 🟩 Tamamlandı ve doğrulandı/);
-        assert.match(livingPlan, /# 17\. P3-1[^\n]*Stale bakım scriptlerini temizle[\s\S]{0,180}\*\*Durum:\*\* 🟩 Tamamlandı ve doğrulandı/);
-        assert.match(livingPlan, /# 18\. P3-2[^\n]*Güncel dokümantasyonu tek gerçekliğe getir[\s\S]{0,180}\*\*Durum:\*\* 🟩 Tamamlandı ve doğrulandı/);
-        assert.match(livingPlan, /\| 0 \| Başlangıç baseline \/ test disiplini \| Zorunlu \| 🟩 \|/);
-        assert.match(livingPlan, /\| 14 \| Stale bakım scriptleri \| P3 \| 🟩 \|/);
-        assert.match(livingPlan, /\| 15 \| README\/context\/docs güncelleme \| P3 \| 🟩 \|/);
-    });
-
-    await t.test('living P3-4 heading matches its completed implementation evidence', () => {
-        assert.match(livingPlan, /# 20\. P3-4[^\n]*Kullanılmayan backend config\/utils kopyalarını temizle[\s\S]{0,180}\*\*Durum:\*\* 🟩 Tamamlandı ve doğrulandı/);
-        assert.match(livingPlan, /\| 17 \| Orphan backend config\/utils \| P3 \| 🟩 \|/);
+    await t.test('GitHub showcase images remain local even though Markdown documentation moved', () => {
+        for (const imagePath of [
+            'docs/images/github-showcase-hero.webp',
+            'docs/images/github-showcase-top-controls.webp',
+            'docs/images/github-showcase-president.webp',
+            'docs/images/github-showcase-class-tv.webp'
+        ]) {
+            assert.equal(fs.existsSync(path.join(root, imagePath)), true, `${imagePath} must remain available to README`);
+        }
     });
 });

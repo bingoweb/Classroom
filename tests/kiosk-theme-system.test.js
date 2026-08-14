@@ -186,10 +186,9 @@ function loadThemeModule({ storedTheme, initialStorage, storageThrows = false, f
 }
 
 test('multi-theme package filesystem contract', async (t) => {
-    await t.test('registry, schema, README and exact supported packages exist', () => {
+    await t.test('registry, schema and exact supported packages exist', () => {
         assert.ok(fs.existsSync(registryPath), 'public/themes/registry.json must exist');
         assert.ok(fs.existsSync(schemaPath), 'public/themes/theme.schema.json must exist');
-        assert.ok(fs.existsSync(path.join(themeRoot, 'README.md')), 'public/themes/README.md must exist');
 
         const registry = readJson(registryPath);
         assert.equal(registry.schemaVersion, 1);
