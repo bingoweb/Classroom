@@ -72,6 +72,8 @@ test('documentation source-of-truth contract', async (t) => {
 
     await t.test('operational Markdown is no longer duplicated in the repository', () => {
         assert.deepEqual(collectProjectMarkdown(root), ['README.md']);
+        assert.equal(fs.existsSync(path.join(root, 'Classroom Projesi')), false,
+            'legacy Classroom Projesi documentation directory must live in Obsidian, not the repo');
         for (const legacyPath of [
             'AI_PROJECT_CONTEXT.md',
             'CLASSROOM_PROJE_TOMOGRAFISI_2026-08-08.md',

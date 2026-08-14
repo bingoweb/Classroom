@@ -258,7 +258,7 @@ tests/                        Node test suite
 
 ## Dokümantasyon
 
-Operasyonel Classroom dokümantasyonunun kanonik kaynağı artık **Obsidian `Classroom/` bilgi alanıdır**. Teknik kararlar, yaşayan planlar, tasarım spesifikasyonları, geliştirme raporları, devir/checkpoint kayıtları ve bileşen belgeleri Obsidian MCP üzerinden yönetilir. Bu `README.md` GitHub vitrini olarak repoda tutulur; proje gerçekliğinde **kod/runtime için Git HEAD**, dokümantasyon için **Obsidian** esas alınır.
+Operasyonel Classroom dokümantasyonunun kanonik kaynağı artık **Obsidian `Classroom/` bilgi alanıdır**. Teknik kararlar, yaşayan planlar, tasarım spesifikasyonları, geliştirme raporları, devir/checkpoint kayıtları ve bileşen belgeleri Obsidian MCP üzerinden yönetilir. Eski DOCX envanter/devir belgeleri de aranabilir Markdown kopyaları ve özgün DOCX kaynaklarıyla `Classroom/11 - Tarihsel Arşiv/` altında korunur. Bu `README.md` GitHub vitrini olarak repoda tutulur; proje gerçekliğinde **kod/runtime için Git HEAD**, dokümantasyon için **Obsidian** esas alınır.
 
 ## Geliştirme ilkesi
 
